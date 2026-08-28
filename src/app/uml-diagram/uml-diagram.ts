@@ -1,6 +1,7 @@
 import { Component, signal, ViewChild, ElementRef, OnInit, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink, Router } from '@angular/router';
 import { FFlowModule, FCreateConnectionEvent, FCanvasComponent } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { AuthService } from '../core/services/auth.service';
@@ -23,7 +24,8 @@ import {
   heroCube,
   heroArrowsRightLeft,
   heroArrowRightOnRectangle,
-  heroUserCircle
+  heroUserCircle,
+  heroFolder
 } from '@ng-icons/heroicons/outline';
 
 export type UmlRelationshipType = 
@@ -86,7 +88,7 @@ export interface UmlDiagramProject {
 @Component({
   standalone: true,
   selector: 'app-uml-diagram',
-  imports: [CommonModule, FormsModule, FFlowModule, NgIconComponent],
+  imports: [CommonModule, FormsModule, FFlowModule, NgIconComponent, RouterLink],
   providers: [
     provideIcons({
       heroMagnifyingGlassPlus,
@@ -107,7 +109,8 @@ export interface UmlDiagramProject {
       heroCube,
       heroArrowsRightLeft,
       heroArrowRightOnRectangle,
-      heroUserCircle
+      heroUserCircle,
+      heroFolder
     })
   ],
   templateUrl: './uml-diagram.html',
@@ -115,6 +118,7 @@ export interface UmlDiagramProject {
 })
 export class UmlDiagram implements OnInit {
   readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
   @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;

@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { UmlDiagram } from './uml-diagram/uml-diagram';
 import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
+import { ProjectListComponent } from './features/projects/project-list/project-list.component';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
@@ -14,17 +15,22 @@ export const routes: Routes = [
     component: RegisterComponent,
   },
   {
+    path: 'projects',
+    component: ProjectListComponent,
+    canActivate: [authGuard],
+  },
+  {
     path: 'diagram',
     component: UmlDiagram,
     canActivate: [authGuard],
   },
   {
     path: '',
-    redirectTo: 'diagram',
+    redirectTo: 'projects',
     pathMatch: 'full',
   },
   {
     path: '**',
-    redirectTo: 'diagram',
+    redirectTo: 'projects',
   },
 ];
