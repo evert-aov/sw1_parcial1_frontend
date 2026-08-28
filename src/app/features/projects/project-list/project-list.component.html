@@ -29,7 +29,7 @@
         <button
           (click)="authService.logout()"
           title="Cerrar Sesión"
-          class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-xs px-2.5 py-1 rounded flex items-center gap-1.5 border border-slate-600 transition-colors cursor-pointer">
+          class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-slate-600 transition-colors cursor-pointer">
           <ng-icon name="heroArrowRightOnRectangle" class="text-xs"></ng-icon>
           <span>Salir</span>
         </button>
@@ -37,25 +37,28 @@
     }
   </header>
 
-  <!-- CONTENEDOR PRINCIPAL -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-    
-    <!-- Barra de Acciones y Búsqueda -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-[#F2EBE6] p-4 border-[1.5px] border-[#6B5A52] shadow-[4px_4px_0px_rgba(0,0,0,0.12)]">
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 z-10">
+
+    <!-- Encabezado de la Sección y Barra de Acciones -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#6B5A52]/30">
       <div>
-        <h2 class="text-base font-bold text-[#2A201B] tracking-tight">Proyectos de Modelado</h2>
-        <p class="text-xs text-[#6B5A52] mt-0.5">Administra tus diagramas de clases, equipos y generación de microservicios</p>
+        <h2 class="text-base font-bold text-[#2A201B] uppercase tracking-wider font-mono flex items-center gap-2">
+          <ng-icon name="heroFolder" class="text-lg text-[#6B5A52]"></ng-icon>
+          Proyectos de Modelado UML
+        </h2>
+        <p class="text-xs text-[#6B5A52] mt-0.5">Administra tus modelos de clases, diagramas y configuraciones de generación.</p>
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- Input de Búsqueda -->
-        <div class="relative w-full sm:w-64">
+        <!-- Buscador -->
+        <div class="relative min-w-[220px]">
           <input
             type="text"
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event)"
             placeholder="Buscar proyectos..."
-            class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner placeholder:text-slate-400"
+            class="w-full pl-8 pr-3 py-1.5 bg-white border border-[#6B5A52] text-xs text-[#2A201B] placeholder-[#6B5A52]/50 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
           />
           <ng-icon name="heroMagnifyingGlass" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#6B5A52]"></ng-icon>
         </div>
@@ -112,15 +115,28 @@
                   </h3>
                 </div>
 
-                <!-- Botón Eliminar Proyecto (Solo Owner) -->
-                @if (project.userRole === 'OWNER') {
-                  <button
-                    (click)="onDeleteProject(project, $event)"
-                    title="Eliminar Proyecto"
-                    class="text-slate-400 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors cursor-pointer shrink-0">
-                    <ng-icon name="heroTrash" class="text-sm"></ng-icon>
-                  </button>
-                }
+                <!-- Acciones Rápidas (Editar y Eliminar) -->
+                <div class="flex items-center gap-1 shrink-0">
+                  <!-- Botón Editar Proyecto (OWNER o EDITOR) -->
+                  @if (project.userRole === 'OWNER' || project.userRole === 'EDITOR') {
+                    <button
+                      (click)="openEditModal(project, $event)"
+                      title="Editar Propiedades del Proyecto"
+                      class="text-slate-500 hover:text-[#2A201B] hover:bg-black/5 p-1 rounded transition-colors cursor-pointer">
+                      <ng-icon name="heroPencilSquare" class="text-sm"></ng-icon>
+                    </button>
+                  }
+
+                  <!-- Botón Eliminar Proyecto (Solo OWNER) -->
+                  @if (project.userRole === 'OWNER') {
+                    <button
+                      (click)="onDeleteProject(project, $event)"
+                      title="Eliminar Proyecto"
+                      class="text-slate-400 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors cursor-pointer">
+                      <ng-icon name="heroTrash" class="text-sm"></ng-icon>
+                    </button>
+                  }
+                </div>
               </div>
 
               <p class="text-xs text-[#6B5A52] mt-2 line-clamp-2 min-h-[32px]">
@@ -171,7 +187,7 @@
   <!-- MODAL: CREAR NUEVO PROYECTO -->
   @if (isCreateModalOpen()) {
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         <!-- Header Modal -->
         <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-5 py-3 flex items-center justify-between">
@@ -258,10 +274,100 @@
     </div>
   }
 
+  <!-- MODAL: EDITAR PROYECTO EXISTENTE -->
+  @if (isEditModalOpen() && selectedProjectForEdit()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        
+        <!-- Header Modal -->
+        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-5 py-3 flex items-center justify-between">
+          <h3 class="text-sm font-bold text-[#2A201B] tracking-tight uppercase flex items-center gap-2">
+            <ng-icon name="heroPencilSquare" class="text-base text-[#6B5A52]"></ng-icon>
+            Editar Proyecto: {{ selectedProjectForEdit()?.name }}
+          </h3>
+          <button (click)="closeEditModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
+        </div>
+
+        <!-- Formulario de Edición -->
+        <form [formGroup]="editForm" (ngSubmit)="onEditSubmit()" class="p-6 space-y-4 text-xs">
+          
+          <div>
+            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Nombre del Proyecto *</label>
+            <input
+              type="text"
+              formControlName="name"
+              placeholder="e.g. Sistema de Facturación"
+              class="w-full px-3 py-2 bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner font-medium text-xs"
+            />
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Descripción</label>
+            <textarea
+              formControlName="description"
+              rows="2"
+              placeholder="Breve descripción del alcance del modelo..."
+              class="w-full px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner"></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Paquete Base Java</label>
+              <input
+                type="text"
+                formControlName="basePackage"
+                placeholder="com.example.app"
+                class="w-full px-3 py-2 bg-white border border-[#6B5A52] text-[#2A201B] font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner"
+              />
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Java Version</label>
+              <select
+                formControlName="javaVersion"
+                class="w-full px-2 py-2 bg-white border border-[#6B5A52] text-[#2A201B] font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner cursor-pointer">
+                <option [value]="21">Java 21 (LTS)</option>
+                <option [value]="17">Java 17 (LTS)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Spring Boot Version</label>
+            <select
+              formControlName="springBootVersion"
+              class="w-full px-2 py-2 bg-white border border-[#6B5A52] text-[#2A201B] font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner cursor-pointer">
+              <option value="3.3.0">Spring Boot 3.3.0</option>
+              <option value="3.4.0">Spring Boot 3.4.0</option>
+            </select>
+          </div>
+
+          <!-- Botones Acción -->
+          <div class="pt-4 border-t border-[#6B5A52]/30 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              (click)="closeEditModal()"
+              class="px-3.5 py-2 bg-white hover:bg-slate-100 text-[#2A201B] font-mono text-xs font-medium border border-[#6B5A52] cursor-pointer">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="projectService.isLoading()"
+              class="px-4 py-2 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold uppercase border border-[#2A201B] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] cursor-pointer disabled:opacity-50">
+              Guardar Cambios
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  }
+
   <!-- MODAL: GESTIÓN DE MIEMBROS COLABORADORES -->
   @if (isMembersModalOpen() && selectedProjectForMembers()) {
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         <!-- Header Modal -->
         <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-5 py-3 flex items-center justify-between">

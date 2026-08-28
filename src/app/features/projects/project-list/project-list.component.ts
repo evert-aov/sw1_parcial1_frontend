@@ -64,11 +64,22 @@ export class ProjectListComponent implements OnInit {
 
   // Modales
   readonly isCreateModalOpen = signal<boolean>(false);
+  readonly isEditModalOpen = signal<boolean>(false);
   readonly isMembersModalOpen = signal<boolean>(false);
   readonly selectedProjectForMembers = signal<Project | null>(null);
+  readonly selectedProjectForEdit = signal<Project | null>(null);
 
   // Formulario Crear Proyecto
   readonly createForm: FormGroup = this.fb.group({
+    name: ['', [Validators.required, Validators.maxLength(120)]],
+    description: [''],
+    basePackage: ['com.example.app', [Validators.required, Validators.maxLength(150)]],
+    javaVersion: [21, [Validators.required]],
+    springBootVersion: ['3.3.0', [Validators.required]],
+  });
+
+  // Formulario Editar Proyecto
+  readonly editForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     description: [''],
     basePackage: ['com.example.app', [Validators.required, Validators.maxLength(150)]],
@@ -99,6 +110,7 @@ export class ProjectListComponent implements OnInit {
     this.projectService.loadProjects().subscribe();
   }
 
+  // --- CREAR PROYECTO ---
   openCreateModal(): void {
     this.createForm.reset({
       name: '',
@@ -127,12 +139,46 @@ export class ProjectListComponent implements OnInit {
     });
   }
 
+  // --- EDITAR PROYECTO ---
+  openEditModal(project: Project, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.selectedProjectForEdit.set(project);
+    this.editForm.patchValue({
+      name: project.name,
+      description: project.description || '',
+      basePackage: project.basePackage,
+      javaVersion: project.javaVersion,
+      springBootVersion: project.springBootVersion,
+    });
+    this.isEditModalOpen.set(true);
+  }
+
+  closeEditModal(): void {
+    this.isEditModalOpen.set(false);
+    this.selectedProjectForEdit.set(null);
+  }
+
+  onEditSubmit(): void {
+    const project = this.selectedProjectForEdit();
+    if (!project || this.editForm.invalid) {
+      this.editForm.markAllAsTouched();
+      return;
+    }
+
+    this.projectService.updateProject(project.id, this.editForm.value).subscribe({
+      next: () => {
+        this.closeEditModal();
+      },
+    });
+  }
+
   openDiagram(project: Project): void {
     this.router.navigate(['/diagram'], {
       queryParams: { projectId: project.id, projectName: project.name },
     });
   }
 
+  // --- GESTIÓN DE MIEMBROS ---
   openMembersModal(project: Project, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.selectedProjectForMembers.set(project);
@@ -155,7 +201,6 @@ export class ProjectListComponent implements OnInit {
     this.projectService.addMember(project.id, this.addMemberForm.value).subscribe({
       next: () => {
         this.addMemberForm.reset({ email: '', role: 'EDITOR' });
-        // Recargar proyecto para actualizar lista
         this.projectService.getProject(project.id).subscribe((p) => {
           this.selectedProjectForMembers.set(p);
         });
