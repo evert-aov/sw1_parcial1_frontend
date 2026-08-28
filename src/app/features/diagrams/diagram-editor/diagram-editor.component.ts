@@ -111,39 +111,37 @@ export class DiagramEditorComponent implements OnInit {
   // Opciones de multiplicidad estándar
   readonly multiplicityOptions: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];
 
-  // Tipos de datos predefinidos
+  // Tipos de datos estrictamente predefinidos y compatibles con Backend (Spring Boot / NestJS / SQL)
   readonly predefinedTypes: string[] = [
-    'uuid',
+    'UUID',
     'String',
-    'int',
     'Integer',
     'Long',
     'Boolean',
-    'Float',
     'Double',
+    'Float',
     'BigDecimal',
+    'LocalDate',
+    'LocalDateTime',
     'Date',
-    'DateTime',
-    'Timestamp',
-    'byte[]',
-    'Object',
-    'void',
-    'List<String>',
-    'List<uuid>',
-    'List<Object>'
+    'Text',
+    'byte[]'
   ];
 
   // Tipos de retorno para métodos
   readonly predefinedReturnTypes: string[] = [
     'void',
+    'UUID',
     'String',
-    'uuid',
-    'int',
+    'Integer',
+    'Long',
     'Boolean',
+    'Double',
     'BigDecimal',
-    'Date',
-    'Object',
-    'List<Object>'
+    'LocalDate',
+    'LocalDateTime',
+    'List<Object>',
+    'Object'
   ];
 
   // Lista de relaciones del Toolbox
@@ -310,8 +308,15 @@ export class DiagramEditorComponent implements OnInit {
             height: n.height || undefined,
             isAnchor: n.isAnchor,
             assocMainConnId: n.assocMainConnId || undefined,
-            attributes: n.attributes || [],
-            methods: n.methods || [],
+            attributes: (n.attributes || []).map(a => ({
+              name: a.name,
+              type: this.normalizeDataType(a.type)
+            })),
+            methods: (n.methods || []).map(m => ({
+              name: m.name,
+              parameters: m.parameters,
+              returnType: this.normalizeReturnType(m.returnType)
+            })),
           })),
         );
       }
@@ -338,6 +343,18 @@ export class DiagramEditorComponent implements OnInit {
         this.updateConnectionEndpoints();
       }, 50);
     });
+  }
+
+  normalizeDataType(type: string): string {
+    if (!type) return 'String';
+    const found = this.predefinedTypes.find(t => t.toLowerCase() === type.trim().toLowerCase());
+    return found || 'String';
+  }
+
+  normalizeReturnType(type: string): string {
+    if (!type) return 'void';
+    const found = this.predefinedReturnTypes.find(rt => rt.toLowerCase() === type.trim().toLowerCase());
+    return found || 'void';
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -1039,7 +1056,16 @@ export class DiagramEditorComponent implements OnInit {
         if (project.nodes && project.connections) {
           this.nodes.set(project.nodes.map(n => ({
             ...n,
-            width: n.width || 220
+            width: n.width || 220,
+            attributes: (n.attributes || []).map(a => ({
+              name: a.name,
+              type: this.normalizeDataType(a.type)
+            })),
+            methods: (n.methods || []).map(m => ({
+              name: m.name,
+              parameters: m.parameters,
+              returnType: this.normalizeReturnType(m.returnType)
+            }))
           })));
           this.connections.set(project.connections);
           if (project.defaultLineStyle) {
@@ -1063,7 +1089,16 @@ export class DiagramEditorComponent implements OnInit {
       if (project.nodes && project.connections) {
         this.nodes.set(project.nodes.map(n => ({
           ...n,
-          width: n.width || 220
+          width: n.width || 220,
+          attributes: (n.attributes || []).map(a => ({
+            name: a.name,
+            type: this.normalizeDataType(a.type)
+          })),
+          methods: (n.methods || []).map(m => ({
+            name: m.name,
+            parameters: m.parameters,
+            returnType: this.normalizeReturnType(m.returnType)
+          }))
         })));
         this.connections.set(project.connections);
         if (project.defaultLineStyle) {

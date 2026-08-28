@@ -1,4 +1,4 @@
-<div class="h-screen w-screen flex flex-col bg-[#F3F4F6] select-none overflow-hidden font-sans">
+<div class="h-screen w-screen flex flex-col bg-[#F9F7F5] select-none overflow-hidden font-sans">
 
   <!-- BARRA SUPERIOR ESTILO ENTERPRISE ARCHITECT -->
   <header class="bg-gradient-to-b from-slate-700 to-slate-800 text-white border-b border-slate-900 shadow-md px-3 py-1.5 flex flex-wrap items-center justify-between gap-3 z-30">
@@ -235,15 +235,12 @@
 
     </aside>
 
-    <!-- LIENZO DE CLASES UML (FOBLEX FLOW) -->
+    <!-- LIENZO DE CLASES UML (FOBLEX FLOW) CON CUADRÍCULA PUNTEADA -->
     <div
       #flowContainer
       (mousemove)="onCanvasMouseMove($event)"
       (click)="onCanvasBackgroundClick()"
-      class="flex-1 relative w-full h-full bg-[#FCFDFE] cursor-default overflow-hidden">
-
-      <!-- Patrón de cuadrícula punteada -->
-      <div class="absolute inset-0 bg-[radial-gradient(#6B5A52_0.75px,transparent_0.75px)] [background-size:16px_16px] opacity-15 pointer-events-none z-0"></div>
+      class="flex-1 relative w-full h-full uml-canvas-container cursor-default overflow-hidden">
 
       <f-flow
         fDraggable
@@ -352,7 +349,7 @@
                     [position]="0.12"
                     (dblclick)="openEditConnModal(conn, $event)"
                     title="Doble clic para editar relación"
-                    class="pointer-events-auto bg-[#FAF1EA] px-1 py-0.2 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800 cursor-pointer">
+                    class="pointer-events-auto bg-[#FAF1EA] px-1.5 py-0.5 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800 cursor-pointer">
                     {{ conn.sourceMultiplicity }}
                   </div>
                 }
@@ -364,7 +361,7 @@
                     [position]="0.5"
                     (dblclick)="openEditConnModal(conn, $event)"
                     title="Doble clic para editar relación"
-                    class="bg-[#FAF1EA] px-1.5 py-0.5 border border-[#6B5A52] rounded shadow-xs text-[11px] font-mono text-slate-900 pointer-events-auto cursor-pointer">
+                    class="bg-[#FAF1EA] px-2 py-0.5 border border-[#6B5A52] rounded shadow-xs text-[11px] font-mono font-medium text-slate-900 pointer-events-auto cursor-pointer">
                     {{ conn.name }}
                   </div>
                 }
@@ -376,7 +373,7 @@
                     [position]="0.88"
                     (dblclick)="openEditConnModal(conn, $event)"
                     title="Doble clic para editar relación"
-                    class="pointer-events-auto bg-[#FAF1EA] px-1 py-0.2 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800 cursor-pointer">
+                    class="pointer-events-auto bg-[#FAF1EA] px-1.5 py-0.5 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800 cursor-pointer">
                     {{ conn.targetMultiplicity }}
                   </div>
                 }
@@ -562,7 +559,7 @@
             />
           </div>
 
-          <!-- Atributos -->
+          <!-- Atributos con Tipos Estrictamente Predefinidos -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
               <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">Atributos (-)</label>
@@ -580,16 +577,19 @@
                     type="text"
                     [(ngModel)]="attr.name"
                     placeholder="nombre"
-                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium"
+                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
                   />
                   <span class="text-[#6B5A52] font-mono">:</span>
-                  <input
-                    type="text"
+                  
+                  <!-- Selector de Tipos Backend Predefinidos -->
+                  <select
                     [(ngModel)]="attr.type"
-                    list="uml-data-types"
-                    placeholder="tipo"
-                    class="w-32 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono"
-                  />
+                    class="w-36 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52] cursor-pointer">
+                    @for (t of predefinedTypes; track t) {
+                      <option [value]="t">{{ t }}</option>
+                    }
+                  </select>
+
                   <button
                     (click)="removeAttributeFromEditingNode($index)"
                     title="Eliminar atributo"
@@ -601,7 +601,7 @@
             </div>
           </div>
 
-          <!-- Métodos -->
+          <!-- Métodos con Retorno Estrictamente Predefinido -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
               <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">Operaciones / Métodos (+)</label>
@@ -619,23 +619,26 @@
                     type="text"
                     [(ngModel)]="m.name"
                     placeholder="método"
-                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium"
+                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
                   />
                   <span class="text-[#6B5A52] font-mono text-xs">(</span>
                   <input
                     type="text"
                     [(ngModel)]="m.parameters"
                     placeholder="params"
-                    class="w-24 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono"
+                    class="w-24 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
                   />
                   <span class="text-[#6B5A52] font-mono text-xs">):</span>
-                  <input
-                    type="text"
+                  
+                  <!-- Selector de Retorno Predefinido -->
+                  <select
                     [(ngModel)]="m.returnType"
-                    list="uml-return-types"
-                    placeholder="retorno"
-                    class="w-24 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono"
-                  />
+                    class="w-32 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52] cursor-pointer">
+                    @for (rt of predefinedReturnTypes; track rt) {
+                      <option [value]="rt">{{ rt }}</option>
+                    }
+                  </select>
+
                   <button
                     (click)="removeMethodFromEditingNode($index)"
                     title="Eliminar método"
@@ -768,18 +771,6 @@
   <datalist id="multiplicity-options">
     @for (m of multiplicityOptions; track m) {
       <option [value]="m"></option>
-    }
-  </datalist>
-
-  <datalist id="uml-data-types">
-    @for (t of predefinedTypes; track t) {
-      <option [value]="t"></option>
-    }
-  </datalist>
-
-  <datalist id="uml-return-types">
-    @for (rt of predefinedReturnTypes; track rt) {
-      <option [value]="rt"></option>
     }
   </datalist>
 
