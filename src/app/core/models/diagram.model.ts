@@ -36,10 +36,12 @@ export interface UmlClassNode {
 
 export interface UmlConnection {
   id: string;
-  from: string;
-  to: string;
+  sourceNodeId?: string;
+  targetNodeId?: string;
   sourceId: string;
   targetId: string;
+  from?: string;
+  to?: string;
   type: UmlRelationshipType;
   lineStyle?: UmlLineStyle;
   name?: string;
