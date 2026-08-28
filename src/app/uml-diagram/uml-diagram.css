@@ -1,0 +1,58 @@
+::ng-deep f-flow .f-node {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background-color: #F2EBE6 !important;
+  border: 1.5px solid #6B5A52 !important;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.18) !important;
+  box-sizing: border-box !important;
+}
+
+::ng-deep f-flow .uml-connector-point.uml-connector-active {
+  background-color: #6628d9 !important;
+  border: 1px solid #121111 !important;
+}
+
+::ng-deep f-flow f-connection.uml-relation-realization path[f-connection-path],
+::ng-deep f-flow f-connection-for-create.uml-relation-realization path[f-connection-path],
+::ng-deep f-flow .uml-relation-realization path[f-connection-path],
+::ng-deep f-flow f-connection.uml-relation-dependency path[f-connection-path],
+::ng-deep f-flow f-connection-for-create.uml-relation-dependency path[f-connection-path],
+::ng-deep f-flow .uml-relation-dependency path[f-connection-path],
+::ng-deep f-flow f-connection.uml-relation-association_class path[f-connection-path],
+::ng-deep f-flow f-connection-for-create.uml-relation-association_class path[f-connection-path],
+::ng-deep f-flow .uml-relation-association_class path[f-connection-path] {
+  stroke-dasharray: 6 4 !important;
+}
+
+::ng-deep f-flow svg marker polygon.uml-marker-hollow,
+::ng-deep f-flow svg defs marker polygon.uml-marker-hollow,
+::ng-deep f-flow marker polygon.uml-marker-hollow,
+::ng-deep f-flow .f-marker polygon.uml-marker-hollow,
+::ng-deep f-flow .uml-marker-hollow,
+::ng-deep polygon.uml-marker-hollow {
+  fill: #ffffff !important;
+  stroke: #1E293B !important;
+  stroke-width: 1.5px !important;
+}
+
+::ng-deep f-flow svg marker polygon.uml-marker-filled,
+::ng-deep f-flow svg defs marker polygon.uml-marker-filled,
+::ng-deep f-flow marker polygon.uml-marker-filled,
+::ng-deep f-flow .f-marker polygon.uml-marker-filled,
+::ng-deep f-flow .uml-marker-filled,
+::ng-deep polygon.uml-marker-filled {
+  fill: #1E293B !important;
+  stroke: #1E293B !important;
+  stroke-width: 1.5px !important;
+}
+
+::ng-deep f-flow svg marker polyline.uml-marker-open,
+::ng-deep f-flow svg defs marker polyline.uml-marker-open,
+::ng-deep f-flow marker polyline.uml-marker-open,
+::ng-deep f-flow .f-marker polyline.uml-marker-open,
+::ng-deep f-flow .uml-marker-open,
+::ng-deep polyline.uml-marker-open {
+  fill: none !important;
+  stroke: #1E293B !important;
+  stroke-width: 1.8px !important;
+}

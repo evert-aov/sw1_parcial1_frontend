@@ -1,3 +1,114 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
+
+/* Quitar contenedor/marco y sockets azules por defecto de foblex flow */
+:root {
+  --ff-connection-drag-handle-stroke: transparent;
+  --ff-connection-drag-handle-fill: transparent;
+  --ff-node-padding: 0px !important;
+  --ff-node-border-radius: 0px !important;
+  --ff-node-border-color: transparent !important;
+  --ff-node-background-color: #F2EBE6 !important;
+  --ff-node-shadow: none !important;
+}
+
+f-flow .f-node {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background-color: #F2EBE6 !important;
+  border: 1.5px solid #6B5A52 !important;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.18) !important;
+  box-sizing: border-box !important;
+}
+
+f-flow .f-connector-source-target,
+f-flow .f-connector-source,
+f-flow .f-connector-target,
+f-flow .f-connector-connected,
+f-flow .f-node-output-connected,
+f-flow .f-node-input-connected,
+f-flow .f-connector-connectable {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* Quitar círculo azul (drag handle) en el extremo de las conexiones */
+f-flow .f-connection-drag-handle,
+f-flow circle[f-connection-drag-handle-end],
+f-flow circle[f-connection-drag-handle-start],
+f-flow circle.f-connection-drag-handle {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  stroke: transparent !important;
+  fill: transparent !important;
+  pointer-events: none !important;
+}
+
+/* Ocultar flecha nativa de datalist para evitar que recorte o tape el texto del tipo */
+f-flow input::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Estilos UML 2.5 para líneas de conexión */
+f-flow f-connection.uml-relation-realization path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-realization path[f-connection-path],
+f-flow .uml-relation-realization path[f-connection-path],
+f-flow f-connection.uml-relation-dependency path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-dependency path[f-connection-path],
+f-flow .uml-relation-dependency path[f-connection-path],
+f-flow f-connection.uml-relation-association_class path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-association_class path[f-connection-path],
+f-flow .uml-relation-association_class path[f-connection-path] {
+  stroke-dasharray: 6 4 !important;
+}
+
+f-flow f-connection.uml-relation-association path[f-connection-path],
+f-flow f-connection.uml-relation-generalization path[f-connection-path],
+f-flow f-connection.uml-relation-composition path[f-connection-path],
+f-flow f-connection.uml-relation-aggregation path[f-connection-path] {
+  stroke-dasharray: none !important;
+}
+
+/* Forzar relleno blanco / hueco en marcadores UML (anula el fill: currentColor de Foblex Flow) */
+f-flow svg marker polygon.uml-marker-hollow,
+f-flow svg defs marker polygon.uml-marker-hollow,
+f-flow marker polygon.uml-marker-hollow,
+f-flow .f-marker polygon.uml-marker-hollow,
+f-flow .uml-marker-hollow,
+polygon.uml-marker-hollow {
+  fill: #ffffff !important;
+  stroke: #1E293B !important;
+  stroke-width: 1.5px !important;
+}
+
+/* Forzar relleno negro sólido en Composición */
+f-flow svg marker polygon.uml-marker-filled,
+f-flow svg defs marker polygon.uml-marker-filled,
+f-flow marker polygon.uml-marker-filled,
+f-flow .f-marker polygon.uml-marker-filled,
+f-flow .uml-marker-filled,
+polygon.uml-marker-filled {
+  fill: #1E293B !important;
+  stroke: #1E293B !important;
+  stroke-width: 1.5px !important;
+}
+
+/* Forzar trazo abierto sin relleno en Dependencia */
+f-flow svg marker polyline.uml-marker-open,
+f-flow svg defs marker polyline.uml-marker-open,
+f-flow marker polyline.uml-marker-open,
+f-flow .f-marker polyline.uml-marker-open,
+f-flow .uml-marker-open,
+polyline.uml-marker-open {
+  fill: none !important;
+  stroke: #1E293B !important;
+  stroke-width: 1.8px !important;
+}
