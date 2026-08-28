@@ -99,7 +99,7 @@ export class DiagramEditorComponent implements OnInit {
   // Por defecto: Modo Seleccionar / Mover
   selectedRelationType = signal<UmlRelationshipType | null>(null);
 
-  // Estilo de línea por defecto
+  // Estilo de línea por defecto para nuevas conexiones
   defaultLineStyle = signal<UmlLineStyle>('segment');
 
   // Nodo origen seleccionado en el flujo clic-a-clic
@@ -109,10 +109,10 @@ export class DiagramEditorComponent implements OnInit {
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Opciones de multiplicidad estándar
-  multiplicityOptions: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];
+  readonly multiplicityOptions: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];
 
   // Tipos de datos predefinidos
-  predefinedTypes: string[] = [
+  readonly predefinedTypes: string[] = [
     'uuid',
     'String',
     'int',
@@ -134,7 +134,7 @@ export class DiagramEditorComponent implements OnInit {
   ];
 
   // Tipos de retorno para métodos
-  predefinedReturnTypes: string[] = [
+  readonly predefinedReturnTypes: string[] = [
     'void',
     'String',
     'uuid',
@@ -146,18 +146,120 @@ export class DiagramEditorComponent implements OnInit {
     'List<Object>'
   ];
 
+  // Lista de relaciones del Toolbox
+  readonly relationTypes: { id: UmlRelationshipType; label: string; icon: string; description: string }[] = [
+    { 
+      id: 'association', 
+      label: 'Association', 
+      icon: '───', 
+      description: 'Relación estructural simple entre dos clases' 
+    },
+    { 
+      id: 'generalization', 
+      label: 'Generalization', 
+      icon: '─▷', 
+      description: 'Herencia: la subclase hereda de la superclase' 
+    },
+    { 
+      id: 'realization', 
+      label: 'Realization', 
+      icon: '┈▷', 
+      description: 'Implementación de una interfaz' 
+    },
+    { 
+      id: 'composition', 
+      label: 'Composition', 
+      icon: '◆──', 
+      description: 'Pertenencia fuerte del todo a las partes' 
+    },
+    { 
+      id: 'aggregation', 
+      label: 'Aggregation', 
+      icon: '◇──', 
+      description: 'Pertenencia débil o contenedor independiente' 
+    },
+    { 
+      id: 'dependency', 
+      label: 'Dependency', 
+      icon: '┈>', 
+      description: 'Uso temporal o dependencia débil' 
+    },
+    { 
+      id: 'association_class', 
+      label: 'Association Class', 
+      icon: '─*─┄[C]', 
+      description: 'Relación muchos a muchos con clase intermedia' 
+    },
+  ];
+
+  // Estilos de enrutamiento
+  readonly lineStyles: { id: UmlLineStyle; label: string }[] = [
+    { id: 'segment', label: 'Ortogonal (Segment)' },
+    { id: 'straight', label: 'Directa (Straight)' },
+    { id: 'bezier', label: 'Curva Bezier' },
+    { id: 'adaptive-curve', label: 'Curva Adaptativa' },
+  ];
+
+  // Acordeones del toolbox
+  isRelationshipsOpen = signal<boolean>(true);
+  isLineStylesOpen = signal<boolean>(true);
+
+  // Modales de edición
+  isEditNodeModalOpen = signal<boolean>(false);
+  isEditConnModalOpen = signal<boolean>(false);
+  editingNode = signal<UmlClassNode | null>(null);
+  editingConnection = signal<UmlConnection | null>(null);
+
   // Modal JSON
   showJsonModal = signal<boolean>(false);
   jsonContent = signal<string>('');
   jsonModalMode = signal<'import' | 'export'>('export');
 
-  // Acordeones de la barra lateral
-  isRelationshipsOpen = signal<boolean>(true);
-  isElementsOpen = signal<boolean>(true);
-
   // Nodos y Conexiones del Diagrama
-  nodes = signal<UmlClassNode[]>([]);
-  connections = signal<UmlConnection[]>([]);
+  nodes = signal<UmlClassNode[]>([
+    {
+      id: 'node_1',
+      name: 'Usuario',
+      position: { x: 80, y: 80 },
+      width: 220,
+      attributes: [
+        { name: 'id', type: 'UUID' },
+        { name: 'email', type: 'String' },
+        { name: 'password_hash', type: 'String' },
+      ],
+      methods: [
+        { name: 'login', parameters: 'pass: String', returnType: 'Boolean' },
+      ],
+    },
+    {
+      id: 'node_2',
+      name: 'Role',
+      position: { x: 440, y: 80 },
+      width: 220,
+      attributes: [
+        { name: 'id', type: 'UUID' },
+        { name: 'role_name', type: 'String' },
+      ],
+      methods: [
+        { name: 'hasPermission', parameters: 'perm: String', returnType: 'Boolean' },
+      ],
+    },
+  ]);
+
+  connections = signal<UmlConnection[]>([
+    {
+      id: 'conn_1_2',
+      sourceNodeId: 'node_1',
+      targetNodeId: 'node_2',
+      sourceId: 'node_1_right',
+      targetId: 'node_2_left',
+      type: 'association',
+      lineStyle: 'segment',
+      sourceMultiplicity: '1',
+      targetMultiplicity: '0..*',
+      name: 'posee',
+    },
+  ]);
 
   ngOnInit(): void {
     this.route.queryParams.subscribe((params) => {
@@ -187,6 +289,8 @@ export class DiagramEditorComponent implements OnInit {
         });
       }
     });
+
+    this.updateConnectionEndpoints();
   }
 
   loadDiagramFromBackend(diagramId: string): void {
@@ -232,9 +336,6 @@ export class DiagramEditorComponent implements OnInit {
 
       setTimeout(() => {
         this.updateConnectionEndpoints();
-        for (const n of this.nodes()) {
-          this.autoAdjustWidth(n);
-        }
       }, 50);
     });
   }
@@ -243,6 +344,8 @@ export class DiagramEditorComponent implements OnInit {
   handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       this.setPointerMode();
+      this.closeEditNodeModal();
+      this.closeEditConnModal();
       this.showJsonModal.set(false);
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
@@ -283,8 +386,8 @@ export class DiagramEditorComponent implements OnInit {
           type: c.type,
           lineStyle: c.lineStyle || this.defaultLineStyle(),
           name: c.name || null,
-          sourceMultiplicity: c.sourceMultiplicity || '1',
-          targetMultiplicity: c.targetMultiplicity || '0..*',
+          sourceMultiplicity: c.sourceMultiplicity || '',
+          targetMultiplicity: c.targetMultiplicity || '',
           assocAnchorNodeId: c.assocAnchorNodeId || null,
         };
       }),
@@ -298,8 +401,33 @@ export class DiagramEditorComponent implements OnInit {
     });
   }
 
-  // Redimensionamiento interactivo de la tabla
-  onResizeMouseDown(node: UmlClassNode, event: MouseEvent) {
+  // --- SELECCIÓN Y HERRAMIENTAS DEL TOOLBOX ---
+  selectRelationType(type: UmlRelationshipType): void {
+    if (this.selectedRelationType() === type) {
+      this.selectedRelationType.set(null);
+      this.selectedSourceNodeId.set(null);
+    } else {
+      this.selectedRelationType.set(type);
+      this.selectedSourceNodeId.set(null);
+    }
+  }
+
+  setPointerMode(): void {
+    this.selectedRelationType.set(null);
+    this.selectedSourceNodeId.set(null);
+  }
+
+  setDefaultLineStyle(style: UmlLineStyle): void {
+    this.defaultLineStyle.set(style);
+  }
+
+  // --- ARRASTRE Y REDIMENSIONAMIENTO ---
+  onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
+    node.position = newPosition;
+    this.updateConnectionEndpoints();
+  }
+
+  onResizeMouseDown(node: UmlClassNode, event: MouseEvent): void {
     event.stopPropagation();
     event.preventDefault();
     const startX = event.clientX;
@@ -311,9 +439,9 @@ export class DiagramEditorComponent implements OnInit {
     const onMouseMove = (moveEvent: MouseEvent) => {
       const dx = (moveEvent.clientX - startX) / scale;
       const dy = (moveEvent.clientY - startY) / scale;
-      node.width = Math.max(160, Math.round(startWidth + dx));
+      node.width = Math.max(180, Math.round(startWidth + dx));
       if (Math.abs(dy) > 5) {
-        node.height = Math.max(40, Math.round(startHeight + dy));
+        node.height = Math.max(50, Math.round(startHeight + dy));
       }
       this.nodes.update(list => [...list]);
       this.updateConnectionEndpoints();
@@ -328,8 +456,8 @@ export class DiagramEditorComponent implements OnInit {
     window.addEventListener('mouseup', onMouseUp);
   }
 
-  // Seguimiento continuo del cursor
-  onCanvasMouseMove(event: MouseEvent) {
+  // --- SEGUIMIENTO Y LÍNEA GUÍA ---
+  onCanvasMouseMove(event: MouseEvent): void {
     if (!this.selectedSourceNodeId()) return;
 
     const container = this.flowContainerRef?.nativeElement;
@@ -349,17 +477,15 @@ export class DiagramEditorComponent implements OnInit {
     this.mouseCanvasPos.set({ x: canvasX, y: canvasY });
   }
 
-  // Obtiene el nodo origen seleccionado actualmente
   getSelectedSourceNode(): UmlClassNode | undefined {
     const id = this.selectedSourceNodeId();
     if (!id) return undefined;
     return this.nodes().find(n => n.id === id);
   }
 
-  // Calcula el punto de anclaje de salida más cercano de Tabla A
   getPreviewSourcePoint(sourceNode: UmlClassNode, mousePos: { x: number; y: number }): { x: number; y: number } {
     const nodeWidth = sourceNode.width || 220;
-    const nodeHeight = sourceNode.height || 60;
+    const nodeHeight = this.getNodeHeight(sourceNode);
     const cx = sourceNode.position.x + nodeWidth / 2;
     const cy = sourceNode.position.y + nodeHeight / 2;
     const dx = mousePos.x - cx;
@@ -380,7 +506,6 @@ export class DiagramEditorComponent implements OnInit {
     }
   }
 
-  // Trazo SVG interactivo que conecta Tabla A con el cursor
   getPreviewPath(): string {
     const sourceNode = this.getSelectedSourceNode();
     if (!sourceNode) return '';
@@ -395,45 +520,23 @@ export class DiagramEditorComponent implements OnInit {
       const midX = (start.x + mouse.x) / 2;
       return `M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${mouse.y}, ${mouse.x} ${mouse.y}`;
     } else {
-      // Ortogonal segment
       const midX = (start.x + mouse.x) / 2;
       return `M ${start.x} ${start.y} L ${midX} ${start.y} L ${midX} ${mouse.y} L ${mouse.x} ${mouse.y}`;
     }
   }
 
-  // Ángulo del símbolo en la punta del cursor
-  getPreviewTargetAngle(): number {
-    const sourceNode = this.getSelectedSourceNode();
-    if (!sourceNode) return 0;
-    const mouse = this.mouseCanvasPos();
-    const start = this.getPreviewSourcePoint(sourceNode, mouse);
-    const style = this.defaultLineStyle();
-
-    if (style === 'segment') {
-      return mouse.x >= start.x ? 0 : 180;
-    }
-
-    const angleRad = Math.atan2(mouse.y - start.y, mouse.x - start.x);
-    return angleRad * (180 / Math.PI);
-  }
-
-  // Obtiene la altura precisa de un nodo de clase
   getNodeHeight(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
-    if (node.height && node.height > 0) {
-      return node.height;
-    }
-    const el = document.querySelector(`[fConnectorId="${node.id}"]`)?.closest('.f-node') as HTMLElement;
-    if (el && el.offsetHeight > 0) {
-      return el.offsetHeight;
-    }
-    const headerH = 32;
-    const attrH = Math.max(28, (node.attributes?.length || 0) * 24 + 28);
-    const methodH = Math.max(28, (node.methods?.length || 0) * 24 + 28);
-    return headerH + attrH + methodH + 4;
+    if (node.height && node.height > 0) return node.height;
+    const headerH = 34;
+    const attrCount = (node.attributes || []).length;
+    const methodCount = (node.methods || []).length;
+    const attrH = attrCount > 0 ? (attrCount * 22) + 12 : 28;
+    const methodH = methodCount > 0 ? (methodCount * 22) + 12 : 28;
+    return headerH + attrH + methodH;
   }
 
-  // Calcula lados óptimos entre dos tablas
+  // --- CONECTORES Y ENRUTAMIENTO ---
   getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
     const sWidth = sourceNode.isAnchor ? 0 : (sourceNode.width || 220);
     const sHeight = sourceNode.isAnchor ? 0 : this.getNodeHeight(sourceNode);
@@ -473,7 +576,6 @@ export class DiagramEditorComponent implements OnInit {
     };
   }
 
-  // Coordenadas absolutas del punto de conexión (top/bottom/left/right) de una tabla
   getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
     const w = node.isAnchor ? 0 : (node.width || 220);
     const h = this.getNodeHeight(node);
@@ -491,11 +593,10 @@ export class DiagramEditorComponent implements OnInit {
     }
   }
 
-  // Actualiza los extremos de todas las conexiones y reubica los anclas de Association Class en el punto medio
-  updateConnectionEndpoints() {
+  updateConnectionEndpoints(): void {
     const nodeMap = new Map(this.nodes().map(n => [n.id, n]));
 
-    // 1. Actualizar posiciones de los nodos ancla invisibles en el punto medio de sus conexiones principales
+    // 1. Actualizar posiciones de nodos ancla invisibles en el punto medio
     for (const conn of this.connections()) {
       if (conn.assocAnchorNodeId) {
         const anchorNode = nodeMap.get(conn.assocAnchorNodeId);
@@ -518,7 +619,7 @@ export class DiagramEditorComponent implements OnInit {
       }
     }
 
-    // 2. Actualizar extremos de todas las conexiones
+    // 2. Actualizar extremos de las conexiones
     this.connections.update(conns => conns.map(conn => {
       if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
         const sourceNode = nodeMap.get(conn.sourceNodeId);
@@ -553,185 +654,55 @@ export class DiagramEditorComponent implements OnInit {
     }));
   }
 
-  // Manejador al mover una tabla
-  onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }) {
-    node.position = newPosition;
-    this.updateConnectionEndpoints();
-  }
-
-  // Alternar herramienta de relación en la barra lateral
-  toggleRelationType(type: UmlRelationshipType) {
-    if (this.selectedRelationType() === type) {
-      this.selectedRelationType.set(null);
-      this.selectedSourceNodeId.set(null);
-    } else {
-      this.selectedRelationType.set(type);
-    }
-  }
-
-  // Modo Selección / Mover
-  setPointerMode() {
-    this.selectedRelationType.set(null);
-    this.selectedSourceNodeId.set(null);
-  }
-
-  // Genera automáticamente la clase de asociación intermedia y las conexiones correspondientes (muchos a muchos)
-  createAssociationClassBetween(sourceNode: UmlClassNode, targetNode: UmlClassNode) {
-    const timestamp = Date.now();
-    const assocClassId = `node_${timestamp}_assoc`;
-    const anchorNodeId = `node_${timestamp}_anchor`;
-    const mainConnId = `conn_${timestamp}_main`;
-    const linkConnId = `conn_${timestamp}_link`;
-
-    const sWidth = sourceNode.width || 220;
-    const sHeight = sourceNode.height || 60;
-    const tWidth = targetNode.width || 220;
-    const tHeight = targetNode.height || 60;
-
-    const sCenter = { x: sourceNode.position.x + sWidth / 2, y: sourceNode.position.y + sHeight / 2 };
-    const tCenter = { x: targetNode.position.x + tWidth / 2, y: targetNode.position.y + tHeight / 2 };
-
-    const dx = tCenter.x - sCenter.x;
-    const dy = tCenter.y - sCenter.y;
-
-    const mainOptimal = this.getOptimalConnectorId(sourceNode, targetNode);
-    const sourceSide = mainOptimal.sourceId.split('_').pop() || 'right';
-    const targetSide = mainOptimal.targetId.split('_').pop() || 'left';
-
-    const p1 = this.getConnectorPoint(sourceNode, sourceSide);
-    const p2 = this.getConnectorPoint(targetNode, targetSide);
-    const midX = Math.round((p1.x + p2.x) / 2);
-    const midY = Math.round((p1.y + p2.y) / 2);
-
-    let assocPos = { x: Math.round(midX + 160), y: Math.round(midY - 30) };
-    if (Math.abs(dx) > Math.abs(dy)) {
-      // Disposición horizontal -> colocar clase de asociación abajo
-      assocPos = { x: Math.round(midX - 100), y: Math.round(midY + 130) };
-    } else {
-      // Disposición vertical -> colocar clase de asociación a la derecha
-      assocPos = { x: Math.round(midX + 160), y: Math.round(midY - 30) };
-    }
-
-    // 1. Nodo visible: Clase de Asociación intermedia
-    const assocNode: UmlClassNode = {
-      id: assocClassId,
-      name: `${sourceNode.name}_${targetNode.name}`,
-      position: assocPos,
-      width: 200,
-      attributes: [],
-      methods: []
-    };
-
-    // 2. Nodo ancla invisible en el punto medio de la línea principal
-    const anchorNode: UmlClassNode = {
-      id: anchorNodeId,
-      name: '',
-      position: { x: midX, y: midY },
-      width: 1,
-      height: 1,
-      attributes: [],
-      methods: [],
-      isAnchor: true,
-      assocMainConnId: mainConnId
-    };
-
-    // 3. Conexión principal sólida entre Tabla A y Tabla B (* a *)
-    const mainConn: UmlConnection = {
-      id: mainConnId,
-      sourceNodeId: sourceNode.id,
-      targetNodeId: targetNode.id,
-      sourceId: mainOptimal.sourceId,
-      targetId: mainOptimal.targetId,
-      type: 'association',
-      lineStyle: this.defaultLineStyle(),
-      sourceMultiplicity: '*',
-      targetMultiplicity: '*',
-      assocAnchorNodeId: anchorNodeId
-    };
-
-    // 4. Enlace discontinuo que SALE de la línea principal (desde el ancla) hacia la Clase de Asociación
-    const linkOptimal = this.getOptimalConnectorId(anchorNode, assocNode);
-    const assocConn: UmlConnection = {
-      id: linkConnId,
-      sourceNodeId: anchorNodeId,
-      targetNodeId: assocClassId,
-      sourceId: anchorNodeId,
-      targetId: linkOptimal.targetId,
-      type: 'association_class',
-      lineStyle: 'straight',
-      sourceMultiplicity: '',
-      targetMultiplicity: ''
-    };
-
-    this.nodes.update(list => [...list, assocNode, anchorNode]);
-    this.connections.update(conns => [...conns, mainConn, assocConn]);
-    this.selectedSourceNodeId.set(null);
-    this.updateConnectionEndpoints();
-  }
-
-  // Clic en cualquier parte de la tabla para seleccionar Tabla A o Tabla B
-  onTableClick(nodeId: string, event: MouseEvent) {
+  // --- CREACIÓN DE RELACIONES ---
+  onTableClick(nodeId: string, event: MouseEvent): void {
     const activeRel = this.selectedRelationType();
-    
-    if (!activeRel) {
-      return;
-    }
+    if (!activeRel) return;
 
     event.stopPropagation();
     const currentSource = this.selectedSourceNodeId();
 
     if (currentSource === null) {
-      // Paso 1: Seleccionar como Tabla A (Origen)
       this.selectedSourceNodeId.set(nodeId);
       this.onCanvasMouseMove(event);
     } else if (currentSource === nodeId) {
-      // Deseleccionar
       this.selectedSourceNodeId.set(null);
     } else {
-      // Paso 2: Conectar con Tabla B (Destino)
       const nodeMap = new Map(this.nodes().map(n => [n.id, n]));
       const sourceNode = nodeMap.get(currentSource);
       const targetNode = nodeMap.get(nodeId);
 
-      if (activeRel === 'association_class' && sourceNode && targetNode) {
+      if (!sourceNode || !targetNode) return;
+
+      if (activeRel === 'association_class') {
         this.createAssociationClassBetween(sourceNode, targetNode);
         return;
       }
 
-      let sourceId = currentSource + '_right';
-      let targetId = nodeId + '_left';
-
-      if (sourceNode && targetNode) {
-        const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-        sourceId = optimal.sourceId;
-        targetId = optimal.targetId;
-      }
-
-      const isAssocClass = activeRel === 'association_class';
+      const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
       const newConnection: UmlConnection = {
-        id: `conn_${Date.now()}`,
+        id: `conn_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         sourceNodeId: currentSource,
         targetNodeId: nodeId,
-        sourceId: sourceId,
-        targetId: targetId,
+        sourceId: optimal.sourceId,
+        targetId: optimal.targetId,
         type: activeRel,
         lineStyle: this.defaultLineStyle(),
-        sourceMultiplicity: isAssocClass ? '*' : '1',
-        targetMultiplicity: isAssocClass ? '*' : '0..*'
+        sourceMultiplicity: this.getDefaultMultiplicity(activeRel, 'source'),
+        targetMultiplicity: this.getDefaultMultiplicity(activeRel, 'target'),
       };
 
       this.connections.update(conns => [...conns, newConnection]);
       this.selectedSourceNodeId.set(null);
+      this.updateConnectionEndpoints();
     }
   }
 
-  // Cancelar selección al hacer clic en el lienzo vacío
-  onCanvasBackgroundClick() {
+  onCanvasBackgroundClick(): void {
     this.selectedSourceNodeId.set(null);
   }
 
-  // Conexión creada mediante arrastre directo (drag-to-connect)
-  onConnectionCreated(event: FCreateConnectionEvent) {
+  onConnectionCreated(event: FCreateConnectionEvent): void {
     if (!event.targetId) return;
 
     const relType = this.selectedRelationType() || 'association';
@@ -756,17 +727,16 @@ export class DiagramEditorComponent implements OnInit {
       targetId = optimal.targetId;
     }
 
-    const isAssocClass = relType === 'association_class';
     const newConnection: UmlConnection = {
-      id: `conn_${Date.now()}`,
+      id: `conn_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       sourceNodeId: baseSourceId,
       targetNodeId: baseTargetId,
       sourceId: sourceId,
       targetId: targetId,
       type: relType,
       lineStyle: this.defaultLineStyle(),
-      sourceMultiplicity: isAssocClass ? '*' : '1',
-      targetMultiplicity: isAssocClass ? '*' : '0..*'
+      sourceMultiplicity: this.getDefaultMultiplicity(relType, 'source'),
+      targetMultiplicity: this.getDefaultMultiplicity(relType, 'target'),
     };
 
     this.connections.update(conns => [...conns, newConnection]);
@@ -774,32 +744,118 @@ export class DiagramEditorComponent implements OnInit {
     this.updateConnectionEndpoints();
   }
 
-  // Agregar nueva Clase limpia (solo nombre, sin atributos ni operaciones por default)
-  addClass() {
+  createAssociationClassBetween(sourceNode: UmlClassNode, targetNode: UmlClassNode): void {
     const timestamp = Date.now();
-    const count = this.nodes().filter(n => !n.isAnchor).length + 1;
-    const newId = `node_${timestamp}`;
+    const assocClassId = `node_${timestamp}_assoc`;
+    const anchorNodeId = `node_${timestamp}_anchor`;
+    const mainConnId = `conn_${timestamp}_main`;
+    const linkConnId = `conn_${timestamp}_link`;
 
-    const newNode: UmlClassNode = {
-      id: newId,
-      name: `Class${count}`,
-      position: { 
-        x: 180 + (this.nodes().length * 35) % 350, 
-        y: 140 + (this.nodes().length * 35) % 250 
-      },
+    const mainOptimal = this.getOptimalConnectorId(sourceNode, targetNode);
+    const sourceSide = mainOptimal.sourceId.split('_').pop() || 'right';
+    const targetSide = mainOptimal.targetId.split('_').pop() || 'left';
+
+    const p1 = this.getConnectorPoint(sourceNode, sourceSide);
+    const p2 = this.getConnectorPoint(targetNode, targetSide);
+    const midX = Math.round((p1.x + p2.x) / 2);
+    const midY = Math.round((p1.y + p2.y) / 2);
+
+    const assocNode: UmlClassNode = {
+      id: assocClassId,
+      name: `${sourceNode.name}${targetNode.name}`,
+      position: { x: Math.round(midX - 110), y: Math.round(midY + 130) },
       width: 220,
+      attributes: [
+        { name: `${sourceNode.name.toLowerCase()}_id`, type: 'UUID' },
+        { name: `${targetNode.name.toLowerCase()}_id`, type: 'UUID' },
+        { name: 'fecha_registro', type: 'Date' },
+      ],
+      methods: [],
+    };
+
+    const anchorNode: UmlClassNode = {
+      id: anchorNodeId,
+      name: '',
+      position: { x: midX, y: midY },
+      width: 1,
+      height: 1,
       attributes: [],
-      methods: []
+      methods: [],
+      isAnchor: true,
+      assocMainConnId: mainConnId,
+    };
+
+    const mainConn: UmlConnection = {
+      id: mainConnId,
+      sourceNodeId: sourceNode.id,
+      targetNodeId: targetNode.id,
+      sourceId: mainOptimal.sourceId,
+      targetId: mainOptimal.targetId,
+      type: 'association',
+      lineStyle: this.defaultLineStyle(),
+      sourceMultiplicity: '*',
+      targetMultiplicity: '*',
+      assocAnchorNodeId: anchorNodeId,
+    };
+
+    const assocConn: UmlConnection = {
+      id: linkConnId,
+      sourceNodeId: anchorNodeId,
+      targetNodeId: assocClassId,
+      sourceId: anchorNodeId,
+      targetId: `${assocClassId}_top`,
+      type: 'association_class',
+      lineStyle: 'straight',
+      sourceMultiplicity: '',
+      targetMultiplicity: '',
+    };
+
+    this.nodes.update(list => [...list, assocNode, anchorNode]);
+    this.connections.update(conns => [...conns, mainConn, assocConn]);
+    this.selectedSourceNodeId.set(null);
+    this.updateConnectionEndpoints();
+  }
+
+  private getDefaultMultiplicity(type: UmlRelationshipType, side: 'source' | 'target'): string {
+    switch (type) {
+      case 'composition':
+        return side === 'source' ? '1' : '1..*';
+      case 'aggregation':
+        return side === 'source' ? '1' : '0..*';
+      case 'generalization':
+      case 'realization':
+        return '';
+      default:
+        return side === 'source' ? '1' : '0..*';
+    }
+  }
+
+  // --- GESTIÓN DE CLASES ---
+  addClass(): void {
+    const currentCount = this.nodes().filter(n => !n.isAnchor).length + 1;
+    const offset = (this.nodes().length * 35) % 250;
+    const newNode: UmlClassNode = {
+      id: `node_${Date.now()}`,
+      name: `Class${currentCount}`,
+      position: { x: 180 + offset, y: 140 + offset },
+      width: 220,
+      attributes: [
+        { name: 'id', type: 'UUID' },
+        { name: 'nombre', type: 'String' },
+      ],
+      methods: [
+        { name: 'getId', parameters: '', returnType: 'UUID' },
+      ],
     };
 
     this.nodes.update(list => [...list, newNode]);
+    this.updateConnectionEndpoints();
   }
 
-  // Eliminar Clase
-  removeClass(nodeId: string) {
+  removeClass(nodeId: string, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
     const nodesToRemove = new Set<string>([nodeId]);
 
-    // Buscar anclas vinculadas
     for (const conn of this.connections()) {
       if (conn.sourceNodeId === nodeId || conn.targetNodeId === nodeId) {
         if (conn.assocAnchorNodeId) {
@@ -822,111 +878,113 @@ export class DiagramEditorComponent implements OnInit {
     }
   }
 
-  // Auto-ajustar ancho de la tabla según contenido de atributos, métodos y nombre
-  autoAdjustWidth(node: UmlClassNode) {
-    const CHAR_W = 8.0;
-    let maxLineW = (node.name?.length || 0) * CHAR_W + 60;
-
-    for (const attr of node.attributes) {
-      const nameLen = attr.name?.length || 0;
-      const typeLen = attr.type?.length || 0;
-      const lineLen = nameLen + typeLen + 6;
-      maxLineW = Math.max(maxLineW, lineLen * CHAR_W + 60);
-    }
-    for (const m of node.methods) {
-      const nameLen = m.name?.length || 0;
-      const paramLen = m.parameters?.length || 0;
-      const returnLen = m.returnType?.length || 0;
-      const lineLen = nameLen + paramLen + returnLen + 8;
-      maxLineW = Math.max(maxLineW, lineLen * CHAR_W + 60);
-    }
-
-    const required = Math.max(220, Math.ceil(maxLineW));
-    if (required > (node.width || 220)) {
-      node.width = required;
-      this.nodes.update(list => [...list]);
-      this.updateConnectionEndpoints();
-    }
+  // --- MODAL DE EDICIÓN DE CLASE (DOBLE CLIC) ---
+  openEditNodeModal(node: UmlClassNode, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    if (node.isAnchor) return;
+    this.editingNode.set(JSON.parse(JSON.stringify(node)));
+    this.isEditNodeModalOpen.set(true);
   }
 
-  onNodeContentChange(node: UmlClassNode) {
-    this.autoAdjustWidth(node);
+  closeEditNodeModal(): void {
+    this.isEditNodeModalOpen.set(false);
+    this.editingNode.set(null);
   }
 
-  // Atributos
-  addAttribute(node: UmlClassNode) {
-    const attrCount = node.attributes.length + 1;
-    node.attributes.push({ name: `attribute${attrCount}`, type: 'String' });
-    this.autoAdjustWidth(node);
-    this.nodes.update(list => [...list]);
+  saveEditedNode(): void {
+    const edited = this.editingNode();
+    if (!edited) return;
+
+    this.nodes.update(nodes =>
+      nodes.map(n => (n.id === edited.id ? edited : n))
+    );
     this.updateConnectionEndpoints();
+    this.closeEditNodeModal();
   }
 
-  removeAttribute(node: UmlClassNode, index: number) {
+  addAttributeToEditingNode(): void {
+    const node = this.editingNode();
+    if (!node) return;
+    node.attributes.push({ name: `attr${node.attributes.length + 1}`, type: 'String' });
+    this.editingNode.set({ ...node });
+  }
+
+  removeAttributeFromEditingNode(index: number): void {
+    const node = this.editingNode();
+    if (!node) return;
     node.attributes.splice(index, 1);
-    this.nodes.update(list => [...list]);
-    this.updateConnectionEndpoints();
+    this.editingNode.set({ ...node });
   }
 
-  // Métodos
-  addMethod(node: UmlClassNode) {
-    const opCount = node.methods.length + 1;
-    node.methods.push({ name: `operation${opCount}`, parameters: '', returnType: 'void' });
-    this.autoAdjustWidth(node);
-    this.nodes.update(list => [...list]);
-    this.updateConnectionEndpoints();
+  addMethodToEditingNode(): void {
+    const node = this.editingNode();
+    if (!node) return;
+    node.methods.push({ name: `operacion${node.methods.length + 1}`, parameters: '', returnType: 'void' });
+    this.editingNode.set({ ...node });
   }
 
-  removeMethod(node: UmlClassNode, index: number) {
+  removeMethodFromEditingNode(index: number): void {
+    const node = this.editingNode();
+    if (!node) return;
     node.methods.splice(index, 1);
-    this.nodes.update(list => [...list]);
-    this.updateConnectionEndpoints();
+    this.editingNode.set({ ...node });
   }
 
-  // Eliminar conexión
-  removeConnection(connId: string) {
+  // --- MODAL DE EDICIÓN DE CONEXIÓN (DOBLE CLIC) ---
+  openEditConnModal(conn: UmlConnection, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.editingConnection.set(JSON.parse(JSON.stringify(conn)));
+    this.isEditConnModalOpen.set(true);
+  }
+
+  closeEditConnModal(): void {
+    this.isEditConnModalOpen.set(false);
+    this.editingConnection.set(null);
+  }
+
+  saveEditedConnection(): void {
+    const edited = this.editingConnection();
+    if (!edited) return;
+
+    this.connections.update(conns =>
+      conns.map(c => (c.id === edited.id ? edited : c))
+    );
+    this.updateConnectionEndpoints();
+    this.closeEditConnModal();
+  }
+
+  removeConnection(connId: string, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
     this.connections.update(conns => conns.filter(c => c.id !== connId));
   }
 
-  // Cambiar tipo de relación
-  changeConnectionType(conn: UmlConnection, newType: UmlRelationshipType) {
-    conn.type = newType;
-    this.connections.update(list => [...list]);
-  }
-
-  // Cambiar estilo de línea
-  changeConnectionStyle(conn: UmlConnection, newStyle: UmlLineStyle) {
-    conn.lineStyle = newStyle;
-    this.connections.update(list => [...list]);
-  }
-
-  // Zoom y Vista
-  zoomIn() {
+  // --- ZOOM Y VISTA ---
+  zoomIn(): void {
     if (this.canvas) {
       this.canvas.setScale(this.canvas.getScale() * 1.15);
     }
   }
 
-  zoomOut() {
+  zoomOut(): void {
     if (this.canvas) {
       this.canvas.setScale(this.canvas.getScale() * 0.85);
     }
   }
 
-  resetView() {
+  resetView(): void {
     if (this.canvas) {
       this.canvas.resetScaleAndCenter();
     }
   }
 
-  fitView() {
+  fitView(): void {
     if (this.canvas) {
       this.canvas.fitToScreen({ x: 40, y: 40 });
     }
   }
 
-  // Exportar / Importar
-  openExportModal() {
+  // --- EXPORTAR / IMPORTAR ---
+  openExportModal(): void {
     const project: UmlDiagramProject = {
       version: '1.0.0',
       name: this.currentDiagramName(),
@@ -940,13 +998,13 @@ export class DiagramEditorComponent implements OnInit {
     this.showJsonModal.set(true);
   }
 
-  openImportModal() {
+  openImportModal(): void {
     this.jsonContent.set('');
     this.jsonModalMode.set('import');
     this.showJsonModal.set(true);
   }
 
-  downloadJsonFile() {
+  downloadJsonFile(): void {
     const project: UmlDiagramProject = {
       version: '1.0.0',
       name: this.currentDiagramName(),
@@ -964,11 +1022,11 @@ export class DiagramEditorComponent implements OnInit {
     downloadAnchor.remove();
   }
 
-  triggerFileInput() {
+  triggerFileInput(): void {
     this.fileInput?.nativeElement.click();
   }
 
-  onFileSelected(event: Event) {
+  onFileSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
     if (!file) return;
@@ -988,10 +1046,6 @@ export class DiagramEditorComponent implements OnInit {
             this.defaultLineStyle.set(project.defaultLineStyle);
           }
           this.updateConnectionEndpoints();
-          for (const n of this.nodes()) {
-            this.autoAdjustWidth(n);
-          }
-          this.nodes.update(list => [...list]);
         } else {
           alert('El archivo JSON no contiene un diagrama de clases válido.');
         }
@@ -1003,7 +1057,7 @@ export class DiagramEditorComponent implements OnInit {
     reader.readAsText(file);
   }
 
-  applyImportedJson() {
+  applyImportedJson(): void {
     try {
       const project = JSON.parse(this.jsonContent()) as UmlDiagramProject;
       if (project.nodes && project.connections) {
@@ -1016,10 +1070,6 @@ export class DiagramEditorComponent implements OnInit {
           this.defaultLineStyle.set(project.defaultLineStyle);
         }
         this.updateConnectionEndpoints();
-        for (const n of this.nodes()) {
-          this.autoAdjustWidth(n);
-        }
-        this.nodes.update(list => [...list]);
         this.showJsonModal.set(false);
       } else {
         alert('Estructura JSON inválida: faltan nodos o conexiones.');
@@ -1029,13 +1079,13 @@ export class DiagramEditorComponent implements OnInit {
     }
   }
 
-  copyJsonToClipboard() {
+  copyJsonToClipboard(): void {
     navigator.clipboard.writeText(this.jsonContent()).then(() => {
       alert('¡JSON copiado al portapapeles!');
     });
   }
 
-  clearDiagram() {
+  clearDiagram(): void {
     if (confirm('¿Estás seguro de que deseas limpiar el diagrama?')) {
       this.nodes.set([]);
       this.connections.set([]);

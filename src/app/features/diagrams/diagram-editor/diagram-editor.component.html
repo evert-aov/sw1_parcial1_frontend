@@ -78,7 +78,7 @@
       <div class="flex items-center bg-slate-800 rounded border border-slate-600 p-0.5 gap-1">
         <button
           (click)="openExportModal()"
-          title="Ver JSON"
+          title="Ver JSON del AST"
           class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-2 py-1 rounded flex items-center gap-1 cursor-pointer">
           <ng-icon name="heroDocumentText" class="text-sm text-slate-300"></ng-icon>
           JSON
@@ -130,10 +130,10 @@
   </header>
 
   <!-- CONTENIDO PRINCIPAL: TOOLBOX LATERAL + LIENZO DE CLASES -->
-  <div class="flex-1 flex overflow-hidden">
+  <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- TOOLBOX LATERAL -->
-    <aside class="w-60 bg-[#EAEAEA] border-r border-[#B8B8B8] flex flex-col shrink-0 select-none text-xs text-slate-800 shadow-sm overflow-y-auto">
+    <!-- TOOLBOX LATERAL (DISEÑO RICO Y ESTRUCTURADO) -->
+    <aside class="w-60 bg-[#EAEAEA] border-r border-[#B8B8B8] flex flex-col shrink-0 select-none text-xs text-slate-800 shadow-sm overflow-y-auto z-20">
 
       <!-- Panel 1: Class Relationships -->
       <div class="border-b border-[#C8C8C8]">
@@ -145,7 +145,7 @@
             Class Relationships
           </span>
           @if (selectedRelationType()) {
-            <span (click)="$event.stopPropagation(); setPointerMode()" title="Deseleccionar relación" class="text-[10px] text-slate-700 hover:text-red-600 font-normal">
+            <span (click)="$event.stopPropagation(); setPointerMode()" title="Deseleccionar relación" class="text-[10px] text-slate-700 hover:text-red-600 font-normal cursor-pointer">
               (deseleccionar)
             </span>
           }
@@ -157,135 +157,80 @@
             <!-- Herramienta Puntero / Mover -->
             <button
               (click)="setPointerMode()"
-              [ngClass]="{'bg-white border-slate-400 font-semibold shadow-xs': selectedRelationType() === null, 'hover:bg-[#E8EEF5] text-slate-600': selectedRelationType() !== null}"
-              class="w-full text-left px-2 py-1.5 rounded flex items-center gap-2 border border-transparent transition-colors mb-1 cursor-pointer">
+              [ngClass]="{'bg-white border-slate-400 font-semibold shadow-xs text-slate-900': selectedRelationType() === null, 'hover:bg-[#E8EEF5] text-slate-600 border-transparent': selectedRelationType() !== null}"
+              class="w-full text-left px-2 py-1.5 rounded flex items-center gap-2 border transition-colors mb-1 cursor-pointer">
               <ng-icon name="heroCursorArrowRays" class="text-sm text-slate-700 shrink-0"></ng-icon>
-              <span>Seleccionar / Mover</span>
-            </button>
-
-            <!-- Associate -->
-            <button
-              (click)="toggleRelationType('association')"
-              [ngClass]="{'bg-slate-200 border-slate-400 text-slate-900 font-semibold shadow-inner': selectedRelationType() === 'association'}"
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-[#E8EEF5] flex items-center justify-between border border-transparent transition-colors cursor-pointer">
-              <div class="flex items-center gap-2">
-                <span class="w-4 h-0.5 bg-slate-700 inline-block"></span>
-                <span>Associate</span>
+              <div>
+                <div class="text-xs font-medium text-slate-800">Seleccionar / Mover</div>
+                <div class="text-[9.5px] text-slate-500">Mueve clases libremente</div>
               </div>
-              @if (selectedRelationType() === 'association') {
-                <ng-icon name="heroCheck" class="text-xs text-slate-700"></ng-icon>
-              }
             </button>
 
-            <!-- Generalize -->
-            <button
-              (click)="toggleRelationType('generalization')"
-              [ngClass]="{'bg-slate-200 border-slate-400 text-slate-900 font-semibold shadow-inner': selectedRelationType() === 'generalization'}"
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-[#E8EEF5] flex items-center justify-between border border-transparent transition-colors cursor-pointer">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-mono font-bold text-slate-700">◁—</span>
-                <span>Generalize</span>
-              </div>
-              @if (selectedRelationType() === 'generalization') {
-                <ng-icon name="heroCheck" class="text-xs text-slate-700"></ng-icon>
-              }
-            </button>
+            <div class="border-t border-slate-200 my-1"></div>
 
-            <!-- Compose -->
-            <button
-              (click)="toggleRelationType('composition')"
-              [ngClass]="{'bg-slate-200 border-slate-400 text-slate-900 font-semibold shadow-inner': selectedRelationType() === 'composition'}"
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-[#E8EEF5] flex items-center justify-between border border-transparent transition-colors cursor-pointer">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-mono font-bold text-slate-900">◆—</span>
-                <span>Compose</span>
-              </div>
-              @if (selectedRelationType() === 'composition') {
-                <ng-icon name="heroCheck" class="text-xs text-slate-700"></ng-icon>
-              }
-            </button>
-
-            <!-- Aggregate -->
-            <button
-              (click)="toggleRelationType('aggregation')"
-              [ngClass]="{'bg-slate-200 border-slate-400 text-slate-900 font-semibold shadow-inner': selectedRelationType() === 'aggregation'}"
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-[#E8EEF5] flex items-center justify-between border border-transparent transition-colors cursor-pointer">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-mono font-bold text-slate-700">◇—</span>
-                <span>Aggregate</span>
-              </div>
-              @if (selectedRelationType() === 'aggregation') {
-                <ng-icon name="heroCheck" class="text-xs text-slate-700"></ng-icon>
-              }
-            </button>
-
-            <!-- Realize -->
-            <button
-              (click)="toggleRelationType('realization')"
-              [ngClass]="{'bg-slate-200 border-slate-400 text-slate-900 font-semibold shadow-inner': selectedRelationType() === 'realization'}"
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-[#E8EEF5] flex items-center justify-between border border-transparent transition-colors cursor-pointer">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-mono font-bold text-slate-700">◁--</span>
-                <span>Realize</span>
-              </div>
-              @if (selectedRelationType() === 'realization') {
-                <ng-icon name="heroCheck" class="text-xs text-slate-700"></ng-icon>
-              }
-            </button>
-
-            <!-- Dependency -->
-            <button
-              (click)="toggleRelationType('dependency')"
-              [ngClass]="{'bg-slate-200 border-slate-400 text-slate-900 font-semibold shadow-inner': selectedRelationType() === 'dependency'}"
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-[#E8EEF5] flex items-center justify-between border border-transparent transition-colors cursor-pointer">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-mono font-bold text-slate-700">&lt;--</span>
-                <span>Dependency</span>
-              </div>
-              @if (selectedRelationType() === 'dependency') {
-                <ng-icon name="heroCheck" class="text-xs text-slate-700"></ng-icon>
-              }
-            </button>
-
-            <!-- Association Class -->
-            <button
-              (click)="toggleRelationType('association_class')"
-              [ngClass]="{'bg-slate-200 border-slate-400 text-slate-900 font-semibold shadow-inner': selectedRelationType() === 'association_class'}"
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-[#E8EEF5] flex items-center justify-between border border-transparent transition-colors cursor-pointer">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-mono font-bold text-slate-700">--- [C]</span>
-                <span>Assoc Class</span>
-              </div>
-              @if (selectedRelationType() === 'association_class') {
-                <ng-icon name="heroCheck" class="text-xs text-slate-700"></ng-icon>
-              }
-            </button>
-
+            <!-- Lista de relaciones UML 2.5 -->
+            @for (rel of relationTypes; track rel.id) {
+              <button
+                (click)="selectRelationType(rel.id)"
+                [ngClass]="{
+                  'bg-blue-100 border-blue-500 font-semibold shadow-xs text-blue-900': selectedRelationType() === rel.id,
+                  'hover:bg-[#E8EEF5] text-slate-700 border-transparent': selectedRelationType() !== rel.id
+                }"
+                class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer group">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="font-mono font-bold text-xs shrink-0 text-slate-800 w-11 text-center bg-white/80 py-0.5 border border-slate-300 rounded-[2px]">
+                    {{ rel.icon }}
+                  </span>
+                  <div class="truncate">
+                    <div class="text-[11.5px] leading-tight font-medium">{{ rel.label }}</div>
+                    <div class="text-[9.5px] text-slate-500 truncate" [title]="rel.description">{{ rel.description }}</div>
+                  </div>
+                </div>
+              </button>
+            }
           </div>
         }
       </div>
 
-      <!-- Panel 2: Common Elements -->
+      <!-- Panel 2: Line Style (Routing) General -->
       <div class="border-b border-[#C8C8C8]">
         <div
-          (click)="isElementsOpen.set(!isElementsOpen())"
+          (click)="isLineStylesOpen.set(!isLineStylesOpen())"
           class="bg-gradient-to-b from-[#EFEFEF] to-[#DCDCDC] px-2.5 py-1.5 font-bold text-[#1E293B] flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] hover:from-[#F5F5F5] hover:to-[#E2E2E2]">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
-            <ng-icon [name]="isElementsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-600"></ng-icon>
-            Common Elements
+            <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-600"></ng-icon>
+            Line Style (Routing)
           </span>
         </div>
 
-        @if (isElementsOpen()) {
+        @if (isLineStylesOpen()) {
           <div class="p-1.5 space-y-1 bg-[#F5F5F5]">
-            <button
-              (click)="addClass()"
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-[#E8EEF5] flex items-center gap-2 border border-slate-300 bg-white shadow-xs font-medium text-slate-900 transition-all hover:border-slate-500 cursor-pointer">
-              <ng-icon name="heroPlus" class="text-sm text-slate-700 shrink-0 font-bold"></ng-icon>
-              <span>Class</span>
-            </button>
+            @for (style of lineStyles; track style.id) {
+              <button
+                (click)="setDefaultLineStyle(style.id)"
+                [ngClass]="{
+                  'bg-white border-slate-400 font-semibold shadow-xs text-slate-900': defaultLineStyle() === style.id,
+                  'hover:bg-[#E8EEF5] text-slate-600 border-transparent': defaultLineStyle() !== style.id
+                }"
+                class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer">
+                <span class="text-xs">{{ style.label }}</span>
+                @if (defaultLineStyle() === style.id) {
+                  <ng-icon name="heroCheck" class="text-xs text-blue-600 font-bold"></ng-icon>
+                }
+              </button>
+            }
           </div>
         }
+      </div>
+
+      <!-- Botón Agregar Nueva Clase UML -->
+      <div class="p-3 mt-auto bg-[#DFDFDF] border-t border-[#C0C0C0]">
+        <button
+          (click)="addClass()"
+          class="w-full py-2 bg-[#6B5A52] hover:bg-[#52443E] active:translate-y-0.5 text-white font-mono text-xs font-bold tracking-wider uppercase border border-[#2A201B] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer flex items-center justify-center gap-1.5">
+          <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+          <span>Nueva Clase UML</span>
+        </button>
       </div>
 
     </aside>
@@ -297,10 +242,14 @@
       (click)="onCanvasBackgroundClick()"
       class="flex-1 relative w-full h-full bg-[#FCFDFE] cursor-default overflow-hidden">
 
-      <!-- Patrón de cuadrícula punteada en todo el fondo del lienzo -->
+      <!-- Patrón de cuadrícula punteada -->
       <div class="absolute inset-0 bg-[radial-gradient(#6B5A52_0.75px,transparent_0.75px)] [background-size:16px_16px] opacity-15 pointer-events-none z-0"></div>
 
-      <f-flow fDraggable (fCreateConnection)="onConnectionCreated($event)" class="block absolute inset-0 h-full w-full">
+      <f-flow
+        fDraggable
+        (fCreateConnection)="onConnectionCreated($event)"
+        class="block absolute inset-0 h-full w-full">
+
         <f-canvas fZoom>
 
           <!-- GUÍA VISUAL INTERACTIVA EN TIEMPO REAL (CLIC A CLIC) -->
@@ -348,7 +297,7 @@
             }
           </f-connection-for-create>
 
-          <!-- RENDERIZADO DE CONEXIONES EXISTENTES CON ENRUTAMIENTO DINÁMICO Y MULTIPLICIDAD -->
+          <!-- CONEXIONES EXISTENTES CON ENRUTAMIENTO, MARCADORES Y DOBLE CLIC PARA EDITAR -->
           <ng-container ngProjectAs="[fConnections]">
             @for (conn of connections(); track conn.id) {
               <f-connection
@@ -357,140 +306,91 @@
                 [fType]="conn.lineStyle || defaultLineStyle()"
                 [fBehavior]="'floating'"
                 [fReassignDisabled]="true"
+                (dblclick)="openEditConnModal(conn, $event)"
                 [class]="'group cursor-pointer uml-relation-' + conn.type"
                 class="group cursor-pointer">
 
-                <!-- Herencia / Generalización: Línea sólida + Triángulo blanco cerrado al final -->
+                <!-- Herencia / Generalización: Triángulo blanco cerrado al final -->
                 @if (conn.type === 'generalization') {
                   <svg fMarker type="end-all" [width]="16" [height]="14" [refX]="16" [refY]="7" viewBox="0 0 16 14">
                     <polygon class="uml-marker-hollow" points="0,1 16,7 0,13" fill="#ffffff" stroke="#1E293B" stroke-width="1.5" stroke-linejoin="round"/>
                   </svg>
                 }
 
-                <!-- Realización: Línea discontinua (dashed) + Triángulo blanco cerrado al final -->
+                <!-- Realización: Línea discontinua + Triángulo blanco cerrado al final -->
                 @if (conn.type === 'realization') {
                   <svg fMarker type="end-all" [width]="16" [height]="14" [refX]="16" [refY]="7" viewBox="0 0 16 14">
                     <polygon class="uml-marker-hollow" points="0,1 16,7 0,13" fill="#ffffff" stroke="#1E293B" stroke-width="1.5" stroke-linejoin="round"/>
                   </svg>
                 }
 
-                <!-- Dependencia: Línea discontinua (dashed) + Flecha abierta al final -->
+                <!-- Dependencia: Línea discontinua + Flecha abierta al final -->
                 @if (conn.type === 'dependency') {
                   <svg fMarker type="end-all" [width]="14" [height]="12" [refX]="14" [refY]="6" viewBox="0 0 14 12">
                     <polyline class="uml-marker-open" points="0,1 12,6 0,11" fill="none" stroke="#1E293B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 }
 
-                <!-- Composición: Línea sólida + Rombo negro relleno en el inicio -->
+                <!-- Composición: Rombo negro relleno al inicio -->
                 @if (conn.type === 'composition') {
                   <svg fMarker type="start-all" [width]="18" [height]="12" [refX]="0" [refY]="6" viewBox="0 0 18 12">
                     <polygon class="uml-marker-filled" points="0,6 9,1 18,6 9,11" fill="#1E293B" stroke="#1E293B" stroke-width="1.5" stroke-linejoin="round"/>
                   </svg>
                 }
 
-                <!-- Agregación: Línea sólida + Rombo blanco hueco en el inicio -->
+                <!-- Agregación: Rombo blanco hueco al inicio -->
                 @if (conn.type === 'aggregation') {
                   <svg fMarker type="start-all" [width]="18" [height]="12" [refX]="0" [refY]="6" viewBox="0 0 18 12">
                     <polygon class="uml-marker-hollow" points="0,6 9,1 18,6 9,11" fill="#ffffff" stroke="#1E293B" stroke-width="1.5" stroke-linejoin="round"/>
                   </svg>
                 }
 
-                <!-- Multiplicidad Origen (Cerca de Tabla A) - Ocultar en enlaces de clase de asociación -->
-                @if (conn.type !== 'association_class') {
-                  <div fConnectionContent [position]="0.12" class="pointer-events-auto bg-[#FAF1EA] px-1 py-0.2 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800">
-                    <input
-                      [(ngModel)]="conn.sourceMultiplicity"
-                      (pointerdown)="$event.stopPropagation()"
-                      (mousedown)="$event.stopPropagation()"
-                      list="multiplicity-options"
-                      placeholder="1"
-                      class="w-10 bg-transparent text-center focus:outline-none cursor-pointer">
+                <!-- Multiplicidad Origen -->
+                @if (conn.type !== 'association_class' && conn.sourceMultiplicity) {
+                  <div
+                    fConnectionContent
+                    [position]="0.12"
+                    (dblclick)="openEditConnModal(conn, $event)"
+                    title="Doble clic para editar relación"
+                    class="pointer-events-auto bg-[#FAF1EA] px-1 py-0.2 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800 cursor-pointer">
+                    {{ conn.sourceMultiplicity }}
                   </div>
                 }
 
-                <!-- Nombre opcional en el centro de la relación -->
+                <!-- Etiqueta / Verbo en el centro -->
                 @if (conn.name) {
-                  <div fConnectionContent [position]="0.5" class="bg-[#FAF1EA] px-1.5 py-0.5 border border-[#6B5A52] rounded shadow-xs text-[11px] font-mono text-slate-900 pointer-events-auto">
-                    <input
-                      [(ngModel)]="conn.name"
-                      (pointerdown)="$event.stopPropagation()"
-                      (mousedown)="$event.stopPropagation()"
-                      placeholder="nombre"
-                      class="bg-transparent text-center focus:outline-none w-16 text-xs">
+                  <div
+                    fConnectionContent
+                    [position]="0.5"
+                    (dblclick)="openEditConnModal(conn, $event)"
+                    title="Doble clic para editar relación"
+                    class="bg-[#FAF1EA] px-1.5 py-0.5 border border-[#6B5A52] rounded shadow-xs text-[11px] font-mono text-slate-900 pointer-events-auto cursor-pointer">
+                    {{ conn.name }}
                   </div>
                 }
 
-                <!-- Multiplicidad Destino (Cerca de Tabla B) - Ocultar en enlaces de clase de asociación -->
-                @if (conn.type !== 'association_class') {
-                  <div fConnectionContent [position]="0.88" class="pointer-events-auto bg-[#FAF1EA] px-1 py-0.2 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800">
-                    <input
-                      [(ngModel)]="conn.targetMultiplicity"
-                      (pointerdown)="$event.stopPropagation()"
-                      (mousedown)="$event.stopPropagation()"
-                      list="multiplicity-options"
-                      placeholder="*"
-                      class="w-10 bg-transparent text-center focus:outline-none cursor-pointer">
+                <!-- Multiplicidad Destino -->
+                @if (conn.type !== 'association_class' && conn.targetMultiplicity) {
+                  <div
+                    fConnectionContent
+                    [position]="0.88"
+                    (dblclick)="openEditConnModal(conn, $event)"
+                    title="Doble clic para editar relación"
+                    class="pointer-events-auto bg-[#FAF1EA] px-1 py-0.2 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800 cursor-pointer">
+                    {{ conn.targetMultiplicity }}
                   </div>
                 }
-
-                <!-- Menú flotante al pasar el mouse sobre la conexión (Vertical/Compacto) -->
-                <div fConnectionContent [position]="0.5" [offset]="-22" class="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-0.5 bg-slate-900/95 backdrop-blur-xs text-white rounded-md p-1 shadow-xl border border-slate-700 pointer-events-auto text-[10px] min-w-[95px] z-50">
-
-                  <!-- Fila 1: Selector Tipo de Relación + Botón Eliminar -->
-                  <div class="flex items-center gap-1">
-                    <select
-                      [ngModel]="conn.type"
-                      (ngModelChange)="changeConnectionType(conn, $event)"
-                      (pointerdown)="$event.stopPropagation()"
-                      (mousedown)="$event.stopPropagation()"
-                      title="Tipo de relación"
-                      class="bg-slate-800 text-white text-[10px] rounded px-1 py-0.5 border border-slate-700 cursor-pointer flex-1 focus:outline-none">
-                      <option value="association">Associate</option>
-                      <option value="generalization">Generalize</option>
-                      <option value="composition">Compose</option>
-                      <option value="aggregation">Aggregate</option>
-                      <option value="realization">Realize</option>
-                      <option value="dependency">Dependency</option>
-                      <option value="association_class">Assoc Class</option>
-                    </select>
-
-                    <button
-                      (click)="removeConnection(conn.id)"
-                      (pointerdown)="$event.stopPropagation()"
-                      (mousedown)="$event.stopPropagation()"
-                      title="Eliminar Conexión"
-                      class="text-red-400 hover:text-red-200 hover:bg-red-950/50 p-0.5 rounded flex items-center justify-center shrink-0 cursor-pointer">
-                      <ng-icon name="heroTrash" class="text-xs"></ng-icon>
-                    </button>
-                  </div>
-
-                  <!-- Fila 2: Selector Estilo de Línea (debajo del tipo de relación) -->
-                  <div class="flex items-center">
-                    <select
-                      [ngModel]="conn.lineStyle || defaultLineStyle()"
-                      (ngModelChange)="changeConnectionStyle(conn, $event)"
-                      (pointerdown)="$event.stopPropagation()"
-                      (mousedown)="$event.stopPropagation()"
-                      title="Estilo de línea"
-                      class="bg-slate-800 text-slate-200 text-[9.5px] rounded px-1 py-0.5 border border-slate-700 cursor-pointer w-full focus:outline-none">
-                      <option value="segment">Auto Routing</option>
-                      <option value="straight">Direct</option>
-                      <option value="bezier">Curved</option>
-                      <option value="adaptive-curve">Custom</option>
-                    </select>
-                  </div>
-
-                </div>
 
               </f-connection>
             }
           </ng-container>
 
-          <!-- RENDERIZADO DE TABLAS / CLASES UML (ENTERPRISE ARCHITECT) -->
+          <!-- NODOS DE CLASE UML (DOBLE CLIC PARA MODAL DE EDICIÓN) -->
           <ng-container ngProjectAs="[fNodes]">
             @for (node of nodes(); track node.id) {
+
+              <!-- Nodo Ancla Invisible para Association Class -->
               @if (node.isAnchor) {
-                <!-- Nodo ancla invisible en el punto medio de la línea principal -->
                 <div
                   fNode
                   [fNodeDraggingDisabled]="true"
@@ -498,20 +398,26 @@
                   class="w-0 h-0 opacity-0 pointer-events-none absolute">
                   <div fConnector fConnectorType="source-target" [fConnectorId]="node.id" class="w-0 h-0"></div>
                 </div>
-              } @else {
+              }
+
+              <!-- Nodo de Clase UML Estándar -->
+              @else {
                 <div
                   fNode
+                  fDragHandle
                   [fNodeDraggingDisabled]="selectedRelationType() !== null"
                   [(fNodePosition)]="node.position"
                   (fNodePositionChange)="onNodePositionChange(node, $event)"
+                  (dblclick)="openEditNodeModal(node, $event)"
                   [style.width.px]="node.width"
                   [style.minWidth.px]="node.width"
                   [style.minHeight.px]="node.height || null"
                   [ngClass]="{
                     'ring-2 ring-[#6B5A52] shadow-xl': selectedSourceNodeId() === node.id,
-                    'cursor-crosshair': selectedRelationType() !== null
+                    'cursor-crosshair': selectedRelationType() !== null,
+                    'cursor-move': selectedRelationType() === null
                   }"
-                  class="font-sans text-[#2A201B] select-none">
+                  class="font-sans text-[#2A201B] select-none relative group/node">
 
                   <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
                   <div
@@ -526,7 +432,7 @@
                     (click)="onTableClick(node.id, $event)">
                   </div>
 
-                  <!-- 4 PUNTOS DE REFERENCIA GUÍA (PERMANENTES EN EL DOM PARA MANTENER LA CONSISTENCIA DE LAS CONEXIONES) -->
+                  <!-- 4 PUNTOS DE REFERENCIA GUÍA -->
                   <div
                     fConnector
                     [fConnectorId]="node.id + '_top'"
@@ -568,161 +474,51 @@
                     class="uml-connector-point absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
 
-                  <!-- 1. CABECERA DE LA TABLA (DRAG HANDLE & NOMBRE EDITABLE) -->
-                  <div
-                    fDragHandle
-                    class="flex items-center justify-between px-2.5 py-1 bg-transparent border-b-[1.5px] border-[#6B5A52] cursor-grab active:cursor-grabbing">
-                    
-                    <input
-                      [(ngModel)]="node.name"
-                      (ngModelChange)="onNodeContentChange(node)"
-                      (click)="$event.stopPropagation()"
-                      (pointerdown)="$event.stopPropagation()"
-                      (mousedown)="$event.stopPropagation()"
-                      (keydown)="$event.stopPropagation()"
-                      class="bg-transparent font-bold text-xs text-center text-[#2A201B] w-full focus:outline-none focus:bg-white/60 rounded px-1 tracking-tight cursor-text select-text"
-                      placeholder="ClassName"
-                    >
-
-                    <!-- Botón Eliminar Clase (X) -->
+                  <!-- 1. CABECERA DE LA TABLA (TÍTULO Y BOTÓN ELIMINAR) -->
+                  <div class="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b-[1.5px] border-[#6B5A52] cursor-move">
+                    <span class="font-bold text-xs text-center text-[#2A201B] w-full tracking-tight truncate" title="Doble clic para editar clase">
+                      {{ node.name }}
+                    </span>
                     <button
-                      (click)="removeClass(node.id); $event.stopPropagation()"
-                      (pointerdown)="$event.stopPropagation()"
-                      (mousedown)="$event.stopPropagation()"
+                      (click)="removeClass(node.id, $event)"
                       title="Eliminar clase"
                       class="text-[#6B5A52] hover:text-red-700 hover:bg-black/5 rounded px-1 transition-colors cursor-pointer text-xs font-bold leading-none shrink-0 ml-1">
                       &times;
                     </button>
                   </div>
 
-                  <!-- 2. COMPARTIMENTO DE ATRIBUTOS (AUTO-EXPANDIBLE Y EDITABLE) -->
-                  <div class="w-full py-1 px-1.5 text-[11.5px] text-[#2A201B] border-b-[1.5px] border-[#6B5A52] group/attr-section relative min-h-[22px]">
-                    <div class="space-y-0.5">
-                      @for(attr of node.attributes; track $index) {
-                        <div class="flex items-center justify-between group/item hover:bg-black/5 rounded-xs px-0.5 relative z-10 gap-1">
-
-                          <div class="flex items-center gap-1 flex-1 min-w-0">
-                            <!-- Signo '-' FIJO Y NO EDITABLE -->
-                            <span class="font-mono font-bold text-[#6B5A52] select-none w-1.5 text-center shrink-0">-</span>
-
-                            <!-- Nombre del Atributo -->
-                            <input
-                              [(ngModel)]="attr.name"
-                              (ngModelChange)="onNodeContentChange(node)"
-                              (click)="$event.stopPropagation()"
-                              (pointerdown)="$event.stopPropagation()"
-                              (mousedown)="$event.stopPropagation()"
-                              (keydown)="$event.stopPropagation()"
-                              class="bg-transparent focus:outline-none focus:bg-white text-[#2A201B] flex-1 min-w-[50px] px-0.5 text-[11.5px] cursor-text select-text pointer-events-auto"
-                              placeholder="name"
-                            >
-                            <span class="text-[#6B5A52] shrink-0">:</span>
-
-                            <!-- Tipo de Dato con Sugerencias -->
-                            <input
-                              [(ngModel)]="attr.type"
-                              (ngModelChange)="onNodeContentChange(node)"
-                              (click)="$event.stopPropagation()"
-                              (pointerdown)="$event.stopPropagation()"
-                              (mousedown)="$event.stopPropagation()"
-                              (keydown)="$event.stopPropagation()"
-                              list="uml-data-types"
-                              [style.width.ch]="(attr.type ? attr.type.length : 6) + 2.5"
-                              class="bg-transparent focus:outline-none focus:bg-white text-[#2A201B] min-w-[40px] shrink-0 px-0.5 text-[11.5px] cursor-pointer select-text pointer-events-auto"
-                              placeholder="String"
-                            >
+                  <!-- 2. COMPARTIMENTO DE ATRIBUTOS -->
+                  <div class="w-full py-1 px-2 text-[11.5px] text-[#2A201B] border-b-[1.5px] border-[#6B5A52] relative min-h-[22px] cursor-pointer" title="Doble clic para editar atributos">
+                    @if (node.attributes.length === 0) {
+                      <div class="text-[10px] italic text-[#6B5A52]/60 py-0.5 text-center">&lt;sin atributos&gt;</div>
+                    } @else {
+                      <div class="space-y-0.5">
+                        @for (attr of node.attributes; track attr.name) {
+                          <div class="flex items-center gap-1.5 truncate leading-tight py-0.2">
+                            <span class="font-mono font-bold text-[#6B5A52] select-none text-[11px]">-</span>
+                            <span class="font-medium text-[#2A201B]">{{ attr.name }}</span>:
+                            <span class="text-[#6B5A52] font-mono text-[11px]">{{ attr.type }}</span>
                           </div>
-
-                          <!-- Botón Borrar Atributo -->
-                          <button
-                            (click)="removeAttribute(node, $index); $event.stopPropagation()"
-                            (pointerdown)="$event.stopPropagation()"
-                            (mousedown)="$event.stopPropagation()"
-                            title="Eliminar atributo"
-                            class="text-slate-400 hover:text-red-600 opacity-0 group-hover/item:opacity-100 px-1 cursor-pointer text-xs font-bold leading-none shrink-0">
-                            &times;
-                          </button>
-
-                        </div>
-                      }
-                    </div>
-
-                    <!-- Botón Agregar Atributo debajo de los atributos -->
-                    <div class="mt-0.5 flex justify-start">
-                      <button
-                        (click)="addAttribute(node); $event.stopPropagation()"
-                        (pointerdown)="$event.stopPropagation()"
-                        (mousedown)="$event.stopPropagation()"
-                        title="Agregar atributo"
-                        class="text-[9.5px] text-[#6B5A52] hover:text-slate-950 hover:bg-black/5 rounded px-1 py-0.5 transition-colors cursor-pointer font-medium flex items-center gap-0.5">
-                        <span class="font-bold text-xs leading-none">+</span> attr
-                      </button>
-                    </div>
+                        }
+                      </div>
+                    }
                   </div>
 
-                  <!-- 3. COMPARTIMENTO DE MÉTODOS / OPERACIONES (AUTO-EXPANDIBLE Y EDITABLE) -->
-                  <div class="w-full py-1 px-1.5 text-[11.5px] text-[#2A201B] group/method-section relative min-h-[22px]">
-                    <div class="space-y-0.5">
-                      @for(method of node.methods; track $index) {
-                        <div class="flex items-center justify-between group/item hover:bg-black/5 rounded-xs px-0.5 relative z-10 gap-1">
-
-                          <div class="flex items-center gap-1 flex-1 min-w-0">
-                            <!-- Signo '+' FIJO Y NO EDITABLE -->
-                            <span class="font-mono font-bold text-[#6B5A52] select-none w-1.5 text-center shrink-0">+</span>
-
-                            <!-- Nombre del Método -->
-                            <input
-                              [(ngModel)]="method.name"
-                              (ngModelChange)="onNodeContentChange(node)"
-                              (click)="$event.stopPropagation()"
-                              (pointerdown)="$event.stopPropagation()"
-                              (mousedown)="$event.stopPropagation()"
-                              (keydown)="$event.stopPropagation()"
-                              class="bg-transparent focus:outline-none focus:bg-white text-[#2A201B] flex-1 min-w-[50px] px-0.5 text-[11.5px] cursor-text select-text pointer-events-auto"
-                              placeholder="operation"
-                            >
-                            <span class="text-[#6B5A52] shrink-0">():</span>
-
-                            <!-- Tipo de Retorno con Sugerencias -->
-                            <input
-                              [(ngModel)]="method.returnType"
-                              (ngModelChange)="onNodeContentChange(node)"
-                              (click)="$event.stopPropagation()"
-                              (pointerdown)="$event.stopPropagation()"
-                              (mousedown)="$event.stopPropagation()"
-                              (keydown)="$event.stopPropagation()"
-                              list="uml-return-types"
-                              [style.width.ch]="(method.returnType ? method.returnType.length : 4) + 2.5"
-                              class="bg-transparent focus:outline-none focus:bg-white text-[#2A201B] min-w-[40px] shrink-0 px-0.5 text-[11.5px] cursor-pointer select-text pointer-events-auto"
-                              placeholder="void"
-                            >
+                  <!-- 3. COMPARTIMENTO DE MÉTODOS / OPERACIONES -->
+                  <div class="w-full py-1 px-2 text-[11.5px] text-[#2A201B] relative min-h-[22px] cursor-pointer" title="Doble clic para editar operaciones">
+                    @if (node.methods.length === 0) {
+                      <div class="text-[10px] italic text-[#6B5A52]/60 py-0.5 text-center">&lt;sin operaciones&gt;</div>
+                    } @else {
+                      <div class="space-y-0.5">
+                        @for (method of node.methods; track method.name) {
+                          <div class="flex items-center gap-1.5 truncate leading-tight py-0.2">
+                            <span class="font-mono font-bold text-[#6B5A52] select-none text-[11px]">+</span>
+                            <span class="font-medium text-[#2A201B]">{{ method.name }}</span>({{ method.parameters }}):
+                            <span class="text-[#6B5A52] font-mono text-[11px]">{{ method.returnType }}</span>
                           </div>
-
-                          <!-- Botón Borrar Método -->
-                          <button
-                            (click)="removeMethod(node, $index); $event.stopPropagation()"
-                            (pointerdown)="$event.stopPropagation()"
-                            (mousedown)="$event.stopPropagation()"
-                            title="Eliminar método"
-                            class="text-slate-400 hover:text-red-600 opacity-0 group-hover/item:opacity-100 px-1 cursor-pointer text-xs font-bold leading-none shrink-0">
-                            &times;
-                          </button>
-
-                        </div>
-                      }
-                    </div>
-
-                    <!-- Botón Agregar Método debajo de los métodos -->
-                    <div class="mt-0.5 flex justify-start">
-                      <button
-                        (click)="addMethod(node); $event.stopPropagation()"
-                        (pointerdown)="$event.stopPropagation()"
-                        (mousedown)="$event.stopPropagation()"
-                        title="Agregar método"
-                        class="text-[9.5px] text-[#6B5A52] hover:text-slate-950 hover:bg-black/5 rounded px-1 py-0.5 transition-colors cursor-pointer font-medium flex items-center gap-0.5">
-                        <span class="font-bold text-xs leading-none">+</span> op
-                      </button>
-                    </div>
+                        }
+                      </div>
+                    }
                   </div>
 
                   <!-- MANIJA DE REDIMENSIONAMIENTO (ESQUINA INFERIOR DERECHA) -->
@@ -744,6 +540,229 @@
     </div>
 
   </div>
+
+  <!-- MODAL: EDITAR CLASE UML (DOBLE CLIC EN CLASE) -->
+  @if (isEditNodeModalOpen() && editingNode()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+        
+        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
+          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">Editar Clase: {{ editingNode()?.name }}</h3>
+          <button (click)="closeEditNodeModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
+        </div>
+
+        <div class="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+          <div>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Nombre de la Clase</label>
+            <input
+              type="text"
+              [(ngModel)]="editingNode()!.name"
+              placeholder="e.g. Usuario, Pedido"
+              class="w-full px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner font-medium text-xs"
+            />
+          </div>
+
+          <!-- Atributos -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">Atributos (-)</label>
+              <button
+                (click)="addAttributeToEditingNode()"
+                class="px-2.5 py-0.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] cursor-pointer">
+                + Agregar Atributo
+              </button>
+            </div>
+            <div class="space-y-1.5">
+              @for (attr of editingNode()!.attributes; track $index) {
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-bold text-[#6B5A52] select-none text-xs">-</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="attr.name"
+                    placeholder="nombre"
+                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium"
+                  />
+                  <span class="text-[#6B5A52] font-mono">:</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="attr.type"
+                    list="uml-data-types"
+                    placeholder="tipo"
+                    class="w-32 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono"
+                  />
+                  <button
+                    (click)="removeAttributeFromEditingNode($index)"
+                    title="Eliminar atributo"
+                    class="text-red-600 hover:text-red-800 p-1 font-bold text-sm cursor-pointer">
+                    &times;
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Métodos -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">Operaciones / Métodos (+)</label>
+              <button
+                (click)="addMethodToEditingNode()"
+                class="px-2.5 py-0.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] cursor-pointer">
+                + Agregar Operación
+              </button>
+            </div>
+            <div class="space-y-1.5">
+              @for (m of editingNode()!.methods; track $index) {
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-bold text-[#6B5A52] select-none text-xs">+</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="m.name"
+                    placeholder="método"
+                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium"
+                  />
+                  <span class="text-[#6B5A52] font-mono text-xs">(</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="m.parameters"
+                    placeholder="params"
+                    class="w-24 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono"
+                  />
+                  <span class="text-[#6B5A52] font-mono text-xs">):</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="m.returnType"
+                    list="uml-return-types"
+                    placeholder="retorno"
+                    class="w-24 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono"
+                  />
+                  <button
+                    (click)="removeMethodFromEditingNode($index)"
+                    title="Eliminar método"
+                    class="text-red-600 hover:text-red-800 p-1 font-bold text-sm cursor-pointer">
+                    &times;
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+        </div>
+
+        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-end gap-2 bg-white/30">
+          <button
+            (click)="closeEditNodeModal()"
+            class="px-3.5 py-1.5 bg-white hover:bg-slate-100 border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
+            Cancelar
+          </button>
+          <button
+            (click)="saveEditedNode()"
+            class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold uppercase border border-[#2A201B] cursor-pointer">
+            Guardar Cambios
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: EDITAR CONEXIÓN (DOBLE CLIC EN LÍNEA / MULTIPLICIDAD) -->
+  @if (isEditConnModalOpen() && editingConnection()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+        
+        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
+          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">Propiedades de la Relación</h3>
+          <button (click)="closeEditConnModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
+        </div>
+
+        <div class="p-4 space-y-3.5">
+
+          <!-- 1. Tipo de Relación -->
+          <div>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Tipo de Relación</label>
+            <select
+              [(ngModel)]="editingConnection()!.type"
+              class="w-full px-2 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
+              @for (rel of relationTypes; track rel.id) {
+                <option [value]="rel.id">{{ rel.label }} ({{ rel.icon }})</option>
+              }
+            </select>
+          </div>
+
+          <!-- 2. Estilo de Línea Específico para esta conexión -->
+          <div>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Estilo de Línea (Routing)</label>
+            <select
+              [(ngModel)]="editingConnection()!.lineStyle"
+              class="w-full px-2 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
+              @for (style of lineStyles; track style.id) {
+                <option [value]="style.id">{{ style.label }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- 3. Multiplicidades -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Multiplicidad Origen</label>
+              <input
+                type="text"
+                [(ngModel)]="editingConnection()!.sourceMultiplicity"
+                list="multiplicity-options"
+                placeholder="1, 0..1, *"
+                class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+              />
+            </div>
+            <div>
+              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Multiplicidad Destino</label>
+              <input
+                type="text"
+                [(ngModel)]="editingConnection()!.targetMultiplicity"
+                list="multiplicity-options"
+                placeholder="0..*, 1..*, *"
+                class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+              />
+            </div>
+          </div>
+
+          <!-- 4. Etiqueta / Verbo -->
+          <div>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Etiqueta / Verbo</label>
+            <input
+              type="text"
+              [(ngModel)]="editingConnection()!.name"
+              placeholder="e.g. posee, genera, pertenece a"
+              class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+            />
+          </div>
+
+        </div>
+
+        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-between items-center bg-white/30">
+          <button
+            (click)="removeConnection(editingConnection()!.id); closeEditConnModal()"
+            class="text-red-600 hover:text-red-800 font-mono font-bold cursor-pointer flex items-center gap-1">
+            <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+            <span>Eliminar Relación</span>
+          </button>
+          <div class="flex gap-2">
+            <button
+              (click)="closeEditConnModal()"
+              class="px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
+              Cancelar
+            </button>
+            <button
+              (click)="saveEditedConnection()"
+              class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold uppercase border border-[#2A201B] cursor-pointer">
+              Aceptar
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
 
   <!-- DATALISTS PARA OPCIONES PREDEFINIDAS -->
   <datalist id="multiplicity-options">
