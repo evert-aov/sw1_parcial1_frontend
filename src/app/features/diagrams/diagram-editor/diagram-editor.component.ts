@@ -2,7 +2,7 @@ import { Component, signal, ViewChild, ElementRef, OnInit, OnDestroy, HostListen
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
-import { FFlowModule, FCreateConnectionEvent, FCanvasComponent } from '@foblex/flow';
+import { FFlowModule, FCreateConnectionEvent, FCanvasComponent, FZoomDirective, FCanvasChangeEvent } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { DiagramService } from '../../../core/services/diagram.service';
@@ -129,6 +129,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
 
   @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
+  @ViewChild(FZoomDirective) fZoom?: FZoomDirective;
   @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
   @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
   @ViewChild('imageInput') imageInput?: ElementRef<HTMLInputElement>;
@@ -1215,16 +1216,28 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- ZOOM Y VISTA ---
   zoomIn(): void {
-    if (this.canvas) {
-      this.canvas.setScale(this.canvas.getScale() * 1.15);
-      this.zoomLevel.set(Math.round(this.canvas.getScale() * 100));
+    if (this.fZoom) {
+      this.fZoom.zoomIn();
+      this.zoomLevel.set(Math.round((this.fZoom.getZoomValue() || 1) * 100));
+    } else if (this.canvas) {
+      const currentScale = this.canvas.getScale() || 1;
+      const nextScale = Math.min(4, currentScale * 1.2);
+      this.canvas.setScale(nextScale);
+      this.canvas.redrawWithAnimation();
+      this.zoomLevel.set(Math.round(nextScale * 100));
     }
   }
 
   zoomOut(): void {
-    if (this.canvas) {
-      this.canvas.setScale(this.canvas.getScale() * 0.85);
-      this.zoomLevel.set(Math.round(this.canvas.getScale() * 100));
+    if (this.fZoom) {
+      this.fZoom.zoomOut();
+      this.zoomLevel.set(Math.round((this.fZoom.getZoomValue() || 1) * 100));
+    } else if (this.canvas) {
+      const currentScale = this.canvas.getScale() || 1;
+      const nextScale = Math.max(0.1, currentScale * 0.8);
+      this.canvas.setScale(nextScale);
+      this.canvas.redrawWithAnimation();
+      this.zoomLevel.set(Math.round(nextScale * 100));
     }
   }
 
@@ -1232,13 +1245,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.canvas) {
       this.canvas.resetScaleAndCenter();
       this.zoomLevel.set(100);
+    } else if (this.fZoom) {
+      this.fZoom.reset();
+      this.zoomLevel.set(100);
     }
   }
 
   fitView(): void {
     if (this.canvas) {
       this.canvas.fitToScreen({ x: 40, y: 40 });
-      this.zoomLevel.set(Math.round(this.canvas.getScale() * 100));
+      this.zoomLevel.set(Math.round((this.canvas.getScale() || 1) * 100));
+    }
+  }
+
+  onCanvasChange(event: FCanvasChangeEvent): void {
+    if (event && event.scale) {
+      this.zoomLevel.set(Math.round(event.scale * 100));
     }
   }
 

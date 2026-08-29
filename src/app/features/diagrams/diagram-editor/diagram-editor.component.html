@@ -319,7 +319,7 @@
         (fCreateConnection)="onConnectionCreated($event)"
         class="block absolute inset-0 h-full w-full">
 
-        <f-canvas fZoom>
+        <f-canvas fZoom (fCanvasChange)="onCanvasChange($event)">
 
           <!-- GUÍA VISUAL INTERACTIVA EN TIEMPO REAL (CLIC A CLIC) -->
           @if (selectedSourceNodeId()) {
