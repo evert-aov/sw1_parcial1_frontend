@@ -1353,6 +1353,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             this.nodes.set(res.nodes);
             if (res.connections) this.connections.set(res.connections);
             this.updateConnectionEndpoints();
+            setTimeout(() => this.updateConnectionEndpoints(), 60);
             this.aiPrompt.set('');
             this.aiHistory.update(list => [
               {
