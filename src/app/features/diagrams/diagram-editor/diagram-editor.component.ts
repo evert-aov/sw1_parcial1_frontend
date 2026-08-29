@@ -346,16 +346,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     // Sincronización remota del diagrama completo (incluyendo mutaciones del Copilot IA)
     this.collaborationService.remoteDiagramSync$.subscribe((data) => {
-      if (data.nodes) {
+      if (data.action === 'ai_mutation' && data.nodes) {
+        this.applyAiMutationWithAnimation(data.nodes, data.connections || []);
+      } else if (data.nodes) {
         const cleanNodes = this.applyAiNodesMutation(data.nodes);
         this.nodes.set(cleanNodes);
         const cleanConns = this.sanitizeClientConnections(data.connections || [], cleanNodes);
         this.connections.set(cleanConns);
+        this.updateConnectionEndpoints();
+        setTimeout(() => this.updateConnectionEndpoints(), 60);
       } else if (data.connections) {
         this.connections.set(this.sanitizeClientConnections(data.connections, this.nodes()));
+        this.updateConnectionEndpoints();
       }
-      this.updateConnectionEndpoints();
-      setTimeout(() => this.updateConnectionEndpoints(), 60);
 
       if (data.action === 'ai_mutation' && !this.isAiProcessing()) {
         this.aiChatMessages.update(list => [
@@ -438,6 +441,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.speechRecognitionInstance && this.isVoiceListening()) {
       this.speechRecognitionInstance.stop();
     }
+    this.animationTimers.forEach(t => clearTimeout(t));
+    this.animationTimers = [];
     this.collaborationService.leaveRoom();
   }
 
@@ -1367,12 +1372,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.isAiProcessing.set(false);
           if (res.success && res.nodes) {
-            const cleanNodes = this.applyAiNodesMutation(res.nodes);
-            this.nodes.set(cleanNodes);
-            const cleanConns = this.sanitizeClientConnections(res.connections || [], cleanNodes);
-            this.connections.set(cleanConns);
-            this.updateConnectionEndpoints();
-            setTimeout(() => this.updateConnectionEndpoints(), 60);
+            this.applyAiMutationWithAnimation(res.nodes, res.connections || []);
 
             this.aiChatMessages.update(list => [
               ...list,
@@ -1425,12 +1425,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.isAiProcessing.set(false);
           if (res.success && res.nodes) {
-            const cleanNodes = this.applyAiNodesMutation(res.nodes);
-            this.nodes.set(cleanNodes);
-            const cleanConns = this.sanitizeClientConnections(res.connections || [], cleanNodes);
-            this.connections.set(cleanConns);
-            this.updateConnectionEndpoints();
-            setTimeout(() => this.updateConnectionEndpoints(), 60);
+            this.applyAiMutationWithAnimation(res.nodes, res.connections || []);
 
             this.aiChatMessages.update(list => [
               ...list,
@@ -1474,6 +1469,83 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  private animationTimers: any[] = [];
+
+  private applyAiMutationWithAnimation(
+    rawNodes: any[],
+    rawConnections: any[],
+    onComplete?: () => void,
+  ): void {
+    // 1. Limpiar timers de animación previos si hubiera alguno en curso
+    this.animationTimers.forEach(t => clearTimeout(t));
+    this.animationTimers = [];
+
+    const finalNodes = this.applyAiNodesMutation(rawNodes);
+    const finalConnections = this.sanitizeClientConnections(rawConnections || [], finalNodes);
+
+    const currentNodes = this.nodes();
+    const currentConns = this.connections();
+
+    const currentNodeIds = new Set(currentNodes.map(n => n.id));
+    const currentConnIds = new Set(currentConns.map(c => c.id));
+
+    // Nodos nuevos que no existían antes
+    const newNodes = finalNodes.filter(n => !currentNodeIds.has(n.id));
+    // Conexiones nuevas que no existían antes
+    const newConnections = finalConnections.filter(c => !currentConnIds.has(c.id));
+
+    // Si no hay nuevos elementos añadidos (ej: eliminación o edición in-place):
+    if (newNodes.length === 0 && newConnections.length === 0) {
+      this.nodes.set(finalNodes);
+      this.connections.set(finalConnections);
+      this.updateConnectionEndpoints();
+      setTimeout(() => this.updateConnectionEndpoints(), 60);
+      onComplete?.();
+      return;
+    }
+
+    // 2. Establecer primero los nodos base existentes (conservando modificaciones o remociones)
+    const baseNodes = finalNodes.filter(n => currentNodeIds.has(n.id));
+    const baseConns = finalConnections.filter(c => currentConnIds.has(c.id));
+
+    this.nodes.set(baseNodes);
+    this.connections.set(baseConns);
+    this.updateConnectionEndpoints();
+
+    let delay = 60;
+    const nodeInterval = 280; // ms entre cada tabla insertada
+    const connInterval = 220; // ms entre cada relación trazada
+
+    // 3. Insertar secuencialmente las nuevas tablas una por una con animación fluida
+    newNodes.forEach((node) => {
+      const timer = setTimeout(() => {
+        this.nodes.update(list => [...list, node]);
+        this.updateConnectionEndpoints();
+      }, delay);
+      this.animationTimers.push(timer);
+      delay += nodeInterval;
+    });
+
+    // 4. Una vez insertadas las tablas, trazar secuencialmente las nuevas relaciones una por una
+    newConnections.forEach((conn) => {
+      const timer = setTimeout(() => {
+        this.connections.update(list => [...list, conn]);
+        this.updateConnectionEndpoints();
+        setTimeout(() => this.updateConnectionEndpoints(), 40);
+      }, delay);
+      this.animationTimers.push(timer);
+      delay += connInterval;
+    });
+
+    // 5. Finalización
+    const finalTimer = setTimeout(() => {
+      this.updateConnectionEndpoints();
+      setTimeout(() => this.updateConnectionEndpoints(), 80);
+      onComplete?.();
+    }, delay + 60);
+    this.animationTimers.push(finalTimer);
   }
 
   private applyAiNodesMutation(nodes: any[]): UmlClassNode[] {

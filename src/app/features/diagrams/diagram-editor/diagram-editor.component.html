@@ -470,7 +470,7 @@
                 [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
                 [ngClass]="{
                   'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
-                  'font-sans text-[#2A201B] select-none relative group/node transition-shadow': !node.isAnchor,
+                  'font-sans text-[#2A201B] select-none relative group/node transition-shadow animate-in fade-in zoom-in-95 duration-300': !node.isAnchor,
                   'ring-2 ring-[#6B5A52] shadow-xl': !node.isAnchor && selectedSourceNodeId() === node.id,
                   'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                   'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
