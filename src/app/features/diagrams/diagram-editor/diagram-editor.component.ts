@@ -358,13 +358,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
       setTimeout(() => this.updateConnectionEndpoints(), 60);
 
-      if (data.action === 'ai_mutation') {
+      if (data.action === 'ai_mutation' && !this.isAiProcessing()) {
         this.aiChatMessages.update(list => [
           ...list,
           {
             id: `ai_remote_${Date.now()}`,
             sender: 'assistant',
-            text: '✨ Copilot IA actualizó el diagrama en tiempo real para todos los colaboradores.',
+            text: '✨ Copilot IA actualizó el diagrama en tiempo real.',
             timestamp: new Date(),
             status: 'success',
           },
