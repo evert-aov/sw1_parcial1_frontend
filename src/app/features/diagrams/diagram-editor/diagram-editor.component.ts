@@ -346,24 +346,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     // Sincronización remota del diagrama completo (incluyendo mutaciones del Copilot IA)
     this.collaborationService.remoteDiagramSync$.subscribe((data) => {
-      // Si hay una petición de IA en vuelo desde ESTE cliente, ignorar el WS:
-      // la respuesta HTTP es la fuente de verdad para el usuario que hizo la petición.
-      // El WS sirve para actualizar a los DEMÁS colaboradores en tiempo real.
-      if (this.isAiProcessing()) return;
-
       if (data.nodes) {
         const cleanNodes = this.sanitizeClientNodes(data.nodes);
         this.nodes.set(cleanNodes);
-        if (data.connections) {
-          this.connections.set(this.sanitizeClientConnections(data.connections, cleanNodes));
-        }
+        const cleanConns = this.sanitizeClientConnections(data.connections || [], cleanNodes);
+        this.connections.set(cleanConns);
       } else if (data.connections) {
         this.connections.set(this.sanitizeClientConnections(data.connections, this.nodes()));
       }
       this.updateConnectionEndpoints();
       setTimeout(() => this.updateConnectionEndpoints(), 60);
 
-      if (data.action === 'ai_mutation') {
+      if (data.action === 'ai_mutation' && !this.isAiProcessing()) {
         this.aiChatMessages.update(list => [
           ...list,
           {
@@ -820,39 +814,46 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 2. Actualizar extremos de las conexiones
-    this.connections.update(conns => conns.map(conn => {
-      if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
-        const sourceNode = nodeMap.get(conn.sourceNodeId);
-        const targetNode = nodeMap.get(conn.targetNodeId);
-        if (sourceNode && targetNode && sourceNode.isAnchor) {
+    // 2. Actualizar extremos de las conexiones filtrando conexiones huérfanas
+    this.connections.update(conns => conns
+      .filter(conn => {
+        const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
+        const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
+        return nodeMap.has(baseSourceId) && nodeMap.has(baseTargetId);
+      })
+      .map(conn => {
+        if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
+          const sourceNode = nodeMap.get(conn.sourceNodeId);
+          const targetNode = nodeMap.get(conn.targetNodeId);
+          if (sourceNode && targetNode && sourceNode.isAnchor) {
+            const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+            return {
+              ...conn,
+              sourceId: sourceNode.id,
+              targetId: optimal.targetId
+            };
+          }
+        }
+
+        const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
+        const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
+
+        const sourceNode = nodeMap.get(baseSourceId);
+        const targetNode = nodeMap.get(baseTargetId);
+
+        if (sourceNode && targetNode && !sourceNode.isAnchor && !targetNode.isAnchor) {
           const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
           return {
             ...conn,
-            sourceId: sourceNode.id,
+            sourceNodeId: baseSourceId,
+            targetNodeId: baseTargetId,
+            sourceId: optimal.sourceId,
             targetId: optimal.targetId
           };
         }
-      }
-
-      const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-      const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
-
-      const sourceNode = nodeMap.get(baseSourceId);
-      const targetNode = nodeMap.get(baseTargetId);
-
-      if (sourceNode && targetNode && !sourceNode.isAnchor && !targetNode.isAnchor) {
-        const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-        return {
-          ...conn,
-          sourceNodeId: baseSourceId,
-          targetNodeId: baseTargetId,
-          sourceId: optimal.sourceId,
-          targetId: optimal.targetId
-        };
-      }
-      return conn;
-    }));
+        return conn;
+      })
+    );
   }
 
   // --- CREACIÓN DE RELACIONES ---
@@ -1368,9 +1369,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           if (res.success && res.nodes) {
             const cleanNodes = this.sanitizeClientNodes(res.nodes);
             this.nodes.set(cleanNodes);
-            if (res.connections) {
-              this.connections.set(this.sanitizeClientConnections(res.connections, cleanNodes));
-            }
+            const cleanConns = this.sanitizeClientConnections(res.connections || [], cleanNodes);
+            this.connections.set(cleanConns);
             this.updateConnectionEndpoints();
             setTimeout(() => this.updateConnectionEndpoints(), 60);
 
@@ -1427,9 +1427,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           if (res.success && res.nodes) {
             const cleanNodes = this.sanitizeClientNodes(res.nodes);
             this.nodes.set(cleanNodes);
-            if (res.connections) {
-              this.connections.set(this.sanitizeClientConnections(res.connections, cleanNodes));
-            }
+            const cleanConns = this.sanitizeClientConnections(res.connections || [], cleanNodes);
+            this.connections.set(cleanConns);
             this.updateConnectionEndpoints();
             setTimeout(() => this.updateConnectionEndpoints(), 60);
 
