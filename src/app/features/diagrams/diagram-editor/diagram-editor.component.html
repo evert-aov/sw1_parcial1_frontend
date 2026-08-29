@@ -456,39 +456,34 @@
 
           <!-- NODOS DE CLASE UML (DOBLE CLIC PARA MODAL DE EDICIÓN) -->
           <ng-container ngProjectAs="[fNodes]">
-            @for (node of nodes(); track (node.id || $index)) {
+            @for (node of nodes(); track node.id) {
+              <div
+                fNode
+                fDragHandle
+                [fNodeDraggingDisabled]="node.isAnchor || selectedRelationType() !== null || isNodeLockedByOther(node.id)"
+                [(fNodePosition)]="node.position"
+                (fNodePositionChange)="onNodePositionChange(node, $event)"
+                (dblclick)="openEditNodeModal(node, $event)"
+                [style.width.px]="node.isAnchor ? 0 : node.width"
+                [style.minWidth.px]="node.isAnchor ? 0 : node.width"
+                [style.minHeight.px]="node.isAnchor ? 0 : (node.height || null)"
+                [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
+                [ngClass]="{
+                  'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
+                  'font-sans text-[#2A201B] select-none relative group/node transition-shadow': !node.isAnchor,
+                  'ring-2 ring-[#6B5A52] shadow-xl': !node.isAnchor && selectedSourceNodeId() === node.id,
+                  'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                  'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
+                  'cursor-not-allowed opacity-95': !node.isAnchor && isNodeLockedByOther(node.id)
+                }">
 
-              <!-- Nodo Ancla Invisible para Association Class -->
-              @if (node.isAnchor) {
-                <div
-                  fNode
-                  [fNodeDraggingDisabled]="true"
-                  [(fNodePosition)]="node.position"
-                  class="w-0 h-0 opacity-0 pointer-events-none absolute">
+                <!-- Contenido Nodo Ancla -->
+                @if (node.isAnchor) {
                   <div fConnector fConnectorType="source-target" [fConnectorId]="node.id" class="w-0 h-0"></div>
-                </div>
-              }
+                }
 
-              <!-- Nodo de Clase UML Estándar -->
-              @else {
-                <div
-                  fNode
-                  fDragHandle
-                  [fNodeDraggingDisabled]="selectedRelationType() !== null || isNodeLockedByOther(node.id)"
-                  [(fNodePosition)]="node.position"
-                  (fNodePositionChange)="onNodePositionChange(node, $event)"
-                  (dblclick)="openEditNodeModal(node, $event)"
-                  [style.width.px]="node.width"
-                  [style.minWidth.px]="node.width"
-                  [style.minHeight.px]="node.height || null"
-                  [style.outline]="isNodeLockedByOther(node.id) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
-                  [ngClass]="{
-                    'ring-2 ring-[#6B5A52] shadow-xl': selectedSourceNodeId() === node.id,
-                    'cursor-crosshair': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
-                    'cursor-move': selectedRelationType() === null && !isNodeLockedByOther(node.id),
-                    'cursor-not-allowed opacity-95': isNodeLockedByOther(node.id)
-                  }"
-                  class="font-sans text-[#2A201B] select-none relative group/node transition-shadow">
+                <!-- Contenido Nodo de Clase Estándar -->
+                @else {
 
                   <!-- BADGE VISUAL DE EXCLUSIÓN MUTUA / BLOQUEO POR OTRO USUARIO -->
                   @if (isNodeLockedByOther(node.id)) {
@@ -619,8 +614,8 @@
                     <span class="text-[9px] font-mono text-[#6B5A52] leading-none select-none">◢</span>
                   </div>
 
-                </div>
-              }
+                }
+              </div>
             }
           </ng-container>
 

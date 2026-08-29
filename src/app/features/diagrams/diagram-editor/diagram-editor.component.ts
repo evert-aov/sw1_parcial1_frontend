@@ -347,7 +347,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     // Sincronización remota del diagrama completo (incluyendo mutaciones del Copilot IA)
     this.collaborationService.remoteDiagramSync$.subscribe((data) => {
       if (data.nodes) {
-        const cleanNodes = this.sanitizeClientNodes(data.nodes);
+        const cleanNodes = this.applyAiNodesMutation(data.nodes);
         this.nodes.set(cleanNodes);
         const cleanConns = this.sanitizeClientConnections(data.connections || [], cleanNodes);
         this.connections.set(cleanConns);
@@ -1367,7 +1367,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.isAiProcessing.set(false);
           if (res.success && res.nodes) {
-            const cleanNodes = this.sanitizeClientNodes(res.nodes);
+            const cleanNodes = this.applyAiNodesMutation(res.nodes);
             this.nodes.set(cleanNodes);
             const cleanConns = this.sanitizeClientConnections(res.connections || [], cleanNodes);
             this.connections.set(cleanConns);
@@ -1425,7 +1425,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.isAiProcessing.set(false);
           if (res.success && res.nodes) {
-            const cleanNodes = this.sanitizeClientNodes(res.nodes);
+            const cleanNodes = this.applyAiNodesMutation(res.nodes);
             this.nodes.set(cleanNodes);
             const cleanConns = this.sanitizeClientConnections(res.connections || [], cleanNodes);
             this.connections.set(cleanConns);
@@ -1474,6 +1474,33 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  private applyAiNodesMutation(nodes: any[]): UmlClassNode[] {
+    const cleanNodes = this.sanitizeClientNodes(nodes);
+    const currentNodes = this.nodes();
+    const currentMap = new Map(currentNodes.map(n => [n.id, n]));
+
+    const result: UmlClassNode[] = [];
+    for (const incNode of cleanNodes) {
+      const existing = currentMap.get(incNode.id);
+      if (existing) {
+        // Preservar la misma referencia del objeto para evitar destrucción/recreación destructiva en el DOM
+        existing.name = incNode.name;
+        existing.position = incNode.position;
+        existing.width = incNode.width;
+        existing.height = incNode.height;
+        existing.isAnchor = incNode.isAnchor;
+        existing.assocMainConnId = incNode.assocMainConnId;
+        existing.attributes = incNode.attributes;
+        existing.methods = incNode.methods;
+        result.push(existing);
+      } else {
+        result.push(incNode);
+      }
+    }
+
+    return result;
   }
 
   private sanitizeClientNodes(nodes: any[]): UmlClassNode[] {
