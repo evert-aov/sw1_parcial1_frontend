@@ -6,6 +6,7 @@ import { FFlowModule, FCreateConnectionEvent, FCanvasComponent } from '@foblex/f
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { DiagramService } from '../../../core/services/diagram.service';
+import { ProjectService } from '../../../core/services/project.service';
 import { CollaborationService } from '../../../core/services/collaboration.service';
 import {
   UmlRelationshipType,
@@ -43,7 +44,8 @@ import {
   heroBolt,
   heroCommandLine,
   heroCpuChip,
-  heroArrowPath
+  heroArrowPath,
+  heroEye
 } from '@ng-icons/heroicons/outline';
 
 export interface UmlDiagramProject {
@@ -95,6 +97,7 @@ export interface AiMutationHistory {
       heroCommandLine,
       heroCpuChip,
       heroArrowPath,
+      heroEye,
     })
   ],
   templateUrl: './diagram-editor.component.html',
@@ -103,6 +106,7 @@ export interface AiMutationHistory {
 export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   readonly diagramService = inject(DiagramService);
+  readonly projectService = inject(ProjectService);
   readonly collaborationService = inject(CollaborationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -117,6 +121,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   currentDiagramName = signal<string>('Diagrama UML');
   saveSuccessMessage = signal<boolean>(false);
   zoomLevel = signal<number>(100);
+
+  // Rol del usuario actual en el proyecto
+  currentUserRole = signal<string>('EDITOR');
+  readonly isReadOnly = computed(() => this.currentUserRole() === 'VIEWER');
 
   // Por defecto: Modo Seleccionar / Mover
   selectedRelationType = signal<UmlRelationshipType | null>(null);
@@ -323,6 +331,24 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
       if (projectId) {
         this.currentProjectId.set(projectId);
+        this.projectService.getProject(projectId).subscribe({
+          next: (project) => {
+            const user = this.authService.currentUser();
+            if (user && project) {
+              if (project.userRole) {
+                this.currentUserRole.set(project.userRole);
+              } else if (project.createdBy === user.id) {
+                this.currentUserRole.set('OWNER');
+              } else if (project.members) {
+                const myMember = project.members.find((m: any) => m.userId === user.id);
+                if (myMember) {
+                  this.currentUserRole.set(myMember.role);
+                }
+              }
+            }
+          },
+          error: () => {},
+        });
       }
 
       if (projectName) {
@@ -342,7 +368,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           }
         });
       } else {
-        // Unirse con ID por defecto si no hay parámetros
         this.collaborationService.joinRoom('default-diagram-studio');
       }
     });
@@ -434,11 +459,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.isExportDropdownOpen.set(false);
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
-      this.saveToBackend();
+      if (!this.isReadOnly()) {
+        this.saveToBackend();
+      }
     }
   }
 
   saveToBackend(): void {
+    if (this.isReadOnly()) return;
+
     const diagramId = this.currentDiagramId();
     if (!diagramId) {
       this.openExportModal();
@@ -489,6 +518,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- SELECCIÓN Y HERRAMIENTAS DEL TOOLBOX ---
   selectRelationType(type: UmlRelationshipType): void {
+    if (this.isReadOnly()) return;
+
     if (this.selectedRelationType() === type) {
       this.selectedRelationType.set(null);
       this.selectedSourceNodeId.set(null);
@@ -509,12 +540,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- ARRASTRE Y REDIMENSIONAMIENTO ---
   onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
+    if (this.isReadOnly()) return;
     node.position = newPosition;
     this.updateConnectionEndpoints();
     this.collaborationService.sendNodeDrag(node.id, newPosition);
   }
 
   onResizeMouseDown(node: UmlClassNode, event: MouseEvent): void {
+    if (this.isReadOnly()) return;
     event.stopPropagation();
     event.preventDefault();
     const startX = event.clientX;
@@ -747,6 +780,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- CREACIÓN DE RELACIONES ---
   onTableClick(nodeId: string, event: MouseEvent): void {
+    if (this.isReadOnly()) return;
+
     const activeRel = this.selectedRelationType();
     if (!activeRel) return;
 
@@ -795,7 +830,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onConnectionCreated(event: FCreateConnectionEvent): void {
-    if (!event.targetId) return;
+    if (this.isReadOnly() || !event.targetId) return;
 
     const relType = this.selectedRelationType() || 'association';
     const baseSourceId = event.sourceId.replace(/_(top|bottom|left|right)$/, '');
@@ -838,6 +873,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   createAssociationClassBetween(sourceNode: UmlClassNode, targetNode: UmlClassNode): void {
+    if (this.isReadOnly()) return;
+
     const timestamp = Date.now();
     const assocClassId = `node_${timestamp}_assoc`;
     const anchorNodeId = `node_${timestamp}_anchor`;
@@ -926,6 +963,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- GESTIÓN DE CLASES ---
   addClass(): void {
+    if (this.isReadOnly()) return;
+
     const currentCount = this.nodes().filter(n => !n.isAnchor).length + 1;
     const offset = (this.nodes().length * 35) % 250;
     const newNode: UmlClassNode = {
@@ -948,7 +987,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   removeClass(nodeId: string, event?: MouseEvent): void {
+    if (this.isReadOnly()) return;
     if (event) event.stopPropagation();
+
     const nodesToRemove = new Set<string>([nodeId]);
 
     for (const conn of this.connections()) {
@@ -976,8 +1017,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- MODAL DE EDICIÓN DE CLASE (DOBLE CLIC) ---
   openEditNodeModal(node: UmlClassNode, event?: MouseEvent): void {
+    if (this.isReadOnly() || node.isAnchor) return;
     if (event) event.stopPropagation();
-    if (node.isAnchor) return;
+
     this.editingNode.set(JSON.parse(JSON.stringify(node)));
     this.isEditNodeModalOpen.set(true);
   }
@@ -988,6 +1030,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   saveEditedNode(): void {
+    if (this.isReadOnly()) return;
     const edited = this.editingNode();
     if (!edited) return;
 
@@ -1029,7 +1072,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- MODAL DE EDICIÓN DE CONEXIÓN (DOBLE CLIC) ---
   openEditConnModal(conn: UmlConnection, event?: MouseEvent): void {
+    if (this.isReadOnly()) return;
     if (event) event.stopPropagation();
+
     this.editingConnection.set(JSON.parse(JSON.stringify(conn)));
     this.isEditConnModalOpen.set(true);
   }
@@ -1040,6 +1085,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   saveEditedConnection(): void {
+    if (this.isReadOnly()) return;
     const edited = this.editingConnection();
     if (!edited) return;
 
@@ -1052,7 +1098,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   removeConnection(connId: string, event?: MouseEvent): void {
+    if (this.isReadOnly()) return;
     if (event) event.stopPropagation();
+
     this.connections.update(conns => conns.filter(c => c.id !== connId));
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'remove_connection');
   }
@@ -1088,12 +1136,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- ASISTENTE IA (COPILOT) ---
   applyAiPrompt(): void {
+    if (this.isReadOnly()) return;
     const promptText = this.aiPrompt().trim();
     if (!promptText) return;
 
     this.isAiProcessing.set(true);
 
-    // Simular procesamiento del Copilot UML con generación de mutación visual
     setTimeout(() => {
       const lower = promptText.toLowerCase();
       const currentNodes = this.nodes().filter(n => !n.isAnchor);
@@ -1157,6 +1205,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   setAiSuggestion(text: string): void {
+    if (this.isReadOnly()) return;
     this.aiPrompt.set(text);
   }
 
@@ -1177,6 +1226,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   openImportModal(): void {
+    if (this.isReadOnly()) return;
     this.jsonContent.set('');
     this.jsonModalMode.set('import');
     this.showJsonModal.set(true);
@@ -1203,7 +1253,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   downloadXmiFile(): void {
-    // Exportación preliminar XMI 2.1 estándar de Enterprise Architect
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<xmi:XMI xmi:version="2.1" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">\n  <uml:Model name="${this.currentDiagramName()}">\n`;
     for (const node of this.nodes().filter(n => !n.isAnchor)) {
       xml += `    <packagedElement xmi:type="uml:Class" xmi:id="${node.id}" name="${node.name}">\n`;
@@ -1230,11 +1279,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   triggerFileInput(): void {
+    if (this.isReadOnly()) return;
     this.fileInput?.nativeElement.click();
     this.isExportDropdownOpen.set(false);
   }
 
   onFileSelected(event: Event): void {
+    if (this.isReadOnly()) return;
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
     if (!file) return;
@@ -1276,6 +1327,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   applyImportedJson(): void {
+    if (this.isReadOnly()) return;
     try {
       const project = JSON.parse(this.jsonContent()) as UmlDiagramProject;
       if (project.nodes && project.connections) {
@@ -1328,6 +1380,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   clearDiagram(): void {
+    if (this.isReadOnly()) return;
     if (confirm('¿Estás seguro de que deseas limpiar el diagrama?')) {
       this.nodes.set([]);
       this.connections.set([]);
@@ -1336,6 +1389,3 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
   }
 }
-
-// Extension for Spring Boot generator modal
-// (method added to component class)
