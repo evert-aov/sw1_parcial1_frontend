@@ -1950,6 +1950,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               this.defaultLineStyle.set(project.defaultLineStyle);
             }
             this.updateConnectionEndpoints();
+            setTimeout(() => {
+              this.updateConnectionEndpoints();
+              this.fitView();
+            }, 100);
             this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_json');
           } else {
             alert('El archivo JSON no contiene un diagrama de clases válido.');
@@ -1957,6 +1961,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         }
       } catch (err) {
         alert('Error al leer el archivo: ' + err);
+      } finally {
+        target.value = '';
       }
       target.value = '';
     };
