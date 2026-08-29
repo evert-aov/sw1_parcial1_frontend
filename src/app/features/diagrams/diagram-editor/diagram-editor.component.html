@@ -579,7 +579,7 @@
                       <div class="text-[10px] italic text-[#6B5A52]/60 py-0.5 text-center">&lt;sin atributos&gt;</div>
                     } @else {
                       <div class="space-y-0.5">
-                        @for (attr of node.attributes; track attr.name) {
+                        @for (attr of node.attributes; track $index) {
                           <div class="flex items-center gap-1.5 truncate leading-tight py-0.2">
                             <span class="font-mono font-bold text-[#6B5A52] select-none text-[11px]">-</span>
                             <span class="font-medium text-[#2A201B]">{{ attr.name }}</span>:
@@ -596,7 +596,7 @@
                       <div class="text-[10px] italic text-[#6B5A52]/60 py-0.5 text-center">&lt;sin operaciones&gt;</div>
                     } @else {
                       <div class="space-y-0.5">
-                        @for (method of node.methods; track method.name) {
+                        @for (method of node.methods; track $index) {
                           <div class="flex items-center gap-1.5 truncate leading-tight py-0.2">
                             <span class="font-mono font-bold text-[#6B5A52] select-none text-[11px]">+</span>
                             <span class="font-medium text-[#2A201B]">{{ method.name }}</span>({{ method.parameters }}):
