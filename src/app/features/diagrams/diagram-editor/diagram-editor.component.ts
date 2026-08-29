@@ -1,4 +1,4 @@
-import { Component, signal, ViewChild, ElementRef, OnInit, HostListener, inject } from '@angular/core';
+import { Component, signal, ViewChild, ElementRef, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
@@ -6,6 +6,7 @@ import { FFlowModule, FCreateConnectionEvent, FCanvasComponent } from '@foblex/f
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { DiagramService } from '../../../core/services/diagram.service';
+import { CollaborationService } from '../../../core/services/collaboration.service';
 import {
   UmlRelationshipType,
   UmlLineStyle,
@@ -36,7 +37,9 @@ import {
   heroArrowRightOnRectangle,
   heroUserCircle,
   heroFolder,
-  heroCloudArrowUp
+  heroCloudArrowUp,
+  heroUserGroup,
+  heroSignal
 } from '@ng-icons/heroicons/outline';
 
 export interface UmlDiagramProject {
@@ -75,14 +78,17 @@ export interface UmlDiagramProject {
       heroUserCircle,
       heroFolder,
       heroCloudArrowUp,
+      heroUserGroup,
+      heroSignal,
     })
   ],
   templateUrl: './diagram-editor.component.html',
   styleUrl: './diagram-editor.component.css',
 })
-export class DiagramEditorComponent implements OnInit {
+export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   readonly diagramService = inject(DiagramService);
+  readonly collaborationService = inject(CollaborationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -260,6 +266,20 @@ export class DiagramEditorComponent implements OnInit {
   ]);
 
   ngOnInit(): void {
+    // Suscripción a eventos remotos de colaboración en tiempo real
+    this.collaborationService.remoteNodeDrag$.subscribe((data) => {
+      this.nodes.update((list) =>
+        list.map((n) => (n.id === data.nodeId ? { ...n, position: data.position } : n)),
+      );
+      this.updateConnectionEndpoints();
+    });
+
+    this.collaborationService.remoteDiagramSync$.subscribe((data) => {
+      if (data.nodes) this.nodes.set(data.nodes);
+      if (data.connections) this.connections.set(data.connections);
+      this.updateConnectionEndpoints();
+    });
+
     this.route.queryParams.subscribe((params) => {
       const diagramId = params['diagramId'];
       const projectId = params['projectId'];
@@ -289,6 +309,10 @@ export class DiagramEditorComponent implements OnInit {
     });
 
     this.updateConnectionEndpoints();
+  }
+
+  ngOnDestroy(): void {
+    this.collaborationService.leaveRoom();
   }
 
   loadDiagramFromBackend(diagramId: string): void {
@@ -338,6 +362,9 @@ export class DiagramEditorComponent implements OnInit {
           })),
         );
       }
+
+      // Unirse a la sala de colaboración en tiempo real
+      this.collaborationService.joinRoom(diagramId);
 
       setTimeout(() => {
         this.updateConnectionEndpoints();
@@ -414,6 +441,7 @@ export class DiagramEditorComponent implements OnInit {
       next: () => {
         this.saveSuccessMessage.set(true);
         setTimeout(() => this.saveSuccessMessage.set(false), 2500);
+        this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'save');
       },
     });
   }
@@ -442,6 +470,7 @@ export class DiagramEditorComponent implements OnInit {
   onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
     node.position = newPosition;
     this.updateConnectionEndpoints();
+    this.collaborationService.sendNodeDrag(node.id, newPosition);
   }
 
   onResizeMouseDown(node: UmlClassNode, event: MouseEvent): void {
@@ -467,6 +496,7 @@ export class DiagramEditorComponent implements OnInit {
     const onMouseUp = () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'resize');
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -475,8 +505,6 @@ export class DiagramEditorComponent implements OnInit {
 
   // --- SEGUIMIENTO Y LÍNEA GUÍA ---
   onCanvasMouseMove(event: MouseEvent): void {
-    if (!this.selectedSourceNodeId()) return;
-
     const container = this.flowContainerRef?.nativeElement;
     if (!container) return;
 
@@ -491,7 +519,12 @@ export class DiagramEditorComponent implements OnInit {
     const canvasX = (rawX - posX) / scale;
     const canvasY = (rawY - posY) / scale;
 
-    this.mouseCanvasPos.set({ x: canvasX, y: canvasY });
+    // Transmitir posición de cursor a colaboradores
+    this.collaborationService.sendCursorPosition(canvasX, canvasY);
+
+    if (this.selectedSourceNodeId()) {
+      this.mouseCanvasPos.set({ x: canvasX, y: canvasY });
+    }
   }
 
   getSelectedSourceNode(): UmlClassNode | undefined {
@@ -712,6 +745,7 @@ export class DiagramEditorComponent implements OnInit {
       this.connections.update(conns => [...conns, newConnection]);
       this.selectedSourceNodeId.set(null);
       this.updateConnectionEndpoints();
+      this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_connection');
     }
   }
 
@@ -759,6 +793,7 @@ export class DiagramEditorComponent implements OnInit {
     this.connections.update(conns => [...conns, newConnection]);
     this.selectedSourceNodeId.set(null);
     this.updateConnectionEndpoints();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_connection');
   }
 
   createAssociationClassBetween(sourceNode: UmlClassNode, targetNode: UmlClassNode): void {
@@ -831,6 +866,7 @@ export class DiagramEditorComponent implements OnInit {
     this.connections.update(conns => [...conns, mainConn, assocConn]);
     this.selectedSourceNodeId.set(null);
     this.updateConnectionEndpoints();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_association_class');
   }
 
   private getDefaultMultiplicity(type: UmlRelationshipType, side: 'source' | 'target'): string {
@@ -867,6 +903,7 @@ export class DiagramEditorComponent implements OnInit {
 
     this.nodes.update(list => [...list, newNode]);
     this.updateConnectionEndpoints();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_class');
   }
 
   removeClass(nodeId: string, event?: MouseEvent): void {
@@ -893,6 +930,7 @@ export class DiagramEditorComponent implements OnInit {
     if (this.selectedSourceNodeId() === nodeId) {
       this.selectedSourceNodeId.set(null);
     }
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'remove_class');
   }
 
   // --- MODAL DE EDICIÓN DE CLASE (DOBLE CLIC) ---
@@ -917,6 +955,7 @@ export class DiagramEditorComponent implements OnInit {
     );
     this.updateConnectionEndpoints();
     this.closeEditNodeModal();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'edit_node');
   }
 
   addAttributeToEditingNode(): void {
@@ -968,11 +1007,13 @@ export class DiagramEditorComponent implements OnInit {
     );
     this.updateConnectionEndpoints();
     this.closeEditConnModal();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'edit_connection');
   }
 
   removeConnection(connId: string, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.connections.update(conns => conns.filter(c => c.id !== connId));
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'remove_connection');
   }
 
   // --- ZOOM Y VISTA ---
@@ -1072,6 +1113,7 @@ export class DiagramEditorComponent implements OnInit {
             this.defaultLineStyle.set(project.defaultLineStyle);
           }
           this.updateConnectionEndpoints();
+          this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_json');
         } else {
           alert('El archivo JSON no contiene un diagrama de clases válido.');
         }
@@ -1106,6 +1148,7 @@ export class DiagramEditorComponent implements OnInit {
         }
         this.updateConnectionEndpoints();
         this.showJsonModal.set(false);
+        this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'apply_json');
       } else {
         alert('Estructura JSON inválida: faltan nodos o conexiones.');
       }
@@ -1120,11 +1163,21 @@ export class DiagramEditorComponent implements OnInit {
     });
   }
 
+  copyRoomCode(): void {
+    const code = this.collaborationService.activeRoomCode();
+    if (code) {
+      navigator.clipboard.writeText(code).then(() => {
+        alert(`Código de sala "${code}" copiado al portapapeles. ¡Compártelo con tus colaboradores!`);
+      });
+    }
+  }
+
   clearDiagram(): void {
     if (confirm('¿Estás seguro de que deseas limpiar el diagrama?')) {
       this.nodes.set([]);
       this.connections.set([]);
       this.selectedSourceNodeId.set(null);
+      this.collaborationService.sendDiagramSync([], [], 'clear');
     }
   }
 }

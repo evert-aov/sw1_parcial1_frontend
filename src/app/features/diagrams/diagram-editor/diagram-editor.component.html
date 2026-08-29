@@ -24,6 +24,31 @@
         </h1>
         <p class="text-[9.5px] font-mono text-slate-400">Enterprise Architect UML 2.5</p>
       </div>
+
+      <!-- Badge de Sesión en Vivo y Colaboradores Conectados -->
+      @if (collaborationService.activeRoomCode()) {
+        <div class="flex items-center gap-2 ml-2 pl-2 border-l border-slate-600">
+          <button
+            (click)="copyRoomCode()"
+            title="Clic para copiar código de sala"
+            class="bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-600/70 px-2 py-0.5 rounded text-[10.5px] font-mono flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>EN VIVO: <strong>{{ collaborationService.activeRoomCode() }}</strong></span>
+          </button>
+
+          <!-- Avatares de Colaboradores en la Sala -->
+          <div class="flex items-center -space-x-1.5">
+            @for (collab of collaborationService.collaborators(); track collab.userId) {
+              <div
+                class="w-5 h-5 rounded-full border border-white text-white font-bold text-[9px] flex items-center justify-center shadow-xs"
+                [style.backgroundColor]="collab.color"
+                [title]="collab.userName + ' (Conectado)'">
+                {{ collab.userName.charAt(0).toUpperCase() }}
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
 
     <!-- Indicador de conexión en vivo -->
@@ -241,6 +266,23 @@
       (mousemove)="onCanvasMouseMove($event)"
       (click)="onCanvasBackgroundClick()"
       class="flex-1 relative w-full h-full uml-canvas-container cursor-default overflow-hidden">
+
+      <!-- CURSORES EN VIVO DE COLABORADORES REMOTOS -->
+      @for (cursor of collaborationService.remoteCursors(); track cursor.userId) {
+        <div
+          class="absolute pointer-events-none z-50 transition-all duration-75 ease-out"
+          [style.left.px]="cursor.x"
+          [style.top.px]="cursor.y">
+          <svg class="w-4 h-4 drop-shadow-md" viewBox="0 0 24 24" fill="none">
+            <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z" [attr.fill]="cursor.color" stroke="#ffffff" stroke-width="1.5"/>
+          </svg>
+          <span
+            class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-white shadow-xs ml-3 -mt-2 inline-block whitespace-nowrap"
+            [style.backgroundColor]="cursor.color">
+            {{ cursor.userName }}
+          </span>
+        </div>
+      }
 
       <f-flow
         fDraggable
