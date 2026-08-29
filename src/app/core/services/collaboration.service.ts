@@ -20,6 +20,13 @@ export interface Collaborator {
   isConnected: boolean;
 }
 
+export interface NodeLock {
+  nodeId: string;
+  userId: string;
+  userName: string;
+  color: string;
+}
+
 export interface ChatMessage {
   userId: string;
   userName: string;
@@ -41,6 +48,7 @@ export class CollaborationService {
   readonly myColor = signal<string>('#3B82F6');
   readonly collaborators = signal<Collaborator[]>([]);
   readonly remoteCursors = signal<RemoteCursor[]>([]);
+  readonly activeNodeLocks = signal<Map<string, NodeLock>>(new Map());
   readonly chatMessages = signal<ChatMessage[]>([]);
 
   // Observables para cambios remotos
@@ -88,6 +96,7 @@ export class CollaborationService {
     this.socket.on('disconnect', () => {
       this.isConnected.set(false);
       this.remoteCursors.set([]);
+      this.activeNodeLocks.set(new Map());
     });
 
     this.socket.on('room_participants_updated', (data: { diagramId?: string; roomCode?: string; participants: Collaborator[] }) => {
@@ -111,6 +120,33 @@ export class CollaborationService {
     this.socket.on('user_left', (data: { userId: string; userName?: string }) => {
       this.collaborators.update((list) => list.filter((c) => c.userId !== data.userId));
       this.remoteCursors.update((cursors) => cursors.filter((c) => c.userId !== data.userId));
+      
+      // Limpiar bloqueos de este usuario si quedaron
+      this.activeNodeLocks.update((map) => {
+        const next = new Map(map);
+        for (const [nodeId, lock] of next.entries()) {
+          if (lock.userId === data.userId) {
+            next.delete(nodeId);
+          }
+        }
+        return next;
+      });
+    });
+
+    this.socket.on('node_locked', (lock: NodeLock) => {
+      this.activeNodeLocks.update((map) => {
+        const next = new Map(map);
+        next.set(lock.nodeId, lock);
+        return next;
+      });
+    });
+
+    this.socket.on('node_unlocked', (data: { nodeId: string; userId: string }) => {
+      this.activeNodeLocks.update((map) => {
+        const next = new Map(map);
+        next.delete(data.nodeId);
+        return next;
+      });
     });
 
     this.socket.on('cursor_moved', (data: RemoteCursor) => {
@@ -171,11 +207,18 @@ export class CollaborationService {
         userName,
         color: assignedColor,
       },
-      (res: { success: boolean; session: any; participants?: Collaborator[] }) => {
+      (res: { success: boolean; session: any; participants?: Collaborator[]; activeLocks?: NodeLock[] }) => {
         if (res && res.success && res.session) {
           this.activeRoomCode.set(res.session.roomCode);
           if (res.participants) {
             this.collaborators.set(res.participants);
+          }
+          if (res.activeLocks) {
+            const map = new Map<string, NodeLock>();
+            for (const lock of res.activeLocks) {
+              map.set(lock.nodeId, lock);
+            }
+            this.activeNodeLocks.set(map);
           }
         }
       },
@@ -196,6 +239,70 @@ export class CollaborationService {
     this.activeRoomCode.set(null);
     this.remoteCursors.set([]);
     this.collaborators.set([]);
+    this.activeNodeLocks.set(new Map());
+  }
+
+  requestNodeLock(nodeId: string): Promise<{ success: boolean; lockedBy?: NodeLock }> {
+    return new Promise((resolve) => {
+      const user = this.getCurrentUser();
+      const diagramId = this.currentDiagramId();
+      const roomCode = this.activeRoomCode();
+
+      if (!this.socket || !diagramId || !user) {
+        resolve({ success: true });
+        return;
+      }
+
+      this.socket.emit(
+        'lock_node',
+        {
+          diagramId,
+          roomCode,
+          nodeId,
+          userId: user.id,
+          userName: user.fullName || user.email || 'Usuario',
+          color: this.myColor(),
+        },
+        (res: { success: boolean; lockedBy?: NodeLock }) => {
+          if (res && res.success) {
+            this.activeNodeLocks.update((map) => {
+              const next = new Map(map);
+              next.set(nodeId, {
+                nodeId,
+                userId: user.id,
+                userName: user.fullName || user.email || 'Usuario',
+                color: this.myColor(),
+              });
+              return next;
+            });
+            resolve({ success: true });
+          } else {
+            resolve({ success: false, lockedBy: res?.lockedBy });
+          }
+        },
+      );
+    });
+  }
+
+  releaseNodeLock(nodeId: string): void {
+    const user = this.getCurrentUser();
+    const diagramId = this.currentDiagramId();
+    const roomCode = this.activeRoomCode();
+
+    this.activeNodeLocks.update((map) => {
+      const next = new Map(map);
+      next.delete(nodeId);
+      return next;
+    });
+
+    if (!this.socket || !diagramId || !user) return;
+
+    this.socket.emit('unlock_node', {
+      diagramId,
+      roomCode,
+      nodeId,
+      userId: user.id,
+    });
   }
 
   sendCursorPosition(x: number, y: number): void {

@@ -7,7 +7,7 @@ import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { DiagramService } from '../../../core/services/diagram.service';
 import { ProjectService } from '../../../core/services/project.service';
-import { CollaborationService } from '../../../core/services/collaboration.service';
+import { CollaborationService, NodeLock } from '../../../core/services/collaboration.service';
 import {
   UmlRelationshipType,
   UmlLineStyle,
@@ -45,7 +45,9 @@ import {
   heroCommandLine,
   heroCpuChip,
   heroArrowPath,
-  heroEye
+  heroEye,
+  heroLockClosed,
+  heroLockOpen,
 } from '@ng-icons/heroicons/outline';
 
 export interface UmlDiagramProject {
@@ -98,6 +100,8 @@ export interface AiMutationHistory {
       heroCpuChip,
       heroArrowPath,
       heroEye,
+      heroLockClosed,
+      heroLockOpen,
     })
   ],
   templateUrl: './diagram-editor.component.html',
@@ -376,6 +380,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.editingNode()) {
+      this.collaborationService.releaseNodeLock(this.editingNode()!.id);
+    }
     this.collaborationService.leaveRoom();
   }
 
@@ -446,6 +453,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (!type) return 'void';
     const found = this.predefinedReturnTypes.find(rt => rt.toLowerCase() === type.trim().toLowerCase());
     return found || 'void';
+  }
+
+  // --- BLOQUEOS Y EXCLUSIÓN MUTUA DE TABLAS ---
+  getNodeLock(nodeId: string): NodeLock | undefined {
+    return this.collaborationService.activeNodeLocks().get(nodeId);
+  }
+
+  isNodeLockedByOther(nodeId: string): boolean {
+    const lock = this.collaborationService.activeNodeLocks().get(nodeId);
+    const currentUserId = this.authService.currentUser()?.id;
+    return !!lock && lock.userId !== currentUserId;
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -540,14 +558,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- ARRASTRE Y REDIMENSIONAMIENTO ---
   onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
-    if (this.isReadOnly()) return;
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
     node.position = newPosition;
     this.updateConnectionEndpoints();
     this.collaborationService.sendNodeDrag(node.id, newPosition);
   }
 
   onResizeMouseDown(node: UmlClassNode, event: MouseEvent): void {
-    if (this.isReadOnly()) return;
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
     event.stopPropagation();
     event.preventDefault();
     const startX = event.clientX;
@@ -780,7 +798,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- CREACIÓN DE RELACIONES ---
   onTableClick(nodeId: string, event: MouseEvent): void {
-    if (this.isReadOnly()) return;
+    if (this.isReadOnly() || this.isNodeLockedByOther(nodeId)) return;
 
     const activeRel = this.selectedRelationType();
     if (!activeRel) return;
@@ -835,6 +853,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const relType = this.selectedRelationType() || 'association';
     const baseSourceId = event.sourceId.replace(/_(top|bottom|left|right)$/, '');
     const baseTargetId = (event.targetId as string).replace(/_(top|bottom|left|right)$/, '');
+
+    if (this.isNodeLockedByOther(baseSourceId) || this.isNodeLockedByOther(baseTargetId)) {
+      alert('🔒 No se pueden crear conexiones hacia/desde una tabla que está siendo editada.');
+      return;
+    }
 
     const nodeMap = new Map(this.nodes().map(n => [n.id, n]));
     const sourceNode = nodeMap.get(baseSourceId);
@@ -990,6 +1013,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.isReadOnly()) return;
     if (event) event.stopPropagation();
 
+    if (this.isNodeLockedByOther(nodeId)) {
+      const lock = this.getNodeLock(nodeId);
+      alert(`🔒 No puedes eliminar la tabla "${nodeId}" mientras ${lock?.userName || 'otro usuario'} la está editando.`);
+      return;
+    }
+
     const nodesToRemove = new Set<string>([nodeId]);
 
     for (const conn of this.connections()) {
@@ -1015,16 +1044,33 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'remove_class');
   }
 
-  // --- MODAL DE EDICIÓN DE CLASE (DOBLE CLIC) ---
+  // --- MODAL DE EDICIÓN DE CLASE (DOBLE CLIC CON EXCLUSIÓN MUTUA) ---
   openEditNodeModal(node: UmlClassNode, event?: MouseEvent): void {
     if (this.isReadOnly() || node.isAnchor) return;
     if (event) event.stopPropagation();
 
-    this.editingNode.set(JSON.parse(JSON.stringify(node)));
-    this.isEditNodeModalOpen.set(true);
+    if (this.isNodeLockedByOther(node.id)) {
+      const lock = this.getNodeLock(node.id);
+      alert(`🔒 La tabla "${node.name}" está siendo editada actualmente por ${lock?.userName || 'otro usuario'}. Por favor espera a que termine de guardar.`);
+      return;
+    }
+
+    // Solicitar bloqueo exclusivo al servidor
+    this.collaborationService.requestNodeLock(node.id).then((res) => {
+      if (res.success) {
+        this.editingNode.set(JSON.parse(JSON.stringify(node)));
+        this.isEditNodeModalOpen.set(true);
+      } else if (res.lockedBy) {
+        alert(`🔒 La tabla "${node.name}" está siendo editada por ${res.lockedBy.userName}.`);
+      }
+    });
   }
 
   closeEditNodeModal(): void {
+    const node = this.editingNode();
+    if (node) {
+      this.collaborationService.releaseNodeLock(node.id);
+    }
     this.isEditNodeModalOpen.set(false);
     this.editingNode.set(null);
   }
@@ -1038,7 +1084,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       nodes.map(n => (n.id === edited.id ? edited : n))
     );
     this.updateConnectionEndpoints();
-    this.closeEditNodeModal();
+    this.collaborationService.releaseNodeLock(edited.id);
+    this.isEditNodeModalOpen.set(false);
+    this.editingNode.set(null);
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'edit_node');
   }
 

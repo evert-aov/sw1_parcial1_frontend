@@ -474,19 +474,32 @@
                 <div
                   fNode
                   fDragHandle
-                  [fNodeDraggingDisabled]="selectedRelationType() !== null"
+                  [fNodeDraggingDisabled]="selectedRelationType() !== null || isNodeLockedByOther(node.id)"
                   [(fNodePosition)]="node.position"
                   (fNodePositionChange)="onNodePositionChange(node, $event)"
                   (dblclick)="openEditNodeModal(node, $event)"
                   [style.width.px]="node.width"
                   [style.minWidth.px]="node.width"
                   [style.minHeight.px]="node.height || null"
+                  [style.outline]="isNodeLockedByOther(node.id) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
                   [ngClass]="{
                     'ring-2 ring-[#6B5A52] shadow-xl': selectedSourceNodeId() === node.id,
-                    'cursor-crosshair': selectedRelationType() !== null,
-                    'cursor-move': selectedRelationType() === null
+                    'cursor-crosshair': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'cursor-move': selectedRelationType() === null && !isNodeLockedByOther(node.id),
+                    'cursor-not-allowed opacity-95': isNodeLockedByOther(node.id)
                   }"
-                  class="font-sans text-[#2A201B] select-none relative group/node">
+                  class="font-sans text-[#2A201B] select-none relative group/node transition-shadow">
+
+                  <!-- BADGE VISUAL DE EXCLUSIÓN MUTUA / BLOQUEO POR OTRO USUARIO -->
+                  @if (isNodeLockedByOther(node.id)) {
+                    <div
+                      class="absolute -top-4.5 left-2 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold text-white flex items-center gap-1 shadow-md z-50 animate-bounce select-none"
+                      [style.backgroundColor]="getNodeLock(node.id)?.color || '#EF4444'"
+                      [title]="'Editando actualmente por ' + getNodeLock(node.id)?.userName">
+                      <ng-icon name="heroLockClosed" class="text-[10px]"></ng-icon>
+                      <span>{{ getNodeLock(node.id)?.userName }} (editando...)</span>
+                    </div>
+                  }
 
                   <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
                   <div
@@ -494,8 +507,8 @@
                     fConnectorType="source-target"
                     [fConnectorId]="node.id"
                     [ngClass]="{
-                      'pointer-events-auto cursor-crosshair': selectedRelationType() !== null,
-                      'pointer-events-none': selectedRelationType() === null
+                      'pointer-events-auto cursor-crosshair': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'pointer-events-none': selectedRelationType() === null || isNodeLockedByOther(node.id)
                     }"
                     class="absolute inset-0 z-40 bg-transparent"
                     (click)="onTableClick(node.id, $event)">
@@ -507,8 +520,8 @@
                     [fConnectorId]="node.id + '_top'"
                     title="Conectar por arriba"
                     [ngClass]="{
-                      'uml-connector-active': selectedRelationType() !== null,
-                      'uml-connector-inactive': selectedRelationType() === null
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                     }"
                     class="uml-connector-point absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
@@ -517,8 +530,8 @@
                     [fConnectorId]="node.id + '_right'"
                     title="Conectar por la derecha"
                     [ngClass]="{
-                      'uml-connector-active': selectedRelationType() !== null,
-                      'uml-connector-inactive': selectedRelationType() === null
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                     }"
                     class="uml-connector-point absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
@@ -527,8 +540,8 @@
                     [fConnectorId]="node.id + '_bottom'"
                     title="Conectar por abajo"
                     [ngClass]="{
-                      'uml-connector-active': selectedRelationType() !== null,
-                      'uml-connector-inactive': selectedRelationType() === null
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                     }"
                     class="uml-connector-point absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
@@ -537,21 +550,25 @@
                     [fConnectorId]="node.id + '_left'"
                     title="Conectar por la izquierda"
                     [ngClass]="{
-                      'uml-connector-active': selectedRelationType() !== null,
-                      'uml-connector-inactive': selectedRelationType() === null
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                     }"
                     class="uml-connector-point absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
 
                   <!-- 1. CABECERA DE LA TABLA (TÍTULO Y BOTÓN ELIMINAR) -->
                   <div class="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b-[1.5px] border-[#6B5A52] cursor-move">
-                    <span class="font-bold text-xs text-center text-[#2A201B] w-full tracking-tight truncate" title="Doble clic para editar clase">
+                    <span class="font-bold text-xs text-center text-[#2A201B] w-full tracking-tight truncate flex items-center justify-center gap-1" title="Doble clic para editar clase">
+                      @if (isNodeLockedByOther(node.id)) {
+                        <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
+                      }
                       {{ node.name }}
                     </span>
                     <button
                       (click)="removeClass(node.id, $event)"
-                      title="Eliminar clase"
-                      class="text-[#6B5A52] hover:text-red-700 hover:bg-black/5 rounded px-1 transition-colors cursor-pointer text-xs font-bold leading-none shrink-0 ml-1">
+                      [disabled]="isNodeLockedByOther(node.id)"
+                      [title]="isNodeLockedByOther(node.id) ? 'Bloqueada por otro usuario' : 'Eliminar clase'"
+                      class="text-[#6B5A52] hover:text-red-700 hover:bg-black/5 rounded px-1 transition-colors cursor-pointer text-xs font-bold leading-none shrink-0 ml-1 disabled:opacity-20 disabled:cursor-not-allowed">
                       &times;
                     </button>
                   </div>
