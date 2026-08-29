@@ -1884,7 +1884,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                 this.currentDiagramName.set(ast.name);
               }
               this.updateConnectionEndpoints();
-              setTimeout(() => this.updateConnectionEndpoints(), 60);
+              setTimeout(() => {
+                this.updateConnectionEndpoints();
+                this.fitView();
+              }, 100);
               this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_xmi');
 
               const diagId = this.currentDiagramId();
@@ -1922,6 +1925,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           } catch (err: any) {
             console.error('Error al parsear XMI:', err);
             alert('Error al leer el archivo XMI: ' + (err.message || err));
+          } finally {
+            target.value = '';
           }
         } else {
           // Importar JSON

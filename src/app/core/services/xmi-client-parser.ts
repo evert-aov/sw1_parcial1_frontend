@@ -236,11 +236,18 @@ export class XmiClientParser {
     const id = assocElem['@_xmi:id'] || assocElem['@_id'] || `conn_${Date.now()}`;
     const name = assocElem['@_name'] || '';
 
-    const ends = assocElem['ownedEnd'] || assocElem['memberEnd'];
+    // Priorizar ownedEnd con definiciones de tipo
+    let ends = assocElem['ownedEnd'];
+    if (!ends || (Array.isArray(ends) && ends.length < 2)) {
+      ends = assocElem['memberEnd'] || ends;
+    }
     if (!ends) return null;
 
-    const rawEnds = Array.isArray(ends) ? ends : [ends];
-    if (rawEnds.length < 2) return null;
+    const rawEnds = (Array.isArray(ends) ? ends : [ends]).filter((e: any) => !!e);
+    const endsWithTypes = rawEnds.filter((e: any) => !!e.type || !!e['@_type']);
+    const listToUse = endsWithTypes.length >= 2 ? endsWithTypes : rawEnds;
+
+    if (listToUse.length < 2) return null;
 
     let sourceNodeId = '';
     let targetNodeId = '';
@@ -248,19 +255,42 @@ export class XmiClientParser {
     let tMult = '';
     let aggregation = 'none';
 
-    const end0 = rawEnds[0];
-    if (end0['type'] && end0['type']['@_xmi:idref']) targetNodeId = end0['type']['@_xmi:idref'];
-    else if (end0['@_type']) targetNodeId = end0['@_type'];
-    tMult = this.extractMult(end0);
-    if (end0['@_aggregation']) aggregation = end0['@_aggregation'];
+    // Determinar extremos src/dst
+    const end0 = listToUse[0];
+    const end1 = listToUse[1];
 
-    const end1 = rawEnds[1];
-    if (end1['type'] && end1['type']['@_xmi:idref']) sourceNodeId = end1['type']['@_xmi:idref'];
-    else if (end1['@_type']) sourceNodeId = end1['@_type'];
-    sMult = this.extractMult(end1);
-    if (end1['@_aggregation'] && end1['@_aggregation'] !== 'none') aggregation = end1['@_aggregation'];
+    const typeId0 = end0.type ? (end0.type['@_xmi:idref'] || end0.type['@_type'] || (typeof end0.type === 'string' ? end0.type : '')) : (end0['@_type'] || '');
+    const typeId1 = end1.type ? (end1.type['@_xmi:idref'] || end1.type['@_type'] || (typeof end1.type === 'string' ? end1.type : '')) : (end1['@_type'] || '');
 
-    if (!nodeMap.has(sourceNodeId) || !nodeMap.has(targetNodeId)) return null;
+    const id0 = (end0['@_xmi:id'] || end0['@_id'] || '').toLowerCase();
+    const id1 = (end1['@_xmi:id'] || end1['@_id'] || '').toLowerCase();
+
+    if (id0.includes('src') || id1.includes('dst')) {
+      sourceNodeId = typeId0;
+      targetNodeId = typeId1;
+      sMult = this.extractMult(end0);
+      tMult = this.extractMult(end1);
+      if (end0['@_aggregation'] && end0['@_aggregation'] !== 'none') aggregation = end0['@_aggregation'];
+      if (end1['@_aggregation'] && end1['@_aggregation'] !== 'none') aggregation = end1['@_aggregation'];
+    } else if (id1.includes('src') || id0.includes('dst')) {
+      sourceNodeId = typeId1;
+      targetNodeId = typeId0;
+      sMult = this.extractMult(end1);
+      tMult = this.extractMult(end0);
+      if (end1['@_aggregation'] && end1['@_aggregation'] !== 'none') aggregation = end1['@_aggregation'];
+      if (end0['@_aggregation'] && end0['@_aggregation'] !== 'none') aggregation = end0['@_aggregation'];
+    } else {
+      sourceNodeId = typeId0;
+      targetNodeId = typeId1;
+      sMult = this.extractMult(end0);
+      tMult = this.extractMult(end1);
+      if (end0['@_aggregation'] && end0['@_aggregation'] !== 'none') aggregation = end0['@_aggregation'];
+      if (end1['@_aggregation'] && end1['@_aggregation'] !== 'none') aggregation = end1['@_aggregation'];
+    }
+
+    if (!sourceNodeId || !targetNodeId || !nodeMap.has(sourceNodeId) || !nodeMap.has(targetNodeId)) {
+      return null;
+    }
 
     let type: any = 'association';
     if (aggregation === 'composite') type = 'composition';
