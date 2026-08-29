@@ -625,158 +625,216 @@
       </f-flow>
     </div>
 
-    <!-- 4. [PANEL IA] COPILOT CONTEXTUAL (VERTEX AI GEMINI 2.5 FLASH) -->
+    <!-- 4. [PANEL IA] COPILOT CONTEXTUAL TIPO CHAT (VERTEX AI GEMINI 2.5 FLASH) -->
     @if (isAiPanelOpen()) {
-      <aside class="w-80 bg-[#EFEFEF] border-l border-[#B8B8B8] flex flex-col shrink-0 text-xs text-slate-800 shadow-lg z-20 animate-in slide-in-from-right duration-150">
+      <aside class="w-[430px] bg-[#EFEFEF] border-l border-[#B8B8B8] flex flex-col shrink-0 text-xs text-slate-800 shadow-2xl z-20 animate-in slide-in-from-right duration-150 h-full">
         
         <!-- Header Panel IA -->
-        <div class="bg-gradient-to-b from-[#EAEAEA] to-[#DCDCDC] px-3 py-2 border-b border-[#C0C0C0] flex items-center justify-between">
-          <div class="flex items-center gap-1.5 font-bold text-slate-900">
-            <ng-icon name="heroSparkles" class="text-sm text-purple-600"></ng-icon>
-            <span>✨ Copilot IA (Vertex AI)</span>
+        <div class="bg-gradient-to-b from-[#EAEAEA] to-[#DCDCDC] px-3.5 py-2.5 border-b border-[#C0C0C0] flex items-center justify-between shrink-0 shadow-xs">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-purple-100 border border-purple-300 flex items-center justify-center shadow-xs">
+              <ng-icon name="heroSparkles" class="text-sm text-purple-600"></ng-icon>
+            </div>
+            <div>
+              <div class="font-bold text-slate-900 leading-tight flex items-center gap-1.5">
+                <span>Copilot IA (UML)</span>
+                <span class="px-1.5 py-0.2 rounded-full text-[9px] bg-purple-700 text-white font-mono font-medium">Vertex AI</span>
+              </div>
+              <span class="text-[9.5px] text-slate-500 font-mono">Gemini 2.5 Flash • Multimodal</span>
+            </div>
           </div>
-          <button (click)="isAiPanelOpen.set(false)" class="text-slate-500 hover:text-slate-900 font-bold cursor-pointer text-sm">&times;</button>
+          <button
+            (click)="isAiPanelOpen.set(false)"
+            title="Cerrar panel IA"
+            class="text-slate-400 hover:text-slate-800 font-bold cursor-pointer text-base px-1.5 py-0.5 rounded hover:bg-slate-200 transition-colors">&times;</button>
         </div>
 
-        <div class="p-3 flex-1 flex flex-col gap-3 overflow-y-auto">
+        <!-- Input oculto para subir imágenes de diagramas -->
+        <input
+          #imageInput
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/jpg"
+          (change)="onImageSelected($event)"
+          class="hidden" />
+
+        <!-- 1. FEED CONVERSACIONAL DE CHAT (SCROLLABLE) -->
+        <div #chatScrollContainer class="flex-1 p-3.5 overflow-y-auto space-y-3 min-h-0 bg-[#F4F4F6]">
+          @for (msg of aiChatMessages(); track msg.id) {
+            
+            <!-- Mensaje del Usuario -->
+            @if (msg.sender === 'user') {
+              <div class="flex items-start justify-end gap-2 animate-in fade-in slide-in-from-bottom-1">
+                <div class="max-w-[85%] space-y-1">
+                  @if (msg.imagePreview) {
+                    <div class="p-1 bg-white border border-purple-200 rounded-md shadow-xs mb-1">
+                      <img [src]="msg.imagePreview" class="max-h-36 max-w-full rounded object-contain" alt="Imagen adjunta" />
+                    </div>
+                  }
+                  <div class="p-2.5 bg-gradient-to-r from-purple-700 to-indigo-800 text-white rounded-2xl rounded-tr-xs text-[11.5px] shadow-sm leading-relaxed">
+                    <p class="whitespace-pre-wrap">{{ msg.text }}</p>
+                  </div>
+                  <div class="text-[9px] font-mono text-slate-400 text-right pr-1">
+                    {{ msg.timestamp | date:'HH:mm:ss' }}
+                  </div>
+                </div>
+                <div class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  {{ (authService.currentUser()?.fullName || 'U').charAt(0).toUpperCase() }}
+                </div>
+              </div>
+            }
+
+            <!-- Mensaje del Asistente IA -->
+            @else {
+              <div class="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-1">
+                <div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <ng-icon name="heroSparkles" class="text-xs"></ng-icon>
+                </div>
+                <div class="max-w-[85%] space-y-1.5">
+                  <div
+                    [ngClass]="{
+                      'bg-white border-slate-300 text-slate-800': msg.status === 'success' || !msg.status,
+                      'bg-amber-50 border-amber-300 text-amber-900': msg.status === 'clarification',
+                      'bg-red-50 border-red-300 text-red-900': msg.status === 'error'
+                    }"
+                    class="p-2.5 border rounded-2xl rounded-tl-xs text-[11.5px] shadow-xs leading-relaxed space-y-1.5">
+                    
+                    @if (msg.status === 'clarification') {
+                      <div class="flex items-center gap-1 font-bold text-amber-800 text-[10.5px]">
+                        <span>⚠️ Aclaración Requerida</span>
+                      </div>
+                    }
+
+                    <p class="whitespace-pre-wrap">{{ msg.text }}</p>
+
+                    @if (msg.changesSummary) {
+                      <div class="p-1.5 bg-purple-50 border border-purple-200 rounded text-[10px] font-mono text-purple-900 flex items-center gap-1">
+                        <span class="text-purple-600 font-bold">✓</span>
+                        <span class="truncate">{{ msg.changesSummary }}</span>
+                      </div>
+                    }
+                  </div>
+                  <div class="text-[9px] font-mono text-slate-400 pl-1">
+                    {{ msg.timestamp | date:'HH:mm:ss' }}
+                  </div>
+                </div>
+              </div>
+            }
+          }
+
+          <!-- Indicador de "Escribiendo / Procesando" -->
+          @if (isAiProcessing()) {
+            <div class="flex items-start gap-2 animate-in fade-in">
+              <div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                <ng-icon name="heroSparkles" class="text-xs"></ng-icon>
+              </div>
+              <div class="p-2.5 bg-white border border-slate-300 rounded-2xl rounded-tl-xs shadow-xs flex items-center gap-2 text-xs text-slate-600 font-mono">
+                <span class="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></span>
+                <span>Copilot está razonando y generando el diagrama...</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- 2. BANDEJA DE ENTRADA INFERIOR (AMPLIA, TIPO CHAT) -->
+        <div class="p-3 bg-white border-t border-[#C0C0C0] shrink-0 space-y-2">
           
-          <!-- Input oculto para subir imágenes de diagramas -->
-          <input
-            #imageInput
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/jpg"
-            (change)="onImageSelected($event)"
-            class="hidden" />
-
-          <!-- Prompt & Multimedia Input Box -->
-          <div class="space-y-2">
-            <div class="flex items-center justify-between">
-              <label class="block font-bold text-[10.5px] font-mono text-slate-700 uppercase tracking-wide">Comando / Dictado / Imagen</label>
-              <span class="text-[9.5px] font-mono text-purple-700 font-semibold">Gemini 2.5 Flash</span>
-            </div>
-
-            <!-- Preview de Imagen Adjunta -->
-            @if (attachedImageBase64()) {
-              <div class="p-1.5 bg-purple-50 border border-purple-300 rounded flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 truncate">
-                  <img [src]="attachedImageBase64()" class="w-8 h-8 object-cover rounded border border-purple-200" alt="Vista previa" />
-                  <span class="text-[11px] font-mono text-purple-900 truncate max-w-[170px]">{{ attachedImageName() }}</span>
-                </div>
-                <button
-                  (click)="removeAttachedImage()"
-                  title="Quitar imagen"
-                  class="text-purple-600 hover:text-red-700 font-bold text-sm px-1 cursor-pointer">
-                  &times;
-                </button>
-              </div>
-            }
-
-            <!-- Área de texto del prompt -->
-            <div class="relative">
-              <textarea
-                [(ngModel)]="aiPrompt"
-                rows="3"
-                [placeholder]="attachedImageBase64() ? 'Instrucción opcional para la imagen (o dejar en blanco para extraer todo)...' : 'e.g. Crea la tabla Producto con id UUID, nombre String, precio Double y conéctala con Categoria con multiplicidad *...'"
-                class="w-full p-2 bg-white border border-[#6B5A52] text-xs focus:outline-none focus:ring-1 focus:ring-purple-600 shadow-inner rounded-xs resize-none pr-16"></textarea>
-
-              <!-- Botones de Acción Multimedia flotantes en el cuadro -->
-              <div class="absolute bottom-2 right-2 flex items-center gap-1">
-                <!-- Botón Dictado por Voz -->
-                <button
-                  (click)="toggleVoiceRecognition()"
-                  type="button"
-                  [title]="isVoiceListening() ? 'Detener dictado por voz' : 'Dictar comando por voz (Micrófono)'"
-                  [ngClass]="{
-                    'bg-red-600 text-white animate-pulse ring-2 ring-red-400': isVoiceListening(),
-                    'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-800 border border-slate-300': !isVoiceListening()
-                  }"
-                  class="p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center">
-                  <ng-icon [name]="isVoiceListening() ? 'heroStop' : 'heroMicrophone'" class="text-xs"></ng-icon>
-                </button>
-
-                <!-- Botón Adjuntar Imagen -->
-                <button
-                  (click)="triggerImageInput()"
-                  type="button"
-                  title="Adjuntar imagen de diagrama UML (pizarra o foto)"
-                  class="p-1.5 bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-800 border border-slate-300 rounded-full transition-all cursor-pointer flex items-center justify-center">
-                  <ng-icon name="heroPhoto" class="text-xs"></ng-icon>
-                </button>
-              </div>
-            </div>
-
-            <!-- Indicador de Grabación de Voz Activa -->
-            @if (isVoiceListening()) {
-              <div class="px-2 py-1 bg-red-50 border border-red-200 rounded text-[10.5px] font-mono text-red-700 flex items-center gap-1.5 animate-pulse">
-                <span class="w-2 h-2 rounded-full bg-red-600"></span>
-                <span>Escuchando tu voz en tiempo real... Habla ahora.</span>
-              </div>
-            }
-
-            <!-- Alerta de Guardrail / Aclaración Requerida -->
-            @if (aiClarificationMessage()) {
-              <div class="p-2 bg-amber-50 border border-amber-300 rounded text-[11px] text-amber-900 space-y-1 animate-in fade-in">
-                <div class="flex items-center gap-1 font-bold text-amber-800">
-                  <span>⚠️ Aclaración Requerida</span>
-                </div>
-                <p>{{ aiClarificationMessage() }}</p>
-              </div>
-            }
-
-            <!-- Botón Ejecutar con Vertex AI -->
+          <!-- Chips de Comandos Sugeridos -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[10px]">
             <button
-              (click)="applyAiPrompt()"
-              [disabled]="isAiProcessing() || (!aiPrompt().trim() && !attachedImageBase64())"
-              class="w-full py-1.5 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white font-mono text-xs font-bold uppercase rounded-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50">
-              @if (isAiProcessing()) {
-                <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span>Procesando con Vertex AI...</span>
-              } @else {
-                <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
-                <span>{{ attachedImageBase64() ? 'Digitalizar Imagen con IA' : 'Ejecutar Comando IA' }}</span>
-              }
+              (click)="setAiSuggestion('Crea una tabla Producto con atributos id UUID, nombre String, precio Double y relacionala con Usuarios con multiplicidad *')"
+              class="px-2 py-0.5 bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-900 border border-slate-300 rounded-full shrink-0 transition-colors cursor-pointer">
+              ✨ Crear Producto y relación
+            </button>
+            <button
+              (click)="setAiSuggestion('Agrega la clase FacturaDetalle con cantidad Integer, precio_unitario Double y subtotal Double')"
+              class="px-2 py-0.5 bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-900 border border-slate-300 rounded-full shrink-0 transition-colors cursor-pointer">
+              ✨ Agregar FacturaDetalle
+            </button>
+            <button
+              (click)="setAiSuggestion('Crear relación de Composición entre Pedido y DetallePedido con multiplicidad 1 a 1..*')"
+              class="px-2 py-0.5 bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-900 border border-slate-300 rounded-full shrink-0 transition-colors cursor-pointer">
+              ✨ Composición 1 a 1..*
             </button>
           </div>
 
-          <!-- Sugerencias Rápidas y Comandos Modelo -->
-          <div class="space-y-1">
-            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wide font-bold">Comandos rápidos de ejemplo:</span>
-            <div class="flex flex-col gap-1">
+          <!-- Preview de Imagen Adjunta (si hay una cargada) -->
+          @if (attachedImageBase64()) {
+            <div class="p-1.5 bg-purple-50 border border-purple-300 rounded flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 truncate">
+                <img [src]="attachedImageBase64()" class="w-9 h-9 object-cover rounded border border-purple-200" alt="Vista previa" />
+                <div class="truncate">
+                  <p class="text-[11px] font-mono text-purple-900 truncate font-medium">{{ attachedImageName() }}</p>
+                  <p class="text-[9px] text-purple-600">Imagen lista para digitalizar con Gemini Vision</p>
+                </div>
+              </div>
               <button
-                (click)="setAiSuggestion('Crea una tabla Producto con atributos id UUID, nombre String, precio Double y relacionala con Categoria con multiplicidad *')"
-                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[10.5px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
-                ✨ Crear Producto y relación con Categoría
+                (click)="removeAttachedImage()"
+                title="Quitar imagen"
+                class="text-purple-600 hover:text-red-700 font-bold text-base px-1.5 cursor-pointer">
+                &times;
               </button>
+            </div>
+          }
+
+          <!-- Indicador de Grabación de Voz Activa -->
+          @if (isVoiceListening()) {
+            <div class="px-2.5 py-1 bg-red-50 border border-red-200 rounded text-[10.5px] font-mono text-red-700 flex items-center justify-between animate-pulse">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-red-600"></span>
+                <span>Escuchando tu voz... Habla ahora.</span>
+              </div>
+              <button (click)="toggleVoiceRecognition()" class="text-red-800 font-bold underline text-[10px] cursor-pointer">Detener</button>
+            </div>
+          }
+
+          <!-- Caja de Entrada con Textarea Alto y Botones de Acción -->
+          <div class="relative border border-[#6B5A52] rounded bg-white shadow-inner focus-within:ring-2 focus-within:ring-purple-600 focus-within:border-transparent transition-all">
+            <textarea
+              [(ngModel)]="aiPrompt"
+              (keydown)="onAiInputKeyDown($event)"
+              rows="4"
+              [placeholder]="attachedImageBase64() ? 'Instrucción opcional para la imagen (o presiona Enter para digitalizar todo)...' : 'Escribe o dicta tu instrucción UML (ej: Crea tabla Producto con id UUID y relación con Usuario)...'"
+              class="w-full p-2.5 text-xs text-slate-800 bg-transparent focus:outline-none resize-none min-h-[95px] pr-20"></textarea>
+
+            <!-- Botones de Acción Multimedia e interactivos en la esquina inferior derecha -->
+            <div class="absolute bottom-2 right-2 flex items-center gap-1.5">
+              <!-- Botón Micrófono / Dictado por Voz -->
               <button
-                (click)="setAiSuggestion('Agrega la clase FacturaDetalle con cantidad Integer, precio_unitario Double y subtotal Double')"
-                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[10.5px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
-                ✨ Agregar FacturaDetalle
+                (click)="toggleVoiceRecognition()"
+                type="button"
+                [title]="isVoiceListening() ? 'Detener dictado por voz' : 'Dictar comando por voz'"
+                [ngClass]="{
+                  'bg-red-600 text-white animate-pulse ring-2 ring-red-400': isVoiceListening(),
+                  'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-800 border border-slate-300': !isVoiceListening()
+                }"
+                class="p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs">
+                <ng-icon [name]="isVoiceListening() ? 'heroStop' : 'heroMicrophone'" class="text-xs"></ng-icon>
               </button>
+
+              <!-- Botón Adjuntar Imagen -->
               <button
-                (click)="setAiSuggestion('Crear relación de Composición entre Pedido y DetallePedido con multiplicidad 1 a 1..*')"
-                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[10.5px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
-                ✨ Relación Composición 1 a 1..*
+                (click)="triggerImageInput()"
+                type="button"
+                title="Adjuntar imagen de diagrama UML (pizarra o foto)"
+                class="p-1.5 bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-800 border border-slate-300 rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs">
+                <ng-icon name="heroPhoto" class="text-xs"></ng-icon>
+              </button>
+
+              <!-- Botón Enviar Mensaje (Enter) -->
+              <button
+                (click)="applyAiPrompt()"
+                [disabled]="isAiProcessing() || (!aiPrompt().trim() && !attachedImageBase64())"
+                title="Enviar mensaje (Enter)"
+                class="p-1.5 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs disabled:opacity-30 disabled:cursor-not-allowed">
+                <ng-icon name="heroPaperAirplane" class="text-xs"></ng-icon>
               </button>
             </div>
           </div>
 
-          <!-- Historial de Mutaciones de IA -->
-          <div class="flex-1 flex flex-col min-h-0 pt-2 border-t border-slate-300">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wide font-bold">Historial de Acciones IA</span>
-              <span class="text-[9px] font-mono text-emerald-700 font-bold">● En vivo</span>
-            </div>
-            <div class="flex-1 space-y-1.5 overflow-y-auto pr-1">
-              @for (item of aiHistory(); track item.id) {
-                <div class="p-2 bg-white/90 border border-slate-300 rounded-xs space-y-0.5 text-[11px] shadow-xs">
-                  <p class="font-semibold text-slate-800 line-clamp-2">"{{ item.prompt }}"</p>
-                  <div class="flex items-center justify-between text-[9.5px] text-slate-500 font-mono">
-                    <span class="text-purple-700 font-medium truncate max-w-[150px]">✨ {{ item.action }}</span>
-                    <span>{{ item.timestamp | date:'HH:mm:ss' }}</span>
-                  </div>
-                </div>
-              }
-            </div>
+          <!-- Pie de ayuda -->
+          <div class="flex items-center justify-between text-[9.5px] font-mono text-slate-400 px-0.5">
+            <span>Enter para enviar • Shift+Enter para salto de línea</span>
+            <span class="text-emerald-700 font-bold">● Sincronizado en vivo</span>
           </div>
 
         </div>

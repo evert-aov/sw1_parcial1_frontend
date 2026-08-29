@@ -64,11 +64,14 @@ export interface UmlDiagramProject {
   connections: UmlConnection[];
 }
 
-export interface AiMutationHistory {
+export interface AiChatMessage {
   id: string;
-  prompt: string;
-  action: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  imagePreview?: string;
+  changesSummary?: string;
   timestamp: Date;
+  status?: 'success' | 'clarification' | 'error' | 'pending';
 }
 
 @Component({
@@ -129,6 +132,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
   @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
   @ViewChild('imageInput') imageInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('chatScrollContainer') chatScrollContainerRef?: ElementRef<HTMLElement>;
 
   // Contexto del diagrama y proyecto
   currentDiagramId = signal<string | null>(null);
@@ -161,18 +165,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   aiPrompt = signal<string>('');
   isAiProcessing = signal<boolean>(false);
   isVoiceListening = signal<boolean>(false);
-  aiClarificationMessage = signal<string | null>(null);
   attachedImageBase64 = signal<string | null>(null);
   attachedImageMimeType = signal<string>('image/png');
   attachedImageName = signal<string | null>(null);
   private speechRecognitionInstance: any = null;
 
-  aiHistory = signal<AiMutationHistory[]>([
+  // Conversación tipo Chat con Copilot IA
+  aiChatMessages = signal<AiChatMessage[]>([
     {
-      id: 'h1',
-      prompt: 'Inicialización de esquema UML',
-      action: 'Estructura base cargada',
+      id: 'm_welcome',
+      sender: 'assistant',
+      text: '¡Hola! Soy tu Copilot de Arquitectura UML con Google Vertex AI. Puedes pedirme crear tablas, agregar atributos tipados, trazar relaciones, dictarme por voz o adjuntarme fotos de diagramas.',
       timestamp: new Date(),
+      status: 'success',
     }
   ]);
 
@@ -346,15 +351,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
 
       if (data.action === 'ai_mutation') {
-        this.aiHistory.update(list => [
+        this.aiChatMessages.update(list => [
+          ...list,
           {
             id: `ai_remote_${Date.now()}`,
-            prompt: 'Mutación remota de IA',
-            action: 'Copilot IA actualizó el diagrama en tiempo real',
+            sender: 'assistant',
+            text: '✨ Copilot IA actualizó el diagrama en tiempo real para todos los colaboradores.',
             timestamp: new Date(),
+            status: 'success',
           },
-          ...list,
         ]);
+        this.scrollToChatBottom();
       }
     });
 
@@ -476,7 +483,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         );
       }
 
-      // Unirse a la sala de colaboración en tiempo real con este diagramId
       this.collaborationService.joinRoom(diagramId);
 
       setTimeout(() => {
@@ -653,7 +659,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const canvasX = (rawX - posX) / scale;
     const canvasY = (rawY - posY) / scale;
 
-    // Transmitir posición de cursor en tiempo real a colaboradores
     this.collaborationService.sendCursorPosition(canvasX, canvasY);
 
     if (this.selectedSourceNodeId()) {
@@ -1291,6 +1296,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.attachedImageName.set(null);
   }
 
+  scrollToChatBottom(): void {
+    setTimeout(() => {
+      if (this.chatScrollContainerRef?.nativeElement) {
+        this.chatScrollContainerRef.nativeElement.scrollTop = this.chatScrollContainerRef.nativeElement.scrollHeight;
+      }
+    }, 60);
+  }
+
+  onAiInputKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.applyAiPrompt();
+    }
+  }
+
   applyAiPrompt(): void {
     if (this.isReadOnly()) return;
     const promptText = this.aiPrompt().trim();
@@ -1300,13 +1320,31 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     if (!promptText && !imageBase64) return;
 
-    this.isAiProcessing.set(true);
-    this.aiClarificationMessage.set(null);
+    // Agregar mensaje del usuario a la conversación del chat
+    const userMsgId = `usr_${Date.now()}`;
+    this.aiChatMessages.update(list => [
+      ...list,
+      {
+        id: userMsgId,
+        sender: 'user',
+        text: promptText || 'Digitalización de imagen de diagrama UML',
+        imagePreview: imageBase64 || undefined,
+        timestamp: new Date(),
+      }
+    ]);
 
-    if (imageBase64) {
+    // Limpiar de inmediato la bandeja de entrada de texto e imagen como en los chats
+    this.aiPrompt.set('');
+    const sentImageBase64 = imageBase64;
+    const sentImageMime = this.attachedImageMimeType();
+    this.removeAttachedImage();
+    this.isAiProcessing.set(true);
+    this.scrollToChatBottom();
+
+    if (sentImageBase64) {
       this.aiAssistantService.sendVisionPrompt(
-        imageBase64,
-        this.attachedImageMimeType(),
+        sentImageBase64,
+        sentImageMime,
         promptText || undefined,
         diagramId,
         roomCode,
@@ -1319,24 +1357,46 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             this.nodes.set(res.nodes);
             if (res.connections) this.connections.set(res.connections);
             this.updateConnectionEndpoints();
-            this.removeAttachedImage();
-            this.aiPrompt.set('');
-            this.aiHistory.update(list => [
+            setTimeout(() => this.updateConnectionEndpoints(), 60);
+
+            this.aiChatMessages.update(list => [
+              ...list,
               {
                 id: `ai_${Date.now()}`,
-                prompt: promptText || 'Digitalización de imagen UML',
-                action: res.changesSummary || 'Diagrama extraído con Vertex AI Vision',
+                sender: 'assistant',
+                text: res.message,
+                changesSummary: res.changesSummary,
                 timestamp: new Date(),
-              },
-              ...list,
+                status: 'success',
+              }
             ]);
           } else {
-            this.aiClarificationMessage.set(res.message);
+            this.aiChatMessages.update(list => [
+              ...list,
+              {
+                id: `ai_${Date.now()}`,
+                sender: 'assistant',
+                text: res.message,
+                timestamp: new Date(),
+                status: 'clarification',
+              }
+            ]);
           }
+          this.scrollToChatBottom();
         },
         error: (err) => {
           this.isAiProcessing.set(false);
-          alert('Error al procesar la imagen con Gemini Vision: ' + (err.error?.message || err.message));
+          this.aiChatMessages.update(list => [
+            ...list,
+            {
+              id: `ai_${Date.now()}`,
+              sender: 'assistant',
+              text: 'Error al procesar la imagen: ' + (err.error?.message || err.message),
+              timestamp: new Date(),
+              status: 'error',
+            }
+          ]);
+          this.scrollToChatBottom();
         }
       });
     } else {
@@ -1354,24 +1414,46 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             if (res.connections) this.connections.set(res.connections);
             this.updateConnectionEndpoints();
             setTimeout(() => this.updateConnectionEndpoints(), 60);
-            this.aiPrompt.set('');
-            this.aiHistory.update(list => [
+
+            this.aiChatMessages.update(list => [
+              ...list,
               {
                 id: `ai_${Date.now()}`,
-                prompt: promptText,
-                action: res.changesSummary || 'Mutación estructural Vertex AI',
+                sender: 'assistant',
+                text: res.message,
+                changesSummary: res.changesSummary,
                 timestamp: new Date(),
-              },
-              ...list,
+                status: 'success',
+              }
             ]);
           } else {
-            // Guardrail activado: Aclaración requerida
-            this.aiClarificationMessage.set(res.message);
+            // Guardrail: Aclaración requerida
+            this.aiChatMessages.update(list => [
+              ...list,
+              {
+                id: `ai_${Date.now()}`,
+                sender: 'assistant',
+                text: res.message,
+                timestamp: new Date(),
+                status: 'clarification',
+              }
+            ]);
           }
+          this.scrollToChatBottom();
         },
         error: (err) => {
           this.isAiProcessing.set(false);
-          alert('Error en Copilot IA: ' + (err.error?.message || err.message));
+          this.aiChatMessages.update(list => [
+            ...list,
+            {
+              id: `ai_${Date.now()}`,
+              sender: 'assistant',
+              text: 'Error en Copilot IA: ' + (err.error?.message || err.message),
+              timestamp: new Date(),
+              status: 'error',
+            }
+          ]);
+          this.scrollToChatBottom();
         }
       });
     }
