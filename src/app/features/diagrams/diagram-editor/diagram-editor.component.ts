@@ -55,6 +55,9 @@ import {
   heroClipboard,
   heroPaperAirplane,
   heroStop,
+  heroBars3,
+  heroBars3CenterLeft,
+  heroChevronLeft,
 } from '@ng-icons/heroicons/outline';
 
 export interface UmlDiagramProject {
@@ -118,6 +121,9 @@ export interface AiChatMessage {
       heroClipboard,
       heroPaperAirplane,
       heroStop,
+      heroBars3,
+      heroBars3CenterLeft,
+      heroChevronLeft,
     })
   ],
   templateUrl: './diagram-editor.component.html',
@@ -160,7 +166,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // Posición del cursor en coordenadas del lienzo
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Paneles laterales
+  // Paneles laterales (Visibilidad colapsable)
+  isToolboxOpen = signal<boolean>(true);
   isAiPanelOpen = signal<boolean>(true);
   isExportDropdownOpen = signal<boolean>(false);
 
@@ -504,6 +511,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       if (!this.isReadOnly()) {
         this.saveToBackend();
       }
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+      event.preventDefault();
+      this.isToolboxOpen.set(!this.isToolboxOpen());
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'i') {
+      event.preventDefault();
+      this.isAiPanelOpen.set(!this.isAiPanelOpen());
     }
   }
 
