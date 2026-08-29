@@ -159,6 +159,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // Modo Seleccionar / Mover o Crear Relación
   selectedRelationType = signal<UmlRelationshipType | null>(null);
   selectedSourceNodeId = signal<string | null>(null);
+  selectedNodeId = signal<string | null>(null);
   defaultLineStyle = signal<UmlLineStyle>('segment');
   mouseCurrentPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -498,6 +499,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
+      this.selectedNodeId.set(null);
       this.setPointerMode();
       this.closeEditNodeModal();
       this.closeEditConnModal();
@@ -839,6 +841,40 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onCanvasBackgroundClick(): void {
     this.selectedSourceNodeId.set(null);
+    this.selectedNodeId.set(null);
+  }
+
+  // --- SELECCIÓN Y RESALTADO DE TABLAS Y RELACIONES (dbdiagram.io) ---
+  onNodeSelect(nodeId: string, event: MouseEvent): void {
+    if (this.selectedRelationType() !== null) return;
+    event.stopPropagation();
+    this.selectedNodeId.update(curr => (curr === nodeId ? null : nodeId));
+  }
+
+  isConnectionHighlighted(conn: UmlConnection): boolean {
+    const selId = this.selectedNodeId();
+    if (!selId) return false;
+    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+    return s === selId || t === selId;
+  }
+
+  isConnectionDimmed(conn: UmlConnection): boolean {
+    const selId = this.selectedNodeId();
+    if (!selId) return false;
+    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+    return s !== selId && t !== selId;
+  }
+
+  isNeighborNode(nodeId: string): boolean {
+    const selId = this.selectedNodeId();
+    if (!selId || nodeId === selId) return false;
+    return this.connections().some(c => {
+      const s = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+      const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
+      return (s === selId && t === nodeId) || (t === selId && s === nodeId);
+    });
   }
 
   // --- CREACIÓN DE RELACIONES ---
