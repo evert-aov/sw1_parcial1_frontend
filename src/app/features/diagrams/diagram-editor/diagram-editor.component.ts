@@ -8,6 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { DiagramService } from '../../../core/services/diagram.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { CollaborationService, NodeLock } from '../../../core/services/collaboration.service';
+import { AiAssistantService } from '../../../core/services/ai-assistant.service';
 import {
   UmlRelationshipType,
   UmlLineStyle,
@@ -48,6 +49,10 @@ import {
   heroEye,
   heroLockClosed,
   heroLockOpen,
+  heroMicrophone,
+  heroPhoto,
+  heroPaperAirplane,
+  heroStop,
 } from '@ng-icons/heroicons/outline';
 
 export interface UmlDiagramProject {
@@ -102,6 +107,10 @@ export interface AiMutationHistory {
       heroEye,
       heroLockClosed,
       heroLockOpen,
+      heroMicrophone,
+      heroPhoto,
+      heroPaperAirplane,
+      heroStop,
     })
   ],
   templateUrl: './diagram-editor.component.html',
@@ -112,12 +121,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly diagramService = inject(DiagramService);
   readonly projectService = inject(ProjectService);
   readonly collaborationService = inject(CollaborationService);
+  readonly aiAssistantService = inject(AiAssistantService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
   @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
   @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('imageInput') imageInput?: ElementRef<HTMLInputElement>;
 
   // Contexto del diagrama y proyecto
   currentDiagramId = signal<string | null>(null);
@@ -146,9 +157,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   isAiPanelOpen = signal<boolean>(true);
   isExportDropdownOpen = signal<boolean>(false);
 
-  // IA Copilot
+  // IA Copilot (Vertex AI Gemini 2.5 Flash)
   aiPrompt = signal<string>('');
   isAiProcessing = signal<boolean>(false);
+  isVoiceListening = signal<boolean>(false);
+  aiClarificationMessage = signal<string | null>(null);
+  attachedImageBase64 = signal<string | null>(null);
+  attachedImageMimeType = signal<string>('image/png');
+  attachedImageName = signal<string | null>(null);
+  private speechRecognitionInstance: any = null;
+
   aiHistory = signal<AiMutationHistory[]>([
     {
       id: 'h1',
@@ -321,11 +339,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
     });
 
-    // Sincronización remota del diagrama completo
+    // Sincronización remota del diagrama completo (incluyendo mutaciones del Copilot IA)
     this.collaborationService.remoteDiagramSync$.subscribe((data) => {
       if (data.nodes) this.nodes.set(data.nodes);
       if (data.connections) this.connections.set(data.connections);
       this.updateConnectionEndpoints();
+
+      if (data.action === 'ai_mutation') {
+        this.aiHistory.update(list => [
+          {
+            id: `ai_remote_${Date.now()}`,
+            prompt: 'Mutación remota de IA',
+            action: 'Copilot IA actualizó el diagrama en tiempo real',
+            timestamp: new Date(),
+          },
+          ...list,
+        ]);
+      }
     });
 
     // Manejo de rechazo de bloqueo por condición de carrera
@@ -391,6 +421,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.editingNode()) {
       this.collaborationService.releaseNodeLock(this.editingNode()!.id);
+    }
+    if (this.speechRecognitionInstance && this.isVoiceListening()) {
+      this.speechRecognitionInstance.stop();
     }
     this.collaborationService.leaveRoom();
   }
@@ -1186,74 +1219,161 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  // --- ASISTENTE IA (COPILOT) ---
+  // --- ASISTENTE IA (COPILOT VERTEX AI GEMINI 2.5 FLASH) ---
+  initVoiceRecognition(): void {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      this.speechRecognitionInstance = new SpeechRecognition();
+      this.speechRecognitionInstance.continuous = false;
+      this.speechRecognitionInstance.lang = 'es-ES';
+      this.speechRecognitionInstance.interimResults = false;
+
+      this.speechRecognitionInstance.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        const current = this.aiPrompt();
+        this.aiPrompt.set(current ? `${current} ${transcript}` : transcript);
+        this.isVoiceListening.set(false);
+      };
+
+      this.speechRecognitionInstance.onerror = () => {
+        this.isVoiceListening.set(false);
+      };
+
+      this.speechRecognitionInstance.onend = () => {
+        this.isVoiceListening.set(false);
+      };
+    }
+  }
+
+  toggleVoiceRecognition(): void {
+    if (this.isReadOnly()) return;
+    if (!this.speechRecognitionInstance) {
+      this.initVoiceRecognition();
+    }
+    if (!this.speechRecognitionInstance) {
+      alert('Tu navegador no soporta reconocimiento de voz nativo (Web Speech API). Puedes escribir el comando en el cuadro de texto.');
+      return;
+    }
+
+    if (this.isVoiceListening()) {
+      this.speechRecognitionInstance.stop();
+      this.isVoiceListening.set(false);
+    } else {
+      this.speechRecognitionInstance.start();
+      this.isVoiceListening.set(true);
+    }
+  }
+
+  triggerImageInput(): void {
+    if (this.isReadOnly()) return;
+    this.imageInput?.nativeElement.click();
+  }
+
+  onImageSelected(event: Event): void {
+    if (this.isReadOnly()) return;
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    this.attachedImageName.set(file.name);
+    this.attachedImageMimeType.set(file.type || 'image/png');
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.attachedImageBase64.set(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    target.value = '';
+  }
+
+  removeAttachedImage(): void {
+    this.attachedImageBase64.set(null);
+    this.attachedImageName.set(null);
+  }
+
   applyAiPrompt(): void {
     if (this.isReadOnly()) return;
     const promptText = this.aiPrompt().trim();
-    if (!promptText) return;
+    const imageBase64 = this.attachedImageBase64();
+    const diagramId = this.currentDiagramId() || 'default-diagram';
+    const roomCode = this.collaborationService.activeRoomCode() || undefined;
+
+    if (!promptText && !imageBase64) return;
 
     this.isAiProcessing.set(true);
+    this.aiClarificationMessage.set(null);
 
-    setTimeout(() => {
-      const lower = promptText.toLowerCase();
-      const currentNodes = this.nodes().filter(n => !n.isAnchor);
-      const timestamp = Date.now();
-
-      if (lower.includes('detalle') || lower.includes('factura') || lower.includes('venta')) {
-        const newNode: UmlClassNode = {
-          id: `node_${timestamp}_ai`,
-          name: 'DetalleFactura',
-          position: { x: 300, y: 280 },
-          width: 230,
-          attributes: [
-            { name: 'id', type: 'UUID' },
-            { name: 'factura_id', type: 'UUID' },
-            { name: 'cantidad', type: 'Integer' },
-            { name: 'precio_unitario', type: 'Double' },
-            { name: 'subtotal', type: 'Double' },
-          ],
-          methods: [
-            { name: 'calcularSubtotal', parameters: '', returnType: 'Double' },
-          ],
-        };
-
-        this.nodes.update(list => [...list, newNode]);
-      } else {
-        const classNameMatch = promptText.match(/(?:tabla|clase|entidad)\s+([A-Za-z0-9_]+)/i);
-        const name = classNameMatch ? classNameMatch[1] : `Entidad${currentNodes.length + 1}`;
-        const newNode: UmlClassNode = {
-          id: `node_${timestamp}_ai`,
-          name,
-          position: { x: 260 + (currentNodes.length * 20), y: 240 },
-          width: 220,
-          attributes: [
-            { name: 'id', type: 'UUID' },
-            { name: 'descripcion', type: 'String' },
-            { name: 'estado', type: 'Boolean' },
-          ],
-          methods: [
-            { name: 'getId', parameters: '', returnType: 'UUID' },
-          ],
-        };
-        this.nodes.update(list => [...list, newNode]);
-      }
-
-      this.updateConnectionEndpoints();
-      this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'ai_mutation');
-
-      this.aiHistory.update(list => [
-        {
-          id: `ai_${timestamp}`,
-          prompt: promptText,
-          action: 'Mutación estructural aplicada al canvas',
-          timestamp: new Date(),
+    if (imageBase64) {
+      this.aiAssistantService.sendVisionPrompt(
+        imageBase64,
+        this.attachedImageMimeType(),
+        promptText || undefined,
+        diagramId,
+        roomCode,
+        this.nodes(),
+        this.connections(),
+      ).subscribe({
+        next: (res) => {
+          this.isAiProcessing.set(false);
+          if (res.success && res.nodes) {
+            this.nodes.set(res.nodes);
+            if (res.connections) this.connections.set(res.connections);
+            this.updateConnectionEndpoints();
+            this.removeAttachedImage();
+            this.aiPrompt.set('');
+            this.aiHistory.update(list => [
+              {
+                id: `ai_${Date.now()}`,
+                prompt: promptText || 'Digitalización de imagen UML',
+                action: res.changesSummary || 'Diagrama extraído con Vertex AI Vision',
+                timestamp: new Date(),
+              },
+              ...list,
+            ]);
+          } else {
+            this.aiClarificationMessage.set(res.message);
+          }
         },
-        ...list,
-      ]);
-
-      this.aiPrompt.set('');
-      this.isAiProcessing.set(false);
-    }, 600);
+        error: (err) => {
+          this.isAiProcessing.set(false);
+          alert('Error al procesar la imagen con Gemini Vision: ' + (err.error?.message || err.message));
+        }
+      });
+    } else {
+      this.aiAssistantService.sendTextPrompt(
+        promptText,
+        diagramId,
+        roomCode,
+        this.nodes(),
+        this.connections(),
+      ).subscribe({
+        next: (res) => {
+          this.isAiProcessing.set(false);
+          if (res.success && res.nodes) {
+            this.nodes.set(res.nodes);
+            if (res.connections) this.connections.set(res.connections);
+            this.updateConnectionEndpoints();
+            this.aiPrompt.set('');
+            this.aiHistory.update(list => [
+              {
+                id: `ai_${Date.now()}`,
+                prompt: promptText,
+                action: res.changesSummary || 'Mutación estructural Vertex AI',
+                timestamp: new Date(),
+              },
+              ...list,
+            ]);
+          } else {
+            // Guardrail activado: Aclaración requerida
+            this.aiClarificationMessage.set(res.message);
+          }
+        },
+        error: (err) => {
+          this.isAiProcessing.set(false);
+          alert('Error en Copilot IA: ' + (err.error?.message || err.message));
+        }
+      });
+    }
   }
 
   setAiSuggestion(text: string): void {

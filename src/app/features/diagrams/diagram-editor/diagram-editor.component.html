@@ -625,70 +625,153 @@
       </f-flow>
     </div>
 
-    <!-- 4. [PANEL IA] COPILOT CONTEXTUAL & HISTORIAL DE MUTACIONES -->
+    <!-- 4. [PANEL IA] COPILOT CONTEXTUAL (VERTEX AI GEMINI 2.5 FLASH) -->
     @if (isAiPanelOpen()) {
-      <aside class="w-72 bg-[#EFEFEF] border-l border-[#B8B8B8] flex flex-col shrink-0 text-xs text-slate-800 shadow-lg z-20 animate-in slide-in-from-right duration-150">
+      <aside class="w-80 bg-[#EFEFEF] border-l border-[#B8B8B8] flex flex-col shrink-0 text-xs text-slate-800 shadow-lg z-20 animate-in slide-in-from-right duration-150">
         
         <!-- Header Panel IA -->
         <div class="bg-gradient-to-b from-[#EAEAEA] to-[#DCDCDC] px-3 py-2 border-b border-[#C0C0C0] flex items-center justify-between">
           <div class="flex items-center gap-1.5 font-bold text-slate-900">
             <ng-icon name="heroSparkles" class="text-sm text-purple-600"></ng-icon>
-            <span>✨ Copilot IA (UML)</span>
+            <span>✨ Copilot IA (Vertex AI)</span>
           </div>
-          <button (click)="isAiPanelOpen.set(false)" class="text-slate-500 hover:text-slate-900 font-bold cursor-pointer">&times;</button>
+          <button (click)="isAiPanelOpen.set(false)" class="text-slate-500 hover:text-slate-900 font-bold cursor-pointer text-sm">&times;</button>
         </div>
 
         <div class="p-3 flex-1 flex flex-col gap-3 overflow-y-auto">
           
-          <!-- Prompt Input Box -->
-          <div class="space-y-1.5">
-            <label class="block font-bold text-[11px] font-mono text-slate-700 uppercase tracking-wide">Comando en Lenguaje Natural</label>
-            <textarea
-              [(ngModel)]="aiPrompt"
-              rows="3"
-              placeholder="e.g. Agrega la tabla DetalleFactura con subtotal y relación con Producto..."
-              class="w-full p-2 bg-white border border-[#6B5A52] text-xs focus:outline-none focus:ring-1 focus:ring-purple-600 shadow-inner rounded-xs resize-none"></textarea>
+          <!-- Input oculto para subir imágenes de diagramas -->
+          <input
+            #imageInput
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/jpg"
+            (change)="onImageSelected($event)"
+            class="hidden" />
 
+          <!-- Prompt & Multimedia Input Box -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block font-bold text-[10.5px] font-mono text-slate-700 uppercase tracking-wide">Comando / Dictado / Imagen</label>
+              <span class="text-[9.5px] font-mono text-purple-700 font-semibold">Gemini 2.5 Flash</span>
+            </div>
+
+            <!-- Preview de Imagen Adjunta -->
+            @if (attachedImageBase64()) {
+              <div class="p-1.5 bg-purple-50 border border-purple-300 rounded flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 truncate">
+                  <img [src]="attachedImageBase64()" class="w-8 h-8 object-cover rounded border border-purple-200" alt="Vista previa" />
+                  <span class="text-[11px] font-mono text-purple-900 truncate max-w-[170px]">{{ attachedImageName() }}</span>
+                </div>
+                <button
+                  (click)="removeAttachedImage()"
+                  title="Quitar imagen"
+                  class="text-purple-600 hover:text-red-700 font-bold text-sm px-1 cursor-pointer">
+                  &times;
+                </button>
+              </div>
+            }
+
+            <!-- Área de texto del prompt -->
+            <div class="relative">
+              <textarea
+                [(ngModel)]="aiPrompt"
+                rows="3"
+                [placeholder]="attachedImageBase64() ? 'Instrucción opcional para la imagen (o dejar en blanco para extraer todo)...' : 'e.g. Crea la tabla Producto con id UUID, nombre String, precio Double y conéctala con Categoria con multiplicidad *...'"
+                class="w-full p-2 bg-white border border-[#6B5A52] text-xs focus:outline-none focus:ring-1 focus:ring-purple-600 shadow-inner rounded-xs resize-none pr-16"></textarea>
+
+              <!-- Botones de Acción Multimedia flotantes en el cuadro -->
+              <div class="absolute bottom-2 right-2 flex items-center gap-1">
+                <!-- Botón Dictado por Voz -->
+                <button
+                  (click)="toggleVoiceRecognition()"
+                  type="button"
+                  [title]="isVoiceListening() ? 'Detener dictado por voz' : 'Dictar comando por voz (Micrófono)'"
+                  [ngClass]="{
+                    'bg-red-600 text-white animate-pulse ring-2 ring-red-400': isVoiceListening(),
+                    'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-800 border border-slate-300': !isVoiceListening()
+                  }"
+                  class="p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center">
+                  <ng-icon [name]="isVoiceListening() ? 'heroStop' : 'heroMicrophone'" class="text-xs"></ng-icon>
+                </button>
+
+                <!-- Botón Adjuntar Imagen -->
+                <button
+                  (click)="triggerImageInput()"
+                  type="button"
+                  title="Adjuntar imagen de diagrama UML (pizarra o foto)"
+                  class="p-1.5 bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-800 border border-slate-300 rounded-full transition-all cursor-pointer flex items-center justify-center">
+                  <ng-icon name="heroPhoto" class="text-xs"></ng-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Indicador de Grabación de Voz Activa -->
+            @if (isVoiceListening()) {
+              <div class="px-2 py-1 bg-red-50 border border-red-200 rounded text-[10.5px] font-mono text-red-700 flex items-center gap-1.5 animate-pulse">
+                <span class="w-2 h-2 rounded-full bg-red-600"></span>
+                <span>Escuchando tu voz en tiempo real... Habla ahora.</span>
+              </div>
+            }
+
+            <!-- Alerta de Guardrail / Aclaración Requerida -->
+            @if (aiClarificationMessage()) {
+              <div class="p-2 bg-amber-50 border border-amber-300 rounded text-[11px] text-amber-900 space-y-1 animate-in fade-in">
+                <div class="flex items-center gap-1 font-bold text-amber-800">
+                  <span>⚠️ Aclaración Requerida</span>
+                </div>
+                <p>{{ aiClarificationMessage() }}</p>
+              </div>
+            }
+
+            <!-- Botón Ejecutar con Vertex AI -->
             <button
               (click)="applyAiPrompt()"
-              [disabled]="isAiProcessing() || !aiPrompt().trim()"
+              [disabled]="isAiProcessing() || (!aiPrompt().trim() && !attachedImageBase64())"
               class="w-full py-1.5 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white font-mono text-xs font-bold uppercase rounded-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50">
               @if (isAiProcessing()) {
-                <span class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span>Procesando...</span>
+                <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span>Procesando con Vertex AI...</span>
               } @else {
                 <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
-                <span>Aplicar Mutación</span>
+                <span>{{ attachedImageBase64() ? 'Digitalizar Imagen con IA' : 'Ejecutar Comando IA' }}</span>
               }
             </button>
           </div>
 
-          <!-- Sugerencias Rápidas -->
+          <!-- Sugerencias Rápidas y Comandos Modelo -->
           <div class="space-y-1">
-            <span class="text-[10.5px] font-mono text-slate-500 uppercase tracking-wide font-bold">Atajos rápidos:</span>
+            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wide font-bold">Comandos rápidos de ejemplo:</span>
             <div class="flex flex-col gap-1">
               <button
-                (click)="setAiSuggestion('Agrega la tabla DetalleFactura con cantidad, precio_unitario y subtotal')"
-                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[11px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
-                ➕ Agregar DetalleFactura
+                (click)="setAiSuggestion('Crea una tabla Producto con atributos id UUID, nombre String, precio Double y relacionala con Categoria con multiplicidad *')"
+                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[10.5px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
+                ✨ Crear Producto y relación con Categoría
               </button>
               <button
-                (click)="setAiSuggestion('Crear entidad Categoria con id, nombre y relacion 1:N con Producto')"
-                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[11px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
-                ➕ Crear entidad Categoria
+                (click)="setAiSuggestion('Agrega la clase FacturaDetalle con cantidad Integer, precio_unitario Double y subtotal Double')"
+                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[10.5px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
+                ✨ Agregar FacturaDetalle
+              </button>
+              <button
+                (click)="setAiSuggestion('Crear relación de Composición entre Pedido y DetallePedido con multiplicidad 1 a 1..*')"
+                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[10.5px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
+                ✨ Relación Composición 1 a 1..*
               </button>
             </div>
           </div>
 
-          <!-- Historial de Mutaciones -->
+          <!-- Historial de Mutaciones de IA -->
           <div class="flex-1 flex flex-col min-h-0 pt-2 border-t border-slate-300">
-            <span class="text-[10.5px] font-mono text-slate-500 uppercase tracking-wide font-bold mb-1.5">Historial de Acciones</span>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wide font-bold">Historial de Acciones IA</span>
+              <span class="text-[9px] font-mono text-emerald-700 font-bold">● En vivo</span>
+            </div>
             <div class="flex-1 space-y-1.5 overflow-y-auto pr-1">
               @for (item of aiHistory(); track item.id) {
-                <div class="p-2 bg-white/80 border border-slate-300 rounded-xs space-y-0.5 text-[11px]">
+                <div class="p-2 bg-white/90 border border-slate-300 rounded-xs space-y-0.5 text-[11px] shadow-xs">
                   <p class="font-semibold text-slate-800 line-clamp-2">"{{ item.prompt }}"</p>
                   <div class="flex items-center justify-between text-[9.5px] text-slate-500 font-mono">
-                    <span class="text-emerald-700 font-medium">✓ {{ item.action }}</span>
+                    <span class="text-purple-700 font-medium truncate max-w-[150px]">✨ {{ item.action }}</span>
                     <span>{{ item.timestamp | date:'HH:mm:ss' }}</span>
                   </div>
                 </div>
