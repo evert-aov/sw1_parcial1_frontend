@@ -37,6 +37,7 @@ export class CollaborationService {
   readonly isConnected = signal<boolean>(false);
   readonly activeRoomCode = signal<string | null>(null);
   readonly currentDiagramId = signal<string | null>(null);
+  readonly myColor = signal<string>('#3B82F6');
   readonly collaborators = signal<Collaborator[]>([]);
   readonly remoteCursors = signal<RemoteCursor[]>([]);
   readonly chatMessages = signal<ChatMessage[]>([]);
@@ -49,15 +50,27 @@ export class CollaborationService {
   private lastCursorSent = 0;
 
   connect(): void {
-    if (this.socket && this.socket.connected) return;
+    if (this.socket) {
+      if (!this.socket.connected) {
+        this.socket.connect();
+      }
+      return;
+    }
 
     this.socket = io(this.socketUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
     });
 
     this.socket.on('connect', () => {
       this.isConnected.set(true);
+      const diagramId = this.currentDiagramId();
+      if (diagramId) {
+        this.emitJoinRoom(diagramId);
+      }
     });
 
     this.socket.on('disconnect', () => {
@@ -65,14 +78,10 @@ export class CollaborationService {
       this.remoteCursors.set([]);
     });
 
-    this.socket.on('user_joined', (data: { userId: string; userName: string; color: string; participants?: any[] }) => {
-      this.collaborators.update((list) => {
-        const exists = list.some((c) => c.userId === data.userId);
-        if (exists) {
-          return list.map((c) => (c.userId === data.userId ? { ...c, isConnected: true } : c));
-        }
-        return [...list, { userId: data.userId, userName: data.userName, color: data.color, isConnected: true }];
-      });
+    this.socket.on('room_participants_updated', (data: { roomCode: string; participants: Collaborator[] }) => {
+      if (data && data.participants) {
+        this.collaborators.set(data.participants);
+      }
     });
 
     this.socket.on('user_left', (data: { userId: string; userName?: string }) => {
@@ -113,11 +122,20 @@ export class CollaborationService {
   }
 
   joinRoom(diagramId: string, customRoomCode?: string): void {
+    this.currentDiagramId.set(diagramId);
     this.connect();
+
+    if (this.socket && this.socket.connected) {
+      this.emitJoinRoom(diagramId, customRoomCode);
+    }
+  }
+
+  private emitJoinRoom(diagramId: string, customRoomCode?: string): void {
     const user = this.authService.currentUser();
     if (!user) return;
 
-    this.currentDiagramId.set(diagramId);
+    const assignedColor = this.generateUserColor(user.fullName || user.id);
+    this.myColor.set(assignedColor);
 
     this.socket?.emit(
       'join_room',
@@ -125,12 +143,15 @@ export class CollaborationService {
         diagramId,
         roomCode: customRoomCode,
         userId: user.id,
-        userName: user.fullName,
+        userName: user.fullName || 'Usuario',
+        color: assignedColor,
       },
-      (res: { success: boolean; session: any }) => {
+      (res: { success: boolean; session: any; participants?: Collaborator[] }) => {
         if (res && res.success && res.session) {
           this.activeRoomCode.set(res.session.roomCode);
-          if (res.session.participants) {
+          if (res.participants) {
+            this.collaborators.set(res.participants);
+          } else if (res.session.participants) {
             const list: Collaborator[] = res.session.participants.map((p: any) => ({
               userId: p.userId,
               userName: p.fullName,
@@ -160,7 +181,7 @@ export class CollaborationService {
 
   sendCursorPosition(x: number, y: number): void {
     const now = Date.now();
-    if (now - this.lastCursorSent < 30) return; // 33 fps cap
+    if (now - this.lastCursorSent < 25) return; // ~40 fps
     this.lastCursorSent = now;
 
     const user = this.authService.currentUser();
@@ -170,7 +191,8 @@ export class CollaborationService {
     this.socket.emit('cursor_move', {
       roomCode,
       userId: user.id,
-      userName: user.fullName,
+      userName: user.fullName || 'Usuario',
+      color: this.myColor(),
       x: Math.round(x),
       y: Math.round(y),
     });
@@ -223,5 +245,25 @@ export class CollaborationService {
       this.socket = null;
     }
     this.isConnected.set(false);
+  }
+
+  private generateUserColor(seed: string): string {
+    const palette = [
+      '#EF4444', // Rojo Coral
+      '#F59E0B', // Ámbar Oro
+      '#10B981', // Verde Esmeralda
+      '#3B82F6', // Azul Cobalto
+      '#6366F1', // Índigo Real
+      '#8B5CF6', // Púrpura Eléctrico
+      '#EC4899', // Rosa Magenta
+      '#06B6D4', // Cian Neón
+      '#F97316', // Naranja Fuego
+    ];
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % palette.length;
+    return palette[index];
   }
 }
