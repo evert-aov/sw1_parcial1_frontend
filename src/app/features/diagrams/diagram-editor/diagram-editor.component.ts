@@ -425,9 +425,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             this.loadDiagramFromBackend(first.id);
           }
         });
-      } else {
-        this.collaborationService.joinRoom('default-diagram-studio');
       }
+      // Sin diagramId ni projectId: no se une a ninguna sala de colaboración
     });
 
     this.updateConnectionEndpoints();
