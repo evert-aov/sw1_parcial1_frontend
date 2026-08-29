@@ -10,6 +10,7 @@ import { ProjectService } from '../../../core/services/project.service';
 import { CollaborationService, NodeLock } from '../../../core/services/collaboration.service';
 import { AiAssistantService } from '../../../core/services/ai-assistant.service';
 import { XmiService } from '../../../core/services/xmi.service';
+import { XmiClientParser } from '../../../core/services/xmi-client-parser';
 import {
   UmlRelationshipType,
   UmlLineStyle,
@@ -1858,41 +1859,70 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
         if (isXmiOrXml) {
           // Importar XMI / XML desde Enterprise Architect
-          this.xmiService.importXmi({ xmiContent: content }).subscribe({
-            next: (ast) => {
-              if (ast.nodes && ast.nodes.length > 0) {
-                this.nodes.set(ast.nodes.map((n: any) => ({
-                  ...n,
-                  width: n.width || 220,
-                  attributes: (n.attributes || []).map((a: any) => ({
-                    name: a.name,
-                    type: this.normalizeDataType(a.type),
-                    visibility: a.visibility || 'private',
-                    isPk: a.isPk || false,
-                    isNullable: a.isNullable || false
-                  })),
-                  methods: (n.methods || []).map((m: any) => ({
-                    name: m.name,
-                    parameters: m.parameters || '',
-                    returnType: this.normalizeReturnType(m.returnType),
-                    visibility: m.visibility || 'public'
-                  }))
-                })));
-                this.connections.set(ast.connections || []);
-                if (ast.name) {
-                  this.currentDiagramName.set(ast.name);
-                }
-                this.updateConnectionEndpoints();
-                this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_xmi');
-              } else {
-                alert('El archivo XMI no contiene clases UML legibles.');
+          try {
+            const ast = XmiClientParser.parse(content);
+            if (ast.nodes && ast.nodes.length > 0) {
+              this.nodes.set(ast.nodes.map((n: any) => ({
+                ...n,
+                width: n.width || 220,
+                attributes: (n.attributes || []).map((a: any) => ({
+                  name: a.name,
+                  type: this.normalizeDataType(a.type),
+                  visibility: a.visibility || 'private',
+                  isPk: a.isPk || false,
+                  isNullable: a.isNullable || false
+                })),
+                methods: (n.methods || []).map((m: any) => ({
+                  name: m.name,
+                  parameters: m.parameters || '',
+                  returnType: this.normalizeReturnType(m.returnType),
+                  visibility: m.visibility || 'public'
+                }))
+              })));
+              this.connections.set(ast.connections || []);
+              if (ast.name) {
+                this.currentDiagramName.set(ast.name);
               }
-            },
-            error: (err) => {
-              console.error('Error al importar XMI:', err);
-              alert('Error al procesar XMI: ' + (err.error?.message || err.message));
+              this.updateConnectionEndpoints();
+              setTimeout(() => this.updateConnectionEndpoints(), 60);
+              this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_xmi');
+
+              const diagId = this.currentDiagramId();
+              if (diagId) {
+                this.diagramService.saveAst(diagId, {
+                  defaultLineStyle: this.defaultLineStyle(),
+                  nodes: this.nodes().map(n => ({
+                    id: n.id,
+                    name: n.name,
+                    positionX: n.position.x,
+                    positionY: n.position.y,
+                    width: n.width,
+                    height: n.height,
+                    isAnchor: n.isAnchor,
+                    attributes: n.attributes.map((a, i) => ({ name: a.name, type: a.type, orderIndex: i })),
+                    methods: n.methods.map((m, i) => ({ name: m.name, parameters: m.parameters, returnType: m.returnType, orderIndex: i })),
+                  })),
+                  connections: this.connections().map(c => ({
+                    id: c.id,
+                    sourceNodeId: c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, ''),
+                    targetNodeId: c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, ''),
+                    sourceId: c.sourceId,
+                    targetId: c.targetId,
+                    type: c.type,
+                    name: c.name,
+                    sourceMultiplicity: c.sourceMultiplicity,
+                    targetMultiplicity: c.targetMultiplicity,
+                    lineStyle: c.lineStyle,
+                  })),
+                }).subscribe();
+              }
+            } else {
+              alert('El archivo XMI no contiene clases UML legibles.');
             }
-          });
+          } catch (err: any) {
+            console.error('Error al parsear XMI:', err);
+            alert('Error al leer el archivo XMI: ' + (err.message || err));
+          }
         } else {
           // Importar JSON
           const project = JSON.parse(content) as UmlDiagramProject;
