@@ -294,7 +294,7 @@
     <div
       #flowContainer
       (mousemove)="onCanvasMouseMove($event)"
-      (click)="onCanvasBackgroundClick()"
+      (click)="onCanvasBackgroundClick($event)"
       class="flex-1 relative w-full h-full uml-canvas-container cursor-default overflow-hidden">
 
       <!-- CURSORES EN VIVO DE COLABORADORES REMOTOS -->
@@ -317,6 +317,7 @@
       <f-flow
         fDraggable
         (fCreateConnection)="onConnectionCreated($event)"
+        (click)="onCanvasBackgroundClick($event)"
         class="block absolute inset-0 h-full w-full">
 
         <f-canvas fZoom (fCanvasChange)="onCanvasChange($event)">
@@ -377,6 +378,10 @@
                 [fReassignDisabled]="true"
                 (dblclick)="openEditConnModal(conn, $event)"
                 [class]="'group cursor-pointer uml-relation-' + conn.type"
+                [ngClass]="{
+                  'conn-highlighted': isConnectionHighlighted(conn),
+                  'conn-dimmed': isConnectionDimmed(conn)
+                }"
                 class="group cursor-pointer">
 
                 <!-- Herencia / Generalización: Triángulo blanco cerrado al final -->
@@ -421,7 +426,11 @@
                     [position]="0.12"
                     (dblclick)="openEditConnModal(conn, $event)"
                     title="Doble clic para editar relación"
-                    class="pointer-events-auto bg-[#FAF1EA] px-1.5 py-0.5 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800 cursor-pointer">
+                    [ngClass]="{
+                      'bg-purple-100 text-purple-900 border-purple-600 font-bold ring-1 ring-purple-400 shadow-sm': isConnectionHighlighted(conn),
+                      'bg-[#FAF1EA] text-slate-900 border-[#6B5A52]': !isConnectionHighlighted(conn)
+                    }"
+                    class="pointer-events-auto px-1.5 py-0.5 rounded border shadow-xs text-[11px] font-mono font-medium hover:border-slate-800 cursor-pointer transition-all">
                     {{ conn.sourceMultiplicity }}
                   </div>
                 }
@@ -433,7 +442,11 @@
                     [position]="0.5"
                     (dblclick)="openEditConnModal(conn, $event)"
                     title="Doble clic para editar relación"
-                    class="bg-[#FAF1EA] px-2 py-0.5 border border-[#6B5A52] rounded shadow-xs text-[11px] font-mono font-medium text-slate-900 pointer-events-auto cursor-pointer">
+                    [ngClass]="{
+                      'bg-purple-100 text-purple-900 border-purple-600 font-bold ring-1 ring-purple-400 shadow-sm': isConnectionHighlighted(conn),
+                      'bg-[#FAF1EA] text-slate-900 border-[#6B5A52]': !isConnectionHighlighted(conn)
+                    }"
+                    class="px-2 py-0.5 border rounded shadow-xs text-[11px] font-mono font-medium pointer-events-auto cursor-pointer transition-all">
                     {{ conn.name }}
                   </div>
                 }
@@ -445,7 +458,11 @@
                     [position]="0.88"
                     (dblclick)="openEditConnModal(conn, $event)"
                     title="Doble clic para editar relación"
-                    class="pointer-events-auto bg-[#FAF1EA] px-1.5 py-0.5 rounded border border-[#6B5A52] shadow-xs text-[11px] font-mono font-medium text-slate-900 hover:border-slate-800 cursor-pointer">
+                    [ngClass]="{
+                      'bg-purple-100 text-purple-900 border-purple-600 font-bold ring-1 ring-purple-400 shadow-sm': isConnectionHighlighted(conn),
+                      'bg-[#FAF1EA] text-slate-900 border-[#6B5A52]': !isConnectionHighlighted(conn)
+                    }"
+                    class="pointer-events-auto px-1.5 py-0.5 rounded border shadow-xs text-[11px] font-mono font-medium hover:border-slate-800 cursor-pointer transition-all">
                     {{ conn.targetMultiplicity }}
                   </div>
                 }
@@ -463,6 +480,7 @@
                 [fNodeDraggingDisabled]="node.isAnchor || selectedRelationType() !== null || isNodeLockedByOther(node.id)"
                 [(fNodePosition)]="node.position"
                 (fNodePositionChange)="onNodePositionChange(node, $event)"
+                (click)="onNodeClick(node.id, $event)"
                 (dblclick)="openEditNodeModal(node, $event)"
                 [style.width.px]="node.isAnchor ? 0 : node.width"
                 [style.minWidth.px]="node.isAnchor ? 0 : node.width"
@@ -470,8 +488,11 @@
                 [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
                 [ngClass]="{
                   'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
-                  'font-sans text-[#2A201B] select-none relative group/node transition-shadow animate-in fade-in zoom-in-95 duration-300': !node.isAnchor,
-                  'ring-2 ring-[#6B5A52] shadow-xl': !node.isAnchor && selectedSourceNodeId() === node.id,
+                  'font-sans text-[#2A201B] select-none relative group/node transition-all animate-in fade-in zoom-in-95 duration-300': !node.isAnchor,
+                  'ring-2 ring-purple-600 shadow-[0_0_18px_rgba(147,51,234,0.35)] z-30': !node.isAnchor && selectedNodeId() === node.id,
+                  'ring-2 ring-indigo-400/80 shadow-md z-20': !node.isAnchor && isNeighborNode(node.id),
+                  'ring-2 ring-[#6B5A52] shadow-xl': !node.isAnchor && selectedSourceNodeId() === node.id && selectedNodeId() !== node.id,
+                  'opacity-85': !node.isAnchor && selectedNodeId() !== null && selectedNodeId() !== node.id && !isNeighborNode(node.id),
                   'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                   'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
                   'cursor-not-allowed opacity-95': !node.isAnchor && isNodeLockedByOther(node.id)
@@ -555,8 +576,14 @@
                   </div>
 
                   <!-- 1. CABECERA: TÍTULO DE LA CLASE UML -->
-                  <div class="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b-[1.5px] border-[#6B5A52] cursor-move">
-                    <span class="font-bold text-xs text-center text-[#2A201B] w-full tracking-tight truncate flex items-center justify-center gap-1" title="Doble clic para editar clase">
+                  <div
+                    [ngClass]="{
+                      'bg-purple-600 text-white border-b-[1.5px] border-purple-700': selectedNodeId() === node.id,
+                      'bg-indigo-100 text-indigo-950 border-b-[1.5px] border-indigo-300': isNeighborNode(node.id),
+                      'bg-transparent border-b-[1.5px] border-[#6B5A52] text-[#2A201B]': selectedNodeId() !== node.id && !isNeighborNode(node.id)
+                    }"
+                    class="flex items-center justify-between px-2.5 py-1.5 cursor-move transition-colors">
+                    <span class="font-bold text-xs text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Doble clic para editar clase">
                       @if (isNodeLockedByOther(node.id)) {
                         <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
                       }
@@ -566,7 +593,11 @@
                       (click)="removeClass(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
                       [title]="isNodeLockedByOther(node.id) ? 'Bloqueada por otro usuario' : 'Eliminar clase'"
-                      class="text-[#6B5A52] hover:text-red-700 hover:bg-black/5 rounded px-1 transition-colors cursor-pointer text-xs font-bold leading-none shrink-0 ml-1 disabled:opacity-20 disabled:cursor-not-allowed">
+                      [ngClass]="{
+                        'text-white/80 hover:text-white hover:bg-white/10': selectedNodeId() === node.id,
+                        'text-[#6B5A52] hover:text-red-700 hover:bg-black/5': selectedNodeId() !== node.id
+                      }"
+                      class="rounded px-1 transition-colors cursor-pointer text-xs font-bold leading-none shrink-0 ml-1 disabled:opacity-20 disabled:cursor-not-allowed">
                       &times;
                     </button>
                   </div>

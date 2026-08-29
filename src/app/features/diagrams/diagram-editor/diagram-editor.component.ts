@@ -150,14 +150,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   currentUserRole = signal<string>('EDITOR');
   readonly isReadOnly = computed(() => this.currentUserRole() === 'VIEWER');
 
-  // Por defecto: Modo Seleccionar / Mover
+  // Modo Seleccionar / Mover o Crear Relación
   selectedRelationType = signal<UmlRelationshipType | null>(null);
-
-  // Estilo de línea por defecto para nuevas conexiones
-  defaultLineStyle = signal<UmlLineStyle>('segment');
-
-  // Nodo origen seleccionado en el flujo clic-a-clic
   selectedSourceNodeId = signal<string | null>(null);
+  selectedNodeId = signal<string | null>(null);
+  defaultLineStyle = signal<UmlLineStyle>('segment');
+  mouseCurrentPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Posición del cursor en coordenadas del lienzo
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -494,6 +492,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
+      this.selectedNodeId.set(null);
       this.setPointerMode();
       this.closeEditNodeModal();
       this.closeEditConnModal();
@@ -827,6 +826,61 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
   }
 
+  // --- RESALTADO DE RELACIONES ESTILO DBDiagram.io ---
+  onNodeClick(nodeId: string, event: MouseEvent): void {
+    if (this.selectedRelationType() !== null) {
+      return;
+    }
+    event.stopPropagation();
+    if (this.selectedNodeId() === nodeId) {
+      this.selectedNodeId.set(null);
+    } else {
+      this.selectedNodeId.set(nodeId);
+    }
+  }
+
+  onCanvasBackgroundClick(event?: MouseEvent): void {
+    if (event) {
+      const target = event.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === 'F-FLOW' ||
+          target.tagName === 'F-CANVAS' ||
+          target.classList.contains('f-flow') ||
+          target.classList.contains('f-canvas') ||
+          target.classList.contains('uml-canvas-container'))
+      ) {
+        this.selectedNodeId.set(null);
+        this.selectedSourceNodeId.set(null);
+      }
+    } else {
+      this.selectedNodeId.set(null);
+      this.selectedSourceNodeId.set(null);
+    }
+  }
+
+  isConnectionHighlighted(conn: UmlConnection): boolean {
+    const selectedId = this.selectedNodeId();
+    if (!selectedId) return false;
+    return conn.sourceNodeId === selectedId || conn.targetNodeId === selectedId;
+  }
+
+  isConnectionDimmed(conn: UmlConnection): boolean {
+    const selectedId = this.selectedNodeId();
+    if (!selectedId) return false;
+    return conn.sourceNodeId !== selectedId && conn.targetNodeId !== selectedId;
+  }
+
+  isNeighborNode(nodeId: string): boolean {
+    const selectedId = this.selectedNodeId();
+    if (!selectedId || nodeId === selectedId) return false;
+    return this.connections().some(
+      (c) =>
+        (c.sourceNodeId === selectedId && c.targetNodeId === nodeId) ||
+        (c.targetNodeId === selectedId && c.sourceNodeId === nodeId),
+    );
+  }
+
   // --- CREACIÓN DE RELACIONES ---
   onTableClick(nodeId: string, event: MouseEvent): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(nodeId)) return;
@@ -872,10 +926,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
       this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_connection');
     }
-  }
-
-  onCanvasBackgroundClick(): void {
-    this.selectedSourceNodeId.set(null);
   }
 
   onConnectionCreated(event: FCreateConnectionEvent): void {
