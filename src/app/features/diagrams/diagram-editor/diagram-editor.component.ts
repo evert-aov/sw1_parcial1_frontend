@@ -1,4 +1,4 @@
-import { Component, signal, ViewChild, ElementRef, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
+import { Component, signal, ViewChild, ElementRef, OnInit, OnDestroy, HostListener, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
@@ -39,7 +39,11 @@ import {
   heroFolder,
   heroCloudArrowUp,
   heroUserGroup,
-  heroSignal
+  heroSparkles,
+  heroBolt,
+  heroCommandLine,
+  heroCpuChip,
+  heroArrowPath
 } from '@ng-icons/heroicons/outline';
 
 export interface UmlDiagramProject {
@@ -49,6 +53,13 @@ export interface UmlDiagramProject {
   defaultLineStyle: UmlLineStyle;
   nodes: UmlClassNode[];
   connections: UmlConnection[];
+}
+
+export interface AiMutationHistory {
+  id: string;
+  prompt: string;
+  action: string;
+  timestamp: Date;
 }
 
 @Component({
@@ -79,7 +90,11 @@ export interface UmlDiagramProject {
       heroFolder,
       heroCloudArrowUp,
       heroUserGroup,
-      heroSignal,
+      heroSparkles,
+      heroBolt,
+      heroCommandLine,
+      heroCpuChip,
+      heroArrowPath,
     })
   ],
   templateUrl: './diagram-editor.component.html',
@@ -101,6 +116,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   currentProjectId = signal<string | null>(null);
   currentDiagramName = signal<string>('Diagrama UML');
   saveSuccessMessage = signal<boolean>(false);
+  zoomLevel = signal<number>(100);
 
   // Por defecto: Modo Seleccionar / Mover
   selectedRelationType = signal<UmlRelationshipType | null>(null);
@@ -113,6 +129,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // Posición del cursor en coordenadas del lienzo
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Paneles laterales
+  isAiPanelOpen = signal<boolean>(true);
+  isExportDropdownOpen = signal<boolean>(false);
+
+  // IA Copilot
+  aiPrompt = signal<string>('');
+  isAiProcessing = signal<boolean>(false);
+  aiHistory = signal<AiMutationHistory[]>([
+    {
+      id: 'h1',
+      prompt: 'Inicialización de esquema UML',
+      action: 'Estructura base cargada',
+      timestamp: new Date(),
+    }
+  ]);
 
   // Opciones de multiplicidad estándar
   readonly multiplicityOptions: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];
@@ -219,12 +251,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   jsonContent = signal<string>('');
   jsonModalMode = signal<'import' | 'export'>('export');
 
+  // Modal Spring Boot
+  showSpringBootModal = signal<boolean>(false);
+
   // Nodos y Conexiones del Diagrama
   nodes = signal<UmlClassNode[]>([
     {
       id: 'node_1',
       name: 'Usuario',
-      position: { x: 80, y: 80 },
+      position: { x: 100, y: 80 },
       width: 220,
       attributes: [
         { name: 'id', type: 'UUID' },
@@ -238,7 +273,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     {
       id: 'node_2',
       name: 'Role',
-      position: { x: 440, y: 80 },
+      position: { x: 480, y: 80 },
       width: 220,
       attributes: [
         { name: 'id', type: 'UUID' },
@@ -266,7 +301,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   ]);
 
   ngOnInit(): void {
-    // Suscripción a eventos remotos de colaboración en tiempo real
+    // Sincronización remota de movimiento de nodos
     this.collaborationService.remoteNodeDrag$.subscribe((data) => {
       this.nodes.update((list) =>
         list.map((n) => (n.id === data.nodeId ? { ...n, position: data.position } : n)),
@@ -274,6 +309,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
     });
 
+    // Sincronización remota del diagrama completo
     this.collaborationService.remoteDiagramSync$.subscribe((data) => {
       if (data.nodes) this.nodes.set(data.nodes);
       if (data.connections) this.connections.set(data.connections);
@@ -305,6 +341,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             this.loadDiagramFromBackend(first.id);
           }
         });
+      } else {
+        // Unirse con ID por defecto si no hay parámetros
+        this.collaborationService.joinRoom('default-diagram-studio');
       }
     });
 
@@ -363,7 +402,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         );
       }
 
-      // Unirse a la sala de colaboración en tiempo real
+      // Unirse a la sala de colaboración en tiempo real con este diagramId
       this.collaborationService.joinRoom(diagramId);
 
       setTimeout(() => {
@@ -391,6 +430,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.closeEditNodeModal();
       this.closeEditConnModal();
       this.showJsonModal.set(false);
+      this.showSpringBootModal.set(false);
+      this.isExportDropdownOpen.set(false);
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
       this.saveToBackend();
@@ -519,7 +560,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const canvasX = (rawX - posX) / scale;
     const canvasY = (rawY - posY) / scale;
 
-    // Transmitir posición de cursor a colaboradores
+    // Transmitir posición de cursor en tiempo real a colaboradores
     this.collaborationService.sendCursorPosition(canvasX, canvasY);
 
     if (this.selectedSourceNodeId()) {
@@ -1020,28 +1061,106 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   zoomIn(): void {
     if (this.canvas) {
       this.canvas.setScale(this.canvas.getScale() * 1.15);
+      this.zoomLevel.set(Math.round(this.canvas.getScale() * 100));
     }
   }
 
   zoomOut(): void {
     if (this.canvas) {
       this.canvas.setScale(this.canvas.getScale() * 0.85);
+      this.zoomLevel.set(Math.round(this.canvas.getScale() * 100));
     }
   }
 
   resetView(): void {
     if (this.canvas) {
       this.canvas.resetScaleAndCenter();
+      this.zoomLevel.set(100);
     }
   }
 
   fitView(): void {
     if (this.canvas) {
       this.canvas.fitToScreen({ x: 40, y: 40 });
+      this.zoomLevel.set(Math.round(this.canvas.getScale() * 100));
     }
   }
 
-  // --- EXPORTAR / IMPORTAR ---
+  // --- ASISTENTE IA (COPILOT) ---
+  applyAiPrompt(): void {
+    const promptText = this.aiPrompt().trim();
+    if (!promptText) return;
+
+    this.isAiProcessing.set(true);
+
+    // Simular procesamiento del Copilot UML con generación de mutación visual
+    setTimeout(() => {
+      const lower = promptText.toLowerCase();
+      const currentNodes = this.nodes().filter(n => !n.isAnchor);
+      const timestamp = Date.now();
+
+      if (lower.includes('detalle') || lower.includes('factura') || lower.includes('venta')) {
+        const newNode: UmlClassNode = {
+          id: `node_${timestamp}_ai`,
+          name: 'DetalleFactura',
+          position: { x: 300, y: 280 },
+          width: 230,
+          attributes: [
+            { name: 'id', type: 'UUID' },
+            { name: 'factura_id', type: 'UUID' },
+            { name: 'cantidad', type: 'Integer' },
+            { name: 'precio_unitario', type: 'Double' },
+            { name: 'subtotal', type: 'Double' },
+          ],
+          methods: [
+            { name: 'calcularSubtotal', parameters: '', returnType: 'Double' },
+          ],
+        };
+
+        this.nodes.update(list => [...list, newNode]);
+      } else {
+        const classNameMatch = promptText.match(/(?:tabla|clase|entidad)\s+([A-Za-z0-9_]+)/i);
+        const name = classNameMatch ? classNameMatch[1] : `Entidad${currentNodes.length + 1}`;
+        const newNode: UmlClassNode = {
+          id: `node_${timestamp}_ai`,
+          name,
+          position: { x: 260 + (currentNodes.length * 20), y: 240 },
+          width: 220,
+          attributes: [
+            { name: 'id', type: 'UUID' },
+            { name: 'descripcion', type: 'String' },
+            { name: 'estado', type: 'Boolean' },
+          ],
+          methods: [
+            { name: 'getId', parameters: '', returnType: 'UUID' },
+          ],
+        };
+        this.nodes.update(list => [...list, newNode]);
+      }
+
+      this.updateConnectionEndpoints();
+      this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'ai_mutation');
+
+      this.aiHistory.update(list => [
+        {
+          id: `ai_${timestamp}`,
+          prompt: promptText,
+          action: 'Mutación estructural aplicada al canvas',
+          timestamp: new Date(),
+        },
+        ...list,
+      ]);
+
+      this.aiPrompt.set('');
+      this.isAiProcessing.set(false);
+    }, 600);
+  }
+
+  setAiSuggestion(text: string): void {
+    this.aiPrompt.set(text);
+  }
+
+  // --- EXPORTAR / IMPORTAR / SPRING BOOT ---
   openExportModal(): void {
     const project: UmlDiagramProject = {
       version: '1.0.0',
@@ -1054,12 +1173,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.jsonContent.set(JSON.stringify(project, null, 2));
     this.jsonModalMode.set('export');
     this.showJsonModal.set(true);
+    this.isExportDropdownOpen.set(false);
   }
 
   openImportModal(): void {
     this.jsonContent.set('');
     this.jsonModalMode.set('import');
     this.showJsonModal.set(true);
+    this.isExportDropdownOpen.set(false);
   }
 
   downloadJsonFile(): void {
@@ -1074,14 +1195,43 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(project, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `diagrama_clases_${Date.now()}.json`);
+    downloadAnchor.setAttribute('download', `${this.currentDiagramName().toLowerCase().replace(/\s+/g, '_')}_ast.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    this.isExportDropdownOpen.set(false);
+  }
+
+  downloadXmiFile(): void {
+    // Exportación preliminar XMI 2.1 estándar de Enterprise Architect
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<xmi:XMI xmi:version="2.1" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">\n  <uml:Model name="${this.currentDiagramName()}">\n`;
+    for (const node of this.nodes().filter(n => !n.isAnchor)) {
+      xml += `    <packagedElement xmi:type="uml:Class" xmi:id="${node.id}" name="${node.name}">\n`;
+      for (const attr of node.attributes) {
+        xml += `      <ownedAttribute xmi:type="uml:Property" name="${attr.name}" type="${attr.type}" visibility="private"/>\n`;
+      }
+      for (const m of node.methods) {
+        xml += `      <ownedOperation xmi:type="uml:Operation" name="${m.name}" visibility="public">\n`;
+        xml += `        <ownedParameter name="return" type="${m.returnType}" direction="return"/>\n`;
+        xml += `      </ownedOperation>\n`;
+      }
+      xml += `    </packagedElement>\n`;
+    }
+    xml += `  </uml:Model>\n</xmi:XMI>`;
+
+    const dataStr = 'data:text/xml;charset=utf-8,' + encodeURIComponent(xml);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `${this.currentDiagramName().toLowerCase().replace(/\s+/g, '_')}_ea.xmi`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    this.isExportDropdownOpen.set(false);
   }
 
   triggerFileInput(): void {
     this.fileInput?.nativeElement.click();
+    this.isExportDropdownOpen.set(false);
   }
 
   onFileSelected(event: Event): void {
@@ -1167,9 +1317,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const code = this.collaborationService.activeRoomCode();
     if (code) {
       navigator.clipboard.writeText(code).then(() => {
-        alert(`Código de sala "${code}" copiado al portapapeles. ¡Compártelo con tus colaboradores!`);
+        alert(`Código de sala "${code}" copiado al portapapeles.`);
       });
     }
+  }
+
+  triggerSpringBootGeneration(): void {
+    this.showSpringBootModal.set(false);
+    alert('El motor de generación de código Spring Boot se integrará en el siguiente módulo (code-generator).');
   }
 
   clearDiagram(): void {
@@ -1181,3 +1336,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
   }
 }
+
+// Extension for Spring Boot generator modal
+// (method added to component class)

@@ -1,14 +1,14 @@
 <div class="h-screen w-screen flex flex-col bg-[#F9F7F5] select-none overflow-hidden font-sans">
 
-  <!-- BARRA SUPERIOR ESTILO ENTERPRISE ARCHITECT -->
-  <header class="bg-gradient-to-b from-slate-700 to-slate-800 text-white border-b border-slate-900 shadow-md px-3 py-1.5 flex flex-wrap items-center justify-between gap-3 z-30">
+  <!-- 1. [TOPBAR] LOGO | PROYECTO | AVATARES COLABORADORES | EXPORTAR | GENERAR SPRING BOOT -->
+  <header class="bg-gradient-to-b from-slate-700 to-slate-800 text-white border-b border-slate-900 shadow-md px-3 py-1.5 flex items-center justify-between gap-3 z-30 shrink-0">
 
-    <!-- Título, Volver a Proyectos y Nombre del Diagrama -->
+    <!-- Izquierda: Logo & Nombre del Proyecto -->
     <div class="flex items-center gap-2.5">
       <a
         routerLink="/projects"
         title="Volver a la lista de proyectos"
-        class="bg-slate-800 hover:bg-slate-900 border border-slate-600 px-2.5 py-1 rounded text-xs text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs">
+        class="bg-slate-800 hover:bg-slate-900 border border-slate-600 px-2 py-1 rounded text-xs text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs">
         <ng-icon name="heroFolder" class="text-xs"></ng-icon>
         <span class="font-mono text-[11px]">Proyectos</span>
       </a>
@@ -24,23 +24,27 @@
         </h1>
         <p class="text-[9.5px] font-mono text-slate-400">Enterprise Architect UML 2.5</p>
       </div>
+    </div>
 
-      <!-- Badge de Sesión en Vivo y Colaboradores Conectados -->
+    <!-- Centro: Avatares de Colaboradores Conectados en Tiempo Real -->
+    <div class="flex items-center gap-2">
       @if (collaborationService.activeRoomCode()) {
-        <div class="flex items-center gap-2 ml-2 pl-2 border-l border-slate-600">
+        <div class="flex items-center gap-2 bg-slate-900/80 border border-slate-600/80 px-2.5 py-0.5 rounded-full shadow-inner">
           <button
             (click)="copyRoomCode()"
             title="Clic para copiar código de sala"
-            class="bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-600/70 px-2 py-0.5 rounded text-[10.5px] font-mono flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs">
+            class="text-emerald-300 text-[10.5px] font-mono flex items-center gap-1.5 cursor-pointer hover:text-emerald-200">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>EN VIVO: <strong>{{ collaborationService.activeRoomCode() }}</strong></span>
+            <span>SALA: <strong>{{ collaborationService.activeRoomCode() }}</strong></span>
           </button>
 
-          <!-- Avatares de Colaboradores en la Sala -->
+          <div class="h-3 w-px bg-slate-600"></div>
+
+          <!-- Avatares con colores diferenciados -->
           <div class="flex items-center -space-x-1.5">
             @for (collab of collaborationService.collaborators(); track collab.userId) {
               <div
-                class="w-5 h-5 rounded-full border border-white text-white font-bold text-[9px] flex items-center justify-center shadow-xs"
+                class="w-5.5 h-5.5 rounded-full border-2 border-slate-800 text-white font-bold text-[9.5px] flex items-center justify-center shadow-md select-none transition-transform hover:scale-125 cursor-default"
                 [style.backgroundColor]="collab.color"
                 [title]="collab.userName + ' (Conectado)'">
                 {{ collab.userName.charAt(0).toUpperCase() }}
@@ -51,16 +55,7 @@
       }
     </div>
 
-    <!-- Indicador de conexión en vivo -->
-    @if (selectedRelationType()) {
-      <div class="bg-slate-900 border border-slate-500 text-slate-200 text-xs px-3 py-0.5 rounded-md flex items-center gap-2 shadow-md">
-        <span class="w-2 h-2 rounded-[2px] bg-amber-400"></span>
-        <span>Modo Relación: <strong>Haz clic en los puntos guía o arrastra desde Tabla A hacia Tabla B</strong></span>
-        <button (click)="setPointerMode()" class="text-slate-300 hover:text-red-300 font-bold ml-1 text-[11px] cursor-pointer">&times; Salir (Esc)</button>
-      </div>
-    }
-
-    <!-- Herramientas Rápidas, Guardar y Exportar/Importar -->
+    <!-- Derecha: Acciones, Exportar, Spring Boot y Perfil -->
     <div class="flex items-center gap-2">
 
       <!-- Botón Guardar en Base de Datos -->
@@ -69,7 +64,7 @@
           (click)="saveToBackend()"
           [disabled]="diagramService.isSaving()"
           title="Guardar cambios en la Base de Datos (Ctrl+S)"
-          class="bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold px-3 py-1 rounded flex items-center gap-1.5 border border-slate-900 shadow-xs transition-all cursor-pointer disabled:opacity-50">
+          class="bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold px-2.5 py-1 rounded flex items-center gap-1.5 border border-slate-900 shadow-xs transition-all cursor-pointer disabled:opacity-50">
           @if (diagramService.isSaving()) {
             <span class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <span>Guardando...</span>
@@ -83,70 +78,77 @@
         </button>
       }
 
-      <!-- Zoom & Canvas -->
-      <div class="flex items-center bg-slate-800 rounded border border-slate-600 p-0.5 gap-0.5">
-        <button (click)="zoomIn()" title="Acercar" class="p-1 hover:bg-slate-700 text-slate-200 rounded flex items-center justify-center cursor-pointer">
-          <ng-icon name="heroMagnifyingGlassPlus" class="text-sm"></ng-icon>
+      <!-- Dropdown Exportar ▾ -->
+      <div class="relative">
+        <button
+          (click)="isExportDropdownOpen.set(!isExportDropdownOpen())"
+          class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-slate-600 shadow-xs cursor-pointer">
+          <ng-icon name="heroArrowDownTray" class="text-xs"></ng-icon>
+          <span>Exportar</span>
+          <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
         </button>
-        <button (click)="zoomOut()" title="Alejar" class="p-1 hover:bg-slate-700 text-slate-200 rounded flex items-center justify-center cursor-pointer">
-          <ng-icon name="heroMagnifyingGlassMinus" class="text-sm"></ng-icon>
-        </button>
-        <button (click)="resetView()" title="1:1" class="p-1 hover:bg-slate-700 text-slate-200 rounded text-[11px] font-mono leading-none cursor-pointer">
-          1:1
-        </button>
-        <button (click)="fitView()" title="Ajustar a Pantalla" class="p-1 hover:bg-slate-700 text-slate-200 rounded flex items-center justify-center cursor-pointer">
-          <ng-icon name="heroArrowsPointingOut" class="text-sm"></ng-icon>
-        </button>
+
+        @if (isExportDropdownOpen()) {
+          <div class="absolute right-0 mt-1 w-44 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100">
+            <button
+              (click)="downloadXmiFile()"
+              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium">
+              <ng-icon name="heroDocumentText" class="text-sm text-blue-600"></ng-icon>
+              <span>Enterprise Architect (.xmi)</span>
+            </button>
+            <button
+              (click)="downloadJsonFile()"
+              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium">
+              <ng-icon name="heroDocumentText" class="text-sm text-emerald-600"></ng-icon>
+              <span>Descargar AST (.json)</span>
+            </button>
+            <button
+              (click)="openExportModal()"
+              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium">
+              <ng-icon name="heroDocumentText" class="text-sm text-slate-600"></ng-icon>
+              <span>Ver JSON en Pantalla</span>
+            </button>
+            <div class="border-t border-slate-200 my-1"></div>
+            <button
+              (click)="triggerFileInput()"
+              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-amber-700">
+              <ng-icon name="heroArrowUpTray" class="text-sm"></ng-icon>
+              <span>Importar Archivo .json</span>
+            </button>
+            <input #fileInput type="file" accept=".json" (change)="onFileSelected($event)" class="hidden">
+          </div>
+        }
       </div>
 
-      <!-- Exportar / Importar JSON -->
-      <div class="flex items-center bg-slate-800 rounded border border-slate-600 p-0.5 gap-1">
-        <button
-          (click)="openExportModal()"
-          title="Ver JSON del AST"
-          class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-2 py-1 rounded flex items-center gap-1 cursor-pointer">
-          <ng-icon name="heroDocumentText" class="text-sm text-slate-300"></ng-icon>
-          JSON
-        </button>
-        <button
-          (click)="downloadJsonFile()"
-          title="Exportar archivo .json"
-          class="bg-slate-600 hover:bg-slate-500 text-white font-medium text-xs px-2.5 py-1 rounded flex items-center gap-1 shadow-xs border border-slate-500 cursor-pointer">
-          <ng-icon name="heroArrowDownTray" class="text-sm"></ng-icon>
-          Exportar
-        </button>
-        <button
-          (click)="triggerFileInput()"
-          title="Importar archivo .json"
-          class="bg-amber-700 hover:bg-amber-600 text-white font-medium text-xs px-2.5 py-1 rounded flex items-center gap-1 shadow-xs border border-amber-600 cursor-pointer">
-          <ng-icon name="heroArrowUpTray" class="text-sm"></ng-icon>
-          Importar
-        </button>
-        <input #fileInput type="file" accept=".json" (change)="onFileSelected($event)" class="hidden">
+      <!-- Botón ⚡ Generar Spring Boot -->
+      <button
+        (click)="showSpringBootModal.set(true)"
+        class="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-xs font-bold px-3 py-1 rounded flex items-center gap-1.5 border border-emerald-900 shadow-xs cursor-pointer transition-all">
+        <ng-icon name="heroBolt" class="text-sm text-amber-300"></ng-icon>
+        <span>⚡ Generar Spring Boot</span>
+      </button>
 
-        <button
-          (click)="clearDiagram()"
-          title="Limpiar Diagrama"
-          class="hover:bg-red-700/60 text-red-300 text-xs p-1 rounded ml-0.5 flex items-center justify-center cursor-pointer">
-          <ng-icon name="heroTrash" class="text-sm"></ng-icon>
-        </button>
-      </div>
+      <!-- Panel IA Toggle -->
+      <button
+        (click)="isAiPanelOpen.set(!isAiPanelOpen())"
+        [ngClass]="{'bg-purple-900/80 border-purple-400 text-purple-200': isAiPanelOpen(), 'bg-slate-800 border-slate-600 text-slate-300': !isAiPanelOpen()}"
+        title="Mostrar/Ocultar Copilot IA"
+        class="px-2 py-1 rounded border text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-xs">
+        <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
+        <span class="font-mono text-[11px]">Copilot</span>
+      </button>
 
-      <!-- Usuario Autenticado & Cerrar Sesión -->
+      <!-- Usuario & Salir -->
       @if (authService.currentUser()) {
-        <div class="flex items-center gap-2 pl-2 border-l border-slate-600">
-          <div class="flex items-center gap-1.5 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-600 text-xs text-slate-200">
-            <ng-icon name="heroUserCircle" class="text-sm text-slate-300"></ng-icon>
-            <span class="font-medium truncate max-w-[130px]" [title]="authService.currentUser()?.fullName">
-              {{ authService.currentUser()?.fullName }}
-            </span>
+        <div class="flex items-center gap-1.5 pl-2 border-l border-slate-600">
+          <div class="w-6 h-6 rounded-full bg-slate-900 border border-slate-600 text-white flex items-center justify-center font-bold text-[10px]" [title]="authService.currentUser()?.fullName">
+            {{ authService.currentUser()?.fullName?.charAt(0)?.toUpperCase() }}
           </div>
           <button
             (click)="authService.logout()"
             title="Cerrar Sesión"
-            class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-xs px-2 py-1 rounded flex items-center gap-1 border border-slate-600 transition-colors cursor-pointer">
-            <ng-icon name="heroArrowRightOnRectangle" class="text-xs"></ng-icon>
-            <span class="hidden sm:inline">Salir</span>
+            class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-[11px] px-1.5 py-0.5 rounded border border-slate-600 cursor-pointer">
+            Salir
           </button>
         </div>
       }
@@ -154,11 +156,11 @@
     </div>
   </header>
 
-  <!-- CONTENIDO PRINCIPAL: TOOLBOX LATERAL + LIENZO DE CLASES -->
+  <!-- CONTENIDO PRINCIPAL: [TOOLBOX] + [CANVAS INTERACTIVO] + [PANEL IA] -->
   <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- TOOLBOX LATERAL (DISEÑO RICO Y ESTRUCTURADO) -->
-    <aside class="w-60 bg-[#EAEAEA] border-r border-[#B8B8B8] flex flex-col shrink-0 select-none text-xs text-slate-800 shadow-sm overflow-y-auto z-20">
+    <!-- 2. [TOOLBOX] BARRA LATERAL IZQUIERDA -->
+    <aside class="w-56 bg-[#EAEAEA] border-r border-[#B8B8B8] flex flex-col shrink-0 select-none text-xs text-slate-800 shadow-sm overflow-y-auto z-20">
 
       <!-- Panel 1: Class Relationships -->
       <div class="border-b border-[#C8C8C8]">
@@ -217,7 +219,7 @@
         }
       </div>
 
-      <!-- Panel 2: Line Style (Routing) General -->
+      <!-- Panel 2: Line Style (Routing) -->
       <div class="border-b border-[#C8C8C8]">
         <div
           (click)="isLineStylesOpen.set(!isLineStylesOpen())"
@@ -248,6 +250,24 @@
         }
       </div>
 
+      <!-- Panel 3: Zoom y Vistas Rápidas -->
+      <div class="p-2 border-b border-[#C8C8C8] bg-[#F5F5F5]">
+        <div class="flex items-center justify-between gap-1">
+          <button (click)="zoomIn()" title="Acercar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+            <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
+          </button>
+          <button (click)="zoomOut()" title="Alejar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+            <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
+          </button>
+          <button (click)="resetView()" title="1:1" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 text-[10px] font-mono leading-none cursor-pointer">
+            1:1
+          </button>
+          <button (click)="fitView()" title="Ajustar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+            <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
+          </button>
+        </div>
+      </div>
+
       <!-- Botón Agregar Nueva Clase UML -->
       <div class="p-3 mt-auto bg-[#DFDFDF] border-t border-[#C0C0C0]">
         <button
@@ -260,7 +280,7 @@
 
     </aside>
 
-    <!-- LIENZO DE CLASES UML (FOBLEX FLOW) CON CUADRÍCULA PUNTEADA -->
+    <!-- 3. [CANVAS INTERACTIVO] FOBLEX FLOW CON CUADRÍCULA PUNTEADA Y CURSORES EN VIVO -->
     <div
       #flowContainer
       (mousemove)="onCanvasMouseMove($event)"
@@ -578,7 +598,118 @@
       </f-flow>
     </div>
 
+    <!-- 4. [PANEL IA] COPILOT CONTEXTUAL & HISTORIAL DE MUTACIONES -->
+    @if (isAiPanelOpen()) {
+      <aside class="w-72 bg-[#EFEFEF] border-l border-[#B8B8B8] flex flex-col shrink-0 text-xs text-slate-800 shadow-lg z-20 animate-in slide-in-from-right duration-150">
+        
+        <!-- Header Panel IA -->
+        <div class="bg-gradient-to-b from-[#EAEAEA] to-[#DCDCDC] px-3 py-2 border-b border-[#C0C0C0] flex items-center justify-between">
+          <div class="flex items-center gap-1.5 font-bold text-slate-900">
+            <ng-icon name="heroSparkles" class="text-sm text-purple-600"></ng-icon>
+            <span>✨ Copilot IA (UML)</span>
+          </div>
+          <button (click)="isAiPanelOpen.set(false)" class="text-slate-500 hover:text-slate-900 font-bold cursor-pointer">&times;</button>
+        </div>
+
+        <div class="p-3 flex-1 flex flex-col gap-3 overflow-y-auto">
+          
+          <!-- Prompt Input Box -->
+          <div class="space-y-1.5">
+            <label class="block font-bold text-[11px] font-mono text-slate-700 uppercase tracking-wide">Comando en Lenguaje Natural</label>
+            <textarea
+              [(ngModel)]="aiPrompt"
+              rows="3"
+              placeholder="e.g. Agrega la tabla DetalleFactura con subtotal y relación con Producto..."
+              class="w-full p-2 bg-white border border-[#6B5A52] text-xs focus:outline-none focus:ring-1 focus:ring-purple-600 shadow-inner rounded-xs resize-none"></textarea>
+
+            <button
+              (click)="applyAiPrompt()"
+              [disabled]="isAiProcessing() || !aiPrompt().trim()"
+              class="w-full py-1.5 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white font-mono text-xs font-bold uppercase rounded-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50">
+              @if (isAiProcessing()) {
+                <span class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span>Procesando...</span>
+              } @else {
+                <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
+                <span>Aplicar Mutación</span>
+              }
+            </button>
+          </div>
+
+          <!-- Sugerencias Rápidas -->
+          <div class="space-y-1">
+            <span class="text-[10.5px] font-mono text-slate-500 uppercase tracking-wide font-bold">Atajos rápidos:</span>
+            <div class="flex flex-col gap-1">
+              <button
+                (click)="setAiSuggestion('Agrega la tabla DetalleFactura con cantidad, precio_unitario y subtotal')"
+                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[11px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
+                ➕ Agregar DetalleFactura
+              </button>
+              <button
+                (click)="setAiSuggestion('Crear entidad Categoria con id, nombre y relacion 1:N con Producto')"
+                class="text-left px-2 py-1 bg-white hover:bg-purple-50 border border-slate-300 text-[11px] text-slate-700 rounded-xs transition-colors cursor-pointer truncate">
+                ➕ Crear entidad Categoria
+              </button>
+            </div>
+          </div>
+
+          <!-- Historial de Mutaciones -->
+          <div class="flex-1 flex flex-col min-h-0 pt-2 border-t border-slate-300">
+            <span class="text-[10.5px] font-mono text-slate-500 uppercase tracking-wide font-bold mb-1.5">Historial de Acciones</span>
+            <div class="flex-1 space-y-1.5 overflow-y-auto pr-1">
+              @for (item of aiHistory(); track item.id) {
+                <div class="p-2 bg-white/80 border border-slate-300 rounded-xs space-y-0.5 text-[11px]">
+                  <p class="font-semibold text-slate-800 line-clamp-2">"{{ item.prompt }}"</p>
+                  <div class="flex items-center justify-between text-[9.5px] text-slate-500 font-mono">
+                    <span class="text-emerald-700 font-medium">✓ {{ item.action }}</span>
+                    <span>{{ item.timestamp | date:'HH:mm:ss' }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+        </div>
+
+      </aside>
+    }
+
   </div>
+
+  <!-- 5. [STATUSBAR] ● CONECTADO (YJS) | NODOS | RELACIONES | ZOOM | ENCODING | VERSIONES -->
+  <footer class="bg-gradient-to-r from-slate-800 to-slate-900 text-slate-300 border-t border-slate-950 px-3 py-1 text-[11px] font-mono flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center gap-3">
+      <!-- Estado WebSockets Yjs -->
+      <div class="flex items-center gap-1.5">
+        <span
+          class="w-2 h-2 rounded-full"
+          [ngClass]="collaborationService.isConnected() ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'"></span>
+        <span [ngClass]="collaborationService.isConnected() ? 'text-emerald-300' : 'text-red-400'">
+          {{ collaborationService.isConnected() ? 'Conectado (Yjs WebSockets)' : 'Desconectado' }}
+        </span>
+      </div>
+
+      <span class="text-slate-600">|</span>
+
+      <!-- Métricas del Canvas -->
+      <span>{{ nodes().length }} Nodos</span>
+      <span>•</span>
+      <span>{{ connections().length }} Relaciones</span>
+
+      <span class="text-slate-600">|</span>
+
+      <!-- Zoom Actual -->
+      <span>Zoom {{ zoomLevel() }}%</span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span>UTF-8</span>
+      <span class="text-slate-600">|</span>
+      <span>Java 21 (LTS)</span>
+      <span>•</span>
+      <span class="text-emerald-400 font-semibold">Spring Boot 3.3.0</span>
+    </div>
+  </footer>
 
   <!-- MODAL: EDITAR CLASE UML (DOBLE CLIC EN CLASE) -->
   @if (isEditNodeModalOpen() && editingNode()) {
@@ -803,6 +934,50 @@
               Aceptar
             </button>
           </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: GENERADOR SPRING BOOT 4 -->
+  @if (showSpringBootModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+        
+        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
+          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide flex items-center gap-1.5">
+            <ng-icon name="heroBolt" class="text-amber-600 text-sm"></ng-icon>
+            Generador Spring Boot 4 + Flyway
+          </h3>
+          <button (click)="showSpringBootModal.set(false)" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
+        </div>
+
+        <div class="p-4 space-y-3">
+          <p class="text-slate-700">Se compilará el AST del diagrama en un microservicio de producción descargable en formato <strong>.zip</strong>:</p>
+          
+          <div class="bg-white p-3 border border-[#6B5A52] space-y-1.5 font-mono text-[11px]">
+            <div class="text-emerald-700 font-bold">✓ Entidades JPA (@Entity, @Table, @ManyToOne, @OneToMany)</div>
+            <div class="text-blue-700 font-bold">✓ Repositorios Spring Data (JpaRepository&lt;T, ID&gt;)</div>
+            <div class="text-purple-700 font-bold">✓ Servicios con transaccionalidad (@Transactional)</div>
+            <div class="text-indigo-700 font-bold">✓ Controladores REST (@RestController con CRUD)</div>
+            <div class="text-amber-700 font-bold">✓ Script de migración Flyway (V1__initial_schema.sql)</div>
+            <div class="text-slate-700">✓ build.gradle, application.yml y docker-compose.yml</div>
+          </div>
+        </div>
+
+        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-end gap-2 bg-white/30">
+          <button
+            (click)="showSpringBootModal.set(false)"
+            class="px-3.5 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
+            Cerrar
+          </button>
+          <button
+            (click)="triggerSpringBootGeneration()"
+            class="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-bold uppercase border border-emerald-950 cursor-pointer flex items-center gap-1.5">
+            <ng-icon name="heroBolt" class="text-xs text-amber-300"></ng-icon>
+            Descargar Microservicio .ZIP
+          </button>
         </div>
 
       </div>
