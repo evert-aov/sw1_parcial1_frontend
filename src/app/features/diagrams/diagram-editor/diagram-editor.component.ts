@@ -9,6 +9,7 @@ import { DiagramService } from '../../../core/services/diagram.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { CollaborationService, NodeLock } from '../../../core/services/collaboration.service';
 import { AiAssistantService } from '../../../core/services/ai-assistant.service';
+import { XmiService } from '../../../core/services/xmi.service';
 import {
   UmlRelationshipType,
   UmlLineStyle,
@@ -135,6 +136,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly projectService = inject(ProjectService);
   readonly collaborationService = inject(CollaborationService);
   readonly aiAssistantService = inject(AiAssistantService);
+  readonly xmiService = inject(XmiService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -1808,29 +1810,30 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   downloadXmiFile(): void {
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<xmi:XMI xmi:version="2.1" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">\n  <uml:Model name="${this.currentDiagramName()}">\n`;
-    for (const node of this.nodes().filter(n => !n.isAnchor)) {
-      xml += `    <packagedElement xmi:type="uml:Class" xmi:id="${node.id}" name="${node.name}">\n`;
-      for (const attr of node.attributes) {
-        xml += `      <ownedAttribute xmi:type="uml:Property" name="${attr.name}" type="${attr.type}" visibility="private"/>\n`;
+    this.xmiService.exportAst({
+      diagramName: this.currentDiagramName(),
+      nodes: this.nodes(),
+      connections: this.connections(),
+      defaultLineStyle: this.defaultLineStyle(),
+    }).subscribe({
+      next: (res) => {
+        const blob = new Blob([res.xmiContent], { type: 'application/xml;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute('href', url);
+        downloadAnchor.setAttribute('download', res.filename || `${this.currentDiagramName().toLowerCase().replace(/\s+/g, '_')}_ea.xmi`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        window.URL.revokeObjectURL(url);
+        this.isExportDropdownOpen.set(false);
+      },
+      error: (err) => {
+        console.error('Error al exportar XMI:', err);
+        alert('Error al generar archivo XMI: ' + (err.error?.message || err.message));
+        this.isExportDropdownOpen.set(false);
       }
-      for (const m of node.methods) {
-        xml += `      <ownedOperation xmi:type="uml:Operation" name="${m.name}" visibility="public">\n`;
-        xml += `        <ownedParameter name="return" type="${m.returnType}" direction="return"/>\n`;
-        xml += `      </ownedOperation>\n`;
-      }
-      xml += `    </packagedElement>\n`;
-    }
-    xml += `  </uml:Model>\n</xmi:XMI>`;
-
-    const dataStr = 'data:text/xml;charset=utf-8,' + encodeURIComponent(xml);
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `${this.currentDiagramName().toLowerCase().replace(/\s+/g, '_')}_ea.xmi`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    this.isExportDropdownOpen.set(false);
+    });
   }
 
   triggerFileInput(): void {
@@ -1845,36 +1848,80 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const file = target.files?.[0];
     if (!file) return;
 
+    const fileName = file.name.toLowerCase();
+    const isXmiOrXml = fileName.endsWith('.xml') || fileName.endsWith('.xmi');
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const content = e.target?.result as string;
-        const project = JSON.parse(content) as UmlDiagramProject;
-        if (project.nodes && project.connections) {
-          this.nodes.set(project.nodes.map(n => ({
-            ...n,
-            width: n.width || 220,
-            attributes: (n.attributes || []).map(a => ({
-              name: a.name,
-              type: this.normalizeDataType(a.type)
-            })),
-            methods: (n.methods || []).map(m => ({
-              name: m.name,
-              parameters: m.parameters,
-              returnType: this.normalizeReturnType(m.returnType)
-            }))
-          })));
-          this.connections.set(project.connections);
-          if (project.defaultLineStyle) {
-            this.defaultLineStyle.set(project.defaultLineStyle);
-          }
-          this.updateConnectionEndpoints();
-          this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_json');
+
+        if (isXmiOrXml) {
+          // Importar XMI / XML desde Enterprise Architect
+          this.xmiService.importXmi({ xmiContent: content }).subscribe({
+            next: (ast) => {
+              if (ast.nodes && ast.nodes.length > 0) {
+                this.nodes.set(ast.nodes.map((n: any) => ({
+                  ...n,
+                  width: n.width || 220,
+                  attributes: (n.attributes || []).map((a: any) => ({
+                    name: a.name,
+                    type: this.normalizeDataType(a.type),
+                    visibility: a.visibility || 'private',
+                    isPk: a.isPk || false,
+                    isNullable: a.isNullable || false
+                  })),
+                  methods: (n.methods || []).map((m: any) => ({
+                    name: m.name,
+                    parameters: m.parameters || '',
+                    returnType: this.normalizeReturnType(m.returnType),
+                    visibility: m.visibility || 'public'
+                  }))
+                })));
+                this.connections.set(ast.connections || []);
+                if (ast.name) {
+                  this.currentDiagramName.set(ast.name);
+                }
+                this.updateConnectionEndpoints();
+                this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_xmi');
+              } else {
+                alert('El archivo XMI no contiene clases UML legibles.');
+              }
+            },
+            error: (err) => {
+              console.error('Error al importar XMI:', err);
+              alert('Error al procesar XMI: ' + (err.error?.message || err.message));
+            }
+          });
         } else {
-          alert('El archivo JSON no contiene un diagrama de clases válido.');
+          // Importar JSON
+          const project = JSON.parse(content) as UmlDiagramProject;
+          if (project.nodes && project.connections) {
+            this.nodes.set(project.nodes.map(n => ({
+              ...n,
+              width: n.width || 220,
+              attributes: (n.attributes || []).map(a => ({
+                name: a.name,
+                type: this.normalizeDataType(a.type)
+              })),
+              methods: (n.methods || []).map(m => ({
+                name: m.name,
+                parameters: m.parameters,
+                returnType: this.normalizeReturnType(m.returnType)
+              }))
+            })));
+            this.connections.set(project.connections);
+            if (project.defaultLineStyle) {
+              this.defaultLineStyle.set(project.defaultLineStyle);
+            }
+            this.updateConnectionEndpoints();
+            this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_json');
+          } else {
+            alert('El archivo JSON no contiene un diagrama de clases válido.');
+          }
         }
       } catch (err) {
-        alert('Error al leer el archivo JSON: ' + err);
+        alert('Error al leer el archivo: ' + err);
       }
       target.value = '';
     };

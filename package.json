@@ -24,6 +24,7 @@
     "@foblex/utils": "^1.1.1",
     "@ng-icons/core": "^35.0.1",
     "@ng-icons/heroicons": "^35.0.1",
+    "fast-xml-parser": "^5.11.1",
     "rxjs": "~7.8.0",
     "socket.io-client": "^4.8.3",
     "tslib": "^2.3.0"

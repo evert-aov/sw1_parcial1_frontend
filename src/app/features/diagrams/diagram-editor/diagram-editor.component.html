@@ -121,9 +121,9 @@
               (click)="triggerFileInput()"
               class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-amber-700">
               <ng-icon name="heroArrowUpTray" class="text-sm"></ng-icon>
-              <span>Importar Archivo .json</span>
+              <span>Importar (.xmi / .xml / .json)</span>
             </button>
-            <input #fileInput type="file" accept=".json" (change)="onFileSelected($event)" class="hidden">
+            <input #fileInput type="file" accept=".json,.xml,.xmi" (change)="onFileSelected($event)" class="hidden">
           </div>
         }
       </div>
