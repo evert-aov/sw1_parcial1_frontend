@@ -346,6 +346,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     // Sincronización remota del diagrama completo (incluyendo mutaciones del Copilot IA)
     this.collaborationService.remoteDiagramSync$.subscribe((data) => {
+      // Si hay una petición de IA en vuelo desde ESTE cliente, ignorar el WS:
+      // la respuesta HTTP es la fuente de verdad para el usuario que hizo la petición.
+      // El WS sirve para actualizar a los DEMÁS colaboradores en tiempo real.
+      if (this.isAiProcessing()) return;
+
       if (data.nodes) {
         const cleanNodes = this.sanitizeClientNodes(data.nodes);
         this.nodes.set(cleanNodes);
@@ -358,7 +363,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
       setTimeout(() => this.updateConnectionEndpoints(), 60);
 
-      if (data.action === 'ai_mutation' && !this.isAiProcessing()) {
+      if (data.action === 'ai_mutation') {
         this.aiChatMessages.update(list => [
           ...list,
           {
