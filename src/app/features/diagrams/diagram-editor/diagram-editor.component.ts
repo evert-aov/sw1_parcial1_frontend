@@ -290,51 +290,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // Modal Spring Boot
   showSpringBootModal = signal<boolean>(false);
 
-  // Nodos y Conexiones del Diagrama
-  nodes = signal<UmlClassNode[]>([
-    {
-      id: 'node_1',
-      name: 'Usuario',
-      position: { x: 100, y: 80 },
-      width: 220,
-      attributes: [
-        { name: 'id', type: 'UUID' },
-        { name: 'email', type: 'String' },
-        { name: 'password_hash', type: 'String' },
-      ],
-      methods: [
-        { name: 'login', parameters: 'pass: String', returnType: 'Boolean' },
-      ],
-    },
-    {
-      id: 'node_2',
-      name: 'Role',
-      position: { x: 480, y: 80 },
-      width: 220,
-      attributes: [
-        { name: 'id', type: 'UUID' },
-        { name: 'role_name', type: 'String' },
-      ],
-      methods: [
-        { name: 'hasPermission', parameters: 'perm: String', returnType: 'Boolean' },
-      ],
-    },
-  ]);
-
-  connections = signal<UmlConnection[]>([
-    {
-      id: 'conn_1_2',
-      sourceNodeId: 'node_1',
-      targetNodeId: 'node_2',
-      sourceId: 'node_1_right',
-      targetId: 'node_2_left',
-      type: 'association',
-      lineStyle: 'segment',
-      sourceMultiplicity: '1',
-      targetMultiplicity: '0..*',
-      name: 'posee',
-    },
-  ]);
+  // Nodos y Conexiones del Diagrama (Inicialización limpia / vacía)
+  nodes = signal<UmlClassNode[]>([]);
+  connections = signal<UmlConnection[]>([]);
 
   ngOnInit(): void {
     // Sincronización remota de movimiento de nodos
