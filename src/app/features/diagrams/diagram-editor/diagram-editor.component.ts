@@ -279,12 +279,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     },
   ];
 
-  // Estilos de enrutamiento
-  readonly lineStyles: { id: UmlLineStyle; label: string }[] = [
-    { id: 'segment', label: 'Ortogonal (Segment)' },
-    { id: 'straight', label: 'Directa (Straight)' },
-    { id: 'bezier', label: 'Curva Bezier' },
-    { id: 'adaptive-curve', label: 'Curva Adaptativa' },
+  // Estilos de enrutamiento compatibles con Enterprise Architect
+  readonly lineStyles: { id: UmlLineStyle; label: string; shortcut?: string }[] = [
+    { id: 'segment', label: 'Custom Line (EA Default / Segmentos)', shortcut: 'Ctrl+Shift+C' },
+    { id: 'straight', label: 'Direct (Directa / Recta)', shortcut: 'Ctrl+Shift+D' },
+    { id: 'bezier', label: 'Bezier (Curva Suave)' },
+    { id: 'adaptive-curve', label: 'Orthogonal - Rounded (Curva Adaptativa)' },
   ];
 
   // Acordeones del toolbox

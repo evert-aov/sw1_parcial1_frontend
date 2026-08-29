@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import { UmlClassNode, UmlConnection } from '../models/diagram.model';
+import { UmlClassNode, UmlConnection, UmlLineStyle } from '../models/diagram.model';
 
 export interface ParsedDiagramResult {
   name: string;
@@ -34,12 +34,13 @@ export class XmiClientParser {
       diagramName = umlModel['@_name'];
     }
 
-    // 1. Extraer geometrías desde <xmi:Extension><diagrams><diagram><elements>
+    // 1. Extraer geometrías y estilos de línea desde <xmi:Extension><diagrams><diagram><elements>
     const geometryMap = new Map<string, { left: number; top: number; width: number; height: number }>();
     const connectorLabelsMap = new Map<string, { name?: string; sMult?: string; tMult?: string }>();
+    const connLineStyleMap = new Map<string, UmlLineStyle>();
 
     try {
-      this.extractGeometry(xmiRoot, geometryMap, connectorLabelsMap);
+      this.extractGeometry(xmiRoot, geometryMap, connectorLabelsMap, connLineStyleMap);
     } catch (e) {
       // Ignorar errores de layout y continuar con grid
     }
@@ -96,7 +97,7 @@ export class XmiClientParser {
       const id = elem['@_xmi:id'] || elem['@_id'];
 
       if (type === 'uml:Association' || type === 'Association' || type === 'uml:AssociationClass') {
-        const conn = this.parseAssociation(elem, nodeMap, connectorLabelsMap);
+        const conn = this.parseAssociation(elem, nodeMap, connectorLabelsMap, connLineStyleMap);
         if (conn && !connSet.has(conn.id)) {
           connSet.add(conn.id);
           connections.push(conn);
@@ -104,7 +105,7 @@ export class XmiClientParser {
       }
 
       if (type === 'uml:Class' || type === 'Class') {
-        const genConns = this.parseGeneralizations(elem, nodeMap);
+        const genConns = this.parseGeneralizations(elem, nodeMap, connLineStyleMap);
         for (const gc of genConns) {
           if (!connSet.has(gc.id)) {
             connSet.add(gc.id);
@@ -115,7 +116,7 @@ export class XmiClientParser {
     }
 
     // 4. Conectores de extensión EA
-    const eaConns = this.extractEaConnectors(xmiRoot, nodeMap);
+    const eaConns = this.extractEaConnectors(xmiRoot, nodeMap, connLineStyleMap);
     for (const ec of eaConns) {
       if (!connSet.has(ec.id)) {
         connSet.add(ec.id);
@@ -232,7 +233,7 @@ export class XmiClientParser {
     return methods;
   }
 
-  private static parseAssociation(assocElem: any, nodeMap: Map<string, any>, labelsMap: Map<string, any>): UmlConnection | null {
+  private static parseAssociation(assocElem: any, nodeMap: Map<string, any>, labelsMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): UmlConnection | null {
     const id = assocElem['@_xmi:id'] || assocElem['@_id'] || `conn_${Date.now()}`;
     const name = assocElem['@_name'] || '';
 
@@ -302,6 +303,8 @@ export class XmiClientParser {
       if (!tMult && lbl.tMult) tMult = lbl.tMult;
     }
 
+    const lineStyle = connLineStyleMap?.get(id) || 'segment';
+
     return {
       id,
       sourceNodeId,
@@ -312,11 +315,11 @@ export class XmiClientParser {
       name: name || undefined,
       sourceMultiplicity: sMult || '1',
       targetMultiplicity: tMult || '0..*',
-      lineStyle: 'segment',
+      lineStyle,
     };
   }
 
-  private static parseGeneralizations(classElem: any, nodeMap: Map<string, any>): UmlConnection[] {
+  private static parseGeneralizations(classElem: any, nodeMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): UmlConnection[] {
     const conns: UmlConnection[] = [];
     const sourceId = classElem['@_xmi:id'] || classElem['@_id'];
     if (!sourceId || !nodeMap.has(sourceId)) return conns;
@@ -328,14 +331,16 @@ export class XmiClientParser {
     for (const g of rawList) {
       const targetId = g['@_general'] || (g['general'] && g['general']['@_xmi:idref']);
       if (targetId && nodeMap.has(targetId)) {
+        const id = g['@_xmi:id'] || `gen_${sourceId}_${targetId}`;
+        const lineStyle = connLineStyleMap?.get(id) || 'segment';
         conns.push({
-          id: g['@_xmi:id'] || `gen_${sourceId}_${targetId}`,
+          id,
           sourceNodeId: sourceId,
           targetNodeId: targetId,
           sourceId: `${sourceId}_top`,
           targetId: `${targetId}_bottom`,
           type: 'generalization',
-          lineStyle: 'segment',
+          lineStyle,
           sourceMultiplicity: '',
           targetMultiplicity: '',
         });
@@ -345,7 +350,7 @@ export class XmiClientParser {
     return conns;
   }
 
-  private static extractEaConnectors(xmiRoot: any, nodeMap: Map<string, any>): UmlConnection[] {
+  private static extractEaConnectors(xmiRoot: any, nodeMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): UmlConnection[] {
     const conns: UmlConnection[] = [];
     const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
     if (!ext) return conns;
@@ -381,6 +386,10 @@ export class XmiClientParser {
       const tMult = labels['@_rb'] || '';
       const name = labels['@_mb'] || undefined;
 
+      const appearance = c['appearance'] || {};
+      const linemode = appearance['@_linemode'];
+      const style = connLineStyleMap?.get(id) || this.mapEaModeToLineStyle(linemode);
+
       conns.push({
         id,
         sourceNodeId: sourceId,
@@ -391,14 +400,14 @@ export class XmiClientParser {
         name,
         sourceMultiplicity: sMult || '1',
         targetMultiplicity: tMult || '0..*',
-        lineStyle: 'segment',
+        lineStyle: style,
       });
     }
 
     return conns;
   }
 
-  private static extractGeometry(xmiRoot: any, geometryMap: Map<string, any>, labelsMap: Map<string, any>): void {
+  private static extractGeometry(xmiRoot: any, geometryMap: Map<string, any>, labelsMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): void {
     const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
     if (!ext) return;
 
@@ -418,6 +427,14 @@ export class XmiClientParser {
     for (const elem of rawList) {
       const subject = elem['@_subject'];
       const geometry = elem['@_geometry'];
+      const style = elem['@_style'];
+
+      if (subject && style && connLineStyleMap) {
+        const modeMatch = style.match(/Mode=(\d+)/);
+        if (modeMatch) {
+          connLineStyleMap.set(subject, this.mapEaModeToLineStyle(modeMatch[1]));
+        }
+      }
 
       if (subject && geometry) {
         const leftMatch = geometry.match(/Left=(-?\d+)/);
@@ -439,6 +456,29 @@ export class XmiClientParser {
           });
         }
       }
+    }
+  }
+
+  public static mapEaModeToLineStyle(mode: string | number | undefined): UmlLineStyle {
+    const m = String(mode || '3');
+    switch (m) {
+      case '1':
+      case 'Direct':
+        return 'straight';
+      case '4':
+      case 'Bezier':
+        return 'bezier';
+      case '10':
+      case 'Orthogonal - Rounded':
+      case 'Orthogonal Rounded':
+        return 'adaptive-curve';
+      case '3':
+      case 'Custom Line':
+      case 'Custom':
+      case '2':
+      case 'Auto Routing':
+      default:
+        return 'segment';
     }
   }
 
