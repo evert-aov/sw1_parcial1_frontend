@@ -11,6 +11,21 @@
   --ff-node-border-color: transparent !important;
   --ff-node-background-color: #F2EBE6 !important;
   --ff-node-shadow: none !important;
+  --ff-canvas-background-color: transparent !important;
+  --ff-flow-background-color: #F9F7F5 !important;
+  --ff-color-surface-canvas: transparent !important;
+  --ff-color-surface-page: #F9F7F5 !important;
+}
+
+f-flow .f-canvas,
+f-flow f-canvas,
+.f-canvas {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
 }
 
 f-flow .f-node {

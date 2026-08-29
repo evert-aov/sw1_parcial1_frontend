@@ -1,9 +1,18 @@
-::ng-deep f-flow,
-::ng-deep f-canvas,
-.uml-canvas-container {
+.uml-canvas-container,
+::ng-deep f-flow {
   background-color: #F9F7F5 !important;
-  background-image: radial-gradient(#6B5A52 1px, transparent 1px) !important;
-  background-size: 16px 16px !important;
+  background-image: radial-gradient(#6B5A52 1.2px, transparent 1.2px) !important;
+  background-size: 20px 20px !important;
+}
+
+::ng-deep f-canvas,
+::ng-deep .f-canvas {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
 }
 
 ::ng-deep f-flow .f-node {
