@@ -702,9 +702,10 @@
                       <div class="flex items-center gap-1 font-bold text-amber-800 text-[10.5px]">
                         <span>⚠️ Aclaración Requerida</span>
                       </div>
+                      <p class="whitespace-pre-wrap text-amber-950 font-medium">{{ msg.text || 'Por favor especifica las tablas, atributos o relaciones concretas que requieres para el diagrama, o adjunta una imagen.' }}</p>
+                    } @else {
+                      <p class="whitespace-pre-wrap">{{ msg.text }}</p>
                     }
-
-                    <p class="whitespace-pre-wrap">{{ msg.text }}</p>
 
                     @if (msg.changesSummary) {
                       <div class="p-1.5 bg-purple-50 border border-purple-200 rounded text-[10px] font-mono text-purple-900 flex items-center gap-1">
