@@ -54,6 +54,7 @@ export class CollaborationService {
   // Observables para cambios remotos
   readonly remoteNodeDrag$ = new Subject<{ nodeId: string; position: { x: number; y: number }; userId: string }>();
   readonly remoteDiagramSync$ = new Subject<{ nodes: UmlClassNode[]; connections: UmlConnection[]; userId: string; action: string }>();
+  readonly nodeLockRejected$ = new Subject<{ nodeId: string; lockedBy: NodeLock }>();
 
   // Control de frecuencia de cursores
   private lastCursorSent = 0;
@@ -139,6 +140,15 @@ export class CollaborationService {
         next.set(lock.nodeId, lock);
         return next;
       });
+    });
+
+    this.socket.on('node_lock_rejected', (data: { nodeId: string; lockedBy: NodeLock }) => {
+      this.activeNodeLocks.update((map) => {
+        const next = new Map(map);
+        next.set(data.nodeId, data.lockedBy);
+        return next;
+      });
+      this.nodeLockRejected$.next(data);
     });
 
     this.socket.on('node_unlocked', (data: { nodeId: string; userId: string }) => {
@@ -242,45 +252,33 @@ export class CollaborationService {
     this.activeNodeLocks.set(new Map());
   }
 
-  requestNodeLock(nodeId: string): Promise<{ success: boolean; lockedBy?: NodeLock }> {
-    return new Promise((resolve) => {
-      const user = this.getCurrentUser();
-      const diagramId = this.currentDiagramId();
-      const roomCode = this.activeRoomCode();
+  requestNodeLock(nodeId: string): void {
+    const user = this.getCurrentUser();
+    const diagramId = this.currentDiagramId();
+    const roomCode = this.activeRoomCode();
 
-      if (!this.socket || !diagramId || !user) {
-        resolve({ success: true });
-        return;
-      }
+    const currentLock: NodeLock = {
+      nodeId,
+      userId: user?.id || 'anon',
+      userName: user?.fullName || user?.email || 'Usuario',
+      color: this.myColor(),
+    };
 
-      this.socket.emit(
-        'lock_node',
-        {
-          diagramId,
-          roomCode,
-          nodeId,
-          userId: user.id,
-          userName: user.fullName || user.email || 'Usuario',
-          color: this.myColor(),
-        },
-        (res: { success: boolean; lockedBy?: NodeLock }) => {
-          if (res && res.success) {
-            this.activeNodeLocks.update((map) => {
-              const next = new Map(map);
-              next.set(nodeId, {
-                nodeId,
-                userId: user.id,
-                userName: user.fullName || user.email || 'Usuario',
-                color: this.myColor(),
-              });
-              return next;
-            });
-            resolve({ success: true });
-          } else {
-            resolve({ success: false, lockedBy: res?.lockedBy });
-          }
-        },
-      );
+    this.activeNodeLocks.update((map) => {
+      const next = new Map(map);
+      next.set(nodeId, currentLock);
+      return next;
+    });
+
+    if (!this.socket || !diagramId || !user) return;
+
+    this.socket.emit('lock_node', {
+      diagramId,
+      roomCode,
+      nodeId,
+      userId: user.id,
+      userName: user.fullName || user.email || 'Usuario',
+      color: this.myColor(),
     });
   }
 

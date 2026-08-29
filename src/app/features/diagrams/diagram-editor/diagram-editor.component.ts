@@ -328,6 +328,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
     });
 
+    // Manejo de rechazo de bloqueo por condición de carrera
+    this.collaborationService.nodeLockRejected$.subscribe((data) => {
+      if (this.editingNode()?.id === data.nodeId) {
+        this.isEditNodeModalOpen.set(false);
+        this.editingNode.set(null);
+        alert(`🔒 La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
+      }
+    });
+
     this.route.queryParams.subscribe((params) => {
       const diagramId = params['diagramId'];
       const projectId = params['projectId'];
@@ -1055,15 +1064,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Solicitar bloqueo exclusivo al servidor
-    this.collaborationService.requestNodeLock(node.id).then((res) => {
-      if (res.success) {
-        this.editingNode.set(JSON.parse(JSON.stringify(node)));
-        this.isEditNodeModalOpen.set(true);
-      } else if (res.lockedBy) {
-        alert(`🔒 La tabla "${node.name}" está siendo editada por ${res.lockedBy.userName}.`);
-      }
-    });
+    // Abrir el modal inmediatamente y emitir el bloqueo a los colaboradores
+    this.editingNode.set(JSON.parse(JSON.stringify(node)));
+    this.isEditNodeModalOpen.set(true);
+    this.collaborationService.requestNodeLock(node.id);
   }
 
   closeEditNodeModal(): void {
