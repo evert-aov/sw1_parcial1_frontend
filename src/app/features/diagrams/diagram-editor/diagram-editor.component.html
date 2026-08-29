@@ -456,7 +456,7 @@
 
           <!-- NODOS DE CLASE UML (DOBLE CLIC PARA MODAL DE EDICIÓN) -->
           <ng-container ngProjectAs="[fNodes]">
-            @for (node of nodes(); track node.id) {
+            @for (node of nodes(); track (node.id || $index)) {
 
               <!-- Nodo Ancla Invisible para Association Class -->
               @if (node.isAnchor) {
@@ -525,6 +525,7 @@
                     }"
                     class="uml-connector-point absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
+
                   <div
                     fConnector
                     [fConnectorId]="node.id + '_right'"
@@ -535,6 +536,7 @@
                     }"
                     class="uml-connector-point absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
+
                   <div
                     fConnector
                     [fConnectorId]="node.id + '_bottom'"
@@ -545,6 +547,7 @@
                     }"
                     class="uml-connector-point absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
+
                   <div
                     fConnector
                     [fConnectorId]="node.id + '_left'"
@@ -556,7 +559,7 @@
                     class="uml-connector-point absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
 
-                  <!-- 1. CABECERA DE LA TABLA (TÍTULO Y BOTÓN ELIMINAR) -->
+                  <!-- 1. CABECERA: TÍTULO DE LA CLASE UML -->
                   <div class="flex items-center justify-between px-2.5 py-1.5 bg-transparent border-b-[1.5px] border-[#6B5A52] cursor-move">
                     <span class="font-bold text-xs text-center text-[#2A201B] w-full tracking-tight truncate flex items-center justify-center gap-1" title="Doble clic para editar clase">
                       @if (isNodeLockedByOther(node.id)) {
@@ -575,11 +578,11 @@
 
                   <!-- 2. COMPARTIMENTO DE ATRIBUTOS -->
                   <div class="w-full py-1 px-2 text-[11.5px] text-[#2A201B] border-b-[1.5px] border-[#6B5A52] relative min-h-[22px] cursor-pointer" title="Doble clic para editar atributos">
-                    @if (node.attributes.length === 0) {
+                    @if (!node.attributes || node.attributes.length === 0) {
                       <div class="text-[10px] italic text-[#6B5A52]/60 py-0.5 text-center">&lt;sin atributos&gt;</div>
                     } @else {
                       <div class="space-y-0.5">
-                        @for (attr of node.attributes; track $index) {
+                        @for (attr of (node.attributes || []); track $index) {
                           <div class="flex items-center gap-1.5 truncate leading-tight py-0.2">
                             <span class="font-mono font-bold text-[#6B5A52] select-none text-[11px]">-</span>
                             <span class="font-medium text-[#2A201B]">{{ attr.name }}</span>:
@@ -592,11 +595,11 @@
 
                   <!-- 3. COMPARTIMENTO DE MÉTODOS / OPERACIONES -->
                   <div class="w-full py-1 px-2 text-[11.5px] text-[#2A201B] relative min-h-[22px] cursor-pointer" title="Doble clic para editar operaciones">
-                    @if (node.methods.length === 0) {
+                    @if (!node.methods || node.methods.length === 0) {
                       <div class="text-[10px] italic text-[#6B5A52]/60 py-0.5 text-center">&lt;sin operaciones&gt;</div>
                     } @else {
                       <div class="space-y-0.5">
-                        @for (method of node.methods; track $index) {
+                        @for (method of (node.methods || []); track $index) {
                           <div class="flex items-center gap-1.5 truncate leading-tight py-0.2">
                             <span class="font-mono font-bold text-[#6B5A52] select-none text-[11px]">+</span>
                             <span class="font-medium text-[#2A201B]">{{ method.name }}</span>({{ method.parameters }}):

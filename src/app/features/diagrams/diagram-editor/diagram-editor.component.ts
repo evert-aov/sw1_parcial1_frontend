@@ -346,9 +346,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     // Sincronización remota del diagrama completo (incluyendo mutaciones del Copilot IA)
     this.collaborationService.remoteDiagramSync$.subscribe((data) => {
-      if (data.nodes) this.nodes.set(data.nodes);
-      if (data.connections) this.connections.set(data.connections);
+      if (data.nodes) {
+        const cleanNodes = this.sanitizeClientNodes(data.nodes);
+        this.nodes.set(cleanNodes);
+        if (data.connections) {
+          this.connections.set(this.sanitizeClientConnections(data.connections, cleanNodes));
+        }
+      } else if (data.connections) {
+        this.connections.set(this.sanitizeClientConnections(data.connections, this.nodes()));
+      }
       this.updateConnectionEndpoints();
+      setTimeout(() => this.updateConnectionEndpoints(), 60);
 
       if (data.action === 'ai_mutation') {
         this.aiChatMessages.update(list => [
@@ -1354,8 +1362,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.isAiProcessing.set(false);
           if (res.success && res.nodes) {
-            this.nodes.set(res.nodes);
-            if (res.connections) this.connections.set(res.connections);
+            const cleanNodes = this.sanitizeClientNodes(res.nodes);
+            this.nodes.set(cleanNodes);
+            if (res.connections) {
+              this.connections.set(this.sanitizeClientConnections(res.connections, cleanNodes));
+            }
             this.updateConnectionEndpoints();
             setTimeout(() => this.updateConnectionEndpoints(), 60);
 
@@ -1410,8 +1421,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.isAiProcessing.set(false);
           if (res.success && res.nodes) {
-            this.nodes.set(res.nodes);
-            if (res.connections) this.connections.set(res.connections);
+            const cleanNodes = this.sanitizeClientNodes(res.nodes);
+            this.nodes.set(cleanNodes);
+            if (res.connections) {
+              this.connections.set(this.sanitizeClientConnections(res.connections, cleanNodes));
+            }
             this.updateConnectionEndpoints();
             setTimeout(() => this.updateConnectionEndpoints(), 60);
 
@@ -1457,6 +1471,56 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  private sanitizeClientNodes(nodes: any[]): UmlClassNode[] {
+    if (!Array.isArray(nodes)) return [];
+    return nodes
+      .filter(n => !!n)
+      .map((n, i) => ({
+        id: (n.id && typeof n.id === 'string' && n.id.trim()) ? n.id.trim() : `node_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+        name: n.name || `Clase${i + 1}`,
+        position: n.position || { x: 120 + (i * 260) % 780, y: 80 + Math.floor((i * 260) / 780) * 220 },
+        width: n.width || 220,
+        height: n.height || undefined,
+        isAnchor: !!n.isAnchor,
+        assocAnchorNodeId: n.assocAnchorNodeId || undefined,
+        assocMainConnId: n.assocMainConnId || undefined,
+        attributes: Array.isArray(n.attributes) ? n.attributes.map((a: any) => ({
+          name: a.name || 'attr',
+          type: this.normalizeDataType(a.type || 'String'),
+        })) : [],
+        methods: Array.isArray(n.methods) ? n.methods.map((m: any) => ({
+          name: m.name || 'operation',
+          parameters: m.parameters || '',
+          returnType: this.normalizeReturnType(m.returnType || 'void'),
+        })) : [],
+      }));
+  }
+
+  private sanitizeClientConnections(conns: any[], nodes: UmlClassNode[]): UmlConnection[] {
+    if (!Array.isArray(conns)) return [];
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    return conns
+      .filter(c => !!c && c.id)
+      .map(c => {
+        const sourceNodeId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+        const targetNodeId = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        return {
+          id: c.id,
+          sourceNodeId,
+          targetNodeId,
+          sourceId: c.sourceId || `${sourceNodeId}_right`,
+          targetId: c.targetId || `${targetNodeId}_left`,
+          type: c.type || 'association',
+          lineStyle: c.lineStyle || 'segment',
+          name: c.name || undefined,
+          sourceMultiplicity: c.sourceMultiplicity || '',
+          targetMultiplicity: c.targetMultiplicity || '',
+          assocAnchorNodeId: c.assocAnchorNodeId || undefined,
+        };
+      })
+      .filter(c => nodeMap.has(c.sourceNodeId || '') && nodeMap.has(c.targetNodeId || ''));
   }
 
   setAiSuggestion(text: string): void {
