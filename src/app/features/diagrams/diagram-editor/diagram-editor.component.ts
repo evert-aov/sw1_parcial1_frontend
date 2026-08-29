@@ -51,6 +51,8 @@ import {
   heroLockOpen,
   heroMicrophone,
   heroPhoto,
+  heroCamera,
+  heroClipboard,
   heroPaperAirplane,
   heroStop,
 } from '@ng-icons/heroicons/outline';
@@ -112,6 +114,8 @@ export interface AiChatMessage {
       heroLockOpen,
       heroMicrophone,
       heroPhoto,
+      heroCamera,
+      heroClipboard,
       heroPaperAirplane,
       heroStop,
     })
@@ -169,6 +173,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   attachedImageBase64 = signal<string | null>(null);
   attachedImageMimeType = signal<string>('image/png');
   attachedImageName = signal<string | null>(null);
+  showWebcamModal = signal<boolean>(false);
+  @ViewChild('webcamVideo') webcamVideoRef?: ElementRef<HTMLVideoElement>;
+  private webcamMediaStream: MediaStream | null = null;
   private speechRecognitionInstance: any = null;
 
   // Conversación tipo Chat con Copilot IA
@@ -1278,7 +1285,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const file = target.files?.[0];
     if (!file) return;
 
-    this.attachedImageName.set(file.name);
+    this.processImageFile(file);
+    target.value = '';
+  }
+
+  private processImageFile(file: File | Blob, customName?: string): void {
+    const fileName = customName || (file instanceof File ? file.name : `Captura_${new Date().toLocaleTimeString().replace(/:/g, '-')}.png`);
+    this.attachedImageName.set(fileName);
     this.attachedImageMimeType.set(file.type || 'image/png');
 
     const reader = new FileReader();
@@ -1286,7 +1299,102 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.attachedImageBase64.set(e.target?.result as string);
     };
     reader.readAsDataURL(file);
-    target.value = '';
+  }
+
+  onPasteImage(event: ClipboardEvent): void {
+    if (this.isReadOnly()) return;
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          event.preventDefault();
+          this.processImageFile(file, `Captura_Portapapeles_${new Date().toLocaleTimeString().replace(/:/g, '-')}.png`);
+          return;
+        }
+      }
+    }
+  }
+
+  onDropImage(event: DragEvent): void {
+    if (this.isReadOnly()) return;
+    event.preventDefault();
+    const file = event.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      this.processImageFile(file);
+    }
+  }
+
+  async pasteFromClipboard(): Promise<void> {
+    if (this.isReadOnly()) return;
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        alert('Puedes presionar Ctrl + V dentro del cuadro de texto del chat para pegar tu captura de pantalla.');
+        return;
+      }
+      const clipboardItems = await navigator.clipboard.read();
+      for (const item of clipboardItems) {
+        const imageType = item.types.find(type => type.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          this.processImageFile(blob, `Captura_Portapapeles_${new Date().toLocaleTimeString().replace(/:/g, '-')}.png`);
+          return;
+        }
+      }
+      alert('No se detectó ninguna imagen en el portapapeles. Copia una captura primero con Win + Shift + S o imprPant / Ctrl + C y vuelve a presionar este botón o usa Ctrl + V.');
+    } catch (err) {
+      alert('Puedes presionar directamente Ctrl + V dentro del cuadro de texto del chat para pegar tu captura de pantalla.');
+    }
+  }
+
+  async openWebcamModal(): Promise<void> {
+    if (this.isReadOnly()) return;
+    try {
+      this.showWebcamModal.set(true);
+      setTimeout(async () => {
+        try {
+          this.webcamMediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+          });
+          if (this.webcamVideoRef?.nativeElement) {
+            this.webcamVideoRef.nativeElement.srcObject = this.webcamMediaStream;
+          }
+        } catch (err) {
+          alert('No se pudo acceder a la cámara del dispositivo: ' + err);
+          this.closeWebcamModal();
+        }
+      }, 100);
+    } catch (e) {
+      alert('Error accediendo a la cámara: ' + e);
+    }
+  }
+
+  captureWebcamPhoto(): void {
+    if (!this.webcamVideoRef?.nativeElement) return;
+    const video = this.webcamVideoRef.nativeElement;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/png');
+      this.attachedImageBase64.set(dataUrl);
+      this.attachedImageName.set(`Foto_Camara_${new Date().toLocaleTimeString().replace(/:/g, '-')}.png`);
+      this.attachedImageMimeType.set('image/png');
+    }
+    this.closeWebcamModal();
+  }
+
+  closeWebcamModal(): void {
+    if (this.webcamMediaStream) {
+      this.webcamMediaStream.getTracks().forEach(track => track.stop());
+      this.webcamMediaStream = null;
+    }
+    this.showWebcamModal.set(false);
   }
 
   removeAttachedImage(): void {
