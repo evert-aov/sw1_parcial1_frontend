@@ -271,19 +271,37 @@
 
                 <!-- Etiquetas de Multiplicidad y Nombre -->
                 @if (conn.sourceMultiplicity) {
-                  <div class="f-connection-text font-mono text-[9px] bg-white/90 border border-slate-300 px-1 rounded shadow-2xs text-slate-800">
+                  <div
+                    fConnectionContent
+                    [position]="0.15"
+                    [offset]="-12"
+                    (dblclick)="openEditConnModal(conn, $event)"
+                    title="Multiplicidad Origen (doble clic para editar)"
+                    class="uml-multiplicity-badge">
                     {{ conn.sourceMultiplicity }}
                   </div>
                 }
 
                 @if (conn.name) {
-                  <div class="f-connection-center font-sans font-medium text-[10px] bg-white/95 border border-slate-400 px-1.5 py-0.5 rounded shadow-xs text-indigo-900 font-bold">
+                  <div
+                    fConnectionContent
+                    [position]="0.5"
+                    [offset]="-14"
+                    (dblclick)="openEditConnModal(conn, $event)"
+                    title="Nombre de Relación (doble clic para editar)"
+                    class="uml-relation-name-badge">
                     {{ conn.name }}
                   </div>
                 }
 
                 @if (conn.targetMultiplicity) {
-                  <div class="f-connection-text font-mono text-[9px] bg-white/90 border border-slate-300 px-1 rounded shadow-2xs text-slate-800">
+                  <div
+                    fConnectionContent
+                    [position]="0.85"
+                    [offset]="-12"
+                    (dblclick)="openEditConnModal(conn, $event)"
+                    title="Multiplicidad Destino (doble clic para editar)"
+                    class="uml-multiplicity-badge">
                     {{ conn.targetMultiplicity }}
                   </div>
                 }
