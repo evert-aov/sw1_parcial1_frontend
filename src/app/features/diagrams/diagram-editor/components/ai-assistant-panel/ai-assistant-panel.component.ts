@@ -6,14 +6,15 @@ import {
   output,
   ElementRef,
   ViewChild,
+  OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
   heroSparkles,
+  heroChevronRight,
   heroXMark,
-  heroArrowPath,
   heroMicrophone,
   heroStop,
   heroClipboard,
@@ -21,9 +22,11 @@ import {
   heroPhoto,
   heroPaperAirplane,
   heroClipboardDocumentCheck,
+  heroChatBubbleLeftRight,
+  heroClock,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { AiAssistantService } from '../../../../../core/services/ai-assistant.service';
+import { AiAssistantService, AiResponse } from '../../../../../core/services/ai-assistant.service';
 import {
   UmlClassNode,
   UmlConnection,
@@ -32,12 +35,12 @@ import {
 
 export interface AiChatMessage {
   id: string;
-  sender: 'user' | 'ai';
+  sender: 'user' | 'assistant';
   text: string;
-  timestamp: Date;
-  status?: 'success' | 'clarification' | 'error';
+  imagePreview?: string;
   changesSummary?: string;
-  imagePreview?: string | null;
+  timestamp: Date;
+  status?: 'success' | 'clarification' | 'error' | 'pending';
 }
 
 @Component({
@@ -47,8 +50,8 @@ export interface AiChatMessage {
   providers: [
     provideIcons({
       heroSparkles,
+      heroChevronRight,
       heroXMark,
-      heroArrowPath,
       heroMicrophone,
       heroStop,
       heroClipboard,
@@ -56,11 +59,13 @@ export interface AiChatMessage {
       heroPhoto,
       heroPaperAirplane,
       heroClipboardDocumentCheck,
+      heroChatBubbleLeftRight,
+      heroClock,
     }),
   ],
   templateUrl: './ai-assistant-panel.component.html',
 })
-export class AiAssistantPanelComponent {
+export class AiAssistantPanelComponent implements OnDestroy {
   readonly authService = inject(AuthService);
   private readonly aiService = inject(AiAssistantService);
 
@@ -99,19 +104,31 @@ export class AiAssistantPanelComponent {
   readonly aiChatMessages = signal<AiChatMessage[]>([
     {
       id: 'welcome',
-      sender: 'ai',
+      sender: 'assistant',
       text: '¡Hola! Soy tu Copilot de Modelado UML con Gemini 2.5 Flash.\n\nPuedes pedirme crear tablas, agregar atributos, conectar entidades, o adjuntar una foto/captura de una pizarra o cuaderno dibujado a mano para digitalizarlo automáticamente.',
       timestamp: new Date(),
     },
   ]);
 
   private speechRecognition: any = null;
+  private webcamMediaStream: MediaStream | null = null;
 
-  onTextareaKeydown(event: KeyboardEvent): void {
+  ngOnDestroy(): void {
+    if (this.speechRecognition && this.isVoiceListening()) {
+      this.speechRecognition.stop();
+    }
+    this.stopWebcam();
+  }
+
+  onAiInputKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.applyAiPrompt();
     }
+  }
+
+  setAiSuggestion(text: string): void {
+    this.aiPrompt.set(text);
   }
 
   // -------------------------------------------------------------
@@ -127,7 +144,6 @@ export class AiAssistantPanelComponent {
 
     const userMessageText = promptText || (imageBase64 ? 'Digitalizar diagrama desde imagen adjunta' : '');
 
-    // Agregar mensaje del usuario al chat
     this.aiChatMessages.update((msgs) => [
       ...msgs,
       {
@@ -135,7 +151,7 @@ export class AiAssistantPanelComponent {
         sender: 'user',
         text: userMessageText,
         timestamp: new Date(),
-        imagePreview: imageBase64,
+        imagePreview: imageBase64 || undefined,
       },
     ]);
 
@@ -147,7 +163,6 @@ export class AiAssistantPanelComponent {
     const recentHistory = this.sessionHistory().slice(-12);
 
     if (imageBase64) {
-      // Prompt con visión multimodal
       this.aiService
         .sendVisionPrompt(
           imageBase64,
@@ -164,7 +179,6 @@ export class AiAssistantPanelComponent {
           error: (err) => this.handleAiError(err),
         });
     } else {
-      // Prompt de texto regular
       this.aiService
         .sendTextPrompt(
           promptText,
@@ -180,53 +194,37 @@ export class AiAssistantPanelComponent {
         });
     }
 
-    // Limpiar inputs
     this.aiPrompt.set('');
     this.attachedImageBase64.set(null);
     this.attachedImageName.set(null);
   }
 
-  private handleAiResponse(res: any, sourceTag: string): void {
+  private handleAiResponse(res: AiResponse, sourceTag: string): void {
     this.isAiProcessing.set(false);
 
-    if (res.status === 'clarification') {
-      this.aiChatMessages.update((msgs) => [
-        ...msgs,
-        {
-          id: 'msg-' + Date.now(),
-          sender: 'ai',
-          text: res.message || 'Por favor aclara los detalles de las tablas o relaciones requeridas.',
-          status: 'clarification',
-          timestamp: new Date(),
-        },
-      ]);
-      this.scrollToBottom();
-      return;
-    }
-
-    // Mutación exitosa
-    const nodes = res.nodes || [];
-    const connections = res.connections || [];
-    const summary = res.changesSummary || 'Diagrama actualizado por el Asistente IA.';
-
-    this.applyMutation.emit({
-      nodes,
-      connections,
-      summary,
-      rawResponse: res,
-    });
+    const summary = res.changesSummary || res.message || 'Diagrama actualizado por Copilot IA.';
+    const isClarification = res.action === 'clarification';
 
     this.aiChatMessages.update((msgs) => [
       ...msgs,
       {
-        id: 'msg-' + Date.now(),
-        sender: 'ai',
-        text: res.message || 'He aplicado los cambios al diagrama exitosamente.',
-        status: 'success',
+        id: 'msg-res-' + Date.now(),
+        sender: 'assistant',
+        text: res.message || (isClarification ? 'Por favor aclara la solicitud.' : '¡Diagrama modelado con éxito!'),
         changesSummary: summary,
+        status: isClarification ? 'clarification' : 'success',
         timestamp: new Date(),
       },
     ]);
+
+    if (!isClarification && res.nodes && res.nodes.length > 0) {
+      this.applyMutation.emit({
+        nodes: res.nodes,
+        connections: res.connections || [],
+        summary,
+        rawResponse: res,
+      });
+    }
 
     this.logActivity.emit({
       type: 'ai_mutation',
@@ -242,14 +240,14 @@ export class AiAssistantPanelComponent {
 
   private handleAiError(err: any): void {
     this.isAiProcessing.set(false);
-    const errorMsg = err.error?.error?.message || err.error?.message || err.message || 'Ocurrió un error al procesar con el Asistente IA';
+    const msg = err.error?.message || err.message || 'Error de conexión con el Asistente IA.';
 
     this.aiChatMessages.update((msgs) => [
       ...msgs,
       {
-        id: 'msg-' + Date.now(),
-        sender: 'ai',
-        text: `Error: ${errorMsg}`,
+        id: 'msg-err-' + Date.now(),
+        sender: 'assistant',
+        text: '❌ Ocurrió un error al procesar tu solicitud: ' + msg,
         status: 'error',
         timestamp: new Date(),
       },
@@ -259,19 +257,20 @@ export class AiAssistantPanelComponent {
   }
 
   // -------------------------------------------------------------
-  // DICTADO POR VOZ (SPEECH RECOGNITION)
+  // DICTADO POR VOZ (WEB SPEECH API)
   // -------------------------------------------------------------
   toggleVoiceRecognition(): void {
-    if (this.isVoiceListening()) {
-      this.stopVoiceRecognition();
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert('Tu navegador no soporta reconocimiento de voz nativo (Web Speech API). Usa Chrome o Edge.');
       return;
     }
 
-    const windowObj = window as any;
-    const SpeechRecognition = windowObj.SpeechRecognition || windowObj.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert('Tu navegador no soporta la API de reconocimiento de voz. Por favor usa Google Chrome, Brave o Edge.');
+    if (this.isVoiceListening()) {
+      this.speechRecognition?.stop();
+      this.isVoiceListening.set(false);
       return;
     }
 
@@ -291,6 +290,7 @@ export class AiAssistantPanelComponent {
           const current = this.aiPrompt().trim();
           this.aiPrompt.set(current ? `${current} ${transcript}` : transcript);
         }
+        this.isVoiceListening.set(false);
       };
 
       this.speechRecognition.onerror = () => {
@@ -307,26 +307,20 @@ export class AiAssistantPanelComponent {
     }
   }
 
-  private stopVoiceRecognition(): void {
-    if (this.speechRecognition) {
-      this.speechRecognition.stop();
-      this.speechRecognition = null;
-    }
-    this.isVoiceListening.set(false);
-  }
-
   // -------------------------------------------------------------
-  // RECONOCIMIENTO MULTIMODAL (PEGAR, ARRASTRAR, CÁMARA, SUBIR)
+  // IMÁGENES / VISION (PEGAR, ARRASTRAR, ARCHIVO)
   // -------------------------------------------------------------
   triggerImageInput(): void {
     this.imageInputRef?.nativeElement?.click();
   }
 
   onImageSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      this.processImageFile(input.files[0]);
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (file) {
+      this.processImageFile(file);
     }
+    target.value = '';
   }
 
   onPasteImage(event: ClipboardEvent): void {
@@ -347,23 +341,33 @@ export class AiAssistantPanelComponent {
 
   pasteFromClipboard(): void {
     if (navigator.clipboard && navigator.clipboard.read) {
-      navigator.clipboard.read().then((data) => {
-        for (const item of data) {
-          for (const type of item.types) {
-            if (type.startsWith('image/')) {
-              item.getType(type).then((blob) => {
-                this.processImageFile(new File([blob], 'captura_portapapeles.png', { type }));
+      navigator.clipboard
+        .read()
+        .then((items) => {
+          for (const item of items) {
+            const imageType = item.types.find((t) => t.startsWith('image/'));
+            if (imageType) {
+              item.getType(imageType).then((blob) => {
+                this.processImageFile(blob);
               });
               return;
             }
           }
-        }
-        alert('No se encontró ninguna imagen en el portapapeles. Usa Ctrl+V o presiona "Impr Pant" primero.');
-      }).catch(() => {
-        alert('Para pegar imágenes usa directamente el atajo Ctrl+V en el campo de texto.');
-      });
+          alert('No se encontró ninguna imagen en el portapapeles. Copia una captura con Ctrl+C o tecla Impr Pant primero.');
+        })
+        .catch(() => {
+          alert('Usa el atajo de teclado Ctrl+V dentro del cuadro de texto para pegar la imagen.');
+        });
     } else {
-      alert('Para pegar imágenes usa directamente el atajo Ctrl+V en el campo de texto.');
+      alert('Usa el atajo Ctrl+V dentro del cuadro de texto.');
+    }
+  }
+
+  onDropImage(event: DragEvent): void {
+    event.preventDefault();
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+      this.processImageFile(files[0]);
     }
   }
 
@@ -372,17 +376,12 @@ export class AiAssistantPanelComponent {
     this.attachedImageName.set(null);
   }
 
-  private processImageFile(file: File): void {
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona un archivo de imagen válido (PNG, JPG, JPEG, WEBP).');
-      return;
-    }
-
+  private processImageFile(file: File | Blob): void {
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64 = e.target?.result as string;
       this.attachedImageBase64.set(base64);
-      this.attachedImageName.set(file.name || 'boceto_capturado.png');
+      this.attachedImageName.set((file as File).name || 'captura_pizarra.png');
     };
     reader.readAsDataURL(file);
   }
@@ -392,85 +391,82 @@ export class AiAssistantPanelComponent {
   // -------------------------------------------------------------
   openWebcamModal(): void {
     this.showWebcamModal.set(true);
-    navigator.mediaDevices
-      ?.getUserMedia({ video: { facingMode: 'environment' } })
-      .then((stream) => {
-        setTimeout(() => {
-          if (this.webcamVideoRef?.nativeElement) {
-            this.webcamVideoRef.nativeElement.srcObject = stream;
-          }
-        }, 100);
-      })
-      .catch(() => {
-        alert('No se pudo acceder a la cámara. Verifica los permisos del navegador.');
-        this.showWebcamModal.set(false);
-      });
+    setTimeout(() => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ video: { facingMode: 'environment' } })
+          .then((stream) => {
+            this.webcamMediaStream = stream;
+            if (this.webcamVideoRef?.nativeElement) {
+              this.webcamVideoRef.nativeElement.srcObject = stream;
+            }
+          })
+          .catch((err) => {
+            alert('No se pudo acceder a la cámara: ' + err.message);
+            this.closeWebcamModal();
+          });
+      }
+    }, 100);
   }
 
   closeWebcamModal(): void {
-    if (this.webcamVideoRef?.nativeElement?.srcObject) {
-      const stream = this.webcamVideoRef.nativeElement.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-    }
+    this.stopWebcam();
     this.showWebcamModal.set(false);
+  }
+
+  private stopWebcam(): void {
+    if (this.webcamMediaStream) {
+      this.webcamMediaStream.getTracks().forEach((track) => track.stop());
+      this.webcamMediaStream = null;
+    }
   }
 
   captureWebcamPhoto(): void {
     if (!this.webcamVideoRef?.nativeElement) return;
     const video = this.webcamVideoRef.nativeElement;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const base64 = canvas.toDataURL('image/jpeg', 0.9);
-      this.attachedImageBase64.set(base64);
-      this.attachedImageName.set('foto_pizarra_' + new Date().toISOString().slice(11, 19).replace(/:/g, '-') + '.jpg');
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      this.attachedImageBase64.set(dataUrl);
+      this.attachedImageName.set(`foto_camara_${Date.now()}.jpg`);
     }
     this.closeWebcamModal();
   }
 
   // -------------------------------------------------------------
-  // ACCIONES DEL HISTORIAL
+  // HISTORIAL DE SESIÓN
   // -------------------------------------------------------------
   copySessionHistory(): void {
-    const list = this.sessionHistory();
-    if (list.length === 0) {
-      alert('No hay eventos registrados en el historial de esta sesión.');
-      return;
-    }
-
-    const formatted = list
-      .map((e) => `[${new Date(e.timestamp).toLocaleTimeString()}] ${e.actor} | ${e.title}: ${e.description}`)
+    const text = this.sessionHistory()
+      .map(
+        (h) =>
+          `[${new Date(h.timestamp).toLocaleTimeString()}] ${h.title} (${h.actor}): ${h.description}`
+      )
       .join('\n');
 
-    navigator.clipboard.writeText(formatted).then(() => {
-      alert('Historial de la sesión copiado al portapapeles.');
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Historial de sesión copiado al portapapeles.');
     });
   }
 
   askAiAboutSession(): void {
+    const count = this.sessionHistory().length;
     this.activeAiTab.set('chat');
-    this.aiPrompt.set('Resume y analiza el trabajo que hemos realizado en esta sesión según el historial de actividad.');
-  }
-
-  clearChat(): void {
-    this.aiChatMessages.set([
-      {
-        id: 'welcome',
-        sender: 'ai',
-        text: '¡Historial de chat reiniciado! ¿En qué puedo ayudarte ahora?',
-        timestamp: new Date(),
-      },
-    ]);
+    this.aiPrompt.set(
+      `Analiza los ${count} eventos del historial de esta sesión y resume la arquitectura UML que hemos construido hasta ahora.`
+    );
   }
 
   private scrollToBottom(): void {
     setTimeout(() => {
       if (this.chatScrollContainerRef?.nativeElement) {
-        this.chatScrollContainerRef.nativeElement.scrollTop = this.chatScrollContainerRef.nativeElement.scrollHeight;
+        const el = this.chatScrollContainerRef.nativeElement;
+        el.scrollTop = el.scrollHeight;
       }
-    }, 100);
+    }, 50);
   }
 }

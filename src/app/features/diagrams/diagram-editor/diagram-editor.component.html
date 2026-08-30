@@ -1,13 +1,12 @@
-<div class="h-screen w-screen flex flex-col bg-[#F9F7F5] select-none font-sans overflow-hidden">
-  
-  <!-- 1. BARRA SUPERIOR (APPBAR REFACTORIZADA) -->
+<div class="h-screen w-screen flex flex-col bg-[#F9F7F5] select-none overflow-hidden font-sans">
+
+  <!-- 1. [TOPBAR] REFACTORIZADO EN COMPONENTE SEPARADO -->
   <app-diagram-appbar
     [diagramTitle]="currentDiagramName()"
-    [projectName]="currentDiagramName()"
-    [projectId]="currentProjectId()"
-    [isSaving]="saveSuccessMessage()"
+    [diagramId]="currentDiagramId()"
+    [isSaving]="diagramService.isSaving()"
+    [saveSuccessMessage]="saveSuccessMessage()"
     [isReadOnly]="isReadOnly()"
-    [isAiPanelOpen]="isAiPanelOpen()"
     (saveDiagram)="saveToBackend()"
     (exportXmi)="downloadXmiFile()"
     (exportJson)="downloadJsonFile()"
@@ -15,297 +14,450 @@
     (fileSelected)="onFileSelected($event)"
     (openImportJson)="openImportModal()"
     (openSpringBoot)="showSpringBootModal.set(true)"
-    (clearDiagram)="clearDiagram()"
-    (toggleReadOnly)="currentUserRole.set(isReadOnly() ? 'EDITOR' : 'VIEWER')"
-    (toggleAiPanel)="isAiPanelOpen.set(!isAiPanelOpen())"
-    (openProfile)="isProfileModalOpen.set(true)">
+    (openProfile)="openProfileModal()">
   </app-diagram-appbar>
 
-  <!-- 2. CONTENIDO PRINCIPAL: [TOOLBOX] + [CANVAS FOBLEX FLOW] + [PANEL IA] -->
+  <!-- 2. [BODY] TOOLBOX IZQUIERDO + CANVAS FOBLEX FLOW + ASISTENTE IA DERECHO -->
   <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- TOOLBOX LATERAL IZQUIERDO -->
-    <aside
-      [ngClass]="{ 'w-64': isToolboxOpen(), 'w-10': !isToolboxOpen() }"
-      class="bg-[#F2EBE6] border-r border-[#6B5A52] flex flex-col z-20 shrink-0 select-none shadow-sm transition-all duration-200">
-      
-      <!-- Cabecera del Toolbox -->
-      <div class="px-2.5 py-2 bg-[#E6DDD6] border-b border-[#6B5A52] flex items-center justify-between">
-        @if (isToolboxOpen()) {
-          <div class="flex items-center gap-1.5">
-            <ng-icon name="heroSquares2x2" class="text-sm text-[#6B5A52]"></ng-icon>
-            <span class="font-bold font-mono text-xs uppercase tracking-wider text-[#2A201B]">Caja de Herramientas</span>
-          </div>
-        }
-        <button
-          (click)="isToolboxOpen.set(!isToolboxOpen())"
-          [title]="isToolboxOpen() ? 'Colapsar Toolbox' : 'Expandir Toolbox'"
-          class="p-1 hover:bg-[#D5C7BC] text-[#6B5A52] rounded cursor-pointer mx-auto">
-          <ng-icon [name]="isToolboxOpen() ? 'heroChevronLeft' : 'heroChevronRight'" class="text-xs"></ng-icon>
-        </button>
-      </div>
+    <!-- 2.1 [TOOLBOX LATERAL IZQUIERDO] HERRAMIENTAS Y RELACIONES UML 2.5 -->
+    @if (isToolboxOpen()) {
+      <aside class="w-56 bg-[#EAEAEA] border-r border-[#B8B8B8] flex flex-col shrink-0 select-none text-xs text-slate-800 shadow-sm overflow-y-auto z-20 animate-in slide-in-from-left duration-150">
 
-      @if (isToolboxOpen()) {
-        <div class="flex-1 overflow-y-auto p-2.5 space-y-3">
-          
-          <!-- Elementos de Clase / Entidades -->
-          <div class="space-y-1">
-            <span class="text-[10.5px] font-mono font-bold uppercase text-[#6B5A52] px-1">Elementos UML</span>
-            <div class="grid grid-cols-2 gap-1.5 pt-0.5">
-              <button
-                (click)="addClass()"
-                [disabled]="isReadOnly()"
-                class="p-2 bg-white hover:bg-amber-50/60 border border-[#6B5A52] shadow-2xs text-left cursor-pointer flex items-center gap-1.5 disabled:opacity-50">
-                <span class="text-xs font-bold text-indigo-700">«C»</span>
-                <span class="text-[11px] font-medium text-slate-800">Clase</span>
-              </button>
+        <!-- Cabecera del Toolbox con botón de colapso -->
+        <div class="px-2.5 py-1.5 bg-[#DFDFDF] border-b border-[#C0C0C0] flex items-center justify-between font-mono font-bold text-[10.5px] text-slate-700">
+          <div class="flex items-center gap-1.5">
+            <ng-icon name="heroBars3" class="text-xs text-slate-600"></ng-icon>
+            <span>HERRAMIENTAS UML</span>
+          </div>
+          <button
+            (click)="isToolboxOpen.set(false)"
+            title="Ocultar Toolbox (Ctrl+B)"
+            class="text-slate-500 hover:text-slate-900 hover:bg-slate-300 rounded px-1.5 py-0.5 cursor-pointer text-xs flex items-center gap-0.5 transition-colors">
+            <ng-icon name="heroChevronLeft" class="text-xs"></ng-icon>
+          </button>
+        </div>
+
+        <!-- Panel 1: Class Relationships -->
+        <div class="border-b border-[#C8C8C8]">
+          <div
+            (click)="isRelationshipsOpen.set(!isRelationshipsOpen())"
+            class="bg-gradient-to-b from-[#EFEFEF] to-[#DCDCDC] px-2.5 py-1.5 font-bold text-[#1E293B] flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] hover:from-[#F5F5F5] hover:to-[#E2E2E2]">
+            <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
+              <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-600"></ng-icon>
+              Class Relationships
+            </span>
+            @if (selectedRelationType()) {
+              <span (click)="$event.stopPropagation(); setPointerMode()" title="Deseleccionar relación" class="text-[10px] text-slate-700 hover:text-red-600 font-normal cursor-pointer">
+                (deseleccionar)
+              </span>
+            }
+          </div>
+
+          @if (isRelationshipsOpen()) {
+            <div class="p-1.5 space-y-1 bg-[#F5F5F5]">
+
+              <!-- Herramienta Puntero / Mover -->
               <button
                 (click)="setPointerMode()"
-                [ngClass]="{
-                  'bg-[#6B5A52] text-white font-bold': !selectedRelationType(),
-                  'bg-white text-slate-800': selectedRelationType()
-                }"
-                class="p-2 border border-[#6B5A52] shadow-2xs text-left cursor-pointer flex items-center gap-1.5">
-                <ng-icon name="heroCursorArrowRays" class="text-xs"></ng-icon>
-                <span class="text-[11px] font-medium">Puntero</span>
+                [ngClass]="{'bg-white border-slate-400 font-semibold shadow-xs text-slate-900': selectedRelationType() === null, 'hover:bg-[#E8EEF5] text-slate-600 border-transparent': selectedRelationType() !== null}"
+                class="w-full text-left px-2 py-1.5 rounded flex items-center gap-2 border transition-colors mb-1 cursor-pointer">
+                <ng-icon name="heroCursorArrowRays" class="text-sm text-slate-700 shrink-0"></ng-icon>
+                <div>
+                  <div class="text-xs font-medium text-slate-800">Seleccionar / Mover</div>
+                  <div class="text-[9.5px] text-slate-500">Mueve clases libremente</div>
+                </div>
               </button>
+
+              <div class="border-t border-slate-200 my-1"></div>
+
+              <!-- Lista de relaciones UML 2.5 -->
+              @for (rel of relationTypes; track rel.id) {
+                <button
+                  (click)="selectRelationType(rel.id)"
+                  [ngClass]="{
+                    'bg-blue-100 border-blue-500 font-semibold shadow-xs text-blue-900': selectedRelationType() === rel.id,
+                    'hover:bg-[#E8EEF5] text-slate-700 border-transparent': selectedRelationType() !== rel.id
+                  }"
+                  class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="font-mono font-bold text-xs shrink-0 text-slate-800 w-11 text-center bg-white/80 py-0.5 border border-slate-300 rounded-[2px]">
+                      {{ rel.icon }}
+                    </span>
+                    <div class="truncate">
+                      <div class="text-[11.5px] leading-tight font-medium">{{ rel.label }}</div>
+                      <div class="text-[9.5px] text-slate-500 truncate" [title]="rel.description">{{ rel.description }}</div>
+                    </div>
+                  </div>
+                </button>
+              }
             </div>
+          }
+        </div>
+
+        <!-- Panel 2: Line Style (Routing) -->
+        <div class="border-b border-[#C8C8C8]">
+          <div
+            (click)="isLineStylesOpen.set(!isLineStylesOpen())"
+            class="bg-gradient-to-b from-[#EFEFEF] to-[#DCDCDC] px-2.5 py-1.5 font-bold text-[#1E293B] flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] hover:from-[#F5F5F5] hover:to-[#E2E2E2]">
+            <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
+              <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-600"></ng-icon>
+              Line Style (Routing)
+            </span>
           </div>
 
-          <!-- Relaciones UML -->
-          <div class="space-y-1 pt-1 border-t border-[#6B5A52]/20">
-            <button
-              (click)="isRelationshipsOpen.set(!isRelationshipsOpen())"
-              class="w-full flex items-center justify-between text-[10.5px] font-mono font-bold uppercase text-[#6B5A52] px-1 py-0.5 cursor-pointer hover:text-[#2A201B]">
-              <span>Tipos de Conector / Relación</span>
-              <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs"></ng-icon>
+          @if (isLineStylesOpen()) {
+            <div class="p-1.5 space-y-1 bg-[#F5F5F5]">
+              @for (style of lineStyles; track style.id) {
+                <button
+                  (click)="setDefaultLineStyle(style.id)"
+                  [ngClass]="{
+                    'bg-white border-slate-400 font-semibold shadow-xs text-slate-900': defaultLineStyle() === style.id,
+                    'hover:bg-[#E8EEF5] text-slate-600 border-transparent': defaultLineStyle() !== style.id
+                  }"
+                  class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer">
+                  <span class="text-xs">{{ style.label }}</span>
+                  @if (defaultLineStyle() === style.id) {
+                    <ng-icon name="heroCheck" class="text-xs text-blue-600 font-bold"></ng-icon>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Panel 3: Zoom y Vistas Rápidas -->
+        <div class="p-2 border-b border-[#C8C8C8] bg-[#F5F5F5]">
+          <div class="flex items-center justify-between gap-1">
+            <button (click)="zoomIn()" title="Acercar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+              <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
             </button>
-
-            @if (isRelationshipsOpen()) {
-              <div class="space-y-1 pt-0.5">
-                @for (rel of relationTypes; track rel.id) {
-                  <button
-                    (click)="selectRelationType(rel.id)"
-                    [title]="rel.description"
-                    [disabled]="isReadOnly()"
-                    [ngClass]="{
-                      'bg-[#6B5A52] text-white font-bold border-[#2A201B] shadow-2xs': selectedRelationType() === rel.id,
-                      'bg-white text-slate-800 border-[#6B5A52]/60 hover:bg-[#F2EBE6]': selectedRelationType() !== rel.id
-                    }"
-                    class="w-full text-left px-2 py-1.5 rounded-none border text-[11px] font-mono flex items-center justify-between cursor-pointer transition-colors disabled:opacity-50">
-                    <span class="truncate">{{ rel.label }}</span>
-                    <span class="font-bold text-xs shrink-0 ml-1">{{ rel.icon }}</span>
-                  </button>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- Estilos de Línea (Enterprise Architect) -->
-          <div class="space-y-1 pt-1 border-t border-[#6B5A52]/20">
-            <button
-              (click)="isLineStylesOpen.set(!isLineStylesOpen())"
-              class="w-full flex items-center justify-between text-[10.5px] font-mono font-bold uppercase text-[#6B5A52] px-1 py-0.5 cursor-pointer hover:text-[#2A201B]">
-              <span>Estilo de Línea (EA)</span>
-              <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs"></ng-icon>
+            <button (click)="zoomOut()" title="Alejar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+              <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
             </button>
-
-            @if (isLineStylesOpen()) {
-              <div class="space-y-1 pt-0.5">
-                @for (style of lineStyles; track style.id) {
-                  <button
-                    (click)="defaultLineStyle.set(style.id); updateConnectionEndpoints()"
-                    [ngClass]="{
-                      'bg-[#6B5A52] text-white font-bold border-[#2A201B] shadow-2xs': defaultLineStyle() === style.id,
-                      'bg-white text-slate-800 border-[#6B5A52]/60 hover:bg-[#F2EBE6]': defaultLineStyle() !== style.id
-                    }"
-                    class="w-full text-left px-2 py-1.5 rounded-none border text-[10.5px] font-mono flex items-center justify-between cursor-pointer transition-colors">
-                    <span class="truncate">{{ style.label }}</span>
-                    @if (defaultLineStyle() === style.id) {
-                      <ng-icon name="heroCheck" class="text-xs text-amber-300"></ng-icon>
-                    }
-                  </button>
-                }
-              </div>
-            }
+            <button (click)="resetView()" title="1:1" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 text-[10px] font-mono leading-none cursor-pointer">
+              1:1
+            </button>
+            <button (click)="fitView()" title="Ajustar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+              <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
+            </button>
           </div>
+        </div>
 
+        <!-- Botón Agregar Nueva Clase UML -->
+        <div class="p-3 mt-auto bg-[#DFDFDF] border-t border-[#C0C0C0]">
+          <button
+            (click)="addClass()"
+            [disabled]="isReadOnly()"
+            [title]="isReadOnly() ? 'Modo de solo lectura' : 'Agregar nueva clase'"
+            class="w-full py-2 bg-[#6B5A52] hover:bg-[#52443E] active:translate-y-0.5 text-white font-mono text-xs font-bold tracking-wider uppercase border border-[#2A201B] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+            <span>Nueva Clase UML</span>
+          </button>
+        </div>
+
+      </aside>
+    }
+
+    <!-- 2.2 [CANVAS INTERACTIVO] FOBLEX FLOW -->
+    <div
+      #flowContainer
+      (mousemove)="onCanvasMouseMove($event)"
+      (click)="onCanvasBackgroundClick()"
+      class="flex-1 relative w-full h-full uml-canvas-container cursor-default overflow-hidden">
+
+      <!-- Botón Flotante para reabrir Toolbox cuando está oculto -->
+      @if (!isToolboxOpen()) {
+        <button
+          (click)="isToolboxOpen.set(true)"
+          title="Mostrar Barra de Herramientas UML (Ctrl+B)"
+          class="absolute top-3.5 left-3.5 z-40 bg-white/95 hover:bg-white text-slate-800 border border-slate-300 shadow-md rounded-md px-2.5 py-1.5 flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 backdrop-blur-xs">
+          <ng-icon name="heroBars3" class="text-sm text-[#6B5A52]"></ng-icon>
+          <span class="text-[11px] text-[#2A201B]">Toolbox</span>
+        </button>
+      }
+
+      <!-- Botón Flotante para reabrir Copilot IA cuando está oculto -->
+      @if (!isAiPanelOpen()) {
+        <button
+          (click)="isAiPanelOpen.set(true)"
+          title="Abrir Asistente IA Copilot (Ctrl+I)"
+          class="absolute top-3.5 right-3.5 z-40 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white shadow-lg rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105">
+          <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
+          <span>Copilot IA</span>
+        </button>
+      }
+
+      <!-- Banner Informativo del Modo de Creación de Relaciones -->
+      @if (selectedRelationType()) {
+        <div class="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-blue-900/90 text-white border border-blue-400 px-4 py-1.5 rounded-full shadow-lg text-xs font-mono flex items-center gap-2 animate-in fade-in slide-in-from-top-2 backdrop-blur-xs">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+          <span>
+            @if (selectedSourceNodeId() === null) {
+              Paso 1: Haz clic en la <strong>clase origen</strong> para la relación <strong>{{ selectedRelationType() }}</strong>
+            } @else {
+              Paso 2: Ahora haz clic en la <strong>clase destino</strong> (o arrastra entre puertos)
+            }
+          </span>
+          <button (click)="setPointerMode()" class="ml-2 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] cursor-pointer">
+            Cancelar (Esc)
+          </button>
         </div>
       }
-    </aside>
 
-    <!-- LIENZO INTERACTIVO (FOBLEX FLOW CANVAS) -->
-    <main class="flex-1 h-full bg-[#FAF9F6] relative overflow-hidden flex flex-col">
-      
-      <!-- Controles de Zoom en la esquina inferior izquierda -->
-      <div class="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-xs border border-[#6B5A52] rounded shadow-md flex items-center divide-x divide-[#6B5A52]/30 text-slate-700">
-        <button (click)="zoomIn()" title="Acercar (+)" class="p-1.5 hover:bg-slate-100 cursor-pointer">
-          <ng-icon name="heroMagnifyingGlassPlus" class="text-sm"></ng-icon>
-        </button>
-        <button (click)="zoomOut()" title="Alejar (-)" class="p-1.5 hover:bg-slate-100 cursor-pointer">
-          <ng-icon name="heroMagnifyingGlassMinus" class="text-sm"></ng-icon>
-        </button>
-        <button (click)="resetZoom()" title="Restablecer Zoom (100%)" class="p-1.5 hover:bg-slate-100 cursor-pointer">
-          <ng-icon name="heroArrowsPointingOut" class="text-sm"></ng-icon>
-        </button>
-      </div>
+      <!-- Cursores Remotos Colaborativos en Vivo -->
+      @for (cursor of collaborationService.remoteCursors(); track cursor.userId) {
+        <div
+          class="absolute pointer-events-none z-40 flex items-center gap-1 transition-all duration-75"
+          [style.left.px]="cursor.x"
+          [style.top.px]="cursor.y">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="drop-shadow-md">
+            <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z" [attr.fill]="cursor.color" stroke="white" stroke-width="1.5" />
+          </svg>
+          <span
+            class="text-[9.5px] font-mono font-bold text-white px-1.5 py-0.5 rounded shadow-md whitespace-nowrap"
+            [style.backgroundColor]="cursor.color">
+            {{ cursor.userName }}
+          </span>
+        </div>
+      }
 
-      <!-- F-FLOW ENGINE CONTAINER -->
+      <!-- FOBLEX FLOW INTERACTIVE CANVAS -->
       <f-flow
         fDraggable
+        (fLoaded)="onFlowLoaded()"
         (fCreateConnection)="onConnectionCreated($event)"
+        (fReassignConnection)="onConnectionReassigned($event)"
         class="w-full h-full block">
-        
-        <f-canvas fZoom (fCanvasChangeEvent)="onCanvasChange($any($event))">
-          
-          <!-- CONEXIONES ENTRE NODOS -->
-          @for (conn of connections(); track conn.id) {
-            <f-connection
-              [fConnectionId]="conn.id"
-              [fOutputId]="conn.sourceId"
-              [fInputId]="conn.targetId"
-              [fType]="conn.lineStyle || defaultLineStyle()"
-              [fBehavior]="'floating'"
-              (dblclick)="openEditConnModal(conn, $event)"
-              class="cursor-pointer group">
-              
-              <!-- Marcadores de Conexión según tipo UML -->
-              @if (conn.type === 'aggregation') {
-                <svg viewBox="0 0 16 16" width="16" height="16" class="fill-white stroke-[#2A201B] stroke-2">
-                  <polygon points="0,8 8,3 16,8 8,13" />
-                </svg>
-              } @else if (conn.type === 'composition') {
-                <svg viewBox="0 0 16 16" width="16" height="16" class="fill-[#2A201B] stroke-[#2A201B] stroke-2">
-                  <polygon points="0,8 8,3 16,8 8,13" />
-                </svg>
-              } @else if (conn.type === 'generalization' || conn.type === 'realization') {
-                <svg viewBox="0 0 16 16" width="16" height="16" class="fill-white stroke-[#2A201B] stroke-2">
-                  <polygon points="0,0 16,8 0,16" />
-                </svg>
-              } @else if (conn.type === 'dependency') {
-                <svg viewBox="0 0 16 16" width="16" height="16" class="fill-none stroke-[#2A201B] stroke-2">
-                  <polyline points="2,2 14,8 2,14" />
-                </svg>
-              }
 
-              <!-- Etiquetas de Multiplicidad y Nombre -->
-              @if (conn.sourceMultiplicity || conn.targetMultiplicity || conn.name) {
-                <div class="f-connection-center bg-white/95 border border-slate-300 rounded px-1.5 py-0.5 text-[9.5px] font-mono shadow-xs text-slate-800">
-                  @if (conn.name) {
-                    <span class="font-bold text-indigo-700">{{ conn.name }}</span>
-                  }
-                  <span class="text-slate-500 font-medium">[{{ conn.sourceMultiplicity || '1' }} ➔ {{ conn.targetMultiplicity || '1..*' }}]</span>
-                </div>
-              }
-            </f-connection>
-          }
+        <f-canvas
+          fZoom
+          (fCanvasChangeEvent)="onCanvasChange($any($event))">
+
+          <!-- CONEXIONES UML SEGÚN RELACIÓN -->
+          <ng-container ngProjectAs="[fConnections]">
+            @for (conn of connections(); track conn.id) {
+              <f-connection
+                [fConnectionId]="conn.id"
+                [fOutputId]="conn.sourceId"
+                [fInputId]="conn.targetId"
+                [fType]="conn.lineStyle || defaultLineStyle()"
+                [fBehavior]="'floating'"
+                (dblclick)="openEditConnModal(conn, $event)"
+                [ngClass]="{
+                  'ring-2 ring-purple-500 shadow-md': isConnectionSelected(conn.id),
+                  'opacity-30': isConnectionDimmed(conn.id)
+                }">
+
+                <!-- Marcadores Visuales según el tipo de Relación UML 2.5 -->
+                @if (conn.type === 'generalization' || conn.type === 'realization') {
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="fill-white stroke-[#2A201B] stroke-2">
+                    <polygon points="0,0 16,8 0,16" />
+                  </svg>
+                } @else if (conn.type === 'composition') {
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="fill-[#2A201B] stroke-[#2A201B] stroke-2">
+                    <polygon points="0,8 8,3 16,8 8,13" />
+                  </svg>
+                } @else if (conn.type === 'aggregation') {
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="fill-white stroke-[#2A201B] stroke-2">
+                    <polygon points="0,8 8,3 16,8 8,13" />
+                  </svg>
+                } @else if (conn.type === 'dependency') {
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="fill-none stroke-[#2A201B] stroke-2">
+                    <polyline points="2,2 14,8 2,14" />
+                  </svg>
+                }
+
+                <!-- Etiquetas de Multiplicidad y Nombre -->
+                @if (conn.sourceMultiplicity) {
+                  <div class="f-connection-text font-mono text-[9px] bg-white/90 border border-slate-300 px-1 rounded shadow-2xs text-slate-800">
+                    {{ conn.sourceMultiplicity }}
+                  </div>
+                }
+
+                @if (conn.name) {
+                  <div class="f-connection-center font-sans font-medium text-[10px] bg-white/95 border border-slate-400 px-1.5 py-0.5 rounded shadow-xs text-indigo-900 font-bold">
+                    {{ conn.name }}
+                  </div>
+                }
+
+                @if (conn.targetMultiplicity) {
+                  <div class="f-connection-text font-mono text-[9px] bg-white/90 border border-slate-300 px-1 rounded shadow-2xs text-slate-800">
+                    {{ conn.targetMultiplicity }}
+                  </div>
+                }
+
+              </f-connection>
+            }
+          </ng-container>
 
           <!-- NODOS DE CLASE UML -->
-          @for (node of nodes(); track node.id) {
-            <div
-              fNode
-              [fNodeId]="node.id"
-              [fNodePosition]="{ x: node.position.x, y: node.position.y }"
-              (fNodePositionChange)="onNodeDragEnd(node.id, $event)"
-              [style.width.px]="node.width || 220"
-              class="uml-node bg-white border-2 border-[#2A201B] shadow-[4px_4px_0px_rgba(0,0,0,0.15)] rounded-xs overflow-hidden absolute select-none text-xs font-sans group">
-              
-              <!-- CABECERA DEL NODO: Nombre y Acciones -->
+          <ng-container ngProjectAs="[fNodes]">
+            @for (node of nodes(); track node.id) {
               <div
+                fNode
+                fDragHandle
+                [fNodeDraggingDisabled]="node.isAnchor || selectedRelationType() !== null || isNodeLockedByOther(node.id)"
+                [(fNodePosition)]="node.position"
+                (fNodePositionChange)="onNodePositionChange(node, $event)"
                 (dblclick)="openEditNodeModal(node, $event)"
-                class="px-2 py-1.5 bg-[#F2EBE6] border-b border-[#2A201B] flex items-center justify-between cursor-move">
-                
-                <div class="truncate flex-1">
-                  @if (node.isAnchor) {
-                    <span class="block text-[9px] font-mono uppercase text-[#6B5A52] font-semibold text-center">
-                      «Association Class»
+                [style.width.px]="node.isAnchor ? 0 : node.width"
+                [style.minWidth.px]="node.isAnchor ? 0 : node.width"
+                [style.minHeight.px]="node.isAnchor ? 0 : (node.height || null)"
+                [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
+                [ngClass]="{
+                  'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
+                  'font-sans text-[#2A201B] select-none relative group/node transition-shadow animate-in fade-in zoom-in-95 duration-300': !node.isAnchor,
+                  'ring-2 ring-purple-600 shadow-[0_0_15px_rgba(124,58,237,0.3)] z-30': !node.isAnchor && selectedNodeId() === node.id,
+                  'ring-2 ring-indigo-400 z-20': !node.isAnchor && isNeighborNode(node.id),
+                  'ring-2 ring-[#6B5A52] shadow-xl': !node.isAnchor && selectedSourceNodeId() === node.id && selectedNodeId() !== node.id,
+                  'opacity-80': !node.isAnchor && selectedNodeId() !== null && selectedNodeId() !== node.id && !isNeighborNode(node.id),
+                  'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                  'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
+                  'cursor-not-allowed opacity-95': !node.isAnchor && isNodeLockedByOther(node.id)
+                }">
+
+                <!-- Contenido Nodo Ancla -->
+                @if (node.isAnchor) {
+                  <div fConnector fConnectorType="source-target" [fConnectorId]="node.id" class="w-0 h-0"></div>
+                }
+
+                <!-- Contenido Nodo de Clase Estándar -->
+                @else {
+
+                  <!-- BADGE VISUAL DE EXCLUSIÓN MUTUA / BLOQUEO POR OTRO USUARIO -->
+                  @if (isNodeLockedByOther(node.id)) {
+                    <div
+                      class="absolute -top-4.5 left-2 px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold text-white flex items-center gap-1 shadow-md z-50 animate-bounce select-none"
+                      [style.backgroundColor]="getNodeLock(node.id)?.color || '#EF4444'"
+                      [title]="'Editando actualmente por ' + getNodeLock(node.id)?.userName">
+                      <ng-icon name="heroLockClosed" class="text-[10px]"></ng-icon>
+                      <span>{{ getNodeLock(node.id)?.userName }} (editando...)</span>
+                    </div>
+                  }
+
+                  <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
+                  <div
+                    fConnector
+                    fConnectorType="source-target"
+                    [fConnectorId]="node.id"
+                    [ngClass]="{
+                      'pointer-events-auto cursor-crosshair': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'pointer-events-none': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="absolute inset-0 z-40 bg-transparent"
+                    (click)="onTableClick(node.id, $event)">
+                  </div>
+
+                  <!-- 4 PUNTOS DE REFERENCIA GUÍA -->
+                  <div
+                    fConnector
+                    [fConnectorId]="node.id + '_top'"
+                    title="Conectar por arriba"
+                    [ngClass]="{
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="uml-connector-point absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  </div>
+
+                  <div
+                    fConnector
+                    [fConnectorId]="node.id + '_right'"
+                    title="Conectar por la derecha"
+                    [ngClass]="{
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="uml-connector-point absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  </div>
+
+                  <div
+                    fConnector
+                    [fConnectorId]="node.id + '_bottom'"
+                    title="Conectar por abajo"
+                    [ngClass]="{
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="uml-connector-point absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  </div>
+
+                  <div
+                    fConnector
+                    [fConnectorId]="node.id + '_left'"
+                    title="Conectar por la izquierda"
+                    [ngClass]="{
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="uml-connector-point absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  </div>
+
+                  <!-- 1. CABECERA: TÍTULO DE LA CLASE UML -->
+                  <div
+                    (click)="onNodeSelect(node.id, $event)"
+                    [ngClass]="{
+                      'bg-purple-600 text-white border-b-[1.5px] border-purple-700': selectedNodeId() === node.id,
+                      'bg-indigo-100 text-indigo-950 border-b-[1.5px] border-indigo-300': isNeighborNode(node.id),
+                      'bg-transparent border-b-[1.5px] border-[#6B5A52] text-[#2A201B]': selectedNodeId() !== node.id && !isNeighborNode(node.id)
+                    }"
+                    class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors">
+                    <span class="font-bold text-xs text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">
+                      @if (isNodeLockedByOther(node.id)) {
+                        <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
+                      }
+                      {{ node.name }}
                     </span>
-                  }
-                  <h4 class="font-bold text-center text-[12px] text-[#2A201B] truncate tracking-wide">
-                    {{ node.name }}
-                  </h4>
-                </div>
+                    <button
+                      (click)="removeClass(node.id, $event)"
+                      [disabled]="isNodeLockedByOther(node.id)"
+                      title="Eliminar clase"
+                      class="opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity disabled:opacity-0">
+                      <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                    </button>
+                  </div>
 
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    (click)="openEditNodeModal(node, $event)"
-                    title="Editar Clase"
-                    class="p-0.5 text-slate-500 hover:text-indigo-600 rounded cursor-pointer">
-                    <ng-icon name="heroPencilSquare" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="removeClass(node.id, $event)"
-                    title="Eliminar Clase"
-                    class="p-0.5 text-slate-500 hover:text-red-600 rounded cursor-pointer">
-                    <ng-icon name="heroTrash" class="text-xs"></ng-icon>
-                  </button>
-                </div>
-              </div>
+                  <!-- 2. CUERPO: ATRIBUTOS TIPADOS -->
+                  <div class="px-2.5 py-1.5 space-y-1 border-b-[1.5px] border-[#6B5A52] bg-white/40 min-h-[30px]">
+                    @if (node.attributes && node.attributes.length > 0) {
+                      @for (attr of node.attributes; track attr.name) {
+                        <div class="flex items-center justify-between text-[11px] font-mono leading-tight">
+                          <span class="truncate font-medium text-[#2A201B]">- {{ attr.name }}</span>
+                          <span class="text-[#6B5A52] text-[10px] truncate ml-1 font-bold">: {{ attr.type }}</span>
+                        </div>
+                      }
+                    } @else {
+                      <div class="text-[10px] text-slate-400 italic text-center py-0.5">sin atributos</div>
+                    }
+                  </div>
 
-              <!-- SECCIÓN 1: ATRIBUTOS -->
-              <div class="p-1.5 border-b border-[#2A201B]/40 min-h-[30px] bg-white font-mono text-[10.5px] space-y-0.5">
-                @if (node.attributes && node.attributes.length > 0) {
-                  @for (attr of node.attributes; track attr.name) {
-                    <div class="flex items-center justify-between text-slate-800 leading-tight">
-                      <div class="flex items-center gap-1 truncate">
-                        <span class="text-slate-400 font-bold">+</span>
-                        <span class="truncate">{{ attr.name }}</span>
-                      </div>
-                      <span class="text-slate-500 text-[10px] truncate ml-1">: {{ attr.type }}</span>
-                    </div>
-                  }
-                } @else {
-                  <span class="text-slate-300 text-[9.5px] italic block text-center">sin atributos</span>
+                  <!-- 3. CUERPO: MÉTODOS / OPERACIONES CON RETORNO -->
+                  <div class="px-2.5 py-1.5 space-y-1 bg-white/40 min-h-[26px]">
+                    @if (node.methods && node.methods.length > 0) {
+                      @for (m of node.methods; track m.name) {
+                        <div class="flex items-center justify-between text-[11px] font-mono leading-tight">
+                          <span class="truncate font-medium text-[#2A201B]">+ {{ m.name }}({{ m.parameters || '' }})</span>
+                          <span class="text-[#6B5A52] text-[10px] truncate ml-1 font-bold">: {{ m.returnType || 'void' }}</span>
+                        </div>
+                      }
+                    } @else {
+                      <div class="text-[10px] text-slate-400 italic text-center py-0.5">sin métodos</div>
+                    }
+                  </div>
+
                 }
-              </div>
 
-              <!-- SECCIÓN 2: MÉTODOS / OPERACIONES -->
-              <div class="p-1.5 min-h-[26px] bg-white font-mono text-[10.5px] space-y-0.5">
-                @if (node.methods && node.methods.length > 0) {
-                  @for (meth of node.methods; track meth.name) {
-                    <div class="flex items-center justify-between text-slate-800 leading-tight">
-                      <div class="flex items-center gap-1 truncate">
-                        <span class="text-slate-400 font-bold">+</span>
-                        <span class="truncate">{{ meth.name }}({{ meth.parameters || '' }})</span>
-                      </div>
-                      <span class="text-slate-500 text-[10px] truncate ml-1">: {{ meth.returnType || 'void' }}</span>
-                    </div>
-                  }
-                } @else {
-                  <span class="text-slate-300 text-[9.5px] italic block text-center">sin operaciones</span>
-                }
               </div>
-
-              <!-- PUERTOS DE CONEXIÓN FOBLEX (TOP, BOTTOM, LEFT, RIGHT) -->
-              <div
-                fNodeInput
-                [fInputId]="node.id + '_top'"
-                class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-700 border-2 border-white shadow-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair">
-              </div>
-              <div
-                fNodeOutput
-                [fOutputId]="node.id + '_bottom'"
-                class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair">
-              </div>
-              <div
-                fNodeInput
-                [fInputId]="node.id + '_left'"
-                class="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-700 border-2 border-white shadow-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair">
-              </div>
-              <div
-                fNodeOutput
-                [fOutputId]="node.id + '_right'"
-                class="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-crosshair">
-              </div>
-
-            </div>
-          }
+            }
+          </ng-container>
 
         </f-canvas>
       </f-flow>
-    </main>
 
-    <!-- 3. ASISTENTE IA (PANEL REFACTORIZADO) -->
+    </div>
+
+    <!-- 2.3 [PANEL LATERAL DERECHO] COPILOT IA REFACTORIZADO EN COMPONENTE SEPARADO -->
     <app-ai-assistant-panel
       [isOpen]="isAiPanelOpen()"
       [diagramId]="currentDiagramId()"
@@ -320,146 +472,271 @@
 
   </div>
 
-  <!-- 4. MODAL PERFIL DE USUARIO (REFACTORIZADO) -->
+  <!-- 3. [STATUSBAR INFERIOR] -->
+  <footer class="bg-gradient-to-r from-slate-800 to-slate-900 text-slate-300 border-t border-slate-950 px-3 py-1 text-[11px] font-mono flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center gap-3">
+      <!-- Estado WebSockets Yjs -->
+      <div class="flex items-center gap-1.5">
+        <span
+          class="w-2 h-2 rounded-full"
+          [ngClass]="collaborationService.isConnected() ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'"></span>
+        <span [ngClass]="collaborationService.isConnected() ? 'text-emerald-300' : 'text-red-400'">
+          {{ collaborationService.isConnected() ? 'Conectado (Yjs WebSockets)' : 'Desconectado' }}
+        </span>
+      </div>
+
+      <div class="h-3 w-px bg-slate-700"></div>
+
+      <!-- Resumen Nodos / Conexiones -->
+      <span class="text-slate-400">
+        Clases: <strong class="text-slate-200">{{ nodes().length }}</strong> |
+        Relaciones: <strong class="text-slate-200">{{ connections().length }}</strong>
+      </span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Estilo de Línea Activo -->
+      <span class="text-slate-400">
+        Routing: <strong class="text-amber-300">{{ defaultLineStyle() }}</strong>
+      </span>
+
+      <div class="h-3 w-px bg-slate-700"></div>
+
+      <!-- Nivel de Zoom -->
+      <span class="text-slate-400">
+        Zoom: <strong class="text-slate-200">{{ zoomLevel() }}%</strong>
+      </span>
+
+      <div class="h-3 w-px bg-slate-700"></div>
+
+      <span class="text-slate-500">UTF-8 • XMI 2.1 / JSON AST</span>
+    </div>
+  </footer>
+
+  <!-- 4. MODAL PERFIL DE USUARIO REFACTORIZADO EN COMPONENTE SEPARADO -->
   <app-user-profile-modal
     [isOpen]="isProfileModalOpen()"
     (close)="isProfileModalOpen.set(false)">
   </app-user-profile-modal>
 
-  <!-- 5. MODAL EDICIÓN DE CLASE -->
+  <!-- 5. MODAL: EDITAR CLASE (DOBLE CLIC) -->
   @if (isEditNodeModalOpen() && editingNode()) {
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-      <div class="bg-[#F9F7F5] border-2 border-[#6B5A52] shadow-2xl max-w-lg w-full overflow-hidden text-xs font-sans">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
         
-        <div class="px-4 py-2.5 bg-[#6B5A52] text-white flex items-center justify-between font-mono font-bold">
-          <span>Editar Clase: {{ editingNode()?.name }}</span>
-          <button (click)="closeEditNodeModal()" class="text-white hover:text-red-200 text-base cursor-pointer">&times;</button>
+        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
+          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">Propiedades de la Clase UML</h3>
+          <button (click)="closeEditNodeModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
         </div>
 
-        <div class="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+        <div class="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+          
+          <!-- Nombre de la Clase -->
           <div>
-            <label class="block font-mono font-bold text-[#2A201B] mb-1">Nombre de la Clase</label>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Nombre de la Clase</label>
             <input
               type="text"
               [(ngModel)]="editingNode()!.name"
-              class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs focus:outline-none"
+              placeholder="e.g. Usuario, Pedido"
+              class="w-full px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner font-medium text-xs"
             />
           </div>
 
-          <!-- Atributos -->
-          <div class="space-y-1.5 pt-2 border-t border-[#6B5A52]/20">
-            <div class="flex items-center justify-between">
-              <span class="font-mono font-bold text-[#2A201B]">Atributos</span>
+          <!-- Atributos con Tipos Estrictamente Predefinidos -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">Atributos (-)</label>
               <button
                 (click)="addAttributeToEditingNode()"
-                class="px-2 py-0.5 bg-[#6B5A52] text-white rounded text-[10px] font-bold cursor-pointer hover:bg-[#52443E]">
-                + Añadir
+                class="px-2.5 py-0.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] cursor-pointer">
+                + Agregar Atributo
               </button>
             </div>
+            <div class="space-y-1.5">
+              @for (attr of editingNode()!.attributes; track $index) {
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-bold text-[#6B5A52] select-none text-xs">-</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="attr.name"
+                    placeholder="nombre"
+                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+                  />
+                  <span class="text-[#6B5A52] font-mono">:</span>
+                  
+                  <select
+                    [(ngModel)]="attr.type"
+                    class="w-36 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52] cursor-pointer">
+                    @for (t of predefinedTypes; track t) {
+                      <option [value]="t">{{ t }}</option>
+                    }
+                  </select>
 
-            @for (attr of editingNode()!.attributes; track $index) {
-              <div class="flex items-center gap-1.5 bg-white p-1.5 border border-[#6B5A52]/40">
-                <input type="text" [(ngModel)]="attr.name" placeholder="nombre" class="flex-1 p-1 border border-slate-300 text-xs" />
-                <select [(ngModel)]="attr.type" class="w-28 p-1 border border-slate-300 text-xs">
-                  @for (t of predefinedTypes; track t) {
-                    <option [value]="t">{{ t }}</option>
-                  }
-                </select>
-                <button (click)="removeAttributeFromEditingNode($index)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer">
-                  <ng-icon name="heroTrash" class="text-xs"></ng-icon>
-                </button>
-              </div>
-            }
+                  <button
+                    (click)="removeAttributeFromEditingNode($index)"
+                    title="Eliminar atributo"
+                    class="text-red-600 hover:text-red-800 p-1 font-bold text-sm cursor-pointer">
+                    &times;
+                  </button>
+                </div>
+              }
+            </div>
           </div>
 
-          <!-- Métodos -->
-          <div class="space-y-1.5 pt-2 border-t border-[#6B5A52]/20">
-            <div class="flex items-center justify-between">
-              <span class="font-mono font-bold text-[#2A201B]">Operaciones / Métodos</span>
+          <!-- Métodos con Retorno Estrictamente Predefinido -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">Operaciones / Métodos (+)</label>
               <button
                 (click)="addMethodToEditingNode()"
-                class="px-2 py-0.5 bg-[#6B5A52] text-white rounded text-[10px] font-bold cursor-pointer hover:bg-[#52443E]">
-                + Añadir
+                class="px-2.5 py-0.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] cursor-pointer">
+                + Agregar Operación
               </button>
             </div>
+            <div class="space-y-1.5">
+              @for (m of editingNode()!.methods; track $index) {
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-bold text-[#6B5A52] select-none text-xs">+</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="m.name"
+                    placeholder="método"
+                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+                  />
+                  <span class="text-[#6B5A52] font-mono text-xs">(</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="m.parameters"
+                    placeholder="params"
+                    class="w-24 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+                  />
+                  <span class="text-[#6B5A52] font-mono text-xs">):</span>
+                  
+                  <select
+                    [(ngModel)]="m.returnType"
+                    class="w-32 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52] cursor-pointer">
+                    @for (rt of predefinedReturnTypes; track rt) {
+                      <option [value]="rt">{{ rt }}</option>
+                    }
+                  </select>
 
-            @for (meth of editingNode()!.methods; track $index) {
-              <div class="flex items-center gap-1.5 bg-white p-1.5 border border-[#6B5A52]/40">
-                <input type="text" [(ngModel)]="meth.name" placeholder="metodo" class="flex-1 p-1 border border-slate-300 text-xs" />
-                <select [(ngModel)]="meth.returnType" class="w-28 p-1 border border-slate-300 text-xs">
-                  @for (rt of predefinedReturnTypes; track rt) {
-                    <option [value]="rt">{{ rt }}</option>
-                  }
-                </select>
-                <button (click)="removeMethodFromEditingNode($index)" class="text-red-500 hover:text-red-700 p-1 cursor-pointer">
-                  <ng-icon name="heroTrash" class="text-xs"></ng-icon>
-                </button>
-              </div>
-            }
+                  <button
+                    (click)="removeMethodFromEditingNode($index)"
+                    title="Eliminar método"
+                    class="text-red-600 hover:text-red-800 p-1 font-bold text-sm cursor-pointer">
+                    &times;
+                  </button>
+                </div>
+              }
+            </div>
           </div>
 
         </div>
 
-        <div class="px-4 py-2.5 bg-[#E6DDD6] border-t border-[#6B5A52] flex justify-end gap-2">
-          <button (click)="closeEditNodeModal()" class="px-3 py-1.5 bg-white border border-[#6B5A52] cursor-pointer">Cancelar</button>
-          <button (click)="saveEditedNode()" class="px-4 py-1.5 bg-[#6B5A52] text-white font-bold cursor-pointer hover:bg-[#52443E]">Guardar Cambios</button>
+        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-end gap-2 bg-white/30">
+          <button
+            (click)="closeEditNodeModal()"
+            class="px-3.5 py-1.5 bg-white hover:bg-slate-100 border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
+            Cancelar
+          </button>
+          <button
+            (click)="saveEditedNode()"
+            class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold uppercase border border-[#2A201B] cursor-pointer">
+            Guardar Cambios
+          </button>
         </div>
 
       </div>
     </div>
   }
 
-  <!-- 6. MODAL EDICIÓN DE CONEXIÓN -->
+  <!-- 6. MODAL: EDITAR CONEXIÓN (DOBLE CLIC EN LÍNEA / MULTIPLICIDAD) -->
   @if (isEditConnModalOpen() && editingConnection()) {
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-      <div class="bg-[#F9F7F5] border-2 border-[#6B5A52] shadow-2xl max-w-md w-full overflow-hidden text-xs font-sans">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
         
-        <div class="px-4 py-2.5 bg-[#6B5A52] text-white flex items-center justify-between font-mono font-bold">
-          <span>Editar Relación UML</span>
-          <button (click)="closeEditConnModal()" class="text-white hover:text-red-200 text-base cursor-pointer">&times;</button>
+        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
+          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">Propiedades de la Relación</h3>
+          <button (click)="closeEditConnModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
         </div>
 
-        <div class="p-4 space-y-3">
+        <div class="p-4 space-y-3.5">
+
           <div>
-            <label class="block font-mono font-bold text-[#2A201B] mb-1">Tipo de Relación</label>
-            <select [(ngModel)]="editingConnection()!.type" class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs">
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Tipo de Relación</label>
+            <select
+              [(ngModel)]="editingConnection()!.type"
+              class="w-full px-2 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
               @for (rel of relationTypes; track rel.id) {
                 <option [value]="rel.id">{{ rel.label }} ({{ rel.icon }})</option>
               }
             </select>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-mono font-bold text-[#2A201B] mb-1">Multiplicidad Origen</label>
-              <input type="text" [(ngModel)]="editingConnection()!.sourceMultiplicity" placeholder="1" class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs" />
-            </div>
-            <div>
-              <label class="block font-mono font-bold text-[#2A201B] mb-1">Multiplicidad Destino</label>
-              <input type="text" [(ngModel)]="editingConnection()!.targetMultiplicity" placeholder="1..*" class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs" />
-            </div>
-          </div>
-
           <div>
-            <label class="block font-mono font-bold text-[#2A201B] mb-1">Estilo de Línea (Enterprise Architect)</label>
-            <select [(ngModel)]="editingConnection()!.lineStyle" class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs">
-              @for (st of lineStyles; track st.id) {
-                <option [value]="st.id">{{ st.label }}</option>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Estilo de Línea (Routing)</label>
+            <select
+              [(ngModel)]="editingConnection()!.lineStyle"
+              class="w-full px-2 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
+              @for (style of lineStyles; track style.id) {
+                <option [value]="style.id">{{ style.label }}</option>
               }
             </select>
           </div>
 
-          <div>
-            <label class="block font-mono font-bold text-[#2A201B] mb-1">Nombre / Etiqueta de la Relación</label>
-            <input type="text" [(ngModel)]="editingConnection()!.name" placeholder="ej. contiene, gestiona" class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs" />
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Multiplicidad Origen</label>
+              <input
+                type="text"
+                [(ngModel)]="editingConnection()!.sourceMultiplicity"
+                list="multiplicity-options"
+                placeholder="1, 0..1, *"
+                class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+              />
+            </div>
+            <div>
+              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Multiplicidad Destino</label>
+              <input
+                type="text"
+                [(ngModel)]="editingConnection()!.targetMultiplicity"
+                list="multiplicity-options"
+                placeholder="0..*, 1..*, *"
+                class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+              />
+            </div>
           </div>
+
+          <div>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Etiqueta / Verbo</label>
+            <input
+              type="text"
+              [(ngModel)]="editingConnection()!.name"
+              placeholder="e.g. posee, genera, pertenece a"
+              class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+            />
+          </div>
+
         </div>
 
-        <div class="px-4 py-2.5 bg-[#E6DDD6] border-t border-[#6B5A52] flex items-center justify-between">
-          <button (click)="removeConnection(editingConnection()!.id, $event)" class="px-3 py-1.5 bg-red-600 text-white font-bold cursor-pointer hover:bg-red-700">Eliminar</button>
+        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-between items-center bg-white/30">
+          <button
+            (click)="removeConnection(editingConnection()!.id); closeEditConnModal()"
+            class="text-red-600 hover:text-red-800 font-mono font-bold cursor-pointer flex items-center gap-1">
+            <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+            <span>Eliminar Relación</span>
+          </button>
           <div class="flex gap-2">
-            <button (click)="closeEditConnModal()" class="px-3 py-1.5 bg-white border border-[#6B5A52] cursor-pointer">Cancelar</button>
-            <button (click)="saveEditedConnection()" class="px-4 py-1.5 bg-[#6B5A52] text-white font-bold cursor-pointer hover:bg-[#52443E]">Guardar</button>
+            <button
+              (click)="closeEditConnModal()"
+              class="px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
+              Cancelar
+            </button>
+            <button
+              (click)="saveEditedConnection()"
+              class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold uppercase border border-[#2A201B] cursor-pointer">
+              Aceptar
+            </button>
           </div>
         </div>
 
@@ -467,51 +744,112 @@
     </div>
   }
 
-  <!-- 7. MODAL VISOR / IMPORTADOR JSON AST -->
-  @if (showJsonModal()) {
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-      <div class="bg-[#F9F7F5] border-2 border-[#6B5A52] shadow-2xl max-w-2xl w-full overflow-hidden text-xs font-mono">
-        <div class="px-4 py-2.5 bg-[#6B5A52] text-white flex items-center justify-between font-bold">
-          <span>{{ jsonModalMode() === 'export' ? 'AST JSON del Diagrama' : 'Importar AST JSON' }}</span>
-          <button (click)="showJsonModal.set(false)" class="text-white hover:text-red-200 text-base cursor-pointer">&times;</button>
+  <!-- 7. MODAL: GENERADOR SPRING BOOT 4 -->
+  @if (showSpringBootModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+        
+        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
+          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide flex items-center gap-1.5">
+            <ng-icon name="heroBolt" class="text-amber-600 text-sm"></ng-icon>
+            Generador Spring Boot 4 + Flyway
+          </h3>
+          <button (click)="showSpringBootModal.set(false)" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
         </div>
-        <div class="p-4">
+
+        <div class="p-4 space-y-3">
+          <p class="text-slate-700">Se compilará el AST del diagrama en un microservicio de producción descargable en formato <strong>.zip</strong>:</p>
+          
+          <div class="bg-white p-3 border border-[#6B5A52] space-y-1.5 font-mono text-[11px]">
+            <div class="text-emerald-700 font-bold">✓ Entidades JPA (@Entity, @Table, @ManyToOne, @OneToMany)</div>
+            <div class="text-blue-700 font-bold">✓ Repositorios Spring Data (JpaRepository&lt;T, ID&gt;)</div>
+            <div class="text-purple-700 font-bold">✓ Servicios con transaccionalidad (@Transactional)</div>
+            <div class="text-indigo-700 font-bold">✓ Controladores REST (@RestController con CRUD)</div>
+            <div class="text-amber-700 font-bold">✓ Script de migración Flyway (V1__initial_schema.sql)</div>
+            <div class="text-slate-700">✓ build.gradle, application.yml y docker-compose.yml</div>
+          </div>
+        </div>
+
+        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-end gap-2 bg-white/30">
+          <button
+            (click)="showSpringBootModal.set(false)"
+            class="px-3.5 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
+            Cerrar
+          </button>
+          <button
+            (click)="triggerSpringBootGeneration()"
+            class="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-bold uppercase border border-emerald-950 cursor-pointer flex items-center gap-1.5">
+            <ng-icon name="heroBolt" class="text-xs text-amber-300"></ng-icon>
+            Descargar Microservicio .ZIP
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- DATALISTS PARA OPCIONES PREDEFINIDAS -->
+  <datalist id="multiplicity-options">
+    @for (m of multiplicityOptions; track m) {
+      <option [value]="m"></option>
+    }
+  </datalist>
+
+  <!-- 8. MODAL JSON (INTEROPERABILIDAD) -->
+  @if (showJsonModal()) {
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded shadow-2xl border border-slate-300 w-full max-w-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+
+        <div class="px-4 py-2.5 bg-slate-800 text-white flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <ng-icon name="heroDocumentText" class="text-slate-300 text-base"></ng-icon>
+            <h2 class="text-xs font-bold">
+              {{ jsonModalMode() === 'export' ? 'Estructura JSON del Diagrama de Clases' : 'Importar Diagrama de Clases desde JSON' }}
+            </h2>
+          </div>
+          <button (click)="showJsonModal.set(false)" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+            <ng-icon name="heroXMark" class="text-base"></ng-icon>
+          </button>
+        </div>
+
+        <div class="p-4 flex-1 flex flex-col gap-2">
+          <p class="text-xs text-slate-600">
+            {{ jsonModalMode() === 'export'
+               ? 'Estructura JSON para transferir las clases y relaciones con Enterprise Architect o tu backend.'
+               : 'Pega el JSON estructurado para cargar las clases en el lienzo:' }}
+          </p>
+
           <textarea
             [(ngModel)]="jsonContent"
             rows="14"
-            [readonly]="jsonModalMode() === 'export'"
-            class="w-full p-2.5 bg-slate-900 text-emerald-400 rounded text-xs font-mono focus:outline-none resize-none"></textarea>
+            class="w-full bg-slate-950 text-emerald-400 font-mono text-xs p-3 rounded border border-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
+            placeholder="Pegar JSON aquí..."></textarea>
         </div>
-        <div class="px-4 py-2.5 bg-[#E6DDD6] border-t border-[#6B5A52] flex justify-end gap-2">
-          <button (click)="showJsonModal.set(false)" class="px-3 py-1.5 bg-white border border-[#6B5A52] cursor-pointer">Cerrar</button>
-          @if (jsonModalMode() === 'import') {
-            <button (click)="applyImportedJson()" class="px-4 py-1.5 bg-[#6B5A52] text-white font-bold cursor-pointer hover:bg-[#52443E]">Aplicar JSON</button>
+
+        <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+          <button
+            (click)="showJsonModal.set(false)"
+            class="px-3 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded font-medium cursor-pointer">
+            Cerrar
+          </button>
+
+          @if (jsonModalMode() === 'export') {
+            <button
+              (click)="copyJsonToClipboard()"
+              class="px-3.5 py-1 text-xs bg-slate-800 hover:bg-slate-900 text-white rounded font-medium shadow-xs flex items-center gap-1.5 border border-slate-700 cursor-pointer">
+              <ng-icon name="heroClipboardDocument" class="text-sm"></ng-icon>
+              Copiar al portapapeles
+            </button>
+          } @else {
+            <button
+              (click)="applyImportedJson()"
+              class="px-3.5 py-1 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded font-medium shadow-xs flex items-center gap-1.5 cursor-pointer">
+              <ng-icon name="heroCheck" class="text-sm"></ng-icon>
+              Aplicar Diagrama
+            </button>
           }
         </div>
-      </div>
-    </div>
-  }
 
-  <!-- 8. MODAL GENERADOR SPRING BOOT -->
-  @if (showSpringBootModal()) {
-    <div class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
-      <div class="bg-[#F9F7F5] border-2 border-[#6B5A52] shadow-2xl max-w-md w-full overflow-hidden text-xs">
-        <div class="px-4 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 text-white flex items-center justify-between font-mono font-bold">
-          <span>Generador Spring Boot 3.3 (Java 21)</span>
-          <button (click)="showSpringBootModal.set(false)" class="text-white hover:text-red-200 text-base cursor-pointer">&times;</button>
-        </div>
-        <div class="p-5 space-y-3">
-          <p class="text-slate-700">Genera automáticamente el proyecto backend Spring Boot completo con:</p>
-          <ul class="list-disc pl-5 space-y-1 font-mono text-[11px] text-slate-800">
-            <li>Entidades JPA (`@Entity`, `@Table`, `@Id`, `@GeneratedValue`)</li>
-            <li>Relaciones (`@OneToMany`, `@ManyToOne`, `@ManyToMany`, `@JoinTable`)</li>
-            <li>Repositorios Spring Data JPA (`JpaRepository`)</li>
-            <li>Controladores REST CRUD con Swagger OpenAPI</li>
-          </ul>
-        </div>
-        <div class="px-4 py-3 bg-[#E6DDD6] border-t border-[#6B5A52] flex justify-end gap-2 font-mono font-bold">
-          <button (click)="showSpringBootModal.set(false)" class="px-3 py-1.5 bg-white border border-[#6B5A52] cursor-pointer">Cerrar</button>
-        </div>
       </div>
     </div>
   }

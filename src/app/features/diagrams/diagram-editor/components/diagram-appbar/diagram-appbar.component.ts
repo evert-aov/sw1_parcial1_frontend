@@ -18,6 +18,10 @@ import {
   heroArrowRightOnRectangle,
   heroUserCircle,
   heroClipboardDocument,
+  heroFolder,
+  heroCloudArrowUp,
+  heroEye,
+  heroCheck,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
@@ -43,6 +47,10 @@ import { CollaborationService } from '../../../../../core/services/collaboration
       heroArrowRightOnRectangle,
       heroUserCircle,
       heroClipboardDocument,
+      heroFolder,
+      heroCloudArrowUp,
+      heroEye,
+      heroCheck,
     }),
   ],
   templateUrl: './diagram-appbar.component.html',
@@ -55,11 +63,10 @@ export class DiagramAppbarComponent {
 
   // Inputs
   readonly diagramTitle = input<string>('Diagrama de Clases UML');
-  readonly projectName = input<string>('Proyecto');
-  readonly projectId = input<string | null>(null);
+  readonly diagramId = input<string | null>(null);
   readonly isSaving = input<boolean>(false);
+  readonly saveSuccessMessage = input<boolean>(false);
   readonly isReadOnly = input<boolean>(false);
-  readonly isAiPanelOpen = input<boolean>(false);
 
   // Outputs
   readonly saveDiagram = output<void>();
@@ -69,27 +76,14 @@ export class DiagramAppbarComponent {
   readonly fileSelected = output<Event>();
   readonly openImportJson = output<void>();
   readonly openSpringBoot = output<void>();
-  readonly clearDiagram = output<void>();
-  readonly toggleReadOnly = output<void>();
-  readonly toggleAiPanel = output<void>();
   readonly openProfile = output<void>();
 
   // Estados de dropdowns locales
-  readonly isExportMenuOpen = signal<boolean>(false);
-  readonly isImportMenuOpen = signal<boolean>(false);
-
-  toggleExportMenu(): void {
-    this.isExportMenuOpen.update((v) => !v);
-    this.isImportMenuOpen.set(false);
-  }
-
-  toggleImportMenu(): void {
-    this.isImportMenuOpen.update((v) => !v);
-    this.isExportMenuOpen.set(false);
-  }
+  readonly isExportDropdownOpen = signal<boolean>(false);
+  readonly isImportDropdownOpen = signal<boolean>(false);
 
   triggerFileInput(): void {
-    this.isImportMenuOpen.set(false);
+    this.isImportDropdownOpen.set(false);
     this.fileInputRef?.nativeElement?.click();
   }
 
