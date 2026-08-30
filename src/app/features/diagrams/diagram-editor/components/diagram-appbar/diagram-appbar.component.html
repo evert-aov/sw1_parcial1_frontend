@@ -1,0 +1,237 @@
+<header class="bg-gradient-to-b from-slate-700 to-slate-800 text-white border-b border-slate-900 shadow-md px-3 py-1.5 flex items-center justify-between z-30 select-none text-xs">
+  
+  <!-- LADO IZQUIERDO: Marca, Título del Diagrama, Migas de Pan, Estado de Guardado -->
+  <div class="flex items-center gap-3">
+    <a
+      [routerLink]="['/projects']"
+      title="Volver a la lista de proyectos"
+      class="bg-slate-900 border border-slate-600 p-1.5 rounded shadow-inner flex items-center justify-center hover:bg-slate-950 transition-colors">
+      <ng-icon name="heroCube" class="text-base text-slate-100"></ng-icon>
+    </a>
+
+    <div class="flex flex-col">
+      <div class="flex items-center gap-2">
+        <span class="font-bold tracking-wide uppercase text-slate-100 text-xs">
+          {{ diagramTitle() }}
+        </span>
+        <span class="text-[10px] text-slate-400 font-mono">
+          ({{ projectName() }})
+        </span>
+
+        @if (isReadOnly()) {
+          <span class="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded text-[9.5px] font-mono flex items-center gap-1">
+            <ng-icon name="heroLockClosed" class="text-[10px]"></ng-icon>
+            <span>Solo Lectura</span>
+          </span>
+        }
+      </div>
+
+      <!-- Estado de guardado y colaboración -->
+      <div class="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+        @if (isSaving()) {
+          <span class="text-amber-400 flex items-center gap-1 animate-pulse">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Guardando cambios...
+          </span>
+        } @else {
+          <span class="text-emerald-400 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Guardado
+          </span>
+        }
+
+        <!-- Indicador de conexión WebSocket y Sala -->
+        <span class="text-slate-500">•</span>
+        @if (collaborationService.isConnected()) {
+          <span class="text-teal-300 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-ping"></span>
+            <span>En vivo</span>
+          </span>
+          @if (collaborationService.activeRoomCode()) {
+            <button
+              (click)="copyRoomCode()"
+              [title]="'Copiar código de sala: ' + collaborationService.activeRoomCode()"
+              class="hover:text-teal-200 cursor-pointer underline flex items-center gap-0.5 text-[9.5px] bg-slate-900/60 px-1 py-0.2 rounded border border-slate-700">
+              <ng-icon name="heroClipboardDocument" class="text-[10px]"></ng-icon>
+              <span>{{ collaborationService.activeRoomCode() }}</span>
+            </button>
+          }
+        } @else {
+          <span class="text-slate-400">Desconectado</span>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- LADO CENTRAL: Usuarios conectados en la sesión colaborativa -->
+  @if (collaborationService.collaborators().length > 0) {
+    <div class="hidden md:flex items-center gap-1 bg-slate-900/70 border border-slate-700 px-2 py-0.5 rounded">
+      <ng-icon name="heroUserGroup" class="text-slate-400 text-xs"></ng-icon>
+      <span class="text-[10px] font-mono text-slate-300 mr-1">
+        {{ collaborationService.collaborators().length }} online:
+      </span>
+      <div class="flex items-center -space-x-1.5">
+        @for (user of collaborationService.collaborators(); track user.userId) {
+          <div
+            [title]="user.userName"
+            [style.background-color]="user.color"
+            class="w-5 h-5 rounded-full border border-slate-900 text-white font-bold text-[9px] flex items-center justify-center shadow-xs">
+            {{ user.userName.charAt(0).toUpperCase() }}
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- LADO DERECHO: Acciones Principales y Menús -->
+  <div class="flex items-center gap-2">
+
+    <!-- Botón Asistente IA (Copilot) -->
+    <button
+      (click)="toggleAiPanel.emit()"
+      [ngClass]="{
+        'bg-gradient-to-r from-purple-700 to-indigo-800 border-purple-400 text-white shadow-sm ring-1 ring-purple-400': isAiPanelOpen(),
+        'bg-slate-900 hover:bg-slate-950 border-purple-500/60 text-purple-300': !isAiPanelOpen()
+      }"
+      title="Asistente de IA (Generación, Edición y Reconocimiento de Bocetos)"
+      class="font-mono text-xs font-bold px-2.5 py-1 rounded flex items-center gap-1.5 border transition-all cursor-pointer">
+      <ng-icon name="heroSparkles" class="text-sm text-amber-300 animate-pulse"></ng-icon>
+      <span>Copilot IA</span>
+    </button>
+
+    <!-- Botón Guardar (Manual) -->
+    <button
+      (click)="saveDiagram.emit()"
+      [disabled]="isSaving() || isReadOnly()"
+      title="Guardar Diagrama (Ctrl+S)"
+      class="bg-slate-900 hover:bg-slate-950 disabled:opacity-50 text-slate-200 font-mono text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-slate-600 transition-colors cursor-pointer">
+      <ng-icon name="heroDocumentChartBar" class="text-sm text-emerald-400"></ng-icon>
+      <span>Guardar</span>
+    </button>
+
+    <!-- Botón Limpiar Diagrama -->
+    <button
+      (click)="clearDiagram.emit()"
+      [disabled]="isReadOnly()"
+      title="Limpiar Diagrama"
+      class="bg-slate-900 hover:bg-red-950 text-slate-300 hover:text-red-200 font-mono text-xs px-2 py-1 rounded flex items-center gap-1 border border-slate-600 hover:border-red-600 transition-colors cursor-pointer disabled:opacity-50">
+      <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+    </button>
+
+    <!-- Botón Modo Solo Lectura / Edición -->
+    <button
+      (click)="toggleReadOnly.emit()"
+      [title]="isReadOnly() ? 'Activar Modo Edición' : 'Activar Modo Solo Lectura'"
+      [ngClass]="{
+        'bg-amber-900/60 text-amber-200 border-amber-500': isReadOnly(),
+        'bg-slate-900 text-slate-300 border-slate-600': !isReadOnly()
+      }"
+      class="font-mono text-xs px-2 py-1 rounded flex items-center gap-1 border transition-colors cursor-pointer">
+      <ng-icon [name]="isReadOnly() ? 'heroLockClosed' : 'heroPencilSquare'" class="text-xs"></ng-icon>
+    </button>
+
+    <!-- MENÚ 1: EXPORTAR (Botón con Dropdown Dedicado) -->
+    <div class="relative">
+      <button
+        (click)="toggleExportMenu()"
+        title="Exportar diagrama en formatos interoperables"
+        class="bg-slate-900 hover:bg-blue-950 text-slate-200 hover:text-blue-200 font-mono text-xs font-bold px-2.5 py-1 rounded flex items-center gap-1.5 border border-slate-600 hover:border-blue-500 transition-all cursor-pointer">
+        <ng-icon name="heroArrowDownTray" class="text-sm text-blue-400"></ng-icon>
+        <span>Exportar</span>
+        <ng-icon name="heroChevronDown" class="text-[10px] text-slate-400"></ng-icon>
+      </button>
+
+      @if (isExportMenuOpen()) {
+        <div
+          (mouseleave)="isExportMenuOpen.set(false)"
+          class="absolute right-0 mt-1 w-56 bg-white border-2 border-slate-800 rounded shadow-xl text-slate-800 text-xs py-1 z-50 font-mono animate-in fade-in zoom-in-95">
+          <div class="px-3 py-1 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
+            Exportar Interoperable
+          </div>
+          <button
+            (click)="exportXmi.emit(); isExportMenuOpen.set(false)"
+            class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-semibold text-blue-700">
+            <ng-icon name="heroCube" class="text-sm"></ng-icon>
+            <span>Enterprise Architect (.xmi)</span>
+          </button>
+          <button
+            (click)="exportJson.emit(); isExportMenuOpen.set(false)"
+            class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+            <ng-icon name="heroArrowDownTray" class="text-sm text-emerald-600"></ng-icon>
+            <span>Descargar AST (.json)</span>
+          </button>
+          <button
+            (click)="viewJson.emit(); isExportMenuOpen.set(false)"
+            class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+            <ng-icon name="heroDocumentText" class="text-sm text-slate-500"></ng-icon>
+            <span>Ver JSON en Pantalla</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- MENÚ 2: IMPORTAR (Botón con Dropdown Dedicado) -->
+    <div class="relative">
+      <button
+        (click)="toggleImportMenu()"
+        [disabled]="isReadOnly()"
+        title="Importar modelo UML desde archivo o código"
+        class="bg-slate-900 hover:bg-amber-950 text-slate-200 hover:text-amber-200 font-mono text-xs font-bold px-2.5 py-1 rounded flex items-center gap-1.5 border border-slate-600 hover:border-amber-500 transition-all cursor-pointer disabled:opacity-50">
+        <ng-icon name="heroArrowUpTray" class="text-sm text-amber-400"></ng-icon>
+        <span>Importar</span>
+        <ng-icon name="heroChevronDown" class="text-[10px] text-slate-400"></ng-icon>
+      </button>
+
+      @if (isImportMenuOpen()) {
+        <div
+          (mouseleave)="isImportMenuOpen.set(false)"
+          class="absolute right-0 mt-1 w-56 bg-white border-2 border-slate-800 rounded shadow-xl text-slate-800 text-xs py-1 z-50 font-mono animate-in fade-in zoom-in-95">
+          <div class="px-3 py-1 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
+            Importar Modelo UML
+          </div>
+          <button
+            (click)="triggerFileInput()"
+            class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-amber-700">
+            <ng-icon name="heroArrowUpTray" class="text-sm"></ng-icon>
+            <span>Cargar Archivo (.xmi / .xml / .json)</span>
+          </button>
+          <button
+            (click)="openImportJson.emit(); isImportMenuOpen.set(false)"
+            class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+            <ng-icon name="heroDocumentText" class="text-sm text-slate-500"></ng-icon>
+            <span>Pegar Código JSON</span>
+          </button>
+        </div>
+      }
+      <input #fileInput type="file" accept=".json,.xml,.xmi" (change)="fileSelected.emit($event)" class="hidden">
+    </div>
+
+    <!-- Botón ⚡ Generar Spring Boot -->
+    <button
+      (click)="openSpringBoot.emit()"
+      class="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-xs font-bold px-3 py-1 rounded flex items-center gap-1.5 border border-emerald-900 shadow-xs cursor-pointer transition-all">
+      <ng-icon name="heroBolt" class="text-sm text-amber-300"></ng-icon>
+      <span>⚡ Generar Spring Boot</span>
+    </button>
+
+    <!-- Usuario & Salir -->
+    @if (authService.currentUser()) {
+      <div class="flex items-center gap-1.5 pl-2 border-l border-slate-600">
+        <button
+          (click)="openProfile.emit()"
+          title="Ver perfil de usuario"
+          class="flex items-center gap-1 bg-slate-900 hover:bg-purple-950/80 px-2 py-0.5 rounded border border-slate-600 hover:border-purple-400 text-white transition-all cursor-pointer">
+          <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-bold text-[9.5px]">
+            {{ authService.currentUser()?.fullName?.charAt(0)?.toUpperCase() }}
+          </div>
+          <span class="text-[11px] font-medium max-w-[100px] truncate">{{ authService.currentUser()?.fullName }}</span>
+        </button>
+        <button
+          (click)="authService.logout()"
+          title="Cerrar Sesión"
+          class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-[11px] px-1.5 py-0.5 rounded border border-slate-600 cursor-pointer">
+          Salir
+        </button>
+      </div>
+    }
+
+  </div>
+</header>

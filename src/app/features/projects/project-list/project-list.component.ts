@@ -25,11 +25,12 @@ import {
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Project, ProjectRole } from '../../../core/models/project.model';
+import { UserProfileModalComponent } from '../../diagrams/diagram-editor/components/user-profile-modal/user-profile-modal.component';
 
 @Component({
   selector: 'app-project-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, NgIconComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, NgIconComponent, UserProfileModalComponent],
   providers: [
     provideIcons({
       heroFolderPlus,
@@ -67,11 +68,6 @@ export class ProjectListComponent implements OnInit {
   readonly isEditModalOpen = signal<boolean>(false);
   readonly isMembersModalOpen = signal<boolean>(false);
   readonly isProfileModalOpen = signal<boolean>(false);
-  readonly isRefreshingProfile = signal<boolean>(false);
-  readonly isSavingProfile = signal<boolean>(false);
-  readonly editProfileFullName = signal<string>('');
-  readonly editProfilePassword = signal<string>('');
-  readonly saveProfileSuccessMessage = signal<string | null>(null);
   readonly selectedProjectForMembers = signal<Project | null>(null);
   readonly selectedProjectForEdit = signal<Project | null>(null);
 
@@ -251,57 +247,5 @@ export class ProjectListComponent implements OnInit {
 
   openProfileModal(): void {
     this.isProfileModalOpen.set(true);
-    this.editProfileFullName.set(this.authService.currentUser()?.fullName || '');
-    this.editProfilePassword.set('');
-    this.saveProfileSuccessMessage.set(null);
-    this.refreshProfile();
-  }
-
-  refreshProfile(): void {
-    this.isRefreshingProfile.set(true);
-    this.authService.fetchProfile().subscribe({
-      next: (user) => {
-        this.isRefreshingProfile.set(false);
-        if (!this.editProfileFullName()) {
-          this.editProfileFullName.set(user.fullName || '');
-        }
-      },
-      error: () => {
-        this.isRefreshingProfile.set(false);
-      }
-    });
-  }
-
-  saveProfile(): void {
-    const fullName = this.editProfileFullName().trim();
-    if (!fullName) {
-      alert('El nombre completo no puede estar vacío.');
-      return;
-    }
-
-    const password = this.editProfilePassword().trim();
-    if (password && password.length < 6) {
-      alert('La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-
-    this.isSavingProfile.set(true);
-    const payload: { fullName?: string; password?: string } = { fullName };
-    if (password) {
-      payload.password = password;
-    }
-
-    this.authService.updateProfile(payload).subscribe({
-      next: (user) => {
-        this.isSavingProfile.set(false);
-        this.editProfilePassword.set('');
-        this.saveProfileSuccessMessage.set('¡Perfil y datos actualizados con éxito!');
-        setTimeout(() => this.saveProfileSuccessMessage.set(null), 3000);
-      },
-      error: (err) => {
-        this.isSavingProfile.set(false);
-        alert('Error al actualizar el perfil: ' + (err.error?.message || err.message));
-      }
-    });
   }
 }
