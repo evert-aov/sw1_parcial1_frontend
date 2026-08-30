@@ -763,49 +763,15 @@
     </div>
   }
 
-  <!-- 7. MODAL: GENERADOR SPRING BOOT 4 -->
-  @if (showSpringBootModal()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
-        
-        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
-          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide flex items-center gap-1.5">
-            <ng-icon name="heroBolt" class="text-amber-600 text-sm"></ng-icon>
-            Generador Spring Boot 4 + Flyway
-          </h3>
-          <button (click)="showSpringBootModal.set(false)" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
-        </div>
-
-        <div class="p-4 space-y-3">
-          <p class="text-slate-700">Se compilará el AST del diagrama en un microservicio de producción descargable en formato <strong>.zip</strong>:</p>
-          
-          <div class="bg-white p-3 border border-[#6B5A52] space-y-1.5 font-mono text-[11px]">
-            <div class="text-emerald-700 font-bold">✓ Entidades JPA (@Entity, @Table, @ManyToOne, @OneToMany)</div>
-            <div class="text-blue-700 font-bold">✓ Repositorios Spring Data (JpaRepository&lt;T, ID&gt;)</div>
-            <div class="text-purple-700 font-bold">✓ Servicios con transaccionalidad (@Transactional)</div>
-            <div class="text-indigo-700 font-bold">✓ Controladores REST (@RestController con CRUD)</div>
-            <div class="text-amber-700 font-bold">✓ Script de migración Flyway (V1__initial_schema.sql)</div>
-            <div class="text-slate-700">✓ build.gradle, application.yml y docker-compose.yml</div>
-          </div>
-        </div>
-
-        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-end gap-2 bg-white/30">
-          <button
-            (click)="showSpringBootModal.set(false)"
-            class="px-3.5 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
-            Cerrar
-          </button>
-          <button
-            (click)="triggerSpringBootGeneration()"
-            class="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-bold uppercase border border-emerald-950 cursor-pointer flex items-center gap-1.5">
-            <ng-icon name="heroBolt" class="text-xs text-amber-300"></ng-icon>
-            Descargar Microservicio .ZIP
-          </button>
-        </div>
-
-      </div>
-    </div>
-  }
+  <!-- 7. MODAL: GENERADOR SPRING BOOT 4 + FLYWAY -->
+  <app-spring-boot-modal
+    [isOpen]="showSpringBootModal()"
+    [diagramId]="currentDiagramId()"
+    [diagramName]="currentDiagramName()"
+    [nodes]="nodes()"
+    [connections]="connections()"
+    (closeModal)="showSpringBootModal.set(false)">
+  </app-spring-boot-modal>
 
   <!-- DATALISTS PARA OPCIONES PREDEFINIDAS -->
   <datalist id="multiplicity-options">

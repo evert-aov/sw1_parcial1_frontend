@@ -78,6 +78,7 @@ import {
 import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
 import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
+import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
 
 export interface UmlDiagramProject {
   version: string;
@@ -99,6 +100,7 @@ export interface UmlDiagramProject {
     DiagramAppbarComponent,
     AiAssistantPanelComponent,
     UserProfileModalComponent,
+    SpringBootModalComponent,
   ],
   providers: [
     provideIcons({
@@ -1397,8 +1399,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   triggerSpringBootGeneration(): void {
-    this.showSpringBootModal.set(false);
-    alert('El motor de generación de código Spring Boot se integrará en el siguiente módulo (code-generator).');
+    this.showSpringBootModal.set(true);
   }
 
   openProfileModal(): void {
