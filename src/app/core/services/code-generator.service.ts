@@ -30,6 +30,7 @@ export interface GenerateCodeRequest {
   databasePassword?: string;
   databasePort?: number;
   serverPort?: number;
+  platform?: 'all' | 'spring-boot' | 'flutter';
   nodes?: any[];
   connections?: any[];
 }

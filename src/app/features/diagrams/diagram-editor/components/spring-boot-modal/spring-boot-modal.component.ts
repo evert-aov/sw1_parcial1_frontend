@@ -27,6 +27,7 @@ import {
   heroSparkles,
   heroCircleStack,
   heroAdjustmentsHorizontal,
+  heroDevicePhoneMobile,
 } from '@ng-icons/heroicons/outline';
 import {
   CodeGeneratorService,
@@ -57,6 +58,7 @@ import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.
       heroSparkles,
       heroCircleStack,
       heroAdjustmentsHorizontal,
+      heroDevicePhoneMobile,
     }),
   ],
   templateUrl: './spring-boot-modal.component.html',
@@ -72,10 +74,13 @@ export class SpringBootModalComponent implements OnInit {
 
   readonly closeModal = output<void>();
 
+  // Selección de Plataforma
+  selectedPlatform = signal<'all' | 'spring-boot' | 'flutter'>('all');
+
   // Configuración del Proyecto
   packageName = signal<string>('com.uagrm.studio');
-  artifactId = signal<string>('spring-boot-uml-api');
-  projectName = signal<string>('Spring Boot UML Microservice');
+  artifactId = signal<string>('sistema-app');
+  projectName = signal<string>('Sistema App Fullstack');
   javaVersion = signal<string>('21');
   databaseName = signal<string>('uml_studio_db');
   databaseUser = signal<string>('postgres');
@@ -97,6 +102,12 @@ export class SpringBootModalComponent implements OnInit {
     const cat = this.activeCategory();
     const all = this.files();
     if (cat === 'all') return all;
+    if (cat === 'flutter') {
+      return all.filter((f) => f.path.includes('mobile_flutter') || f.path.startsWith('lib/') || f.language === 'dart');
+    }
+    if (cat === 'spring-boot') {
+      return all.filter((f) => f.path.includes('backend') || f.path.startsWith('src/') || f.language === 'java');
+    }
     return all.filter((f) => f.layer === cat);
   });
 
@@ -111,9 +122,14 @@ export class SpringBootModalComponent implements OnInit {
   ngOnInit(): void {
     if (this.diagramName()) {
       const clean = this.diagramName().toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      this.artifactId.set(clean || 'spring-boot-uml-api');
+      this.artifactId.set(clean || 'sistema-app');
       this.projectName.set(this.diagramName());
     }
+    this.generatePreview();
+  }
+
+  setPlatform(plat: 'all' | 'spring-boot' | 'flutter'): void {
+    this.selectedPlatform.set(plat);
     this.generatePreview();
   }
 
@@ -122,6 +138,7 @@ export class SpringBootModalComponent implements OnInit {
 
     const payload: GenerateCodeRequest = {
       diagramId: this.diagramId() || undefined,
+      platform: this.selectedPlatform(),
       packageName: this.packageName(),
       artifactId: this.artifactId(),
       projectName: this.projectName(),
@@ -143,7 +160,6 @@ export class SpringBootModalComponent implements OnInit {
       next: (res) => {
         this.files.set(res.files || []);
         if (res.files && res.files.length > 0) {
-          // Seleccionar por defecto la primera entidad o el primer archivo
           const firstEntity = res.files.find((f) => f.layer === 'entity') || res.files[0];
           this.selectedFile.set(firstEntity);
         }
@@ -175,6 +191,7 @@ export class SpringBootModalComponent implements OnInit {
 
     const payload: GenerateCodeRequest = {
       diagramId: this.diagramId() || undefined,
+      platform: this.selectedPlatform(),
       packageName: this.packageName(),
       artifactId: this.artifactId(),
       projectName: this.projectName(),
@@ -197,7 +214,7 @@ export class SpringBootModalComponent implements OnInit {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${this.artifactId()}.zip`;
+        a.download = `${this.artifactId()}-${this.selectedPlatform()}.zip`;
         a.click();
         window.URL.revokeObjectURL(url);
         this.isDownloading.set(false);
@@ -209,8 +226,27 @@ export class SpringBootModalComponent implements OnInit {
     });
   }
 
-  getLayerBadge(layer: string): { label: string; class: string } {
-    switch (layer) {
+  getLayerBadge(file: GeneratedFile): { label: string; class: string } {
+    if (file.language === 'dart') {
+      if (file.path.includes('/bloc/')) {
+        return { label: 'Flutter BLoC', class: 'bg-cyan-100 text-cyan-800 border-cyan-300' };
+      }
+      if (file.path.includes('/pages/') || file.path.includes('/widgets/')) {
+        return { label: 'Flutter UI', class: 'bg-sky-100 text-sky-800 border-sky-300' };
+      }
+      if (file.path.includes('/usecases/')) {
+        return { label: 'UseCase', class: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
+      }
+      if (file.path.includes('/entities/')) {
+        return { label: 'Dart Entity', class: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+      }
+      if (file.path.includes('/datasources/')) {
+        return { label: 'Remote DataSource (Dio)', class: 'bg-amber-100 text-amber-800 border-amber-300' };
+      }
+      return { label: 'Flutter Dart', class: 'bg-blue-100 text-blue-800 border-blue-300' };
+    }
+
+    switch (file.layer) {
       case 'entity':
         return { label: 'Entidad JPA', class: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
       case 'repository':
@@ -230,7 +266,7 @@ export class SpringBootModalComponent implements OnInit {
       case 'docs':
         return { label: 'Documentación', class: 'bg-teal-100 text-teal-800 border-teal-300' };
       default:
-        return { label: layer, class: 'bg-slate-100 text-slate-700 border-slate-300' };
+        return { label: file.layer, class: 'bg-slate-100 text-slate-700 border-slate-300' };
     }
   }
 }

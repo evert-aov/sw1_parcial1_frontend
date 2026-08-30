@@ -1,17 +1,17 @@
 @if (isOpen()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-    <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-6xl w-full flex flex-col max-h-[92vh] overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150 rounded-sm">
+    <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-6xl w-full flex flex-col max-h-[94vh] overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150 rounded-sm">
       
-      <!-- 1. Header del Modal -->
-      <div class="px-4 py-3 bg-[#6B5A52] text-white flex items-center justify-between shrink-0">
+      <!-- 1. Header del Modal con Selector de Plataforma -->
+      <div class="px-4 py-3 bg-[#6B5A52] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 rounded bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
-            <ng-icon name="heroBolt" class="text-base text-emerald-300"></ng-icon>
+          <div class="w-8 h-8 rounded bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
+            <ng-icon name="heroBolt" class="text-lg text-emerald-300"></ng-icon>
           </div>
           <div>
             <h3 class="font-bold uppercase tracking-wider font-mono text-[12px] flex items-center gap-2">
-              <span>Generador de Backend Spring Boot + PostgreSQL</span>
-              <span class="px-2 py-0.2 bg-emerald-600 text-white text-[9.5px] rounded-full font-mono font-bold">5 Capas + Flyway</span>
+              <span>Generador de Código de Arquitectura</span>
+              <span class="px-2 py-0.2 bg-emerald-600 text-white text-[9.5px] rounded-full font-mono font-bold">Clean Architecture</span>
             </h3>
             <p class="text-[10px] text-slate-200 font-mono">
               {{ totalClasses() }} clases UML • {{ totalRelations() }} relaciones • {{ files().length }} archivos generados
@@ -19,10 +19,33 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <!-- Selector de Plataforma (Fullstack / Spring Boot / Flutter) -->
+        <div class="flex items-center gap-1 bg-[#43342D] p-1 rounded border border-[#8D7B72]/40 font-mono text-[10.5px]">
+          <button
+            (click)="setPlatform('all')"
+            [ngClass]="selectedPlatform() === 'all' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-300 hover:text-white hover:bg-white/5'"
+            class="px-2.5 py-1 rounded transition-all cursor-pointer flex items-center gap-1.5">
+            <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
+            <span>Fullstack (Ambos)</span>
+          </button>
+          <button
+            (click)="setPlatform('spring-boot')"
+            [ngClass]="selectedPlatform() === 'spring-boot' ? 'bg-[#6B5A52] text-white font-bold shadow-xs' : 'text-slate-300 hover:text-white hover:bg-white/5'"
+            class="px-2.5 py-1 rounded transition-all cursor-pointer flex items-center gap-1.5">
+            <ng-icon name="heroServer" class="text-xs text-emerald-300"></ng-icon>
+            <span>Spring Boot</span>
+          </button>
+          <button
+            (click)="setPlatform('flutter')"
+            [ngClass]="selectedPlatform() === 'flutter' ? 'bg-sky-700 text-white font-bold shadow-xs' : 'text-slate-300 hover:text-white hover:bg-white/5'"
+            class="px-2.5 py-1 rounded transition-all cursor-pointer flex items-center gap-1.5">
+            <ng-icon name="heroDevicePhoneMobile" class="text-xs text-cyan-300"></ng-icon>
+            <span>Flutter BLoC</span>
+          </button>
+
           <button
             (click)="closeModal.emit()"
-            class="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded cursor-pointer leading-none text-base">
+            class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded ml-1 cursor-pointer leading-none text-base">
             <ng-icon name="heroXMark" class="text-base"></ng-icon>
           </button>
         </div>
@@ -39,7 +62,7 @@
             class="w-full px-2 py-1 bg-white border border-[#6B5A52] text-[#2A201B] rounded focus:outline-none focus:ring-1 focus:ring-emerald-600" />
         </div>
         <div>
-          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Artifact ID:</label>
+          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Artifact / App ID:</label>
           <input
             [(ngModel)]="artifactId"
             (change)="generatePreview()"
@@ -47,43 +70,31 @@
             class="w-full px-2 py-1 bg-white border border-[#6B5A52] text-[#2A201B] rounded focus:outline-none focus:ring-1 focus:ring-emerald-600" />
         </div>
         <div>
-          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Versión Java & BD:</label>
-          <div class="flex gap-1.5">
-            <select
-              [(ngModel)]="javaVersion"
-              (change)="generatePreview()"
-              class="w-1/2 px-1.5 py-1 bg-white border border-[#6B5A52] text-[#2A201B] rounded focus:outline-none">
-              <option value="21">Java 21</option>
-              <option value="17">Java 17</option>
-            </select>
-            <input
-              [(ngModel)]="databaseName"
-              (change)="generatePreview()"
-              type="text"
-              placeholder="DB Name"
-              class="w-1/2 px-2 py-1 bg-white border border-[#6B5A52] text-[#2A201B] rounded focus:outline-none" />
-          </div>
-        </div>
-        <div>
-          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Puerto Server & DB:</label>
+          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Puerto Server & BD:</label>
           <div class="flex gap-1.5">
             <input
               [(ngModel)]="serverPort"
               (change)="generatePreview()"
               type="number"
-              placeholder="App Port"
+              placeholder="Server Port (8080)"
               class="w-1/2 px-2 py-1 bg-white border border-[#6B5A52] text-[#2A201B] rounded focus:outline-none" />
             <input
               [(ngModel)]="databasePort"
               (change)="generatePreview()"
               type="number"
-              placeholder="DB Port"
+              placeholder="DB Port (5432)"
               class="w-1/2 px-2 py-1 bg-white border border-[#6B5A52] text-[#2A201B] rounded focus:outline-none" />
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Conexión Móvil USB:</label>
+          <div class="px-2 py-1 bg-slate-200 border border-slate-300 rounded text-[9.5px] text-slate-700 font-mono truncate">
+            <code>adb reverse tcp:{{ serverPort() }} tcp:{{ serverPort() }}</code>
           </div>
         </div>
       </div>
 
-      <!-- 3. Barra de Filtros por Capa Arquitectónica -->
+      <!-- 3. Barra de Filtros por Capa / Categoría -->
       <div class="bg-white border-b border-[#C0C0C0] px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 text-[10.5px] font-mono">
         <button
           (click)="activeCategory.set('all')"
@@ -91,35 +102,53 @@
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
           Todos ({{ files().length }})
         </button>
+
+        @if (selectedPlatform() === 'all') {
+          <button
+            (click)="activeCategory.set('spring-boot')"
+            [ngClass]="activeCategory() === 'spring-boot' ? 'bg-emerald-700 text-white font-bold' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'"
+            class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0 flex items-center gap-1">
+            <ng-icon name="heroServer" class="text-xs"></ng-icon>
+            <span>Spring Boot (backend/)</span>
+          </button>
+          <button
+            (click)="activeCategory.set('flutter')"
+            [ngClass]="activeCategory() === 'flutter' ? 'bg-sky-700 text-white font-bold' : 'bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-300'"
+            class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0 flex items-center gap-1">
+            <ng-icon name="heroDevicePhoneMobile" class="text-xs"></ng-icon>
+            <span>Flutter (mobile_flutter/)</span>
+          </button>
+        }
+
         <button
           (click)="activeCategory.set('entity')"
           [ngClass]="activeCategory() === 'entity' ? 'bg-emerald-700 text-white font-bold' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Entidades JPA
+          Entidades / Domain
         </button>
         <button
           (click)="activeCategory.set('repository')"
           [ngClass]="activeCategory() === 'repository' ? 'bg-blue-700 text-white font-bold' : 'bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Repositorios
+          Repositorios & DataSources
         </button>
         <button
           (click)="activeCategory.set('dto')"
           [ngClass]="activeCategory() === 'dto' ? 'bg-purple-700 text-white font-bold' : 'bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          DTOs (Req/Res)
+          DTOs & Data Models
         </button>
         <button
           (click)="activeCategory.set('service')"
           [ngClass]="activeCategory() === 'service' ? 'bg-indigo-700 text-white font-bold' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Servicios
+          Servicios & UseCases
         </button>
         <button
           (click)="activeCategory.set('controller')"
           [ngClass]="activeCategory() === 'controller' ? 'bg-rose-700 text-white font-bold' : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          REST Controllers
+          Controllers & BLoC / UI
         </button>
         <button
           (click)="activeCategory.set('migration')"
@@ -136,19 +165,19 @@
       </div>
 
       <!-- 4. Cuerpo Principal: Explorador de Archivos + Visor de Código -->
-      <div class="flex-1 flex overflow-hidden min-h-[360px]">
+      <div class="flex-1 flex overflow-hidden min-h-[380px]">
         
         <!-- Columna Izquierda: Lista de Archivos -->
-        <div class="w-72 bg-[#FAFAFA] border-r border-[#C0C0C0] overflow-y-auto flex flex-col shrink-0">
+        <div class="w-80 bg-[#FAFAFA] border-r border-[#C0C0C0] overflow-y-auto flex flex-col shrink-0">
           <div class="p-2 border-b border-slate-200 bg-slate-100 flex items-center justify-between font-mono text-[10px] text-slate-500">
-            <span>EXPLORADOR DE PROYECTO</span>
+            <span>EXPLORADOR ({{ selectedPlatform().toUpperCase() }})</span>
             <span>{{ filteredFiles().length }} archivo(s)</span>
           </div>
 
           @if (isGenerating()) {
             <div class="p-8 text-center text-slate-500 font-mono flex flex-col items-center gap-2">
               <span class="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
-              <span>Compilando AST a Spring Boot...</span>
+              <span>Compilando AST a {{ selectedPlatform() === 'all' ? 'Spring Boot y Flutter' : selectedPlatform() }}...</span>
             </div>
           } @else {
             <div class="divide-y divide-slate-100">
@@ -159,8 +188,8 @@
                   class="w-full p-2 text-left flex flex-col gap-1 transition-colors cursor-pointer">
                   <div class="flex items-center justify-between gap-1">
                     <span class="font-mono text-[11px] truncate">{{ file.filename }}</span>
-                    <span class="px-1.5 py-0.2 rounded text-[8.5px] font-mono border" [ngClass]="getLayerBadge(file.layer).class">
-                      {{ getLayerBadge(file.layer).label }}
+                    <span class="px-1.5 py-0.2 rounded text-[8.5px] font-mono border" [ngClass]="getLayerBadge(file).class">
+                      {{ getLayerBadge(file).label }}
                     </span>
                   </div>
                   <span class="text-[9.5px] font-mono text-slate-400 truncate">{{ file.path }}</span>
@@ -196,7 +225,7 @@
             </div>
           } @else {
             <div class="flex-1 flex items-center justify-center text-slate-500 font-mono text-xs">
-              Selecciona un archivo del explorador para ver su código
+              Selecciona un archivo del explorador para ver su código fuente
             </div>
           }
 
@@ -208,7 +237,15 @@
       <div class="p-3 bg-white border-t border-[#6B5A52]/30 flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
         <div class="flex items-center gap-2 text-[10.5px] font-mono text-slate-600">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>Swagger UI listo en <strong>/swagger-ui.html</strong> • Flyway migrations activas</span>
+          <span>
+            @if (selectedPlatform() === 'all') {
+              Solución Fullstack lista: Spring Boot (backend/) + Flutter Clean Architecture (mobile_flutter/)
+            } @else if (selectedPlatform() === 'flutter') {
+              Flutter App lista con BLoC, Dio, GetIt y consumo local vía USB / 10.0.2.2
+            } @else {
+              Spring Boot microservicio listo con PostgreSQL 16 y Flyway en puerto {{ serverPort() }}
+            }
+          </span>
         </div>
 
         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -225,7 +262,9 @@
             [disabled]="isDownloading() || files().length === 0"
             class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             <ng-icon name="heroArrowDownTray" class="text-sm text-emerald-200"></ng-icon>
-            <span>{{ isDownloading() ? 'Empaquetando ZIP...' : 'Descargar Proyecto (.zip)' }}</span>
+            <span>
+              {{ isDownloading() ? 'Empaquetando ZIP...' : (selectedPlatform() === 'all' ? 'Descargar Solución Fullstack (.zip)' : 'Descargar ' + selectedPlatform() + ' (.zip)') }}
+            </span>
           </button>
         </div>
       </div>
