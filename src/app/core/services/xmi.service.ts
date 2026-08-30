@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { ApiResponse } from '../models/auth.model';
 import { UmlClassNode, UmlConnection } from '../models/diagram.model';
+import { environment } from '../../../environments/environment';
 
 export interface ExportXmiResult {
   filename: string;
@@ -25,7 +26,7 @@ export interface DiagramVersionItem {
 })
 export class XmiService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:3000/api/xmi';
+  private readonly apiUrl = `${environment.apiUrl}/xmi`;
 
   /**
    * Exporta un diagrama existente a XMI 2.1 estándar compatible con Enterprise Architect v17.

@@ -3,13 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap, map, catchError, throwError } from 'rxjs';
 import { DiagramDto, SaveDiagramAstRequest, UmlClassNode, UmlConnection } from '../models/diagram.model';
 import { ApiResponse } from '../models/auth.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DiagramService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:3000/api/diagrams';
+  private readonly apiUrl = `${environment.apiUrl}/diagrams`;
 
   // Signals para estado reactivo
   readonly currentDiagram = signal<DiagramDto | null>(null);

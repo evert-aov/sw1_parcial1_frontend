@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { UmlClassNode, UmlConnection } from '../models/diagram.model';
+import { environment } from '../../../environments/environment';
 
 export interface AiResponse {
   success: boolean;
@@ -17,7 +18,7 @@ export interface AiResponse {
 })
 export class AiAssistantService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:3000/api/ai';
+  private readonly apiUrl = `${environment.apiUrl}/ai`;
 
   sendTextPrompt(
     prompt: string,

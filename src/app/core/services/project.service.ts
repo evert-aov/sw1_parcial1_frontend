@@ -10,13 +10,14 @@ import {
   ProjectMember,
 } from '../models/project.model';
 import { ApiResponse } from '../models/auth.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ProjectService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:3000/api/projects';
+  private readonly apiUrl = `${environment.apiUrl}/projects`;
 
   // Reactive state using Angular Signals
   readonly projects = signal<Project[]>([]);

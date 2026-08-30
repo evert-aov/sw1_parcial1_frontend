@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError, map } from 'rxjs';
 import { User } from '../models/user.model';
 import { LoginRequest, RegisterRequest, AuthResponse, ApiResponse } from '../models/auth.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -12,7 +13,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
 
-  private readonly apiUrl = 'http://localhost:3000/api/auth';
+  private readonly apiUrl = `${environment.apiUrl}/auth`;
   private readonly TOKEN_KEY = 'uml_studio_token';
   private readonly USER_KEY = 'uml_studio_user';
 

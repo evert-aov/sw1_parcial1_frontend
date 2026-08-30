@@ -4,6 +4,7 @@ import { Subject } from 'rxjs';
 import { AuthService } from './auth.service';
 import { UmlClassNode, UmlConnection } from '../models/diagram.model';
 import { User } from '../models/user.model';
+import { environment } from '../../../environments/environment';
 
 export interface RemoteCursor {
   userId: string;
@@ -40,7 +41,7 @@ export interface ChatMessage {
 export class CollaborationService {
   private readonly authService = inject(AuthService);
   private socket: Socket | null = null;
-  private readonly socketUrl = 'http://localhost:3000/collaboration';
+  private readonly socketUrl = environment.socketUrl;
 
   readonly isConnected = signal<boolean>(false);
   readonly activeRoomCode = signal<string | null>(null);

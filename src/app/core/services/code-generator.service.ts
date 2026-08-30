@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, map, catchError, throwError } from 'rxjs';
 import { ApiResponse } from '../models/auth.model';
+import { environment } from '../../../environments/environment';
 
 export interface GeneratedFile {
   path: string;
@@ -40,7 +41,7 @@ export interface GenerateCodeRequest {
 })
 export class CodeGeneratorService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:3000/api/codegen';
+  private readonly apiUrl = `${environment.apiUrl}/codegen`;
 
   readonly isGenerating = signal<boolean>(false);
   readonly previewData = signal<CodeGenerationPreviewResponse | null>(null);
