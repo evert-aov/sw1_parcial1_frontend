@@ -80,6 +80,16 @@ export class AuthService {
     );
   }
 
+  updateProfile(payload: { fullName?: string; password?: string }): Observable<User> {
+    return this.http.patch<ApiResponse<User>>(`${this.apiUrl}/me`, payload).pipe(
+      map((res) => res.data),
+      tap((user) => {
+        this.currentUser.set(user);
+        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+      }),
+    );
+  }
+
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);

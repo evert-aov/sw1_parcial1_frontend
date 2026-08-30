@@ -68,6 +68,10 @@ export class ProjectListComponent implements OnInit {
   readonly isMembersModalOpen = signal<boolean>(false);
   readonly isProfileModalOpen = signal<boolean>(false);
   readonly isRefreshingProfile = signal<boolean>(false);
+  readonly isSavingProfile = signal<boolean>(false);
+  readonly editProfileFullName = signal<string>('');
+  readonly editProfilePassword = signal<string>('');
+  readonly saveProfileSuccessMessage = signal<string | null>(null);
   readonly selectedProjectForMembers = signal<Project | null>(null);
   readonly selectedProjectForEdit = signal<Project | null>(null);
 
@@ -247,17 +251,56 @@ export class ProjectListComponent implements OnInit {
 
   openProfileModal(): void {
     this.isProfileModalOpen.set(true);
+    this.editProfileFullName.set(this.authService.currentUser()?.fullName || '');
+    this.editProfilePassword.set('');
+    this.saveProfileSuccessMessage.set(null);
     this.refreshProfile();
   }
 
   refreshProfile(): void {
     this.isRefreshingProfile.set(true);
     this.authService.fetchProfile().subscribe({
-      next: () => {
+      next: (user) => {
         this.isRefreshingProfile.set(false);
+        if (!this.editProfileFullName()) {
+          this.editProfileFullName.set(user.fullName || '');
+        }
       },
       error: () => {
         this.isRefreshingProfile.set(false);
+      }
+    });
+  }
+
+  saveProfile(): void {
+    const fullName = this.editProfileFullName().trim();
+    if (!fullName) {
+      alert('El nombre completo no puede estar vacío.');
+      return;
+    }
+
+    const password = this.editProfilePassword().trim();
+    if (password && password.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    this.isSavingProfile.set(true);
+    const payload: { fullName?: string; password?: string } = { fullName };
+    if (password) {
+      payload.password = password;
+    }
+
+    this.authService.updateProfile(payload).subscribe({
+      next: (user) => {
+        this.isSavingProfile.set(false);
+        this.editProfilePassword.set('');
+        this.saveProfileSuccessMessage.set('¡Perfil y datos actualizados con éxito!');
+        setTimeout(() => this.saveProfileSuccessMessage.set(null), 3000);
+      },
+      error: (err) => {
+        this.isSavingProfile.set(false);
+        alert('Error al actualizar el perfil: ' + (err.error?.message || err.message));
       }
     });
   }
