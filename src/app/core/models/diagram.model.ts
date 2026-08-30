@@ -113,3 +113,15 @@ export interface SaveDiagramAstRequest {
     assocAnchorNodeId?: string | null;
   }[];
 }
+
+export interface SessionActivityEvent {
+  id: string;
+  timestamp: Date;
+  type: 'ai_mutation' | 'ai_chat' | 'create_node' | 'update_node' | 'delete_node' | 'create_conn' | 'update_conn' | 'delete_conn' | 'import_file' | 'export_file';
+  title: string;
+  description: string;
+  metadata?: Record<string, any>;
+  actor: string;
+  icon: string;
+  badgeClass: string;
+}

@@ -25,6 +25,7 @@ export class AiAssistantService {
     roomCode?: string,
     currentNodes: UmlClassNode[] = [],
     currentConnections: UmlConnection[] = [],
+    sessionHistory: any[] = [],
   ): Observable<AiResponse> {
     return this.http.post<AiResponse>(`${this.apiUrl}/prompt`, {
       prompt,
@@ -32,6 +33,7 @@ export class AiAssistantService {
       roomCode,
       currentNodes,
       currentConnections,
+      sessionHistory,
     });
   }
 
@@ -43,6 +45,7 @@ export class AiAssistantService {
     roomCode?: string,
     currentNodes: UmlClassNode[] = [],
     currentConnections: UmlConnection[] = [],
+    sessionHistory: any[] = [],
   ): Observable<AiResponse> {
     return this.http.post<AiResponse>(`${this.apiUrl}/vision-diagram`, {
       imageBase64,
@@ -52,6 +55,7 @@ export class AiAssistantService {
       roomCode,
       currentNodes,
       currentConnections,
+      sessionHistory,
     });
   }
 }

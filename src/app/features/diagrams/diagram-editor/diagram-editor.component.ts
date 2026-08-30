@@ -19,6 +19,7 @@ import {
   UmlClassNode,
   UmlConnection,
   SaveDiagramAstRequest,
+  SessionActivityEvent,
 } from '../../../core/models/diagram.model';
 import { 
   heroMagnifyingGlassPlus, 
@@ -188,6 +189,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private speechRecognitionInstance: any = null;
 
   // Conversación tipo Chat con Copilot IA
+  activeAiTab = signal<'chat' | 'history'>('chat');
+  sessionHistory = signal<SessionActivityEvent[]>([
+    {
+      id: 'init_session',
+      timestamp: new Date(),
+      type: 'ai_chat',
+      title: 'Sesión Iniciada',
+      description: 'Espacio de modelado UML y Copilot IA inicializados.',
+      actor: 'Sistema',
+      icon: 'heroSparkles',
+      badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300'
+    }
+  ]);
   aiChatMessages = signal<AiChatMessage[]>([
     {
       id: 'm_welcome',
@@ -924,6 +938,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.connections.update(conns => [...conns, newConnection]);
       this.selectedSourceNodeId.set(null);
       this.updateConnectionEndpoints();
+      const sName = sourceNode?.name || currentSource;
+      const tName = targetNode?.name || nodeId;
+      this.logSessionActivity('create_conn', 'Relación Creada', `Relación ${activeRel} entre "${sName}" y "${tName}".`);
       this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_connection');
     }
   }
@@ -973,6 +990,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.connections.update(conns => [...conns, newConnection]);
     this.selectedSourceNodeId.set(null);
     this.updateConnectionEndpoints();
+    const sName = sourceNode?.name || baseSourceId;
+    const tName = targetNode?.name || baseTargetId;
+    this.logSessionActivity('create_conn', 'Relación Trazada', `Relación ${relType} trazada entre "${sName}" y "${tName}".`);
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_connection');
   }
 
@@ -980,39 +1000,36 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.isReadOnly()) return;
 
     const timestamp = Date.now();
-    const assocClassId = `node_${timestamp}_assoc`;
-    const anchorNodeId = `node_${timestamp}_anchor`;
-    const mainConnId = `conn_${timestamp}_main`;
-    const linkConnId = `conn_${timestamp}_link`;
-
-    const mainOptimal = this.getOptimalConnectorId(sourceNode, targetNode);
-    const sourceSide = mainOptimal.sourceId.split('_').pop() || 'right';
-    const targetSide = mainOptimal.targetId.split('_').pop() || 'left';
-
-    const p1 = this.getConnectorPoint(sourceNode, sourceSide);
-    const p2 = this.getConnectorPoint(targetNode, targetSide);
-    const midX = Math.round((p1.x + p2.x) / 2);
-    const midY = Math.round((p1.y + p2.y) / 2);
+    const assocClassId = `node_assoc_${timestamp}`;
+    const anchorNodeId = `anchor_${timestamp}`;
+    const mainConnId = `conn_main_${timestamp}`;
 
     const assocNode: UmlClassNode = {
       id: assocClassId,
-      name: `${sourceNode.name}${targetNode.name}`,
-      position: { x: Math.round(midX - 110), y: Math.round(midY + 130) },
+      name: `${sourceNode.name}_${targetNode.name}`,
+      position: {
+        x: Math.round((sourceNode.position.x + targetNode.position.x) / 2),
+        y: Math.max(sourceNode.position.y, targetNode.position.y) + 160,
+      },
       width: 220,
       attributes: [
-        { name: `${sourceNode.name.toLowerCase()}_id`, type: 'UUID' },
-        { name: `${targetNode.name.toLowerCase()}_id`, type: 'UUID' },
-        { name: 'fecha_registro', type: 'Date' },
+        { name: 'id', type: 'UUID' },
+        { name: 'fecha_registro', type: 'LocalDateTime' },
       ],
       methods: [],
+      isAnchor: false,
+      assocMainConnId: mainConnId,
     };
 
     const anchorNode: UmlClassNode = {
       id: anchorNodeId,
       name: '',
-      position: { x: midX, y: midY },
-      width: 1,
-      height: 1,
+      position: {
+        x: Math.round((sourceNode.position.x + targetNode.position.x) / 2 + 100),
+        y: Math.round((sourceNode.position.y + targetNode.position.y) / 2 + 50),
+      },
+      width: 8,
+      height: 8,
       attributes: [],
       methods: [],
       isAnchor: true,
@@ -1023,17 +1040,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       id: mainConnId,
       sourceNodeId: sourceNode.id,
       targetNodeId: targetNode.id,
-      sourceId: mainOptimal.sourceId,
-      targetId: mainOptimal.targetId,
+      sourceId: `${sourceNode.id}_right`,
+      targetId: `${targetNode.id}_left`,
       type: 'association',
-      lineStyle: this.defaultLineStyle(),
-      sourceMultiplicity: '*',
-      targetMultiplicity: '*',
+      lineStyle: 'segment',
+      sourceMultiplicity: '0..*',
+      targetMultiplicity: '0..*',
       assocAnchorNodeId: anchorNodeId,
     };
 
     const assocConn: UmlConnection = {
-      id: linkConnId,
+      id: `conn_assoc_${timestamp}`,
       sourceNodeId: anchorNodeId,
       targetNodeId: assocClassId,
       sourceId: anchorNodeId,
@@ -1048,6 +1065,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.connections.update(conns => [...conns, mainConn, assocConn]);
     this.selectedSourceNodeId.set(null);
     this.updateConnectionEndpoints();
+    this.logSessionActivity('create_node', 'Clase de Asociación Creada', `Se creó la clase intermedia "${assocNode.name}" vinculada a "${sourceNode.name}" y "${targetNode.name}".`);
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_association_class');
   }
 
@@ -1087,6 +1105,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     this.nodes.update(list => [...list, newNode]);
     this.updateConnectionEndpoints();
+    this.logSessionActivity('create_node', 'Clase Creada', `Se creó la clase "${newNode.name}" con atributos iniciales.`);
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_class');
   }
 
@@ -1094,9 +1113,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.isReadOnly()) return;
     if (event) event.stopPropagation();
 
+    const targetNode = this.nodes().find(n => n.id === nodeId);
+    const nodeName = targetNode?.name || nodeId;
+
     if (this.isNodeLockedByOther(nodeId)) {
       const lock = this.getNodeLock(nodeId);
-      alert(`🔒 No puedes eliminar la tabla "${nodeId}" mientras ${lock?.userName || 'otro usuario'} la está editando.`);
+      alert(`🔒 No puedes eliminar la tabla "${nodeName}" mientras ${lock?.userName || 'otro usuario'} la está editando.`);
       return;
     }
 
@@ -1122,6 +1144,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.selectedSourceNodeId() === nodeId) {
       this.selectedSourceNodeId.set(null);
     }
+    this.logSessionActivity('delete_node', 'Clase Eliminada', `Se eliminó la clase "${nodeName}" y sus relaciones.`);
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'remove_class');
   }
 
@@ -1163,6 +1186,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.collaborationService.releaseNodeLock(edited.id);
     this.isEditNodeModalOpen.set(false);
     this.editingNode.set(null);
+    this.logSessionActivity('update_node', 'Clase Modificada', `Se actualizaron las propiedades y atributos de "${edited.name}".`);
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'edit_node');
   }
 
@@ -1218,6 +1242,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
     this.updateConnectionEndpoints();
     this.closeEditConnModal();
+    this.logSessionActivity('update_conn', 'Relación Modificada', `Se actualizaron las propiedades de la relación (${edited.type}).`);
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'edit_connection');
   }
 
@@ -1226,6 +1251,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (event) event.stopPropagation();
 
     this.connections.update(conns => conns.filter(c => c.id !== connId));
+    this.logSessionActivity('delete_conn', 'Relación Eliminada', 'Se eliminó una relación del diagrama.');
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'remove_connection');
   }
 
@@ -1452,6 +1478,68 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.attachedImageName.set(null);
   }
 
+  logSessionActivity(
+    type: SessionActivityEvent['type'],
+    title: string,
+    description: string,
+    actor: string = 'Usuario',
+    metadata?: Record<string, any>
+  ): void {
+    const icons: Record<SessionActivityEvent['type'], string> = {
+      ai_mutation: 'heroSparkles',
+      ai_chat: 'heroChatBubbleLeftRight',
+      create_node: 'heroPlusCircle',
+      update_node: 'heroPencilSquare',
+      delete_node: 'heroTrash',
+      create_conn: 'heroLink',
+      update_conn: 'heroPencil',
+      delete_conn: 'heroTrash',
+      import_file: 'heroArrowUpTray',
+      export_file: 'heroArrowDownTray',
+    };
+
+    const badgeColors: Record<SessionActivityEvent['type'], string> = {
+      ai_mutation: 'bg-purple-100 text-purple-800 border-purple-300',
+      ai_chat: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+      create_node: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      update_node: 'bg-amber-100 text-amber-800 border-amber-300',
+      delete_node: 'bg-rose-100 text-rose-800 border-rose-300',
+      create_conn: 'bg-sky-100 text-sky-800 border-sky-300',
+      update_conn: 'bg-blue-100 text-blue-800 border-blue-300',
+      delete_conn: 'bg-red-100 text-red-800 border-red-300',
+      import_file: 'bg-teal-100 text-teal-800 border-teal-300',
+      export_file: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+    };
+
+    const event: SessionActivityEvent = {
+      id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date(),
+      type,
+      title,
+      description,
+      actor,
+      icon: icons[type] || 'heroClock',
+      badgeClass: badgeColors[type] || 'bg-slate-100 text-slate-800 border-slate-300',
+      metadata,
+    };
+
+    this.sessionHistory.update(list => [event, ...list]);
+  }
+
+  copySessionHistory(): void {
+    const lines = this.sessionHistory().map(h => 
+      `[${h.timestamp.toLocaleTimeString()}] ${h.actor}: ${h.title} - ${h.description}`
+    );
+    navigator.clipboard.writeText(lines.join('\n'));
+    alert('Historial de la sesión copiado al portapapeles.');
+  }
+
+  askAiAboutSession(): void {
+    this.activeAiTab.set('chat');
+    this.aiPrompt.set('¿Puedes resumir y analizar todas las acciones y el modelo que hemos construido en esta sesión?');
+    this.applyAiPrompt();
+  }
+
   scrollToChatBottom(): void {
     setTimeout(() => {
       if (this.chatScrollContainerRef?.nativeElement) {
@@ -1506,11 +1594,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         roomCode,
         this.nodes(),
         this.connections(),
+        this.sessionHistory(),
       ).subscribe({
         next: (res) => {
           this.isAiProcessing.set(false);
           if (res.success && res.nodes) {
             this.applyAiMutationWithAnimation(res.nodes, res.connections || []);
+
+            this.logSessionActivity('ai_mutation', 'Mutación por Copilot IA (Visión)', res.changesSummary || res.message, '✨ Copilot IA');
 
             this.aiChatMessages.update(list => [
               ...list,
@@ -1559,11 +1650,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         roomCode,
         this.nodes(),
         this.connections(),
+        this.sessionHistory(),
       ).subscribe({
         next: (res) => {
           this.isAiProcessing.set(false);
           if (res.success && res.nodes) {
             this.applyAiMutationWithAnimation(res.nodes, res.connections || []);
+
+            this.logSessionActivity('ai_mutation', 'Mutación por Copilot IA', res.changesSummary || res.message, '✨ Copilot IA');
 
             this.aiChatMessages.update(list => [
               ...list,
@@ -1810,6 +1904,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     downloadAnchor.click();
     downloadAnchor.remove();
     this.isExportDropdownOpen.set(false);
+    this.logSessionActivity('export_file', 'Exportación JSON', `Se descargó el AST JSON del diagrama (${this.nodes().length} clases).`);
   }
 
   downloadXmiFile(): void {
@@ -1830,6 +1925,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         downloadAnchor.remove();
         window.URL.revokeObjectURL(url);
         this.isExportDropdownOpen.set(false);
+        this.logSessionActivity('export_file', 'Exportación XMI', `Se exportó el diagrama compatible con Enterprise Architect v17 (${this.nodes().length} clases).`);
       },
       error: (err) => {
         console.error('Error al exportar XMI:', err);
@@ -1892,6 +1988,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                 this.fitView();
               }, 100);
               this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_xmi');
+              this.logSessionActivity('import_file', 'Importación XMI Exitosa', `Se importaron ${ast.nodes.length} clases y ${(ast.connections || []).length} relaciones desde ${file.name}.`);
 
               const diagId = this.currentDiagramId();
               if (diagId) {
@@ -1958,6 +2055,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               this.fitView();
             }, 100);
             this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_json');
+            this.logSessionActivity('import_file', 'Importación JSON Exitosa', `Se importaron ${project.nodes.length} clases desde ${file.name}.`);
           } else {
             alert('El archivo JSON no contiene un diagrama de clases válido.');
           }
