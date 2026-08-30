@@ -66,6 +66,8 @@ export class ProjectListComponent implements OnInit {
   readonly isCreateModalOpen = signal<boolean>(false);
   readonly isEditModalOpen = signal<boolean>(false);
   readonly isMembersModalOpen = signal<boolean>(false);
+  readonly isProfileModalOpen = signal<boolean>(false);
+  readonly isRefreshingProfile = signal<boolean>(false);
   readonly selectedProjectForMembers = signal<Project | null>(null);
   readonly selectedProjectForEdit = signal<Project | null>(null);
 
@@ -241,5 +243,22 @@ export class ProjectListComponent implements OnInit {
     if (confirm(`¿Estás seguro de eliminar el proyecto "${project.name}" y todos sus diagramas asociados?`)) {
       this.projectService.deleteProject(project.id).subscribe();
     }
+  }
+
+  openProfileModal(): void {
+    this.isProfileModalOpen.set(true);
+    this.refreshProfile();
+  }
+
+  refreshProfile(): void {
+    this.isRefreshingProfile.set(true);
+    this.authService.fetchProfile().subscribe({
+      next: () => {
+        this.isRefreshingProfile.set(false);
+      },
+      error: () => {
+        this.isRefreshingProfile.set(false);
+      }
+    });
   }
 }

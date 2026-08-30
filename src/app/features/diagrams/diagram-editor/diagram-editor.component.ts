@@ -317,6 +317,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   jsonContent = signal<string>('');
   jsonModalMode = signal<'import' | 'export'>('export');
 
+  // Modal Perfil de Usuario (/api/auth/me)
+  isProfileModalOpen = signal<boolean>(false);
+  isRefreshingProfile = signal<boolean>(false);
+
   // Modal Spring Boot
   showSpringBootModal = signal<boolean>(false);
 
@@ -2131,5 +2135,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.selectedSourceNodeId.set(null);
       this.collaborationService.sendDiagramSync([], [], 'clear');
     }
+  }
+
+  openProfileModal(): void {
+    this.isProfileModalOpen.set(true);
+    this.refreshProfile();
+  }
+
+  refreshProfile(): void {
+    this.isRefreshingProfile.set(true);
+    this.authService.fetchProfile().subscribe({
+      next: () => {
+        this.isRefreshingProfile.set(false);
+      },
+      error: () => {
+        this.isRefreshingProfile.set(false);
+      }
+    });
   }
 }

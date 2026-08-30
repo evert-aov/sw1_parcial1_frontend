@@ -20,12 +20,15 @@
     <!-- Perfil & Cerrar Sesión -->
     @if (authService.currentUser()) {
       <div class="flex items-center gap-3">
-        <div class="flex items-center gap-1.5 bg-slate-900/60 px-2.5 py-1 rounded border border-slate-600 text-xs text-slate-200">
-          <ng-icon name="heroUserCircle" class="text-sm text-slate-300"></ng-icon>
+        <button
+          (click)="openProfileModal()"
+          title="Ver perfil de usuario (/api/auth/me)"
+          class="flex items-center gap-1.5 bg-slate-900/60 hover:bg-slate-900 px-2.5 py-1 rounded border border-slate-600 hover:border-slate-400 text-xs text-slate-200 transition-all cursor-pointer">
+          <ng-icon name="heroUserCircle" class="text-sm text-purple-300"></ng-icon>
           <span class="font-medium truncate max-w-[150px]" [title]="authService.currentUser()?.fullName">
             {{ authService.currentUser()?.fullName }}
           </span>
-        </div>
+        </button>
         <button
           (click)="authService.logout()"
           title="Cerrar Sesión"
@@ -458,6 +461,71 @@
           <div class="pt-3 border-t border-[#6B5A52]/30 flex justify-end">
             <button
               (click)="closeMembersModal()"
+              class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold border border-[#2A201B] cursor-pointer">
+              Cerrar
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- MODAL: PERFIL DE USUARIO (/api/auth/me) -->
+  @if (isProfileModalOpen()) {
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+      <div class="bg-[#F9F7F5] border-2 border-[#6B5A52] shadow-[8px_8px_0px_rgba(0,0,0,0.3)] max-w-md w-full overflow-hidden text-xs">
+        
+        <!-- Cabecera del Modal -->
+        <div class="border-b-2 border-[#6B5A52] bg-gradient-to-r from-slate-800 to-slate-900 text-white px-5 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <ng-icon name="heroUserCircle" class="text-lg text-purple-300"></ng-icon>
+            <h3 class="font-bold text-xs uppercase tracking-wider font-mono">Información de la Cuenta (/api/auth/me)</h3>
+          </div>
+          <button (click)="isProfileModalOpen.set(false)" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">&times;</button>
+        </div>
+
+        <!-- Contenido del Perfil -->
+        <div class="p-6 space-y-4">
+          <div class="flex items-center gap-4 p-3 bg-[#F2EBE6] border border-[#6B5A52]">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-purple-700 to-indigo-800 text-white font-bold text-lg flex items-center justify-center border-2 border-[#6B5A52] shadow-sm">
+              {{ (authService.currentUser()?.fullName || 'U').charAt(0).toUpperCase() }}
+            </div>
+            <div class="truncate flex-1">
+              <h4 class="font-bold text-sm text-[#2A201B] truncate">{{ authService.currentUser()?.fullName }}</h4>
+              <p class="text-xs text-[#6B5A52] font-mono truncate">{{ authService.currentUser()?.email }}</p>
+            </div>
+          </div>
+
+          <div class="space-y-2.5 font-mono text-[11px]">
+            <div class="flex justify-between items-center py-1.5 border-b border-[#6B5A52]/20">
+              <span class="text-[#6B5A52] font-bold">Identificador Único (UUID):</span>
+              <span class="text-[#2A201B] font-medium select-all">{{ authService.currentUser()?.id }}</span>
+            </div>
+            <div class="flex justify-between items-center py-1.5 border-b border-[#6B5A52]/20">
+              <span class="text-[#6B5A52] font-bold">Estado de la Cuenta:</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                ✓ Activo
+              </span>
+            </div>
+            <div class="flex justify-between items-center py-1.5 border-b border-[#6B5A52]/20">
+              <span class="text-[#6B5A52] font-bold">Fecha de Registro:</span>
+              <span class="text-[#2A201B]">{{ (authService.currentUser()?.createdAt | date:'medium') || 'Reciente' }}</span>
+            </div>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="pt-3 flex items-center justify-between gap-3 border-t border-[#6B5A52]/30">
+            <button
+              (click)="refreshProfile()"
+              [disabled]="isRefreshingProfile()"
+              class="px-3 py-1.5 bg-[#EAEAEA] hover:bg-slate-200 text-slate-800 font-mono text-xs font-bold border border-[#6B5A52] cursor-pointer flex items-center gap-1.5 disabled:opacity-50">
+              <span [ngClass]="{ 'animate-spin': isRefreshingProfile() }">🔄</span>
+              <span>{{ isRefreshingProfile() ? 'Sincronizando...' : 'Refrescar Datos' }}</span>
+            </button>
+            <button
+              (click)="isProfileModalOpen.set(false)"
               class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold border border-[#2A201B] cursor-pointer">
               Cerrar
             </button>
