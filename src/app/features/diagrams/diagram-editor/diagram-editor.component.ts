@@ -173,6 +173,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   isToolboxOpen = signal<boolean>(true);
   isAiPanelOpen = signal<boolean>(true);
   isExportDropdownOpen = signal<boolean>(false);
+  isImportDropdownOpen = signal<boolean>(false);
 
   // IA Copilot (Vertex AI Gemini 2.5 Flash)
   aiPrompt = signal<string>('');
@@ -1789,6 +1790,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.jsonModalMode.set('import');
     this.showJsonModal.set(true);
     this.isExportDropdownOpen.set(false);
+    this.isImportDropdownOpen.set(false);
   }
 
   downloadJsonFile(): void {
@@ -1841,6 +1843,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.isReadOnly()) return;
     this.fileInput?.nativeElement.click();
     this.isExportDropdownOpen.set(false);
+    this.isImportDropdownOpen.set(false);
   }
 
   onFileSelected(event: Event): void {
