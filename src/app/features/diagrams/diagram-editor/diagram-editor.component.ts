@@ -389,6 +389,26 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
       this.collaborationService.joinRoom(diagramId);
 
+      this.diagramService.getActivities(diagramId).subscribe({
+        next: (acts) => {
+          if (acts && acts.length > 0) {
+            const mappedActs: SessionActivityEvent[] = acts.map((a: any) => ({
+              id: a.id,
+              timestamp: new Date(a.timestamp),
+              type: a.type as SessionActivityEvent['type'],
+              title: a.title,
+              description: a.description,
+              actor: a.actor,
+              icon: this.getActivityIcon(a.type),
+              badgeClass: a.badgeClass || this.getActivityBadgeClass(a.type),
+              metadata: a.metadata,
+            }));
+            this.sessionHistory.set(mappedActs);
+          }
+        },
+        error: () => {},
+      });
+
       setTimeout(() => {
         this.updateConnectionEndpoints();
       }, 50);
@@ -1113,17 +1133,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }));
   }
 
-  logSessionActivity(
-    type: SessionActivityEvent['type'],
-    title: string,
-    description: string,
-    actor?: string,
-    badgeClass?: string
-  ): void {
-    const user = this.authService.currentUser();
-    const resolvedActor = actor || (user ? `👤 ${user.fullName}` : '👤 Usuario');
-
-    const icons: Record<SessionActivityEvent['type'], string> = {
+  getActivityIcon(type: string): string {
+    const icons: Record<string, string> = {
       ai_mutation: 'heroSparkles',
       ai_chat: 'heroSparkles',
       create_node: 'heroPlus',
@@ -1135,8 +1146,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       import_file: 'heroArrowUpTray',
       export_file: 'heroArrowDownTray',
     };
+    return icons[type] || 'heroDocumentText';
+  }
 
-    const badgeColors: Record<SessionActivityEvent['type'], string> = {
+  getActivityBadgeClass(type: string): string {
+    const badgeColors: Record<string, string> = {
       ai_mutation: 'bg-purple-100 text-purple-800 border-purple-300',
       ai_chat: 'bg-indigo-100 text-indigo-800 border-indigo-300',
       create_node: 'bg-emerald-100 text-emerald-800 border-emerald-300',
@@ -1148,6 +1162,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       import_file: 'bg-teal-100 text-teal-800 border-teal-300',
       export_file: 'bg-blue-100 text-blue-800 border-blue-300',
     };
+    return badgeColors[type] || 'bg-slate-100 text-slate-700 border-slate-300';
+  }
+
+  logSessionActivity(
+    type: SessionActivityEvent['type'],
+    title: string,
+    description: string,
+    actor?: string,
+    badgeClass?: string
+  ): void {
+    const user = this.authService.currentUser();
+    const resolvedActor = actor || (user ? `👤 ${user.fullName}` : '👤 Usuario');
 
     const event: SessionActivityEvent = {
       id: 'act_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -1156,11 +1182,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       title,
       description,
       actor: resolvedActor,
-      icon: icons[type] || 'heroDocumentText',
-      badgeClass: badgeClass || badgeColors[type] || 'bg-slate-100 text-slate-700 border-slate-300',
+      icon: this.getActivityIcon(type),
+      badgeClass: badgeClass || this.getActivityBadgeClass(type),
     };
 
     this.sessionHistory.update((list) => [event, ...list]);
+
+    // Persistir en base de datos PostgreSQL
+    const diagId = this.currentDiagramId();
+    if (diagId) {
+      this.diagramService.logActivity(diagId, {
+        type: event.type,
+        title: event.title,
+        description: event.description,
+        actor: event.actor,
+        badgeClass: event.badgeClass,
+      }).subscribe({ error: () => {} });
+    }
   }
 
   downloadXmiFile(): void {
