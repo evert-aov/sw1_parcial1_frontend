@@ -50,7 +50,9 @@ f-flow .f-connector-connectable {
   border-radius: 0 !important;
 }
 
-/* Quitar círculo azul (drag handle) en el extremo de las conexiones */
+/* Quitar círculo (drag handle) en el extremo de las conexiones */
+f-flow circle,
+f-connection circle,
 f-flow .f-connection-drag-handle,
 f-flow circle[f-connection-drag-handle-end],
 f-flow circle[f-connection-drag-handle-start],
@@ -59,7 +61,7 @@ f-flow circle.f-connection-drag-handle {
   visibility: hidden !important;
   opacity: 0 !important;
   stroke: transparent !important;
-  fill: transparent !important;
+  fill: none !important;
   pointer-events: none !important;
 }
 

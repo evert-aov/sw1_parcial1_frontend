@@ -22,6 +22,14 @@ export class BmpExportService {
 
     try {
       // 1. Sanitizar elementos SVG del DOM para garantizar trazo limpio (sin relleno negro por defecto de SVG)
+      const allCircles = element.querySelectorAll<SVGCircleElement>('circle');
+      allCircles.forEach((circle) => {
+        circle.setAttribute('display', 'none');
+        circle.style.display = 'none';
+        circle.setAttribute('fill', 'none');
+        circle.style.fill = 'none';
+      });
+
       const allPaths = element.querySelectorAll<SVGPathElement>('path');
       allPaths.forEach((path) => {
         path.setAttribute('fill', 'none');
@@ -57,6 +65,17 @@ export class BmpExportService {
         pixelRatio: 2,
         cacheBust: true,
         filter: (domNode: HTMLElement) => {
+          // Filtrar círculos de conexión (drag handles temporales de Foblex)
+          const tag = domNode.tagName?.toLowerCase();
+          if (
+            tag === 'circle' ||
+            domNode.classList?.contains('f-connection-drag-handle') ||
+            domNode.hasAttribute?.('f-connection-drag-handle-start') ||
+            domNode.hasAttribute?.('f-connection-drag-handle-end')
+          ) {
+            return false;
+          }
+
           // Filtrar controles flotantes de UI (botones flotantes, cursores remotos temporales)
           if (domNode.classList && (
             domNode.classList.contains('pointer-events-none') ||

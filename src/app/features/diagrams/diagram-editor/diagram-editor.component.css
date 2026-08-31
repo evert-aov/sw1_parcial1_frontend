@@ -29,6 +29,16 @@
   border: 1px solid #121111 !important;
 }
 
+::ng-deep f-flow circle,
+::ng-deep f-flow f-connection circle,
+::ng-deep f-flow .f-connection-drag-handle {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  fill: none !important;
+  stroke: transparent !important;
+}
+
 ::ng-deep f-flow f-connection path,
 ::ng-deep f-flow f-connection-for-create path,
 ::ng-deep f-flow .f-connection path,
