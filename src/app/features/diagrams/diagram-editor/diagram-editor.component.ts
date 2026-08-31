@@ -64,6 +64,7 @@ import { CollaborationService, NodeLock } from '../../../core/services/collabora
 import { AiAssistantService } from '../../../core/services/ai-assistant.service';
 import { XmiService } from '../../../core/services/xmi.service';
 import { XmiClientParser } from '../../../core/services/xmi-client-parser';
+import { BmpExportService } from '../../../core/services/bmp-export.service';
 import {
   UmlRelationshipType,
   UmlLineStyle,
@@ -149,6 +150,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly collaborationService = inject(CollaborationService);
   readonly aiAssistantService = inject(AiAssistantService);
   readonly xmiService = inject(XmiService);
+  readonly bmpExportService = inject(BmpExportService);
   private readonly route = inject(ActivatedRoute);
 
   @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
@@ -1201,6 +1203,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         badgeClass: event.badgeClass,
       }).subscribe({ error: () => {} });
     }
+  }
+
+  downloadBmpFile(): void {
+    this.bmpExportService.exportToBmp(
+      this.nodes(),
+      this.connections(),
+      this.currentDiagramName(),
+    );
+    this.logSessionActivity('export_file', 'Exportación Imagen BMP', 'Diagrama exportado a imagen BMP (Enterprise Architect).');
   }
 
   downloadXmiFile(): void {

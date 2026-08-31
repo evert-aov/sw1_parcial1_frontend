@@ -8,6 +8,7 @@
     [saveSuccessMessage]="saveSuccessMessage()"
     [isReadOnly]="isReadOnly()"
     (saveDiagram)="saveToBackend()"
+    (exportBmp)="downloadBmpFile()"
     (exportXmi)="downloadXmiFile()"
     (exportJson)="downloadJsonFile()"
     (viewJson)="openExportModal()"

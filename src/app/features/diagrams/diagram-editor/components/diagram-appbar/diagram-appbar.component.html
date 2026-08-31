@@ -95,25 +95,35 @@
         </button>
 
         @if (isExportDropdownOpen()) {
-          <div class="absolute right-0 mt-1 w-48 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100">
-            <button
-              (click)="exportXmi.emit(); isExportDropdownOpen.set(false)"
-              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium">
-              <ng-icon name="heroDocumentText" class="text-sm text-blue-600"></ng-icon>
-              <span>Enterprise Architect (.xmi)</span>
-            </button>
-            <button
-              (click)="exportJson.emit(); isExportDropdownOpen.set(false)"
-              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium">
-              <ng-icon name="heroDocumentText" class="text-sm text-emerald-600"></ng-icon>
-              <span>Descargar AST (.json)</span>
-            </button>
-            <button
-              (click)="viewJson.emit(); isExportDropdownOpen.set(false)"
-              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium">
-              <ng-icon name="heroDocumentText" class="text-sm text-slate-600"></ng-icon>
-              <span>Ver JSON en Pantalla</span>
-            </button>
+          <div class="absolute right-0 mt-1 w-52 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100">
+            <div class="py-0.5">
+              <button
+                (click)="exportBmp.emit(); isExportDropdownOpen.set(false)"
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
+                <ng-icon name="heroPhoto" class="text-sm text-purple-600"></ng-icon>
+                <span>Imagen Bitmap (.bmp - EA)</span>
+              </button>
+              <button
+                (click)="exportXmi.emit(); isExportDropdownOpen.set(false)"
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
+                <ng-icon name="heroDocumentText" class="text-sm text-blue-600"></ng-icon>
+                <span>Enterprise Architect (.xmi)</span>
+              </button>
+            </div>
+            <div class="py-0.5">
+              <button
+                (click)="exportJson.emit(); isExportDropdownOpen.set(false)"
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
+                <ng-icon name="heroDocumentText" class="text-sm text-emerald-600"></ng-icon>
+                <span>Descargar AST (.json)</span>
+              </button>
+              <button
+                (click)="viewJson.emit(); isExportDropdownOpen.set(false)"
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
+                <ng-icon name="heroDocumentText" class="text-sm text-slate-600"></ng-icon>
+                <span>Ver JSON en Pantalla</span>
+              </button>
+            </div>
           </div>
         }
       </div>

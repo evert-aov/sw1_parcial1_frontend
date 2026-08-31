@@ -22,6 +22,7 @@ import {
   heroCloudArrowUp,
   heroEye,
   heroCheck,
+  heroPhoto,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
@@ -51,6 +52,7 @@ import { CollaborationService } from '../../../../../core/services/collaboration
       heroCloudArrowUp,
       heroEye,
       heroCheck,
+      heroPhoto,
     }),
   ],
   templateUrl: './diagram-appbar.component.html',
@@ -70,6 +72,7 @@ export class DiagramAppbarComponent {
 
   // Outputs
   readonly saveDiagram = output<void>();
+  readonly exportBmp = output<void>();
   readonly exportXmi = output<void>();
   readonly exportJson = output<void>();
   readonly viewJson = output<void>();
