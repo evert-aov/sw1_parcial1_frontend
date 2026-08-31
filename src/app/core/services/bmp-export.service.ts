@@ -21,7 +21,37 @@ export class BmpExportService {
     }
 
     try {
-      // 1. Renderizar el DOM exacto a un Canvas HTML5 a 2x de resolución
+      // 1. Sanitizar elementos SVG del DOM para garantizar trazo limpio (sin relleno negro por defecto de SVG)
+      const allPaths = element.querySelectorAll<SVGPathElement>('path');
+      allPaths.forEach((path) => {
+        path.setAttribute('fill', 'none');
+        path.style.fill = 'none';
+        if (!path.getAttribute('stroke') || path.getAttribute('stroke') === 'none') {
+          path.setAttribute('stroke', '#2A201B');
+        }
+      });
+
+      const allPolygons = element.querySelectorAll<SVGPolygonElement>('polygon');
+      allPolygons.forEach((poly) => {
+        const isFilled = poly.getAttribute('fill') === '#2A201B' || poly.classList.contains('fill-[#2A201B]');
+        if (isFilled) {
+          poly.setAttribute('fill', '#2A201B');
+          poly.style.fill = '#2A201B';
+        } else {
+          poly.setAttribute('fill', '#FFFFFF');
+          poly.style.fill = '#FFFFFF';
+        }
+        poly.setAttribute('stroke', '#2A201B');
+      });
+
+      const allPolylines = element.querySelectorAll<SVGPolylineElement>('polyline');
+      allPolylines.forEach((pline) => {
+        pline.setAttribute('fill', 'none');
+        pline.style.fill = 'none';
+        pline.setAttribute('stroke', '#2A201B');
+      });
+
+      // 2. Renderizar el DOM exacto a un Canvas HTML5 a 2x de resolución
       const canvas = await toCanvas(element, {
         backgroundColor: '#F9F7F5',
         pixelRatio: 2,

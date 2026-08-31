@@ -29,6 +29,16 @@
   border: 1px solid #121111 !important;
 }
 
+::ng-deep f-flow f-connection path,
+::ng-deep f-flow f-connection-for-create path,
+::ng-deep f-flow .f-connection path,
+::ng-deep f-flow path[f-connection-path],
+::ng-deep f-flow .f-connection-path {
+  fill: none !important;
+  stroke: #2A201B !important;
+  stroke-width: 1.5px !important;
+}
+
 ::ng-deep f-flow f-connection.uml-relation-realization path[f-connection-path],
 ::ng-deep f-flow f-connection-for-create.uml-relation-realization path[f-connection-path],
 ::ng-deep f-flow .uml-relation-realization path[f-connection-path],

@@ -253,20 +253,20 @@
 
                 <!-- Marcadores Visuales según el tipo de Relación UML 2.5 -->
                 @if (conn.type === 'generalization' || conn.type === 'realization') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="fill-white stroke-[#2A201B] stroke-2">
-                    <polygon points="0,0 16,8 0,16" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] stroke-2">
+                    <polygon points="0,0 16,8 0,16" fill="#FFFFFF" stroke="#2A201B" stroke-width="1.8" />
                   </svg>
                 } @else if (conn.type === 'composition') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="fill-[#2A201B] stroke-[#2A201B] stroke-2">
-                    <polygon points="0,8 8,3 16,8 8,13" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] stroke-2">
+                    <polygon points="0,8 8,3 16,8 8,13" fill="#2A201B" stroke="#2A201B" stroke-width="1.8" />
                   </svg>
                 } @else if (conn.type === 'aggregation') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="fill-white stroke-[#2A201B] stroke-2">
-                    <polygon points="0,8 8,3 16,8 8,13" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] stroke-2">
+                    <polygon points="0,8 8,3 16,8 8,13" fill="#FFFFFF" stroke="#2A201B" stroke-width="1.8" />
                   </svg>
                 } @else if (conn.type === 'dependency') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="fill-none stroke-[#2A201B] stroke-2">
-                    <polyline points="2,2 14,8 2,14" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] stroke-2">
+                    <polyline points="2,2 14,8 2,14" fill="none" stroke="#2A201B" stroke-width="1.8" />
                   </svg>
                 }
 

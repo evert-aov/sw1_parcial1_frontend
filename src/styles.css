@@ -73,6 +73,16 @@ f-flow input::-webkit-calendar-picker-indicator {
 }
 
 /* Estilos UML 2.5 para líneas de conexión */
+f-flow f-connection path,
+f-flow f-connection-for-create path,
+f-flow .f-connection path,
+f-flow path[f-connection-path],
+f-flow .f-connection-path {
+  fill: none !important;
+  stroke: #2A201B !important;
+  stroke-width: 1.5px !important;
+}
+
 f-flow f-connection.uml-relation-realization path[f-connection-path],
 f-flow f-connection-for-create.uml-relation-realization path[f-connection-path],
 f-flow .uml-relation-realization path[f-connection-path],
