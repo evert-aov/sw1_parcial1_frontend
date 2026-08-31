@@ -20,6 +20,40 @@ describe('BmpExportService', () => {
     alertSpy.mockRestore();
   });
 
+  it('debe codificar un ImageData en un ArrayBuffer BMP válido con encabezado BM', () => {
+    const width = 10;
+    const height = 10;
+    const dummyData = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < dummyData.length; i += 4) {
+      dummyData[i] = 255;     // R
+      dummyData[i + 1] = 0;   // G
+      dummyData[i + 2] = 0;   // B
+      dummyData[i + 3] = 255; // A
+    }
+
+    const mockImageData = {
+      width,
+      height,
+      data: dummyData,
+      colorSpace: 'srgb',
+    } as unknown as ImageData;
+
+    const buffer = service.convertImageDataToBmp(mockImageData);
+    expect(buffer).toBeInstanceOf(ArrayBuffer);
+
+    const view = new DataView(buffer);
+    // Firma 'BM'
+    expect(view.getUint8(0)).toBe(0x42);
+    expect(view.getUint8(1)).toBe(0x4d);
+    // Tamaño del header BITMAPINFOHEADER (40)
+    expect(view.getUint32(14, true)).toBe(40);
+    // Dimensiones
+    expect(view.getInt32(18, true)).toBe(10);
+    expect(view.getInt32(22, true)).toBe(10);
+    // Bits por pixel (24)
+    expect(view.getUint16(28, true)).toBe(24);
+  });
+
   it('debe generar y descargar un archivo BMP con nodos y conexiones', () => {
     const mockNodes: UmlClassNode[] = [
       {

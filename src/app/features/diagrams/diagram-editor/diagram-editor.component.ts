@@ -1205,13 +1205,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  downloadBmpFile(): void {
-    this.bmpExportService.exportToBmp(
-      this.nodes(),
-      this.connections(),
-      this.currentDiagramName(),
-    );
-    this.logSessionActivity('export_file', 'Exportación Imagen BMP', 'Diagrama exportado a imagen BMP (Enterprise Architect).');
+  async downloadBmpFile(): Promise<void> {
+    const containerEl = this.flowContainerRef?.nativeElement;
+    if (containerEl) {
+      await this.bmpExportService.exportElementToBmp(
+        containerEl,
+        this.currentDiagramName(),
+      );
+    } else {
+      this.bmpExportService.exportToBmp(
+        this.nodes(),
+        this.connections(),
+        this.currentDiagramName(),
+      );
+    }
+    this.logSessionActivity('export_file', 'Exportación Imagen BMP', 'Captura visual del diagrama exportada a formato BMP.');
   }
 
   downloadXmiFile(): void {

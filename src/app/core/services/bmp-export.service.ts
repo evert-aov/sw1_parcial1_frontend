@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { toCanvas } from 'html-to-image';
 import { UmlClassNode, UmlConnection } from '../models/diagram.model';
 
 @Injectable({
@@ -6,7 +7,67 @@ import { UmlClassNode, UmlConnection } from '../models/diagram.model';
 })
 export class BmpExportService {
   /**
-   * Exporta el diagrama UML a una imagen en formato Windows Bitmap (.bmp) estilo Enterprise Architect.
+   * Exporta una captura visual exacta del DOM del editor de diagramas a formato BMP (Windows Bitmap).
+   * @param element Elemento HTML del contenedor del lienzo (FlowContainer).
+   * @param diagramName Nombre del archivo generado.
+   */
+  async exportElementToBmp(
+    element: HTMLElement,
+    diagramName = 'diagrama-uml',
+  ): Promise<void> {
+    if (!element) {
+      alert('No se encontró el contenedor del lienzo para capturar.');
+      return;
+    }
+
+    try {
+      // 1. Renderizar el DOM exacto a un Canvas HTML5 a 2x de resolución
+      const canvas = await toCanvas(element, {
+        backgroundColor: '#F9F7F5',
+        pixelRatio: 2,
+        cacheBust: true,
+        filter: (domNode: HTMLElement) => {
+          // Filtrar controles flotantes de UI (botones flotantes, cursores remotos temporales)
+          if (domNode.classList && (
+            domNode.classList.contains('pointer-events-none') ||
+            (domNode.classList.contains('z-40') && domNode.tagName === 'BUTTON')
+          )) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      // 2. Extraer ImageData del Canvas
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('No se pudo obtener el contexto 2d del canvas.');
+      }
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      // 3. Codificar a binario BMP de 24 bits
+      const bmpBuffer = this.convertImageDataToBmp(imageData);
+
+      // 4. Descargar el archivo .bmp
+      const blob = new Blob([bmpBuffer], { type: 'image/bmp' });
+      const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `${cleanFileName || 'diagrama'}.bmp`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Error al capturar imagen BMP del editor:', err);
+      alert('Error al generar la captura BMP del diagrama.');
+    }
+  }
+
+  /**
+   * Exporta el diagrama UML a una imagen en formato Windows Bitmap (.bmp) mediante renderizado de fallback.
    * @param nodes Lista de nodos de clases UML.
    * @param connections Lista de conexiones UML.
    * @param diagramName Nombre del diagrama para el archivo de salida.
@@ -158,7 +219,6 @@ export class BmpExportService {
     const sCenter = { x: source.x + source.w / 2, y: source.y + source.h / 2 };
     const tCenter = { x: target.x + target.w / 2, y: target.y + target.h / 2 };
 
-    // Puntos de intersección en los bordes de los rectángulos
     const start = this.getRectIntersection(sCenter, tCenter, source);
     const end = this.getRectIntersection(tCenter, sCenter, target);
 
@@ -172,17 +232,13 @@ export class BmpExportService {
       ctx.setLineDash([]);
     }
 
-    // Trazo de línea segmentada o directa
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(end.x, end.y);
     ctx.stroke();
 
-    // Dibujar marcadores según tipo de relación UML 2.5
     ctx.setLineDash([]);
     this.drawRelationshipMarker(ctx, start, end, conn.type);
-
-    // Multiplicidades y Nombres de Relación
     this.drawMultiplicityAndLabels(ctx, start, end, conn);
 
     ctx.restore();
@@ -197,7 +253,6 @@ export class BmpExportService {
     const angle = Math.atan2(end.y - start.y, end.x - start.x);
 
     if (type === 'generalization' || type === 'realization') {
-      // Triángulo hueco en el destino (Herencia / Implementación)
       const arrowLength = 14;
       const arrowWidth = 9;
 
@@ -220,7 +275,6 @@ export class BmpExportService {
       ctx.fill();
       ctx.stroke();
     } else if (type === 'composition' || type === 'aggregation') {
-      // Rombo en el origen
       const diamondLen = 14;
       const diamondWidth = 7;
       const oppAngle = angle + Math.PI;
@@ -250,7 +304,6 @@ export class BmpExportService {
       ctx.fill();
       ctx.stroke();
     } else if (type === 'dependency') {
-      // Flecha abierta en el destino
       const arrowLength = 10;
       const arrowAngle = Math.PI / 6;
 
@@ -278,19 +331,16 @@ export class BmpExportService {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Multiplicidad Origen
     if (conn.sourceMultiplicity) {
       const pos = this.interpolatePoint(start, end, 0.18);
       this.drawBadge(ctx, pos.x, pos.y - 10, conn.sourceMultiplicity, '#0284C7', '#E0F2FE');
     }
 
-    // Nombre de la Relación (en el centro)
     if (conn.name) {
       const mid = this.interpolatePoint(start, end, 0.5);
       this.drawBadge(ctx, mid.x, mid.y - 12, conn.name, '#475569', '#F8FAFC');
     }
 
-    // Multiplicidad Destino
     if (conn.targetMultiplicity) {
       const pos = this.interpolatePoint(start, end, 0.82);
       this.drawBadge(ctx, pos.x, pos.y - 10, conn.targetMultiplicity, '#0284C7', '#E0F2FE');
@@ -335,13 +385,11 @@ export class BmpExportService {
   ): void {
     ctx.save();
 
-    // Sombra suave estilo Enterprise Architect
     ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
     ctx.shadowBlur = 8;
     ctx.shadowOffsetX = 3;
     ctx.shadowOffsetY = 3;
 
-    // Cuerpo de la tarjeta
     ctx.fillStyle = '#FFFFFF';
     ctx.strokeStyle = '#6B5A52';
     ctx.lineWidth = 1.5;
@@ -350,24 +398,20 @@ export class BmpExportService {
     ctx.fill();
     ctx.stroke();
 
-    // Desactivar sombra para el contenido interno
     ctx.shadowColor = 'transparent';
 
-    // 1. Cabecera (Header de la clase)
     const headerHeight = 34;
     ctx.fillStyle = '#6B5A52';
     ctx.beginPath();
     ctx.roundRect(x, y, w, headerHeight, [6, 6, 0, 0]);
     ctx.fill();
 
-    // Título de la clase (Nombre centrado)
     ctx.font = 'bold 12px sans-serif';
     ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(node.name, x + w / 2, y + headerHeight / 2);
 
-    // 2. Compartimento de Atributos
     let currentY = y + headerHeight + 12;
     ctx.font = '10.5px monospace';
     ctx.textAlign = 'left';
@@ -390,7 +434,6 @@ export class BmpExportService {
       }
     }
 
-    // 3. Línea divisoria de Métodos
     currentY += 4;
     ctx.strokeStyle = '#E2E8F0';
     ctx.lineWidth = 1;
@@ -399,7 +442,6 @@ export class BmpExportService {
     ctx.lineTo(x + w, currentY);
     ctx.stroke();
 
-    // 4. Compartimento de Métodos
     currentY += 12;
     const methods = node.methods || [];
     if (methods.length === 0) {
@@ -436,12 +478,10 @@ export class BmpExportService {
     const slope = dy / (dx || 0.0001);
 
     if (Math.abs(dy * hw) < Math.abs(dx * hh)) {
-      // Intersección en borde izquierdo o derecho
       const ix = dx > 0 ? rCenter.x + hw : rCenter.x - hw;
       const iy = rCenter.y + (ix - rCenter.x) * slope;
       return { x: ix, y: iy };
     } else {
-      // Intersección en borde superior o inferior
       const iy = dy > 0 ? rCenter.y + hh : rCenter.y - hh;
       const ix = rCenter.x + (iy - rCenter.y) / slope;
       return { x: ix, y: iy };
@@ -462,7 +502,7 @@ export class BmpExportService {
   /**
    * Codifica un objeto ImageData (RGBA) a un ArrayBuffer con la estructura binaria de un archivo BMP de 24 bits.
    */
-  private convertImageDataToBmp(imageData: ImageData): ArrayBuffer {
+  convertImageDataToBmp(imageData: ImageData): ArrayBuffer {
     const width = imageData.width;
     const height = imageData.height;
     const data = imageData.data;
@@ -513,10 +553,10 @@ export class BmpExportService {
         const b = data[srcIdx + 2];
         const a = data[srcIdx + 3] / 255;
 
-        // Mezcla con fondo blanco en caso de transparencia
-        const blendedR = Math.round(r * a + 255 * (1 - a));
-        const blendedG = Math.round(g * a + 255 * (1 - a));
-        const blendedB = Math.round(b * a + 255 * (1 - a));
+        // Mezcla con fondo claro en caso de transparencia
+        const blendedR = Math.round(r * a + 249 * (1 - a));
+        const blendedG = Math.round(g * a + 247 * (1 - a));
+        const blendedB = Math.round(b * a + 245 * (1 - a));
 
         const destIdx = destRowOffset + x * 3;
         uint8View[destIdx] = blendedB; // B
