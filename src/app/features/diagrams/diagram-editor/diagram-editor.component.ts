@@ -19,6 +19,7 @@ import {
   FCanvasComponent,
   FZoomDirective,
   FCanvasChangeEvent,
+  FTriggerEvent,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
@@ -174,6 +175,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   selectedNodeId = signal<string | null>(null);
   defaultLineStyle = signal<UmlLineStyle>('segment');
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Control de movimiento del lienzo (deshabilita el paneo con clic primario al crear relaciones)
+  canvasMoveTrigger = (event: FTriggerEvent): boolean => {
+    if (this.selectedRelationType() !== null) {
+      if (event instanceof MouseEvent && (event.buttons === 4 || event.button === 1)) {
+        return true;
+      }
+      return false;
+    }
+    return true;
+  };
 
   // Paneles laterales
   isToolboxOpen = signal<boolean>(true);
@@ -748,6 +760,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (!activeRel) return;
 
     event.stopPropagation();
+    event.preventDefault();
     const currentSource = this.selectedSourceNodeId();
 
     if (currentSource === null) {
@@ -798,6 +811,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const relType = this.selectedRelationType() || 'association';
     const baseSourceId = event.fOutputId.replace(/_(top|bottom|left|right)$/, '');
     const baseTargetId = event.fInputId.replace(/_(top|bottom|left|right)$/, '');
+
+    if (baseSourceId === baseTargetId) return;
 
     if (this.isNodeLockedByOther(baseSourceId) || this.isNodeLockedByOther(baseTargetId)) {
       alert('🔒 No se pueden crear conexiones hacia/desde una tabla que está siendo editada.');

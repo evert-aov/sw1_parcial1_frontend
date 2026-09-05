@@ -227,6 +227,7 @@
       <!-- FOBLEX FLOW INTERACTIVE CANVAS -->
       <f-flow
         fDraggable
+        [fCanvasMoveTrigger]="canvasMoveTrigger"
         (fLoaded)="onFlowLoaded()"
         (fCreateConnection)="onConnectionCreated($event)"
         (fReassignConnection)="onConnectionReassigned($event)"
@@ -311,6 +312,13 @@
             }
           </ng-container>
 
+          <!-- Previsualización de conexión al arrastrar -->
+          <f-connection-for-create
+            [fType]="defaultLineStyle()"
+            [fBehavior]="'floating'"
+            [class]="'uml-relation-' + (selectedRelationType() || 'association')">
+          </f-connection-for-create>
+
           <!-- NODOS DE CLASE UML -->
           <ng-container ngProjectAs="[fNodes]">
             @for (node of nodes(); track node.id) {
@@ -361,6 +369,8 @@
                     fConnector
                     fConnectorType="source-target"
                     [fConnectorId]="node.id"
+                    [fConnectorSelfConnectable]="false"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
                     [ngClass]="{
                       'pointer-events-auto cursor-crosshair': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                       'pointer-events-none': selectedRelationType() === null || isNodeLockedByOther(node.id)
@@ -372,7 +382,11 @@
                   <!-- 4 PUNTOS DE REFERENCIA GUÍA -->
                   <div
                     fConnector
+                    fConnectorType="source-target"
                     [fConnectorId]="node.id + '_top'"
+                    [fConnectorSelfConnectable]="false"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    (click)="onTableClick(node.id, $event)"
                     title="Conectar por arriba"
                     [ngClass]="{
                       'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -383,7 +397,11 @@
 
                   <div
                     fConnector
+                    fConnectorType="source-target"
                     [fConnectorId]="node.id + '_right'"
+                    [fConnectorSelfConnectable]="false"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    (click)="onTableClick(node.id, $event)"
                     title="Conectar por la derecha"
                     [ngClass]="{
                       'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -394,7 +412,11 @@
 
                   <div
                     fConnector
+                    fConnectorType="source-target"
                     [fConnectorId]="node.id + '_bottom'"
+                    [fConnectorSelfConnectable]="false"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    (click)="onTableClick(node.id, $event)"
                     title="Conectar por abajo"
                     [ngClass]="{
                       'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -405,7 +427,11 @@
 
                   <div
                     fConnector
+                    fConnectorType="source-target"
                     [fConnectorId]="node.id + '_left'"
+                    [fConnectorSelfConnectable]="false"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    (click)="onTableClick(node.id, $event)"
                     title="Conectar por la izquierda"
                     [ngClass]="{
                       'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),

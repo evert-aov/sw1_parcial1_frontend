@@ -24,9 +24,16 @@
   box-sizing: border-box !important;
 }
 
+::ng-deep f-flow .uml-connector-point.uml-connector-inactive {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 ::ng-deep f-flow .uml-connector-point.uml-connector-active {
   background-color: #6628d9 !important;
   border: 1px solid #121111 !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 ::ng-deep f-flow circle,
