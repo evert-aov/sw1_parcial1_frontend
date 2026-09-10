@@ -28,6 +28,7 @@ import {
   heroCircleStack,
   heroAdjustmentsHorizontal,
   heroDevicePhoneMobile,
+  heroExclamationTriangle,
 } from '@ng-icons/heroicons/outline';
 import {
   CodeGeneratorService,
@@ -59,6 +60,7 @@ import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.
       heroCircleStack,
       heroAdjustmentsHorizontal,
       heroDevicePhoneMobile,
+      heroExclamationTriangle,
     }),
   ],
   templateUrl: './spring-boot-modal.component.html',
@@ -134,10 +136,18 @@ export class SpringBootModalComponent implements OnInit {
   }
 
   generatePreview(): void {
+    const diagId = this.diagramId();
+    if (!diagId) {
+      this.files.set([]);
+      this.selectedFile.set(null);
+      this.isGenerating.set(false);
+      return;
+    }
+
     this.isGenerating.set(true);
 
     const payload: GenerateCodeRequest = {
-      diagramId: this.diagramId() || undefined,
+      diagramId: diagId,
       platform: this.selectedPlatform(),
       packageName: this.packageName(),
       artifactId: this.artifactId(),
@@ -152,11 +162,7 @@ export class SpringBootModalComponent implements OnInit {
       connections: this.connections(),
     };
 
-    const request$ = this.diagramId()
-      ? this.codegenService.previewFromDiagramId(this.diagramId()!, payload)
-      : this.codegenService.preview(payload);
-
-    request$.subscribe({
+    this.codegenService.previewFromDiagramId(diagId, payload).subscribe({
       next: (res) => {
         this.files.set(res.files || []);
         if (res.files && res.files.length > 0) {
@@ -187,10 +193,16 @@ export class SpringBootModalComponent implements OnInit {
   }
 
   downloadZip(): void {
+    const diagId = this.diagramId();
+    if (!diagId) {
+      alert('Debes guardar el diagrama antes de descargar el proyecto.');
+      return;
+    }
+
     this.isDownloading.set(true);
 
     const payload: GenerateCodeRequest = {
-      diagramId: this.diagramId() || undefined,
+      diagramId: diagId,
       platform: this.selectedPlatform(),
       packageName: this.packageName(),
       artifactId: this.artifactId(),
@@ -205,11 +217,7 @@ export class SpringBootModalComponent implements OnInit {
       connections: this.connections(),
     };
 
-    const request$ = this.diagramId()
-      ? this.codegenService.downloadZipFromDiagramId(this.diagramId()!, payload)
-      : this.codegenService.downloadZip(payload);
-
-    request$.subscribe({
+    this.codegenService.downloadZipFromDiagramId(diagId, payload).subscribe({
       next: (blob: Blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');

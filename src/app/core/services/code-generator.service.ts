@@ -46,21 +46,6 @@ export class CodeGeneratorService {
   readonly isGenerating = signal<boolean>(false);
   readonly previewData = signal<CodeGenerationPreviewResponse | null>(null);
 
-  preview(payload: GenerateCodeRequest): Observable<CodeGenerationPreviewResponse> {
-    this.isGenerating.set(true);
-    return this.http.post<ApiResponse<CodeGenerationPreviewResponse>>(`${this.apiUrl}/preview-ast`, payload).pipe(
-      map((res) => res.data || (res as any)),
-      tap((data) => {
-        this.previewData.set(data);
-        this.isGenerating.set(false);
-      }),
-      catchError((err) => {
-        this.isGenerating.set(false);
-        return throwError(() => err);
-      }),
-    );
-  }
-
   previewFromDiagramId(diagramId: string, payload: GenerateCodeRequest): Observable<CodeGenerationPreviewResponse> {
     this.isGenerating.set(true);
     return this.http.post<ApiResponse<CodeGenerationPreviewResponse>>(`${this.apiUrl}/preview/${diagramId}`, payload).pipe(
@@ -74,12 +59,6 @@ export class CodeGeneratorService {
         return throwError(() => err);
       }),
     );
-  }
-
-  downloadZip(payload: GenerateCodeRequest): Observable<Blob> {
-    return this.http.post(`${this.apiUrl}/download-ast`, payload, {
-      responseType: 'blob',
-    });
   }
 
   downloadZipFromDiagramId(diagramId: string, payload: GenerateCodeRequest): Observable<Blob> {

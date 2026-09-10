@@ -51,6 +51,14 @@
         </div>
       </div>
 
+      @if (!diagramId()) {
+        <div class="px-4 py-2.5 bg-amber-100 border-b border-amber-300 text-amber-900 flex items-center gap-2 font-mono text-[11px] shrink-0">
+          <ng-icon name="heroExclamationTriangle" class="text-sm text-amber-700 shrink-0"></ng-icon>
+          <span class="font-bold">⚠️ Atención:</span>
+          <span>Debes guardar el diagrama en el servidor antes de generar la arquitectura y descargar el proyecto.</span>
+        </div>
+      }
+
       <!-- 2. Parámetros de Configuración del Proyecto (Compacto) -->
       <div class="p-3 bg-[#EAEAEA] border-b border-[#C0C0C0] shrink-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 font-mono text-[11px]">
         <div>
@@ -251,15 +259,15 @@
         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
           <button
             (click)="generatePreview()"
-            [disabled]="isGenerating()"
-            class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-mono text-xs font-bold rounded cursor-pointer transition-colors flex items-center gap-1.5">
+            [disabled]="isGenerating() || !diagramId()"
+            class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-mono text-xs font-bold rounded cursor-pointer transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
             <ng-icon name="heroArrowPath" class="text-xs" [ngClass]="{ 'animate-spin': isGenerating() }"></ng-icon>
             <span>Actualizar</span>
           </button>
           
           <button
             (click)="downloadZip()"
-            [disabled]="isDownloading() || files().length === 0"
+            [disabled]="isDownloading() || files().length === 0 || !diagramId()"
             class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             <ng-icon name="heroArrowDownTray" class="text-sm text-emerald-200"></ng-icon>
             <span>
