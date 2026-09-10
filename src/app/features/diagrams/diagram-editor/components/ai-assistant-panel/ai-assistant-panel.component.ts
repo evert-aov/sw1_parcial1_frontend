@@ -203,7 +203,12 @@ export class AiAssistantPanelComponent implements OnDestroy {
     this.isAiProcessing.set(false);
 
     const summary = res.changesSummary || res.message || 'Diagrama actualizado por Copilot IA.';
-    const isClarification = res.action === 'clarification';
+    const isClarification = res.action === 'clarification' || res.action === 'clarification_required';
+    const isError = !res.success && !isClarification;
+
+    let status: 'success' | 'clarification' | 'error' = 'success';
+    if (isClarification) status = 'clarification';
+    else if (isError) status = 'error';
 
     this.aiChatMessages.update((msgs) => [
       ...msgs,
@@ -212,12 +217,12 @@ export class AiAssistantPanelComponent implements OnDestroy {
         sender: 'assistant',
         text: res.message || (isClarification ? 'Por favor aclara la solicitud.' : '¡Diagrama modelado con éxito!'),
         changesSummary: summary,
-        status: isClarification ? 'clarification' : 'success',
+        status,
         timestamp: new Date(),
       },
     ]);
 
-    if (!isClarification && res.nodes && res.nodes.length > 0) {
+    if (res.success && res.nodes && res.nodes.length > 0) {
       this.applyMutation.emit({
         nodes: res.nodes,
         connections: res.connections || [],
@@ -226,14 +231,16 @@ export class AiAssistantPanelComponent implements OnDestroy {
       });
     }
 
-    this.logActivity.emit({
-      type: 'ai_mutation',
-      title: sourceTag,
-      description: summary,
-      actor: '🤖 Copilot IA',
-      icon: 'heroSparkles',
-      badgeClass: 'bg-purple-100 text-purple-800 border-purple-300',
-    });
+    if (res.success) {
+      this.logActivity.emit({
+        type: 'ai_mutation',
+        title: sourceTag,
+        description: summary,
+        actor: '🤖 Copilot IA',
+        icon: 'heroSparkles',
+        badgeClass: 'bg-purple-100 text-purple-800 border-purple-300',
+      });
+    }
 
     this.scrollToBottom();
   }
