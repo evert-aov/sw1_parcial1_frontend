@@ -37,6 +37,26 @@ import {
 } from '../../../../../core/services/code-generator.service';
 import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
 import { TranslatePipe } from '../../../../../core/i18n';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import hljs from 'highlight.js/lib/core';
+import java from 'highlight.js/lib/languages/java';
+import dart from 'highlight.js/lib/languages/dart';
+import sql from 'highlight.js/lib/languages/sql';
+import yaml from 'highlight.js/lib/languages/yaml';
+import dockerfile from 'highlight.js/lib/languages/dockerfile';
+import json from 'highlight.js/lib/languages/json';
+import xml from 'highlight.js/lib/languages/xml';
+import properties from 'highlight.js/lib/languages/properties';
+
+hljs.registerLanguage('java', java);
+hljs.registerLanguage('dart', dart);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('yaml', yaml);
+hljs.registerLanguage('yml', yaml);
+hljs.registerLanguage('dockerfile', dockerfile);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('properties', properties);
 
 @Component({
   standalone: true,
@@ -68,6 +88,7 @@ import { TranslatePipe } from '../../../../../core/i18n';
 })
 export class SpringBootModalComponent implements OnInit {
   private readonly codegenService = inject(CodeGeneratorService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly isOpen = input<boolean>(false);
   readonly diagramId = input<string | null>(null);
@@ -121,6 +142,69 @@ export class SpringBootModalComponent implements OnInit {
   readonly totalRelations = computed(() => {
     return this.connections().length;
   });
+
+  readonly highlightedCode = computed<SafeHtml>(() => {
+    const file = this.selectedFile();
+    if (!file || !file.content) return '';
+
+    const rawCode = file.content;
+    const lang = this.detectLanguage(file);
+
+    try {
+      if (lang && hljs.getLanguage(lang)) {
+        const result = hljs.highlight(rawCode, { language: lang, ignoreIllegals: true });
+        return this.sanitizer.bypassSecurityTrustHtml(result.value);
+      }
+      return this.sanitizer.bypassSecurityTrustHtml(this.escapeHtml(rawCode));
+    } catch {
+      return this.sanitizer.bypassSecurityTrustHtml(this.escapeHtml(rawCode));
+    }
+  });
+
+  readonly lineNumbers = computed<number[]>(() => {
+    const file = this.selectedFile();
+    if (!file || !file.content) return [];
+    const count = file.content.split('\n').length;
+    return Array.from({ length: count }, (_, i) => i + 1);
+  });
+
+  readonly detectedLanguage = computed<string>(() => {
+    const file = this.selectedFile();
+    if (!file) return '';
+    return this.detectLanguage(file);
+  });
+
+  private detectLanguage(file: GeneratedFile): string {
+    if (file.language) {
+      const l = file.language.toLowerCase();
+      if (l === 'dart') return 'dart';
+      if (l === 'java') return 'java';
+      if (l === 'sql') return 'sql';
+      if (l === 'yaml' || l === 'yml') return 'yaml';
+      if (l === 'json') return 'json';
+      if (l === 'xml') return 'xml';
+      if (l === 'docker' || l === 'dockerfile') return 'dockerfile';
+    }
+    const name = (file.filename || file.path).toLowerCase();
+    if (name.endsWith('.java')) return 'java';
+    if (name.endsWith('.dart')) return 'dart';
+    if (name.endsWith('.sql')) return 'sql';
+    if (name.endsWith('.yml') || name.endsWith('.yaml')) return 'yaml';
+    if (name.endsWith('.json')) return 'json';
+    if (name.endsWith('.xml')) return 'xml';
+    if (name.endsWith('.properties')) return 'properties';
+    if (name.includes('dockerfile')) return 'dockerfile';
+    return 'plaintext';
+  }
+
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
   ngOnInit(): void {
     if (this.diagramName()) {
