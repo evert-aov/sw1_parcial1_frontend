@@ -125,7 +125,7 @@
                   @if (project.userRole === 'OWNER' || project.userRole === 'EDITOR') {
                     <button
                       (click)="openEditModal(project, $event)"
-                      title="Editar Propiedades del Proyecto"
+                      [title]="'projects.editModal.title' | translate"
                       class="text-slate-500 hover:text-[#2A201B] hover:bg-black/5 p-1 rounded transition-colors cursor-pointer">
                       <ng-icon name="heroPencilSquare" class="text-sm"></ng-icon>
                     </button>
@@ -135,7 +135,7 @@
                   @if (project.userRole === 'OWNER') {
                     <button
                       (click)="onDeleteProject(project, $event)"
-                      title="Eliminar Proyecto"
+                      [title]="'projects.deleteTooltip' | translate"
                       class="text-slate-400 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors cursor-pointer">
                       <ng-icon name="heroTrash" class="text-sm"></ng-icon>
                     </button>
@@ -144,20 +144,20 @@
               </div>
 
               <p class="text-xs text-[#6B5A52] mt-2 line-clamp-2 min-h-[32px]">
-                {{ project.description || 'Sin descripción detallada.' }}
+                {{ project.description || ('projects.noDescription' | translate) }}
               </p>
             </div>
 
             <!-- Metadatos y Paquete -->
             <div class="p-4 space-y-2 text-xs">
               <div class="flex items-center justify-between text-[11px] font-mono text-[#6B5A52]">
-                <span>Paquete:</span>
+                <span>{{ 'projects.package' | translate }}:</span>
                 <span class="text-[#2A201B] font-semibold truncate max-w-[170px]" [title]="project.basePackage">
                   {{ project.basePackage }}
                 </span>
               </div>
               <div class="flex items-center justify-between text-[11px] font-mono text-[#6B5A52]">
-                <span>Creado por:</span>
+                <span>{{ 'projects.createdBy' | translate }}:</span>
                 <span class="text-[#2A201B] truncate max-w-[170px]" [title]="project.creatorName">
                   {{ project.creatorName }}
                 </span>
@@ -171,12 +171,12 @@
                 (click)="openMembersModal(project, $event)"
                 class="flex items-center gap-1 text-[11px] font-mono text-[#6B5A52] hover:text-[#2A201B] font-medium hover:underline cursor-pointer">
                 <ng-icon name="heroUserGroup" class="text-xs"></ng-icon>
-                <span>{{ project.memberCount }} miembro(s)</span>
+                <span>{{ 'projects.membersCount' | translate:{ count: project.memberCount } }}</span>
               </button>
 
               <!-- Botón Abrir Canvas -->
               <div class="flex items-center gap-1 font-mono text-[11px] font-bold text-[#6B5A52] group-hover:text-[#2A201B]">
-                <span>Abrir Lienzo</span>
+                <span>{{ 'projects.openCanvas' | translate }}</span>
                 <ng-icon name="heroArrowTopRightOnSquare" class="text-xs"></ng-icon>
               </div>
             </div>
@@ -197,7 +197,7 @@
         <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-5 py-3 flex items-center justify-between">
           <h3 class="text-sm font-bold text-[#2A201B] tracking-tight uppercase flex items-center gap-2">
             <ng-icon name="heroFolderPlus" class="text-base text-[#6B5A52]"></ng-icon>
-            Nuevo Proyecto de Modelado
+            {{ 'projects.createModal.title' | translate }}
           </h3>
           <button (click)="closeCreateModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
         </div>
@@ -206,7 +206,7 @@
         <form [formGroup]="createForm" (ngSubmit)="onCreateSubmit()" class="p-6 space-y-4 text-xs">
           
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Nombre del Proyecto *</label>
+            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">{{ 'projects.createModal.nameLabel' | translate }} *</label>
             <input
               type="text"
               formControlName="name"
@@ -216,17 +216,17 @@
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Descripción</label>
+            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">{{ 'projects.createModal.descLabel' | translate }}</label>
             <textarea
               formControlName="description"
               rows="2"
-              placeholder="Breve descripción del alcance del modelo..."
+              [placeholder]="'projects.createModal.descPlaceholder' | translate"
               class="w-full px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner"></textarea>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div class="sm:col-span-2">
-              <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Paquete Base Java</label>
+              <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">{{ 'projects.createModal.basePackageLabel' | translate }}</label>
               <input
                 type="text"
                 formControlName="basePackage"
@@ -262,13 +262,13 @@
               type="button"
               (click)="closeCreateModal()"
               class="px-3 py-2 bg-white hover:bg-slate-100 text-[#2A201B] font-mono text-xs font-medium border border-[#6B5A52] cursor-pointer">
-              Cancelar
+              {{ 'common.cancel' | translate }}
             </button>
             <button
               type="submit"
               [disabled]="projectService.isLoading()"
               class="px-4 py-2 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold uppercase border border-[#2A201B] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] cursor-pointer disabled:opacity-50">
-              Crear Proyecto
+              {{ 'projects.createModal.submit' | translate }}
             </button>
           </div>
 
@@ -287,7 +287,7 @@
         <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-5 py-3 flex items-center justify-between">
           <h3 class="text-sm font-bold text-[#2A201B] tracking-tight uppercase flex items-center gap-2">
             <ng-icon name="heroPencilSquare" class="text-base text-[#6B5A52]"></ng-icon>
-            Editar Proyecto: {{ selectedProjectForEdit()?.name }}
+            {{ 'projects.editModal.title' | translate }} {{ selectedProjectForEdit()?.name }}
           </h3>
           <button (click)="closeEditModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
         </div>
@@ -296,7 +296,7 @@
         <form [formGroup]="editForm" (ngSubmit)="onEditSubmit()" class="p-6 space-y-4 text-xs">
           
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Nombre del Proyecto *</label>
+            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">{{ 'projects.editModal.nameLabel' | translate }}</label>
             <input
               type="text"
               formControlName="name"
@@ -306,17 +306,17 @@
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Descripción</label>
+            <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">{{ 'projects.editModal.descLabel' | translate }}</label>
             <textarea
               formControlName="description"
               rows="2"
-              placeholder="Breve descripción del alcance del modelo..."
+              [placeholder]="'projects.createModal.descPlaceholder' | translate"
               class="w-full px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner"></textarea>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div class="sm:col-span-2">
-              <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">Paquete Base Java</label>
+              <label class="block text-[11px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">{{ 'projects.editModal.basePackageLabel' | translate }}</label>
               <input
                 type="text"
                 formControlName="basePackage"
@@ -352,13 +352,13 @@
               type="button"
               (click)="closeEditModal()"
               class="px-3.5 py-2 bg-white hover:bg-slate-100 text-[#2A201B] font-mono text-xs font-medium border border-[#6B5A52] cursor-pointer">
-              Cancelar
+              {{ 'common.cancel' | translate }}
             </button>
             <button
               type="submit"
               [disabled]="projectService.isLoading()"
               class="px-4 py-2 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold uppercase border border-[#2A201B] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] cursor-pointer disabled:opacity-50">
-              Guardar Cambios
+              {{ 'projects.editModal.submit' | translate }}
             </button>
           </div>
 
@@ -378,7 +378,7 @@
           <div>
             <h3 class="text-sm font-bold text-[#2A201B] tracking-tight uppercase flex items-center gap-2">
               <ng-icon name="heroUserGroup" class="text-base text-[#6B5A52]"></ng-icon>
-              Miembros del Proyecto
+              {{ 'projects.membersModal.title' | translate }}
             </h3>
             <p class="text-[10.5px] font-mono text-[#6B5A52] truncate max-w-sm">{{ selectedProjectForMembers()?.name }}</p>
           </div>
@@ -390,7 +390,7 @@
           <!-- Formulario Agregar Miembro (Solo si es OWNER) -->
           @if (selectedProjectForMembers()?.userRole === 'OWNER') {
             <form [formGroup]="addMemberForm" (ngSubmit)="onAddMemberSubmit()" class="p-3 bg-white border border-[#6B5A52] space-y-3">
-              <h4 class="font-bold text-[#2A201B] text-xs">Invitar Nuevo Colaborador</h4>
+              <h4 class="font-bold text-[#2A201B] text-xs">{{ 'projects.membersModal.inviteTitle' | translate }}</h4>
               <div class="flex items-center gap-2">
                 <input
                   type="email"
@@ -407,7 +407,7 @@
                 <button
                   type="submit"
                   class="px-3 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold text-xs border border-[#2A201B] cursor-pointer">
-                  Invitar
+                  {{ 'projects.membersModal.inviteBtn' | translate }}
                 </button>
               </div>
             </form>
@@ -415,7 +415,7 @@
 
           <!-- Lista de Miembros Actuales -->
           <div>
-            <h4 class="font-bold font-mono text-[#2A201B] uppercase tracking-wider text-[11px] mb-2">Miembros Activos ({{ selectedProjectForMembers()?.members?.length || 0 }})</h4>
+            <h4 class="font-bold font-mono text-[#2A201B] uppercase tracking-wider text-[11px] mb-2">{{ 'projects.membersModal.activeMembers' | translate }} ({{ selectedProjectForMembers()?.members?.length || 0 }})</h4>
             <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
               @for (member of selectedProjectForMembers()?.members; track member.userId) {
                 <div class="flex items-center justify-between p-2 bg-white/70 border border-[#6B5A52]/40 text-xs">
@@ -443,7 +443,7 @@
 
                       <button
                         (click)="onRemoveMember(member.userId)"
-                        title="Remover Miembro"
+                        [title]="'projects.membersModal.removeTooltip' | translate"
                         class="text-red-500 hover:text-red-700 p-1 cursor-pointer">
                         <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                       </button>
@@ -463,7 +463,7 @@
             <button
               (click)="closeMembersModal()"
               class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold border border-[#2A201B] cursor-pointer">
-              Cerrar
+              {{ 'common.close' | translate }}
             </button>
           </div>
 

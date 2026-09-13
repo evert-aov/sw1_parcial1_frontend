@@ -33,7 +33,7 @@
           </div>
           <button
             (click)="isToolboxOpen.set(false)"
-            title="Ocultar Toolbox (Ctrl+B)"
+            [title]="'toolbar.hideToolbox' | translate"
             class="text-slate-500 hover:text-slate-900 hover:bg-slate-300 rounded px-1.5 py-0.5 cursor-pointer text-xs flex items-center gap-0.5 transition-colors">
             <ng-icon name="heroChevronLeft" class="text-xs"></ng-icon>
           </button>
@@ -49,8 +49,8 @@
               {{ 'toolbar.relationships.title' | translate }}
             </span>
             @if (selectedRelationType()) {
-              <span (click)="$event.stopPropagation(); setPointerMode()" title="Deseleccionar relación" class="text-[10px] text-slate-700 hover:text-red-600 font-normal cursor-pointer">
-                (deseleccionar)
+              <span (click)="$event.stopPropagation(); setPointerMode()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-slate-700 hover:text-red-600 font-normal cursor-pointer">
+                {{ 'toolbar.relationships.deselect' | translate }}
               </span>
             }
           </div>
@@ -66,7 +66,7 @@
                 <ng-icon name="heroCursorArrowRays" class="text-sm text-slate-700 shrink-0"></ng-icon>
                 <div>
                   <div class="text-xs font-medium text-slate-800">{{ 'toolbar.pointer' | translate }}</div>
-                  <div class="text-[9.5px] text-slate-500">Mueve clases libremente</div>
+                  <div class="text-[9.5px] text-slate-500">{{ 'toolbar.pointerDesc' | translate }}</div>
                 </div>
               </button>
 
@@ -103,7 +103,7 @@
             class="bg-gradient-to-b from-[#EFEFEF] to-[#DCDCDC] px-2.5 py-1.5 font-bold text-[#1E293B] flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] hover:from-[#F5F5F5] hover:to-[#E2E2E2]">
             <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
               <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-600"></ng-icon>
-              Line Style (Routing)
+              {{ 'toolbar.lineStylesTitle' | translate }}
             </span>
           </div>
 
@@ -130,16 +130,16 @@
         <!-- Panel 3: Zoom y Vistas Rápidas -->
         <div class="p-2 border-b border-[#C8C8C8] bg-[#F5F5F5]">
           <div class="flex items-center justify-between gap-1">
-            <button (click)="zoomIn()" title="Acercar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+            <button (click)="zoomIn()" [title]="'toolbar.canvas.zoomIn' | translate" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
               <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
             </button>
-            <button (click)="zoomOut()" title="Alejar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+            <button (click)="zoomOut()" [title]="'toolbar.canvas.zoomOut' | translate" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
               <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
             </button>
             <button (click)="resetView()" title="1:1" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 text-[10px] font-mono leading-none cursor-pointer">
               1:1
             </button>
-            <button (click)="fitView()" title="Ajustar" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
+            <button (click)="fitView()" [title]="'toolbar.canvas.fitView' | translate" class="p-1 bg-white hover:bg-slate-200 border border-slate-300 rounded flex-1 flex items-center justify-center cursor-pointer">
               <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
             </button>
           </div>
@@ -150,10 +150,10 @@
           <button
             (click)="addClass()"
             [disabled]="isReadOnly()"
-            [title]="isReadOnly() ? 'Modo de solo lectura' : 'Agregar nueva clase'"
+            [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('toolbar.addClassTooltip' | translate)"
             class="w-full py-2 bg-[#6B5A52] hover:bg-[#52443E] active:translate-y-0.5 text-white font-mono text-xs font-bold tracking-wider uppercase border border-[#2A201B] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
             <ng-icon name="heroPlus" class="text-xs"></ng-icon>
-            <span>Nueva Clase UML</span>
+            <span>{{ 'toolbar.newClassBtn' | translate }}</span>
           </button>
         </div>
 
@@ -171,7 +171,7 @@
       @if (!isToolboxOpen()) {
         <button
           (click)="isToolboxOpen.set(true)"
-          title="Mostrar Barra de Herramientas UML (Ctrl+B)"
+          [title]="'toolbar.showToolbox' | translate"
           class="absolute top-3.5 left-3.5 z-40 bg-white/95 hover:bg-white text-slate-800 border border-slate-300 shadow-md rounded-md px-2.5 py-1.5 flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 backdrop-blur-xs">
           <ng-icon name="heroBars3" class="text-sm text-[#6B5A52]"></ng-icon>
           <span class="text-[11px] text-[#2A201B]">Toolbox</span>
@@ -182,10 +182,10 @@
       @if (!isAiPanelOpen()) {
         <button
           (click)="isAiPanelOpen.set(true)"
-          title="Abrir Asistente IA Copilot (Ctrl+I)"
+          [title]="'toolbar.openAiTooltip' | translate"
           class="absolute top-3.5 right-3.5 z-40 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white shadow-lg rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105">
           <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
-          <span>Copilot IA</span>
+          <span>{{ 'toolbar.aiCopilot' | translate }}</span>
           <ng-icon name="heroBars3CenterLeft" class="text-xs opacity-80"></ng-icon>
         </button>
       }
@@ -196,13 +196,13 @@
           <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
           <span>
             @if (selectedSourceNodeId() === null) {
-              Paso 1: Haz clic en la <strong>clase origen</strong> para la relación <strong>{{ selectedRelationType() }}</strong>
+              {{ 'toolbar.step1' | translate }} <strong>{{ selectedRelationType() }}</strong>
             } @else {
-              Paso 2: Ahora haz clic en la <strong>clase destino</strong> (o arrastra entre puertos)
+              {{ 'toolbar.step2' | translate }}
             }
           </span>
           <button (click)="setPointerMode()" class="ml-2 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] cursor-pointer">
-            Cancelar (Esc)
+            {{ 'toolbar.cancelEsc' | translate }}
           </button>
         </div>
       }
@@ -527,7 +527,7 @@
           class="w-2 h-2 rounded-full"
           [ngClass]="collaborationService.isConnected() ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'"></span>
         <span [ngClass]="collaborationService.isConnected() ? 'text-emerald-300' : 'text-red-400'">
-          {{ collaborationService.isConnected() ? 'Conectado (Yjs WebSockets)' : 'Desconectado' }}
+          {{ collaborationService.isConnected() ? ('editor.statusbar.connected' | translate) : ('editor.statusbar.disconnected' | translate) }}
         </span>
       </div>
 
@@ -535,8 +535,8 @@
 
       <!-- Resumen Nodos / Conexiones -->
       <span class="text-slate-400">
-        Clases: <strong class="text-slate-200">{{ nodes().length }}</strong> |
-        Relaciones: <strong class="text-slate-200">{{ connections().length }}</strong>
+        {{ 'editor.statusbar.classes' | translate }}: <strong class="text-slate-200">{{ nodes().length }}</strong> |
+        {{ 'editor.statusbar.relations' | translate }}: <strong class="text-slate-200">{{ connections().length }}</strong>
       </span>
     </div>
 
@@ -571,7 +571,7 @@
       <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
         
         <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
-          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">Propiedades de la Clase UML</h3>
+          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">{{ 'editor.nodeModal.title' | translate }}</h3>
           <button (click)="closeEditNodeModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
         </div>
 
@@ -579,7 +579,7 @@
           
           <!-- Nombre de la Clase -->
           <div>
-            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Nombre de la Clase</label>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.nodeModal.className' | translate }}</label>
             <input
               type="text"
               [(ngModel)]="editingNode()!.name"
@@ -591,11 +591,11 @@
           <!-- Atributos con Tipos Estrictamente Predefinidos -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">Atributos (-)</label>
+              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">{{ 'editor.nodeModal.attributes' | translate }}</label>
               <button
                 (click)="addAttributeToEditingNode()"
                 class="px-2.5 py-0.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] cursor-pointer">
-                + Agregar Atributo
+                {{ 'editor.nodeModal.addAttribute' | translate }}
               </button>
             </div>
             <div class="space-y-1.5">
@@ -620,7 +620,7 @@
 
                   <button
                     (click)="removeAttributeFromEditingNode($index)"
-                    title="Eliminar atributo"
+                    [title]="'editor.nodeModal.deleteAttribute' | translate"
                     class="text-red-600 hover:text-red-800 p-1 font-bold text-sm cursor-pointer">
                     &times;
                   </button>
@@ -632,11 +632,11 @@
           <!-- Métodos con Retorno Estrictamente Predefinido -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">Operaciones / Métodos (+)</label>
+              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">{{ 'editor.nodeModal.operations' | translate }}</label>
               <button
                 (click)="addMethodToEditingNode()"
                 class="px-2.5 py-0.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] cursor-pointer">
-                + Agregar Operación
+                {{ 'editor.nodeModal.addOperation' | translate }}
               </button>
             </div>
             <div class="space-y-1.5">
@@ -668,7 +668,7 @@
 
                   <button
                     (click)="removeMethodFromEditingNode($index)"
-                    title="Eliminar método"
+                    [title]="'editor.nodeModal.deleteOperation' | translate"
                     class="text-red-600 hover:text-red-800 p-1 font-bold text-sm cursor-pointer">
                     &times;
                   </button>
@@ -683,12 +683,12 @@
           <button
             (click)="closeEditNodeModal()"
             class="px-3.5 py-1.5 bg-white hover:bg-slate-100 border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
-            Cancelar
+            {{ 'common.cancel' | translate }}
           </button>
           <button
             (click)="saveEditedNode()"
             class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold uppercase border border-[#2A201B] cursor-pointer">
-            Guardar Cambios
+            {{ 'editor.nodeModal.save' | translate }}
           </button>
         </div>
 
@@ -702,14 +702,14 @@
       <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
         
         <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
-          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">Propiedades de la Relación</h3>
+          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">{{ 'editor.connModal.title' | translate }}</h3>
           <button (click)="closeEditConnModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
         </div>
 
         <div class="p-4 space-y-3.5">
 
           <div>
-            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Tipo de Relación</label>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.type' | translate }}</label>
             <select
               [(ngModel)]="editingConnection()!.type"
               class="w-full px-2 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
@@ -720,7 +720,7 @@
           </div>
 
           <div>
-            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Estilo de Línea (Routing)</label>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.lineStyle' | translate }}</label>
             <select
               [(ngModel)]="editingConnection()!.lineStyle"
               class="w-full px-2 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
@@ -732,7 +732,7 @@
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Multiplicidad Origen</label>
+              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.sourceMult' | translate }}</label>
               <input
                 type="text"
                 [(ngModel)]="editingConnection()!.sourceMultiplicity"
@@ -742,7 +742,7 @@
               />
             </div>
             <div>
-              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Multiplicidad Destino</label>
+              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.targetMult' | translate }}</label>
               <input
                 type="text"
                 [(ngModel)]="editingConnection()!.targetMultiplicity"
@@ -754,7 +754,7 @@
           </div>
 
           <div>
-            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">Etiqueta / Verbo</label>
+            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.name' | translate }}</label>
             <input
               type="text"
               [(ngModel)]="editingConnection()!.name"
@@ -770,18 +770,18 @@
             (click)="removeConnection(editingConnection()!.id); closeEditConnModal()"
             class="text-red-600 hover:text-red-800 font-mono font-bold cursor-pointer flex items-center gap-1">
             <ng-icon name="heroTrash" class="text-xs"></ng-icon>
-            <span>Eliminar Relación</span>
+            <span>{{ 'editor.connModal.delete' | translate }}</span>
           </button>
           <div class="flex gap-2">
             <button
               (click)="closeEditConnModal()"
               class="px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
-              Cancelar
+              {{ 'common.cancel' | translate }}
             </button>
             <button
               (click)="saveEditedConnection()"
               class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold uppercase border border-[#2A201B] cursor-pointer">
-              Aceptar
+              {{ 'common.save' | translate }}
             </button>
           </div>
         </div>
@@ -816,7 +816,7 @@
           <div class="flex items-center gap-2">
             <ng-icon name="heroDocumentText" class="text-slate-300 text-base"></ng-icon>
             <h2 class="text-xs font-bold">
-              {{ jsonModalMode() === 'export' ? 'Estructura JSON del Diagrama de Clases' : 'Importar Diagrama de Clases desde JSON' }}
+              {{ jsonModalMode() === 'export' ? ('editor.jsonModal.exportTitle' | translate) : ('editor.jsonModal.importTitle' | translate) }}
             </h2>
           </div>
           <button (click)="showJsonModal.set(false)" class="text-slate-400 hover:text-white p-1 cursor-pointer">
@@ -827,22 +827,22 @@
         <div class="p-4 flex-1 flex flex-col gap-2">
           <p class="text-xs text-slate-600">
             {{ jsonModalMode() === 'export'
-               ? 'Estructura JSON para transferir las clases y relaciones con Enterprise Architect o tu backend.'
-               : 'Pega el JSON estructurado para cargar las clases en el lienzo:' }}
+               ? ('editor.jsonModal.exportDesc' | translate)
+               : ('editor.jsonModal.importDesc' | translate) }}
           </p>
 
           <textarea
             [(ngModel)]="jsonContent"
             rows="14"
             class="w-full bg-slate-950 text-emerald-400 font-mono text-xs p-3 rounded border border-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
-            placeholder="Pegar JSON aquí..."></textarea>
+            [placeholder]="'editor.jsonModal.placeholder' | translate"></textarea>
         </div>
 
         <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
           <button
             (click)="showJsonModal.set(false)"
             class="px-3 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded font-medium cursor-pointer">
-            Cerrar
+            {{ 'common.close' | translate }}
           </button>
 
           @if (jsonModalMode() === 'export') {
@@ -850,14 +850,14 @@
               (click)="copyJsonToClipboard()"
               class="px-3.5 py-1 text-xs bg-slate-800 hover:bg-slate-900 text-white rounded font-medium shadow-xs flex items-center gap-1.5 border border-slate-700 cursor-pointer">
               <ng-icon name="heroClipboardDocument" class="text-sm"></ng-icon>
-              Copiar al portapapeles
+              {{ 'editor.jsonModal.copy' | translate }}
             </button>
           } @else {
             <button
               (click)="applyImportedJson()"
               class="px-3.5 py-1 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded font-medium shadow-xs flex items-center gap-1.5 cursor-pointer">
               <ng-icon name="heroCheck" class="text-sm"></ng-icon>
-              Aplicar Diagrama
+              {{ 'editor.jsonModal.apply' | translate }}
             </button>
           }
         </div>

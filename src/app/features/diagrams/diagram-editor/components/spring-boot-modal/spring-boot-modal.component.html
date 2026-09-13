@@ -14,7 +14,7 @@
               <span class="px-2 py-0.2 bg-emerald-600 text-white text-[9.5px] rounded-full font-mono font-bold">Clean Architecture</span>
             </h3>
             <p class="text-[10px] text-slate-200 font-mono">
-              {{ totalClasses() }} clases UML • {{ totalRelations() }} relaciones • {{ files().length }} archivos generados
+              {{ 'codeGen.stats' | translate:{ classes: totalClasses(), relations: totalRelations(), files: files().length } }}
             </p>
           </div>
         </div>
@@ -26,7 +26,7 @@
             [ngClass]="selectedPlatform() === 'all' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-300 hover:text-white hover:bg-white/5'"
             class="px-2.5 py-1 rounded transition-all cursor-pointer flex items-center gap-1.5">
             <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
-            <span>Fullstack (Ambos)</span>
+            <span>{{ 'codeGen.platformAll' | translate }}</span>
           </button>
           <button
             (click)="setPlatform('spring-boot')"
@@ -54,15 +54,15 @@
       @if (!diagramId()) {
         <div class="px-4 py-2.5 bg-amber-100 border-b border-amber-300 text-amber-900 flex items-center gap-2 font-mono text-[11px] shrink-0">
           <ng-icon name="heroExclamationTriangle" class="text-sm text-amber-700 shrink-0"></ng-icon>
-          <span class="font-bold">⚠️ Atención:</span>
-          <span>Debes guardar el diagrama en el servidor antes de generar la arquitectura y descargar el proyecto.</span>
+          <span class="font-bold">{{ 'codeGen.warningTitle' | translate }}</span>
+          <span>{{ 'codeGen.warningDesc' | translate }}</span>
         </div>
       }
 
       <!-- 2. Parámetros de Configuración del Proyecto (Compacto) -->
       <div class="p-3 bg-[#EAEAEA] border-b border-[#C0C0C0] shrink-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 font-mono text-[11px]">
         <div>
-          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Package Base:</label>
+          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">{{ 'codeGen.packageBase' | translate }}:</label>
           <input
             [(ngModel)]="packageName"
             (change)="generatePreview()"
@@ -70,7 +70,7 @@
             class="w-full px-2 py-1 bg-white border border-[#6B5A52] text-[#2A201B] rounded focus:outline-none focus:ring-1 focus:ring-emerald-600" />
         </div>
         <div>
-          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Artifact / App ID:</label>
+          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">{{ 'codeGen.artifactId' | translate }}:</label>
           <input
             [(ngModel)]="artifactId"
             (change)="generatePreview()"
@@ -78,7 +78,7 @@
             class="w-full px-2 py-1 bg-white border border-[#6B5A52] text-[#2A201B] rounded focus:outline-none focus:ring-1 focus:ring-emerald-600" />
         </div>
         <div>
-          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Puerto Server & BD:</label>
+          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">{{ 'codeGen.serverDbPort' | translate }}:</label>
           <div class="flex gap-1.5">
             <input
               [(ngModel)]="serverPort"
@@ -95,7 +95,7 @@
           </div>
         </div>
         <div>
-          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">Conexión Móvil USB:</label>
+          <label class="text-slate-600 font-bold block mb-0.5 text-[10px]">{{ 'codeGen.usbConnection' | translate }}:</label>
           <div class="px-2 py-1 bg-slate-200 border border-slate-300 rounded text-[9.5px] text-slate-700 font-mono truncate">
             <code>adb reverse tcp:{{ serverPort() }} tcp:{{ serverPort() }}</code>
           </div>
@@ -108,7 +108,7 @@
           (click)="activeCategory.set('all')"
           [ngClass]="activeCategory() === 'all' ? 'bg-[#6B5A52] text-white font-bold' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Todos ({{ files().length }})
+          {{ 'codeGen.filterAll' | translate }} ({{ files().length }})
         </button>
 
         @if (selectedPlatform() === 'all') {
@@ -132,43 +132,43 @@
           (click)="activeCategory.set('entity')"
           [ngClass]="activeCategory() === 'entity' ? 'bg-emerald-700 text-white font-bold' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Entidades / Domain
+          {{ 'codeGen.categories.entity' | translate }}
         </button>
         <button
           (click)="activeCategory.set('repository')"
           [ngClass]="activeCategory() === 'repository' ? 'bg-blue-700 text-white font-bold' : 'bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Repositorios & DataSources
+          {{ 'codeGen.categories.repository' | translate }}
         </button>
         <button
           (click)="activeCategory.set('dto')"
           [ngClass]="activeCategory() === 'dto' ? 'bg-purple-700 text-white font-bold' : 'bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          DTOs & Data Models
+          {{ 'codeGen.categories.dto' | translate }}
         </button>
         <button
           (click)="activeCategory.set('service')"
           [ngClass]="activeCategory() === 'service' ? 'bg-indigo-700 text-white font-bold' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Servicios & UseCases
+          {{ 'codeGen.categories.service' | translate }}
         </button>
         <button
           (click)="activeCategory.set('controller')"
           [ngClass]="activeCategory() === 'controller' ? 'bg-rose-700 text-white font-bold' : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Controllers & BLoC / UI
+          {{ 'codeGen.categories.controller' | translate }}
         </button>
         <button
           (click)="activeCategory.set('migration')"
           [ngClass]="activeCategory() === 'migration' ? 'bg-amber-700 text-white font-bold' : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Flyway SQL (DDL)
+          {{ 'codeGen.categories.migration' | translate }}
         </button>
         <button
           (click)="activeCategory.set('docker')"
           [ngClass]="activeCategory() === 'docker' ? 'bg-sky-700 text-white font-bold' : 'bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
-          Docker Compose
+          {{ 'codeGen.categories.docker' | translate }}
         </button>
       </div>
 
@@ -178,14 +178,14 @@
         <!-- Columna Izquierda: Lista de Archivos -->
         <div class="w-80 bg-[#FAFAFA] border-r border-[#C0C0C0] overflow-y-auto flex flex-col shrink-0">
           <div class="p-2 border-b border-slate-200 bg-slate-100 flex items-center justify-between font-mono text-[10px] text-slate-500">
-            <span>EXPLORADOR ({{ selectedPlatform().toUpperCase() }})</span>
-            <span>{{ filteredFiles().length }} archivo(s)</span>
+            <span>{{ 'codeGen.fileExplorer' | translate }} ({{ selectedPlatform().toUpperCase() }})</span>
+            <span>{{ 'codeGen.filesCount' | translate:{ count: filteredFiles().length } }}</span>
           </div>
 
           @if (isGenerating()) {
             <div class="p-8 text-center text-slate-500 font-mono flex flex-col items-center gap-2">
               <span class="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
-              <span>Compilando AST a {{ selectedPlatform() === 'all' ? 'Spring Boot y Flutter' : selectedPlatform() }}...</span>
+              <span>{{ 'codeGen.compiling' | translate:{ target: (selectedPlatform() === 'all' ? 'Spring Boot & Flutter' : selectedPlatform()) } }}</span>
             </div>
           } @else {
             <div class="divide-y divide-slate-100">
@@ -247,11 +247,11 @@
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span>
             @if (selectedPlatform() === 'all') {
-              Solución Fullstack lista: Spring Boot (backend/) + Flutter Clean Architecture (mobile_flutter/)
+              {{ 'codeGen.readyStatus.all' | translate }}
             } @else if (selectedPlatform() === 'flutter') {
-              Flutter App lista con BLoC, Dio, GetIt y consumo local vía USB / 10.0.2.2
+              {{ 'codeGen.readyStatus.flutter' | translate }}
             } @else {
-              Spring Boot microservicio listo con PostgreSQL 16 y Flyway en puerto {{ serverPort() }}
+              {{ 'codeGen.readyStatus.springBoot' | translate:{ port: serverPort() } }}
             }
           </span>
         </div>
@@ -262,7 +262,7 @@
             [disabled]="isGenerating() || !diagramId()"
             class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-mono text-xs font-bold rounded cursor-pointer transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
             <ng-icon name="heroArrowPath" class="text-xs" [ngClass]="{ 'animate-spin': isGenerating() }"></ng-icon>
-            <span>Actualizar</span>
+            <span>{{ 'codeGen.refresh' | translate }}</span>
           </button>
           
           <button
@@ -271,7 +271,7 @@
             class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             <ng-icon name="heroArrowDownTray" class="text-sm text-emerald-200"></ng-icon>
             <span>
-              {{ isDownloading() ? 'Empaquetando ZIP...' : (selectedPlatform() === 'all' ? 'Descargar Solución Fullstack (.zip)' : 'Descargar ' + selectedPlatform() + ' (.zip)') }}
+              {{ isDownloading() ? ('codeGen.generatingZip' | translate) : (selectedPlatform() === 'all' ? ('codeGen.downloadFullstack' | translate) : ('codeGen.downloadZip' | translate)) }}
             </span>
           </button>
         </div>

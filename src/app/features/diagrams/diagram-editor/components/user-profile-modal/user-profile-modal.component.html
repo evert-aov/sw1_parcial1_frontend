@@ -41,20 +41,20 @@
               type="text"
               [ngModel]="editFullName()"
               (ngModelChange)="editFullName.set($event)"
-              placeholder="Ingresa tu nombre completo"
+              [placeholder]="'profile.fullNamePlaceholder' | translate"
               class="w-full px-3 py-1.5 bg-white border border-[#6B5A52] text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
             />
           </div>
 
           <div>
             <label class="block font-mono font-bold text-[#2A201B] uppercase text-[11px] mb-1">
-              Nueva Contraseña <span class="text-[#6B5A52] font-normal lowercase">(opcional)</span>
+              {{ 'profile.newPassword' | translate }} <span class="text-[#6B5A52] font-normal lowercase">{{ 'profile.optional' | translate }}</span>
             </label>
             <input
               type="password"
               [ngModel]="editPassword()"
               (ngModelChange)="editPassword.set($event)"
-              placeholder="Dejar en blanco para conservar la actual"
+              [placeholder]="'profile.passwordPlaceholder' | translate"
               class="w-full px-3 py-1.5 bg-white border border-[#6B5A52] text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
             />
           </div>
@@ -63,14 +63,14 @@
         <!-- Metadatos de la Cuenta -->
         <div class="pt-2 text-[11px] font-mono text-[#6B5A52] space-y-1.5">
           <div class="flex justify-between items-center py-1 border-b border-[#6B5A52]/20">
-            <span class="text-[#6B5A52] font-bold">Estado de la Cuenta:</span>
+            <span class="text-[#6B5A52] font-bold">{{ 'profile.accountStatus' | translate }}</span>
             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-              ✓ Activo
+              ✓ {{ 'profile.statusActive' | translate }}
             </span>
           </div>
           <div class="flex justify-between items-center py-1 border-b border-[#6B5A52]/20">
-            <span class="text-[#6B5A52] font-bold">Fecha de Registro:</span>
-            <span class="text-[#2A201B]">{{ (authService.currentUser()?.createdAt | date:'medium') || 'Reciente' }}</span>
+            <span class="text-[#6B5A52] font-bold">{{ 'profile.memberSince' | translate }}</span>
+            <span class="text-[#2A201B]">{{ (authService.currentUser()?.createdAt | date:'medium') || ('profile.recent' | translate) }}</span>
           </div>
         </div>
 
@@ -79,10 +79,10 @@
           <button
             (click)="refreshProfile()"
             [disabled]="isRefreshing() || isSaving()"
-            title="Sincronizar datos"
+            [title]="'profile.syncTooltip' | translate"
             class="px-2.5 py-1.5 bg-[#EAEAEA] hover:bg-slate-200 text-slate-800 font-mono text-[11px] font-bold border border-[#6B5A52] cursor-pointer flex items-center gap-1 disabled:opacity-50">
             <span [ngClass]="{ 'animate-spin': isRefreshing() }">🔄</span>
-            <span>{{ isRefreshing() ? ('common.loading' | translate) : 'Refrescar' }}</span>
+            <span>{{ isRefreshing() ? ('common.loading' | translate) : ('profile.refresh' | translate) }}</span>
           </button>
 
           <div class="flex items-center gap-2">
