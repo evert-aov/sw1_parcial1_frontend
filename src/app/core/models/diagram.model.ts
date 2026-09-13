@@ -9,6 +9,36 @@ export type UmlRelationshipType =
 
 export type UmlLineStyle = 'segment' | 'straight' | 'bezier' | 'adaptive-curve';
 
+export interface UmlRelationTypeItem {
+  id: UmlRelationshipType;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+export interface UmlLineStyleItem {
+  id: UmlLineStyle;
+  label: string;
+  shortcut?: string;
+}
+
+export const UML_RELATION_TYPES: UmlRelationTypeItem[] = [
+  { id: 'association', label: 'Association', icon: '───', description: 'Relación estructural simple entre dos clases' },
+  { id: 'generalization', label: 'Generalization', icon: '─▷', description: 'Herencia: la subclase hereda de la superclase' },
+  { id: 'realization', label: 'Realization', icon: '┈▷', description: 'Implementación de una interfaz' },
+  { id: 'composition', label: 'Composition', icon: '◆──', description: 'Pertenencia fuerte del todo a las partes' },
+  { id: 'aggregation', label: 'Aggregation', icon: '◇──', description: 'Pertenencia débil o contenedor independiente' },
+  { id: 'dependency', label: 'Dependency', icon: '┈>', description: 'Uso temporal o dependencia débil' },
+  { id: 'association_class', label: 'Association Class', icon: '─*─┄[C]', description: 'Relación muchos a muchos con clase intermedia' },
+];
+
+export const UML_LINE_STYLES: UmlLineStyleItem[] = [
+  { id: 'segment', label: 'Custom Line (EA Default / Segmentos)', shortcut: 'Ctrl+Shift+C' },
+  { id: 'straight', label: 'Direct (Directa / Recta)', shortcut: 'Ctrl+Shift+D' },
+  { id: 'bezier', label: 'Bezier (Curva Suave)' },
+  { id: 'adaptive-curve', label: 'Orthogonal - Rounded (Curva Adaptativa)' },
+];
+
 export interface UmlAttribute {
   name: string;
   type: string;

@@ -75,9 +75,12 @@ import {
   UmlConnection,
   SaveDiagramAstRequest,
   SessionActivityEvent,
+  UML_RELATION_TYPES,
+  UML_LINE_STYLES,
 } from '../../../core/models/diagram.model';
 
 import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
+import { DiagramToolboxComponent } from './components/diagram-toolbox/diagram-toolbox.component';
 import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
 import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
@@ -101,6 +104,7 @@ export interface UmlDiagramProject {
     FFlowModule,
     NgIconComponent,
     DiagramAppbarComponent,
+    DiagramToolboxComponent,
     AiAssistantPanelComponent,
     UserProfileModalComponent,
     SpringBootModalComponent,
@@ -224,28 +228,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     'Double', 'BigDecimal', 'LocalDate', 'LocalDateTime', 'List<Object>', 'Object'
   ];
 
-  // Lista de relaciones del Toolbox
-  readonly relationTypes: { id: UmlRelationshipType; label: string; icon: string; description: string }[] = [
-    { id: 'association', label: 'Association', icon: '───', description: 'Relación estructural simple entre dos clases' },
-    { id: 'generalization', label: 'Generalization', icon: '─▷', description: 'Herencia: la subclase hereda de la superclase' },
-    { id: 'realization', label: 'Realization', icon: '┈▷', description: 'Implementación de una interfaz' },
-    { id: 'composition', label: 'Composition', icon: '◆──', description: 'Pertenencia fuerte del todo a las partes' },
-    { id: 'aggregation', label: 'Aggregation', icon: '◇──', description: 'Pertenencia débil o contenedor independiente' },
-    { id: 'dependency', label: 'Dependency', icon: '┈>', description: 'Uso temporal o dependencia débil' },
-    { id: 'association_class', label: 'Association Class', icon: '─*─┄[C]', description: 'Relación muchos a muchos con clase intermedia' },
-  ];
+  // Lista de relaciones (reutilizadas en modal de conexión)
+  readonly relationTypes = UML_RELATION_TYPES;
 
   // Estilos de línea Enterprise Architect
-  readonly lineStyles: { id: UmlLineStyle; label: string; shortcut?: string }[] = [
-    { id: 'segment', label: 'Custom Line (EA Default / Segmentos)', shortcut: 'Ctrl+Shift+C' },
-    { id: 'straight', label: 'Direct (Directa / Recta)', shortcut: 'Ctrl+Shift+D' },
-    { id: 'bezier', label: 'Bezier (Curva Suave)' },
-    { id: 'adaptive-curve', label: 'Orthogonal - Rounded (Curva Adaptativa)' },
-  ];
-
-  // Acordeones del toolbox
-  isRelationshipsOpen = signal<boolean>(true);
-  isLineStylesOpen = signal<boolean>(true);
+  readonly lineStyles = UML_LINE_STYLES;
 
   // Modales de edición
   isEditNodeModalOpen = signal<boolean>(false);
