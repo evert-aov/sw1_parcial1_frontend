@@ -95,32 +95,32 @@
         </button>
 
         @if (isExportDropdownOpen()) {
-          <div class="absolute right-0 mt-1 w-56 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100">
+          <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100 dark:divide-slate-700">
             <div class="py-0.5">
               <button
                 (click)="exportBmp.emit(); isExportDropdownOpen.set(false)"
-                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
-                <ng-icon name="heroPhoto" class="text-sm text-purple-600"></ng-icon>
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
+                <ng-icon name="heroPhoto" class="text-sm text-purple-600 dark:text-purple-400"></ng-icon>
                 <span>{{ 'appbar.exportBmp' | translate }}</span>
               </button>
               <button
                 (click)="exportXmi.emit(); isExportDropdownOpen.set(false)"
-                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
-                <ng-icon name="heroDocumentText" class="text-sm text-blue-600"></ng-icon>
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
+                <ng-icon name="heroDocumentText" class="text-sm text-blue-600 dark:text-blue-400"></ng-icon>
                 <span>{{ 'appbar.exportXmi' | translate }}</span>
               </button>
             </div>
             <div class="py-0.5">
               <button
                 (click)="exportJson.emit(); isExportDropdownOpen.set(false)"
-                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
-                <ng-icon name="heroDocumentText" class="text-sm text-emerald-600"></ng-icon>
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
+                <ng-icon name="heroDocumentText" class="text-sm text-emerald-600 dark:text-emerald-400"></ng-icon>
                 <span>{{ 'appbar.exportJson' | translate }}</span>
               </button>
               <button
                 (click)="viewJson.emit(); isExportDropdownOpen.set(false)"
-                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
-                <ng-icon name="heroDocumentText" class="text-sm text-slate-600"></ng-icon>
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
+                <ng-icon name="heroDocumentText" class="text-sm text-slate-600 dark:text-slate-400"></ng-icon>
                 <span>JSON</span>
               </button>
             </div>
@@ -139,17 +139,17 @@
         </button>
 
         @if (isImportDropdownOpen()) {
-          <div class="absolute right-0 mt-1 w-56 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100">
+          <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-100">
             <button
               (click)="triggerFileInput()"
-              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-amber-700">
+              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-amber-700 dark:text-amber-400">
               <ng-icon name="heroArrowUpTray" class="text-sm"></ng-icon>
               <span>{{ 'appbar.importXmi' | translate }}</span>
             </button>
             <button
               (click)="openImportJson.emit(); isImportDropdownOpen.set(false)"
-              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-              <ng-icon name="heroDocumentText" class="text-sm text-slate-500"></ng-icon>
+              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-slate-700 dark:text-slate-300">
+              <ng-icon name="heroDocumentText" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
               <span>JSON</span>
             </button>
           </div>
@@ -165,6 +165,9 @@
         <ng-icon name="heroBolt" class="text-sm text-amber-300"></ng-icon>
         <span>⚡ {{ 'appbar.generateCode' | translate }}</span>
       </button>
+
+      <!-- Selector de Tema (Claro / Oscuro) -->
+      <app-theme-toggle [variant]="'dark'" />
 
       <!-- Selector de Idioma (Español / English) -->
       <app-language-selector [theme]="'dark'" />

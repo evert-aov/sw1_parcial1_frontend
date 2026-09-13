@@ -1,4 +1,4 @@
-<div class="h-screen w-screen flex flex-col bg-[#F9F7F5] select-none overflow-hidden font-sans">
+<div class="h-screen w-screen flex flex-col bg-[#F9F7F5] dark:bg-[#0F1115] select-none overflow-hidden font-sans transition-colors duration-200">
 
   <!-- 1. [TOPBAR] REFACTORIZADO EN COMPONENTE SEPARADO -->
   <app-diagram-appbar
@@ -50,9 +50,9 @@
         <button
           (click)="isToolboxOpen.set(true)"
           [title]="'toolbar.showToolbox' | translate"
-          class="absolute top-3.5 left-3.5 z-40 bg-white/95 hover:bg-white text-slate-800 border border-slate-300 shadow-md rounded-md px-2.5 py-1.5 flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 backdrop-blur-xs">
-          <ng-icon name="heroBars3" class="text-sm text-[#6B5A52]"></ng-icon>
-          <span class="text-[11px] text-[#2A201B]">Toolbox</span>
+          class="absolute top-3.5 left-3.5 z-40 bg-white/95 hover:bg-white dark:bg-[#181B22]/95 dark:hover:bg-[#1E232E] text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-[#383F4C] shadow-md rounded-md px-2.5 py-1.5 flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 backdrop-blur-xs">
+          <ng-icon name="heroBars3" class="text-sm text-[#6B5A52] dark:text-amber-400"></ng-icon>
+          <span class="text-[11px] text-[#2A201B] dark:text-slate-200">Toolbox</span>
         </button>
       }
 
@@ -132,20 +132,20 @@
 
                 <!-- Marcadores Visuales según el tipo de Relación UML 2.5 -->
                 @if (conn.type === 'generalization' || conn.type === 'realization') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] stroke-2">
-                    <polygon points="0,0 16,8 0,16" fill="#FFFFFF" stroke="#2A201B" stroke-width="1.8" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] dark:stroke-[#94A3B8] stroke-2">
+                    <polygon points="0,0 16,8 0,16" class="fill-white dark:fill-[#1A1D24] stroke-[#2A201B] dark:stroke-[#94A3B8]" stroke-width="1.8" />
                   </svg>
                 } @else if (conn.type === 'composition') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] stroke-2">
-                    <polygon points="0,8 8,3 16,8 8,13" fill="#2A201B" stroke="#2A201B" stroke-width="1.8" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] dark:stroke-[#94A3B8] stroke-2">
+                    <polygon points="0,8 8,3 16,8 8,13" class="fill-[#2A201B] dark:fill-[#94A3B8] stroke-[#2A201B] dark:stroke-[#94A3B8]" stroke-width="1.8" />
                   </svg>
                 } @else if (conn.type === 'aggregation') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] stroke-2">
-                    <polygon points="0,8 8,3 16,8 8,13" fill="#FFFFFF" stroke="#2A201B" stroke-width="1.8" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] dark:stroke-[#94A3B8] stroke-2">
+                    <polygon points="0,8 8,3 16,8 8,13" class="fill-white dark:fill-[#1A1D24] stroke-[#2A201B] dark:stroke-[#94A3B8]" stroke-width="1.8" />
                   </svg>
                 } @else if (conn.type === 'dependency') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] stroke-2">
-                    <polyline points="2,2 14,8 2,14" fill="none" stroke="#2A201B" stroke-width="1.8" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] dark:stroke-[#94A3B8] stroke-2">
+                    <polyline points="2,2 14,8 2,14" fill="none" class="stroke-[#2A201B] dark:stroke-[#94A3B8]" stroke-width="1.8" />
                   </svg>
                 }
 
@@ -213,10 +213,10 @@
                 [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
                 [ngClass]="{
                   'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
-                  'font-sans text-[#2A201B] select-none relative group/node transition-shadow animate-in fade-in zoom-in-95 duration-300': !node.isAnchor,
+                  'font-sans text-[#2A201B] dark:text-slate-100 select-none relative group/node transition-shadow animate-in fade-in zoom-in-95 duration-300': !node.isAnchor,
                   'ring-2 ring-purple-600 shadow-[0_0_15px_rgba(124,58,237,0.3)] z-30': !node.isAnchor && selectedNodeId() === node.id,
                   'ring-2 ring-indigo-400 z-20': !node.isAnchor && isNeighborNode(node.id),
-                  'ring-2 ring-[#6B5A52] shadow-xl': !node.isAnchor && selectedSourceNodeId() === node.id && selectedNodeId() !== node.id,
+                  'ring-2 ring-[#6B5A52] dark:ring-[#94A3B8] shadow-xl': !node.isAnchor && selectedSourceNodeId() === node.id && selectedNodeId() !== node.id,
                   'opacity-80': !node.isAnchor && selectedNodeId() !== null && selectedNodeId() !== node.id && !isNeighborNode(node.id),
                   'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                   'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
@@ -324,7 +324,7 @@
                     [ngClass]="{
                       'bg-purple-600 text-white border-b-[1.5px] border-purple-700': selectedNodeId() === node.id,
                       'bg-indigo-100 text-indigo-950 border-b-[1.5px] border-indigo-300': isNeighborNode(node.id),
-                      'bg-transparent border-b-[1.5px] border-[#6B5A52] text-[#2A201B]': selectedNodeId() !== node.id && !isNeighborNode(node.id)
+                      'bg-transparent border-b-[1.5px] border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-100': selectedNodeId() !== node.id && !isNeighborNode(node.id)
                     }"
                     class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors">
                     <span class="font-bold text-xs text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">
@@ -343,30 +343,30 @@
                   </div>
 
                   <!-- 2. CUERPO: ATRIBUTOS TIPADOS -->
-                  <div class="px-2.5 py-1.5 space-y-1 border-b-[1.5px] border-[#6B5A52] bg-white/40 min-h-[30px]">
+                  <div class="px-2.5 py-1.5 space-y-1 border-b-[1.5px] border-[#6B5A52] dark:border-[#383F4C] bg-white/40 dark:bg-black/20 min-h-[30px]">
                     @if (node.attributes && node.attributes.length > 0) {
                       @for (attr of node.attributes; track attr.name) {
                         <div class="flex items-center justify-between text-[11px] font-mono leading-tight">
-                          <span class="truncate font-medium text-[#2A201B]">- {{ attr.name }}</span>
-                          <span class="text-[#6B5A52] text-[10px] truncate ml-1 font-bold">: {{ attr.type }}</span>
+                          <span class="truncate font-medium text-[#2A201B] dark:text-slate-200">- {{ attr.name }}</span>
+                          <span class="text-[#6B5A52] dark:text-slate-400 text-[10px] truncate ml-1 font-bold">: {{ attr.type }}</span>
                         </div>
                       }
                     } @else {
-                      <div class="text-[10px] text-slate-400 italic text-center py-0.5">sin atributos</div>
+                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-0.5">sin atributos</div>
                     }
                   </div>
 
                   <!-- 3. CUERPO: MÉTODOS / OPERACIONES CON RETORNO -->
-                  <div class="px-2.5 py-1.5 space-y-1 bg-white/40 min-h-[26px]">
+                  <div class="px-2.5 py-1.5 space-y-1 bg-white/40 dark:bg-black/20 min-h-[26px]">
                     @if (node.methods && node.methods.length > 0) {
                       @for (m of node.methods; track m.name) {
                         <div class="flex items-center justify-between text-[11px] font-mono leading-tight">
-                          <span class="truncate font-medium text-[#2A201B]">+ {{ m.name }}({{ m.parameters || '' }})</span>
-                          <span class="text-[#6B5A52] text-[10px] truncate ml-1 font-bold">: {{ m.returnType || 'void' }}</span>
+                          <span class="truncate font-medium text-[#2A201B] dark:text-slate-200">+ {{ m.name }}({{ m.parameters || '' }})</span>
+                          <span class="text-[#6B5A52] dark:text-slate-400 text-[10px] truncate ml-1 font-bold">: {{ m.returnType || 'void' }}</span>
                         </div>
                       }
                     } @else {
-                      <div class="text-[10px] text-slate-400 italic text-center py-0.5">sin métodos</div>
+                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-0.5">sin métodos</div>
                     }
                   </div>
 
@@ -446,51 +446,51 @@
   <!-- 5. MODAL: EDITAR CLASE (DOBLE CLIC) -->
   @if (isEditNodeModalOpen() && editingNode()) {
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+      <div class="bg-[#F2EBE6] dark:bg-[#181B22] border-[1.5px] border-[#6B5A52] dark:border-[#383F4C] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
         
-        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
-          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">{{ 'editor.nodeModal.title' | translate }}</h3>
-          <button (click)="closeEditNodeModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
+        <div class="border-b-[1.5px] border-[#6B5A52] dark:border-[#383F4C] bg-white/40 dark:bg-black/20 px-4 py-2.5 flex items-center justify-between">
+          <h3 class="font-bold text-[#2A201B] dark:text-slate-100 uppercase tracking-wide">{{ 'editor.nodeModal.title' | translate }}</h3>
+          <button (click)="closeEditNodeModal()" class="text-[#6B5A52] dark:text-slate-400 hover:text-[#2A201B] dark:hover:text-slate-200 font-bold text-base cursor-pointer">&times;</button>
         </div>
 
         <div class="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
           
           <!-- Nombre de la Clase -->
           <div>
-            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.nodeModal.className' | translate }}</label>
+            <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.nodeModal.className' | translate }}</label>
             <input
               type="text"
               [(ngModel)]="editingNode()!.name"
               placeholder="e.g. Usuario, Pedido"
-              class="w-full px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner font-medium text-xs"
+              class="w-full px-3 py-1.5 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#6B5A52] shadow-inner font-medium text-xs"
             />
           </div>
 
           <!-- Atributos con Tipos Estrictamente Predefinidos -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">{{ 'editor.nodeModal.attributes' | translate }}</label>
+              <label class="font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px]">{{ 'editor.nodeModal.attributes' | translate }}</label>
               <button
                 (click)="addAttributeToEditingNode()"
-                class="px-2.5 py-0.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] cursor-pointer">
+                class="px-2.5 py-0.5 bg-[#6B5A52] dark:bg-[#2A303C] hover:bg-[#52443E] dark:hover:bg-[#343C4A] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] dark:border-[#383F4C] cursor-pointer">
                 {{ 'editor.nodeModal.addAttribute' | translate }}
               </button>
             </div>
             <div class="space-y-1.5">
               @for (attr of editingNode()!.attributes; track $index) {
                 <div class="flex items-center gap-2">
-                  <span class="font-mono font-bold text-[#6B5A52] select-none text-xs">-</span>
+                  <span class="font-mono font-bold text-[#6B5A52] dark:text-slate-400 select-none text-xs">-</span>
                   <input
                     type="text"
                     [(ngModel)]="attr.name"
                     placeholder="nombre"
-                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+                    class="flex-1 px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-medium text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
                   />
-                  <span class="text-[#6B5A52] font-mono">:</span>
+                  <span class="text-[#6B5A52] dark:text-slate-400 font-mono">:</span>
                   
                   <select
                     [(ngModel)]="attr.type"
-                    class="w-36 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52] cursor-pointer">
+                    class="w-36 px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-mono font-medium text-[#2A201B] dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] cursor-pointer">
                     @for (t of predefinedTypes; track t) {
                       <option [value]="t">{{ t }}</option>
                     }
@@ -510,35 +510,35 @@
           <!-- Métodos con Retorno Estrictamente Predefinido -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="font-bold font-mono text-[#2A201B] uppercase text-[11px]">{{ 'editor.nodeModal.operations' | translate }}</label>
+              <label class="font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px]">{{ 'editor.nodeModal.operations' | translate }}</label>
               <button
                 (click)="addMethodToEditingNode()"
-                class="px-2.5 py-0.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] cursor-pointer">
+                class="px-2.5 py-0.5 bg-[#6B5A52] dark:bg-[#2A303C] hover:bg-[#52443E] dark:hover:bg-[#343C4A] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] dark:border-[#383F4C] cursor-pointer">
                 {{ 'editor.nodeModal.addOperation' | translate }}
               </button>
             </div>
             <div class="space-y-1.5">
               @for (m of editingNode()!.methods; track $index) {
                 <div class="flex items-center gap-2">
-                  <span class="font-mono font-bold text-[#6B5A52] select-none text-xs">+</span>
+                  <span class="font-mono font-bold text-[#6B5A52] dark:text-slate-400 select-none text-xs">+</span>
                   <input
                     type="text"
                     [(ngModel)]="m.name"
                     placeholder="método"
-                    class="flex-1 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+                    class="flex-1 px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-medium text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
                   />
-                  <span class="text-[#6B5A52] font-mono text-xs">(</span>
+                  <span class="text-[#6B5A52] dark:text-slate-400 font-mono text-xs">(</span>
                   <input
                     type="text"
                     [(ngModel)]="m.parameters"
                     placeholder="params"
-                    class="w-24 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+                    class="w-24 px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-mono text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
                   />
-                  <span class="text-[#6B5A52] font-mono text-xs">):</span>
+                  <span class="text-[#6B5A52] dark:text-slate-400 font-mono text-xs">):</span>
                   
                   <select
                     [(ngModel)]="m.returnType"
-                    class="w-32 px-2 py-1 bg-white border border-[#6B5A52] text-xs font-mono font-medium focus:outline-none focus:ring-1 focus:ring-[#6B5A52] cursor-pointer">
+                    class="w-32 px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-mono font-medium text-[#2A201B] dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] cursor-pointer">
                     @for (rt of predefinedReturnTypes; track rt) {
                       <option [value]="rt">{{ rt }}</option>
                     }
@@ -557,15 +557,15 @@
 
         </div>
 
-        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-end gap-2 bg-white/30">
+        <div class="p-3 border-t border-[#6B5A52]/30 dark:border-[#383F4C] flex justify-end gap-2 bg-white/30 dark:bg-black/20">
           <button
             (click)="closeEditNodeModal()"
-            class="px-3.5 py-1.5 bg-white hover:bg-slate-100 border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
+            class="px-3.5 py-1.5 bg-white dark:bg-[#101318] hover:bg-slate-100 dark:hover:bg-[#1C2028] border border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-200 font-mono cursor-pointer">
             {{ 'common.cancel' | translate }}
           </button>
           <button
             (click)="saveEditedNode()"
-            class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold uppercase border border-[#2A201B] cursor-pointer">
+            class="px-4 py-1.5 bg-[#6B5A52] dark:bg-[#3B82F6] hover:bg-[#52443E] dark:hover:bg-[#2563EB] text-white font-mono font-bold uppercase border border-[#2A201B] dark:border-[#1D4ED8] cursor-pointer">
             {{ 'editor.nodeModal.save' | translate }}
           </button>
         </div>
@@ -577,20 +577,20 @@
   <!-- 6. MODAL: EDITAR CONEXIÓN (DOBLE CLIC EN LÍNEA / MULTIPLICIDAD) -->
   @if (isEditConnModalOpen() && editingConnection()) {
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+      <div class="bg-[#F2EBE6] dark:bg-[#181B22] border-[1.5px] border-[#6B5A52] dark:border-[#383F4C] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
         
-        <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-4 py-2.5 flex items-center justify-between">
-          <h3 class="font-bold text-[#2A201B] uppercase tracking-wide">{{ 'editor.connModal.title' | translate }}</h3>
-          <button (click)="closeEditConnModal()" class="text-[#6B5A52] hover:text-[#2A201B] font-bold text-base cursor-pointer">&times;</button>
+        <div class="border-b-[1.5px] border-[#6B5A52] dark:border-[#383F4C] bg-white/40 dark:bg-black/20 px-4 py-2.5 flex items-center justify-between">
+          <h3 class="font-bold text-[#2A201B] dark:text-slate-100 uppercase tracking-wide">{{ 'editor.connModal.title' | translate }}</h3>
+          <button (click)="closeEditConnModal()" class="text-[#6B5A52] dark:text-slate-400 hover:text-[#2A201B] dark:hover:text-slate-200 font-bold text-base cursor-pointer">&times;</button>
         </div>
 
         <div class="p-4 space-y-3.5">
 
           <div>
-            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.type' | translate }}</label>
+            <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.connModal.type' | translate }}</label>
             <select
               [(ngModel)]="editingConnection()!.type"
-              class="w-full px-2 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
+              class="w-full px-2 py-1.5 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-mono text-[#2A201B] dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
               @for (rel of relationTypes; track rel.id) {
                 <option [value]="rel.id">{{ rel.label }} ({{ rel.icon }})</option>
               }
@@ -598,10 +598,10 @@
           </div>
 
           <div>
-            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.lineStyle' | translate }}</label>
+            <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.connModal.lineStyle' | translate }}</label>
             <select
               [(ngModel)]="editingConnection()!.lineStyle"
-              class="w-full px-2 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
+              class="w-full px-2 py-1.5 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-mono text-[#2A201B] dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52]">
               @for (style of lineStyles; track style.id) {
                 <option [value]="style.id">{{ style.label }}</option>
               }
@@ -610,55 +610,55 @@
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.sourceMult' | translate }}</label>
+              <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.connModal.sourceMult' | translate }}</label>
               <input
                 type="text"
                 [(ngModel)]="editingConnection()!.sourceMultiplicity"
                 list="multiplicity-options"
                 placeholder="1, 0..1, *"
-                class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+                class="w-full px-2.5 py-1.5 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-mono text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
               />
             </div>
             <div>
-              <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.targetMult' | translate }}</label>
+              <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.connModal.targetMult' | translate }}</label>
               <input
                 type="text"
                 [(ngModel)]="editingConnection()!.targetMultiplicity"
                 list="multiplicity-options"
                 placeholder="0..*, 1..*, *"
-                class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+                class="w-full px-2.5 py-1.5 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs font-mono text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
               />
             </div>
           </div>
 
           <div>
-            <label class="block font-bold font-mono text-[#2A201B] uppercase text-[11px] mb-1">{{ 'editor.connModal.name' | translate }}</label>
+            <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.connModal.name' | translate }}</label>
             <input
               type="text"
               [(ngModel)]="editingConnection()!.name"
               placeholder="e.g. posee, genera, pertenece a"
-              class="w-full px-2.5 py-1.5 bg-white border border-[#6B5A52] text-xs focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
+              class="w-full px-2.5 py-1.5 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-xs text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
             />
           </div>
 
         </div>
 
-        <div class="p-3 border-t border-[#6B5A52]/30 flex justify-between items-center bg-white/30">
+        <div class="p-3 border-t border-[#6B5A52]/30 dark:border-[#383F4C] flex justify-between items-center bg-white/30 dark:bg-black/20">
           <button
             (click)="removeConnection(editingConnection()!.id); closeEditConnModal()"
-            class="text-red-600 hover:text-red-800 font-mono font-bold cursor-pointer flex items-center gap-1">
+            class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-mono font-bold cursor-pointer flex items-center gap-1">
             <ng-icon name="heroTrash" class="text-xs"></ng-icon>
             <span>{{ 'editor.connModal.delete' | translate }}</span>
           </button>
           <div class="flex gap-2">
             <button
               (click)="closeEditConnModal()"
-              class="px-3 py-1.5 bg-white border border-[#6B5A52] text-[#2A201B] font-mono cursor-pointer">
+              class="px-3 py-1.5 bg-white dark:bg-[#101318] hover:bg-slate-100 dark:hover:bg-[#1C2028] border border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-200 font-mono cursor-pointer">
               {{ 'common.cancel' | translate }}
             </button>
             <button
               (click)="saveEditedConnection()"
-              class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono font-bold uppercase border border-[#2A201B] cursor-pointer">
+              class="px-4 py-1.5 bg-[#6B5A52] dark:bg-[#3B82F6] hover:bg-[#52443E] dark:hover:bg-[#2563EB] text-white font-mono font-bold uppercase border border-[#2A201B] dark:border-[#1D4ED8] cursor-pointer">
               {{ 'common.save' | translate }}
             </button>
           </div>
@@ -688,9 +688,9 @@
   <!-- 8. MODAL JSON (INTEROPERABILIDAD) -->
   @if (showJsonModal()) {
     <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded shadow-2xl border border-slate-300 w-full max-w-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="bg-white dark:bg-[#181B22] rounded shadow-2xl border border-slate-300 dark:border-[#383F4C] w-full max-w-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
 
-        <div class="px-4 py-2.5 bg-slate-800 text-white flex items-center justify-between">
+        <div class="px-4 py-2.5 bg-slate-800 dark:bg-[#101318] text-white flex items-center justify-between border-b border-transparent dark:border-[#383F4C]">
           <div class="flex items-center gap-2">
             <ng-icon name="heroDocumentText" class="text-slate-300 text-base"></ng-icon>
             <h2 class="text-xs font-bold">
@@ -703,7 +703,7 @@
         </div>
 
         <div class="p-4 flex-1 flex flex-col gap-2">
-          <p class="text-xs text-slate-600">
+          <p class="text-xs text-slate-600 dark:text-slate-300">
             {{ jsonModalMode() === 'export'
                ? ('editor.jsonModal.exportDesc' | translate)
                : ('editor.jsonModal.importDesc' | translate) }}
@@ -716,17 +716,17 @@
             [placeholder]="'editor.jsonModal.placeholder' | translate"></textarea>
         </div>
 
-        <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+        <div class="px-4 py-2.5 bg-slate-50 dark:bg-[#14171E] border-t border-slate-200 dark:border-[#383F4C] flex justify-end gap-2">
           <button
             (click)="showJsonModal.set(false)"
-            class="px-3 py-1 text-xs text-slate-700 hover:bg-slate-200 rounded font-medium cursor-pointer">
+            class="px-3 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded font-medium cursor-pointer">
             {{ 'common.close' | translate }}
           </button>
 
           @if (jsonModalMode() === 'export') {
             <button
               (click)="copyJsonToClipboard()"
-              class="px-3.5 py-1 text-xs bg-slate-800 hover:bg-slate-900 text-white rounded font-medium shadow-xs flex items-center gap-1.5 border border-slate-700 cursor-pointer">
+              class="px-3.5 py-1 text-xs bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded font-medium shadow-xs flex items-center gap-1.5 border border-slate-700 dark:border-slate-600 cursor-pointer">
               <ng-icon name="heroClipboardDocument" class="text-sm"></ng-icon>
               {{ 'editor.jsonModal.copy' | translate }}
             </button>

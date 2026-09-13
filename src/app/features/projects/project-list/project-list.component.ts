@@ -27,6 +27,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { Project, ProjectRole } from '../../../core/models/project.model';
 import { UserProfileModalComponent } from '../../diagrams/diagram-editor/components/user-profile-modal/user-profile-modal.component';
 import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
+import { ThemeToggleComponent } from '../../../core/components/theme-toggle/theme-toggle.component';
 
 @Component({
   selector: 'app-project-list',
@@ -39,6 +40,7 @@ import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
     UserProfileModalComponent,
     TranslatePipe,
     LanguageSelectorComponent,
+    ThemeToggleComponent,
   ],
   providers: [
     provideIcons({

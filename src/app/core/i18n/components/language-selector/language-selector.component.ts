@@ -38,17 +38,19 @@ import { SupportedLanguage } from '../../models/language.type';
         </button>
       </div>
     } @else {
-      <div class="inline-flex items-center rounded border border-[#6B5A52]/40 bg-white/80 p-0.5 text-[11px] font-mono shadow-xs select-none">
+      <div class="inline-flex items-center rounded border border-[#6B5A52]/40 dark:border-slate-700 bg-white/80 dark:bg-slate-800/90 p-0.5 text-[11px] font-mono shadow-xs select-none">
         <button
           type="button"
           (click)="setLang('es')"
           [attr.aria-pressed]="currentLang() === 'es'"
           title="Cambiar idioma a Español"
           [class.bg-[#6B5A52]]="currentLang() === 'es'"
+          [class.dark:bg-slate-700]="currentLang() === 'es'"
           [class.text-white]="currentLang() === 'es'"
           [class.shadow-xs]="currentLang() === 'es'"
           [class.text-[#6B5A52]]="currentLang() !== 'es'"
-          class="px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer hover:bg-[#6B5A52]/10 font-semibold">
+          [class.dark:text-slate-300]="currentLang() !== 'es'"
+          class="px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer hover:bg-[#6B5A52]/10 dark:hover:bg-slate-700/50 font-semibold">
           <span>🇪🇸</span>
           <span>ES</span>
         </button>
@@ -58,10 +60,12 @@ import { SupportedLanguage } from '../../models/language.type';
           [attr.aria-pressed]="currentLang() === 'en'"
           title="Switch language to English"
           [class.bg-[#6B5A52]]="currentLang() === 'en'"
+          [class.dark:bg-slate-700]="currentLang() === 'en'"
           [class.text-white]="currentLang() === 'en'"
           [class.shadow-xs]="currentLang() === 'en'"
           [class.text-[#6B5A52]]="currentLang() !== 'en'"
-          class="px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer hover:bg-[#6B5A52]/10 font-semibold">
+          [class.dark:text-slate-300]="currentLang() !== 'en'"
+          class="px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer hover:bg-[#6B5A52]/10 dark:hover:bg-slate-700/50 font-semibold">
           <span>🇺🇸</span>
           <span>EN</span>
         </button>

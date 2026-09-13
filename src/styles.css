@@ -3,6 +3,8 @@
 @import 'tailwindcss';
 @import 'highlight.js/styles/github-dark.css';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Quitar contenedor/marco y sockets azules por defecto de foblex flow */
 :root {
   --ff-connection-drag-handle-stroke: transparent;
@@ -16,6 +18,39 @@
   --ff-flow-background-color: #F9F7F5 !important;
   --ff-color-surface-canvas: transparent !important;
   --ff-color-surface-page: #F9F7F5 !important;
+}
+
+.dark {
+  --ff-connection-drag-handle-stroke: transparent;
+  --ff-connection-drag-handle-fill: transparent;
+  --ff-node-padding: 0px !important;
+  --ff-node-border-radius: 0px !important;
+  --ff-node-border-color: transparent !important;
+  --ff-node-background-color: #1A1D24 !important;
+  --ff-node-shadow: none !important;
+  --ff-canvas-background-color: transparent !important;
+  --ff-flow-background-color: #0F1115 !important;
+  --ff-color-surface-canvas: transparent !important;
+  --ff-color-surface-page: #0F1115 !important;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #12151B;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #2D3340;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3E4554;
 }
 
 f-flow .f-canvas,
@@ -36,6 +71,12 @@ f-flow .f-node {
   border: 1.5px solid #6B5A52 !important;
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.18) !important;
   box-sizing: border-box !important;
+}
+
+.dark f-flow .f-node {
+  background-color: #1A1D24 !important;
+  border: 1.5px solid #475569 !important;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5) !important;
 }
 
 f-flow .f-connector-source-target,
@@ -66,6 +107,83 @@ f-flow circle.f-connection-drag-handle {
   pointer-events: none !important;
 }
 
+/* Badges de Multiplicidad y Nombre de Relación UML */
+.uml-multiplicity-badge {
+  background-color: #FFFFFF;
+  color: #1E293B;
+  border: 1.5px solid #6B5A52;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.22);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2.5px 6px;
+  border-radius: 4px;
+  user-select: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.uml-multiplicity-badge:hover {
+  background-color: #FAF5FF;
+  border-color: #7C3AED;
+  color: #6D28D9;
+  transform: scale(1.12);
+  box-shadow: 2px 2px 0px rgba(124, 58, 237, 0.4);
+}
+
+.dark .uml-multiplicity-badge {
+  background-color: #1E293B;
+  color: #F1F5F9;
+  border-color: #475569;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+}
+
+.dark .uml-multiplicity-badge:hover {
+  background-color: #312E81;
+  border-color: #818CF8;
+  color: #E0E7FF;
+}
+
+.uml-relation-name-badge {
+  background-color: #F8FAFC;
+  color: #334155;
+  border: 1.5px solid #64748B;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.18);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1;
+  padding: 3px 8px;
+  border-radius: 4px;
+  user-select: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.uml-relation-name-badge:hover {
+  background-color: #EEF2FF;
+  border-color: #4F46E5;
+  color: #3730A3;
+  transform: scale(1.08);
+}
+
+.dark .uml-relation-name-badge {
+  background-color: #1E222B;
+  color: #CBD5E1;
+  border-color: #475569;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+}
+
+.dark .uml-relation-name-badge:hover {
+  background-color: #312E81;
+  border-color: #6366F1;
+  color: #E0E7FF;
+}
+
 /* Ocultar flecha nativa de datalist para evitar que recorte o tape el texto del tipo */
 f-flow input::-webkit-calendar-picker-indicator {
   display: none !important;
@@ -84,6 +202,14 @@ f-flow .f-connection-path {
   fill: none !important;
   stroke: #2A201B !important;
   stroke-width: 1.5px !important;
+}
+
+.dark f-flow f-connection path,
+.dark f-flow f-connection-for-create path,
+.dark f-flow .f-connection path,
+.dark f-flow path[f-connection-path],
+.dark f-flow .f-connection-path {
+  stroke: #94A3B8 !important;
 }
 
 f-flow f-connection.uml-relation-realization path[f-connection-path],
@@ -117,6 +243,16 @@ polygon.uml-marker-hollow {
   stroke-width: 1.5px !important;
 }
 
+.dark f-flow svg marker polygon.uml-marker-hollow,
+.dark f-flow svg defs marker polygon.uml-marker-hollow,
+.dark f-flow marker polygon.uml-marker-hollow,
+.dark f-flow .f-marker polygon.uml-marker-hollow,
+.dark f-flow .uml-marker-hollow,
+.dark polygon.uml-marker-hollow {
+  fill: #1A1D24 !important;
+  stroke: #94A3B8 !important;
+}
+
 /* Forzar relleno negro sólido en Composición */
 f-flow svg marker polygon.uml-marker-filled,
 f-flow svg defs marker polygon.uml-marker-filled,
@@ -129,6 +265,16 @@ polygon.uml-marker-filled {
   stroke-width: 1.5px !important;
 }
 
+.dark f-flow svg marker polygon.uml-marker-filled,
+.dark f-flow svg defs marker polygon.uml-marker-filled,
+.dark f-flow marker polygon.uml-marker-filled,
+.dark f-flow .f-marker polygon.uml-marker-filled,
+.dark f-flow .uml-marker-filled,
+.dark polygon.uml-marker-filled {
+  fill: #94A3B8 !important;
+  stroke: #94A3B8 !important;
+}
+
 /* Forzar trazo abierto sin relleno en Dependencia */
 f-flow svg marker polyline.uml-marker-open,
 f-flow svg defs marker polyline.uml-marker-open,
@@ -139,4 +285,13 @@ polyline.uml-marker-open {
   fill: none !important;
   stroke: #1E293B !important;
   stroke-width: 1.8px !important;
+}
+
+.dark f-flow svg marker polyline.uml-marker-open,
+.dark f-flow svg defs marker polyline.uml-marker-open,
+.dark f-flow marker polyline.uml-marker-open,
+.dark f-flow .f-marker polyline.uml-marker-open,
+.dark f-flow .uml-marker-open,
+.dark polyline.uml-marker-open {
+  stroke: #94A3B8 !important;
 }

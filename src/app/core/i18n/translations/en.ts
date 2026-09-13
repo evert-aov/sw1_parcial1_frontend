@@ -28,6 +28,11 @@ export const en = {
     date: 'Date',
     collaborativeModeling: 'Collaborative Visual Modeling & Code Generation',
   },
+  theme: {
+    toggle: 'Toggle theme',
+    light: 'Light theme',
+    dark: 'Dark theme',
+  },
   auth: {
     badge: 'Authentication',
     login: {

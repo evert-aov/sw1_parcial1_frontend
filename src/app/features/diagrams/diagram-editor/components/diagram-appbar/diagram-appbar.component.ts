@@ -27,11 +27,12 @@ import {
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
 import { TranslatePipe, LanguageSelectorComponent } from '../../../../../core/i18n';
+import { ThemeToggleComponent } from '../../../../../core/components/theme-toggle/theme-toggle.component';
 
 @Component({
   selector: 'app-diagram-appbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, NgIconComponent, TranslatePipe, LanguageSelectorComponent],
+  imports: [CommonModule, RouterLink, NgIconComponent, TranslatePipe, LanguageSelectorComponent, ThemeToggleComponent],
   providers: [
     provideIcons({
       heroCube,

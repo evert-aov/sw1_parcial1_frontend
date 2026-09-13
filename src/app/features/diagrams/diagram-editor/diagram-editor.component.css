@@ -156,52 +156,5 @@
   pointer-events: all !important;
 }
 
-.uml-multiplicity-badge {
-  background-color: #FFFFFF;
-  color: #1E293B;
-  border: 1.5px solid #6B5A52;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.22);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-weight: 700;
-  font-size: 11px;
-  line-height: 1;
-  padding: 2.5px 6px;
-  border-radius: 4px;
-  user-select: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
 
-.uml-multiplicity-badge:hover {
-  background-color: #FAF5FF;
-  border-color: #7C3AED;
-  color: #6D28D9;
-  transform: scale(1.12);
-  box-shadow: 2px 2px 0px rgba(124, 58, 237, 0.4);
-}
 
-.uml-relation-name-badge {
-  background-color: #F8FAFC;
-  color: #334155;
-  border: 1.5px solid #64748B;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.18);
-  font-family: system-ui, -apple-system, sans-serif;
-  font-weight: 600;
-  font-size: 11px;
-  font-style: italic;
-  line-height: 1;
-  padding: 3px 8px;
-  border-radius: 4px;
-  user-select: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.uml-relation-name-badge:hover {
-  background-color: #EEF2FF;
-  border-color: #4F46E5;
-  color: #3730A3;
-  transform: scale(1.08);
-}
