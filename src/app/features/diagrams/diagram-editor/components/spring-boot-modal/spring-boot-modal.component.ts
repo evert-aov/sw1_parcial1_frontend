@@ -36,11 +36,12 @@ import {
   GenerateCodeRequest,
 } from '../../../../../core/services/code-generator.service';
 import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
+import { TranslatePipe } from '../../../../../core/i18n';
 
 @Component({
   standalone: true,
   selector: 'app-spring-boot-modal',
-  imports: [CommonModule, FormsModule, NgIconComponent],
+  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe],
   providers: [
     provideIcons({
       heroBolt,

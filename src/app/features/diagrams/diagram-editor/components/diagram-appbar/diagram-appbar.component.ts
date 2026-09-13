@@ -26,11 +26,12 @@ import {
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
+import { TranslatePipe, LanguageSelectorComponent } from '../../../../../core/i18n';
 
 @Component({
   selector: 'app-diagram-appbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, NgIconComponent],
+  imports: [CommonModule, RouterLink, NgIconComponent, TranslatePipe, LanguageSelectorComponent],
   providers: [
     provideIcons({
       heroCube,

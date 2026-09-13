@@ -81,6 +81,7 @@ import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appb
 import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
 import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
+import { TranslatePipe } from '../../../core/i18n';
 
 export interface UmlDiagramProject {
   version: string;
@@ -103,6 +104,7 @@ export interface UmlDiagramProject {
     AiAssistantPanelComponent,
     UserProfileModalComponent,
     SpringBootModalComponent,
+    TranslatePipe,
   ],
   providers: [
     provideIcons({

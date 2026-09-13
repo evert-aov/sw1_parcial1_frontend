@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { heroUserCircle, heroXMark, heroCheck } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
+import { TranslatePipe } from '../../../../../core/i18n';
 
 @Component({
   selector: 'app-user-profile-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent],
+  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe],
   providers: [
     provideIcons({
       heroUserCircle,

@@ -17,12 +17,13 @@
       </div>
     </div>
 
-    <!-- Perfil & Cerrar Sesión -->
+    <!-- Idioma, Perfil & Cerrar Sesión -->
     @if (authService.currentUser()) {
       <div class="flex items-center gap-3">
+        <app-language-selector [theme]="'dark'" />
         <button
           (click)="openProfileModal()"
-          title="Ver perfil de usuario (/api/auth/me)"
+          [title]="'profile.title' | translate"
           class="flex items-center gap-1.5 bg-slate-900/60 hover:bg-slate-900 px-2.5 py-1 rounded border border-slate-600 hover:border-slate-400 text-xs text-slate-200 transition-all cursor-pointer">
           <ng-icon name="heroUserCircle" class="text-sm text-purple-300"></ng-icon>
           <span class="font-medium truncate max-w-[150px]" [title]="authService.currentUser()?.fullName">
@@ -31,10 +32,10 @@
         </button>
         <button
           (click)="authService.logout()"
-          title="Cerrar Sesión"
+          [title]="'auth.logout' | translate"
           class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-slate-600 transition-colors cursor-pointer">
           <ng-icon name="heroArrowRightOnRectangle" class="text-xs"></ng-icon>
-          <span>Salir</span>
+          <span>{{ 'auth.logout' | translate }}</span>
         </button>
       </div>
     }
@@ -48,9 +49,9 @@
       <div>
         <h2 class="text-base font-bold text-[#2A201B] uppercase tracking-wider font-mono flex items-center gap-2">
           <ng-icon name="heroFolder" class="text-lg text-[#6B5A52]"></ng-icon>
-          Proyectos de Modelado UML
+          {{ 'projects.headerTitle' | translate }}
         </h2>
-        <p class="text-xs text-[#6B5A52] mt-0.5">Administra tus modelos de clases, diagramas y configuraciones de generación.</p>
+        <p class="text-xs text-[#6B5A52] mt-0.5">{{ 'projects.headerSubtitle' | translate }}</p>
       </div>
 
       <div class="flex items-center gap-3">
@@ -60,7 +61,7 @@
             type="text"
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event)"
-            placeholder="Buscar proyectos..."
+            [placeholder]="'projects.searchPlaceholder' | translate"
             class="w-full pl-8 pr-3 py-1.5 bg-white border border-[#6B5A52] text-xs text-[#2A201B] placeholder-[#6B5A52]/50 focus:outline-none focus:ring-1 focus:ring-[#6B5A52]"
           />
           <ng-icon name="heroMagnifyingGlass" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#6B5A52]"></ng-icon>
@@ -71,7 +72,7 @@
           (click)="openCreateModal()"
           class="bg-[#6B5A52] hover:bg-[#52443E] active:translate-y-0.5 text-white font-mono text-xs font-bold py-1.5 px-3 border border-[#2A201B] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer flex items-center gap-1.5 shrink-0">
           <ng-icon name="heroFolderPlus" class="text-sm"></ng-icon>
-          <span>Nuevo Proyecto</span>
+          <span>{{ 'projects.newProject' | translate }}</span>
         </button>
       </div>
     </div>
@@ -80,20 +81,20 @@
     @if (projectService.isLoading()) {
       <div class="flex flex-col items-center justify-center py-20">
         <span class="inline-block w-8 h-8 border-3 border-[#6B5A52] border-t-transparent rounded-full animate-spin"></span>
-        <p class="text-xs font-mono text-[#6B5A52] mt-3">Cargando proyectos...</p>
+        <p class="text-xs font-mono text-[#6B5A52] mt-3">{{ 'projects.loading' | translate }}</p>
       </div>
     } @else if (filteredProjects().length === 0) {
       <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] p-12 text-center shadow-[4px_4px_0px_rgba(0,0,0,0.1)] max-w-md mx-auto">
         <div class="w-12 h-12 bg-[#6B5A52]/10 border border-[#6B5A52] text-[#6B5A52] flex items-center justify-center mx-auto mb-3">
           <ng-icon name="heroFolder" class="text-2xl"></ng-icon>
         </div>
-        <h3 class="text-sm font-bold text-[#2A201B]">No se encontraron proyectos</h3>
-        <p class="text-xs text-[#6B5A52] mt-1 mb-4">Comienza creando tu primer proyecto de arquitectura UML.</p>
+        <h3 class="text-sm font-bold text-[#2A201B]">{{ 'projects.emptyTitle' | translate }}</h3>
+        <p class="text-xs text-[#6B5A52] mt-1 mb-4">{{ 'projects.emptySubtitle' | translate }}</p>
         <button
           (click)="openCreateModal()"
           class="bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold py-1.5 px-4 border border-[#2A201B] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer inline-flex items-center gap-1.5">
           <ng-icon name="heroPlus" class="text-sm"></ng-icon>
-          <span>Crear Primer Proyecto</span>
+          <span>{{ 'projects.createFirst' | translate }}</span>
         </button>
       </div>
     } @else {

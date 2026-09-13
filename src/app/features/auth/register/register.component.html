@@ -9,27 +9,30 @@
     <div class="bg-[#F2EBE6] border-[1.5px] border-[#6B5A52] rounded-none shadow-[6px_6px_0px_rgba(0,0,0,0.15)] overflow-hidden">
       
       <!-- Encabezado de la Tarjeta estilo Barra de Título CASE -->
-      <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-6 py-4 flex items-center justify-between">
+      <div class="border-b-[1.5px] border-[#6B5A52] bg-white/40 px-6 py-4 flex items-center justify-between gap-2">
         <div class="flex items-center gap-2.5">
           <div class="w-7 h-7 bg-[#6B5A52] text-white flex items-center justify-center text-xs font-bold font-mono shadow-xs">
             UML
           </div>
           <div>
-            <h1 class="text-sm font-bold text-[#2A201B] tracking-tight uppercase">Studio & Code Gen</h1>
-            <p class="text-[10.5px] font-mono text-[#6B5A52]">Enterprise Architect v2.5</p>
+            <h1 class="text-sm font-bold text-[#2A201B] tracking-tight uppercase">{{ 'common.appTitle' | translate }}</h1>
+            <p class="text-[10.5px] font-mono text-[#6B5A52]">{{ 'common.appSubtitle' | translate }}</p>
           </div>
         </div>
-        <span class="text-[11px] font-mono px-2 py-0.5 border border-[#6B5A52] bg-[#F2EBE6] text-[#2A201B] font-semibold">
-          Registro
-        </span>
+        <div class="flex items-center gap-2">
+          <app-language-selector [theme]="'light'" />
+          <span class="text-[11px] font-mono px-2 py-0.5 border border-[#6B5A52] bg-[#F2EBE6] text-[#2A201B] font-semibold">
+            {{ 'auth.register.badge' | translate }}
+          </span>
+        </div>
       </div>
 
       <!-- Cuerpo del Formulario -->
       <div class="p-6 sm:p-8">
         
         <div class="mb-6">
-          <h2 class="text-lg font-bold text-[#2A201B]">Crear Cuenta</h2>
-          <p class="text-xs text-[#6B5A52] mt-0.5">Únete al espacio de modelado y arquitectura de software</p>
+          <h2 class="text-lg font-bold text-[#2A201B]">{{ 'auth.register.title' | translate }}</h2>
+          <p class="text-xs text-[#6B5A52] mt-0.5">{{ 'auth.register.subtitle' | translate }}</p>
         </div>
 
         <!-- Mensaje de Error -->
@@ -45,47 +48,47 @@
           <!-- Campo Nombre Completo -->
           <div>
             <label class="block text-[11.5px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">
-              Nombre Completo
+              {{ 'auth.register.fullNameLabel' | translate }}
             </label>
             <input
               type="text"
               formControlName="fullName"
-              placeholder="Ing. Carlos Mendez"
+              [placeholder]="'auth.register.fullNamePlaceholder' | translate"
               [class.border-red-500]="registerForm.get('fullName')?.invalid && registerForm.get('fullName')?.touched"
               class="w-full px-3 py-2 text-xs bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] focus:border-transparent transition-all shadow-inner placeholder:text-slate-400"
             />
             @if (registerForm.get('fullName')?.invalid && registerForm.get('fullName')?.touched) {
-              <p class="text-[10px] text-red-600 font-mono mt-1">El nombre completo es requerido.</p>
+              <p class="text-[10px] text-red-600 font-mono mt-1">{{ 'auth.register.fullNameInvalid' | translate }}</p>
             }
           </div>
 
           <!-- Campo Email -->
           <div>
             <label class="block text-[11.5px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">
-              Correo Electrónico
+              {{ 'auth.register.emailLabel' | translate }}
             </label>
             <input
               type="email"
               formControlName="email"
-              placeholder="carlos.mendez@universidad.edu"
+              [placeholder]="'auth.register.emailPlaceholder' | translate"
               [class.border-red-500]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
               class="w-full px-3 py-2 text-xs bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] focus:border-transparent transition-all shadow-inner placeholder:text-slate-400"
             />
             @if (registerForm.get('email')?.invalid && registerForm.get('email')?.touched) {
-              <p class="text-[10px] text-red-600 font-mono mt-1">Ingresa un correo electrónico válido.</p>
+              <p class="text-[10px] text-red-600 font-mono mt-1">{{ 'auth.register.emailInvalid' | translate }}</p>
             }
           </div>
 
           <!-- Campo Contraseña -->
           <div>
             <label class="block text-[11.5px] font-bold font-mono text-[#2A201B] uppercase tracking-wider mb-1">
-              Contraseña
+              {{ 'auth.register.passwordLabel' | translate }}
             </label>
             <div class="relative">
               <input
                 [type]="showPassword() ? 'text' : 'password'"
                 formControlName="password"
-                placeholder="••••••••"
+                [placeholder]="'auth.register.passwordPlaceholder' | translate"
                 [class.border-red-500]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
                 class="w-full px-3 py-2 text-xs bg-white border border-[#6B5A52] text-[#2A201B] focus:outline-none focus:ring-2 focus:ring-[#6B5A52] focus:border-transparent transition-all shadow-inner pr-10"
               />
@@ -93,11 +96,11 @@
                 type="button"
                 (click)="togglePassword()"
                 class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#6B5A52] hover:text-[#2A201B] font-mono cursor-pointer select-none">
-                {{ showPassword() ? 'Ocultar' : 'Ver' }}
+                {{ showPassword() ? ('auth.register.hidePassword' | translate) : ('auth.register.showPassword' | translate) }}
               </button>
             </div>
             @if (registerForm.get('password')?.invalid && registerForm.get('password')?.touched) {
-              <p class="text-[10px] text-red-600 font-mono mt-1">La contraseña debe tener al menos 6 caracteres.</p>
+              <p class="text-[10px] text-red-600 font-mono mt-1">{{ 'auth.register.passwordInvalid' | translate }}</p>
             }
           </div>
 
@@ -109,9 +112,9 @@
               class="w-full py-2.5 px-4 bg-[#6B5A52] hover:bg-[#52443E] active:translate-y-0.5 text-white font-mono text-xs font-bold tracking-wider uppercase border border-[#2A201B] shadow-[3px_3px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
               @if (authService.isLoading()) {
                 <span class="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span>Creando cuenta...</span>
+                <span>{{ 'auth.register.submitting' | translate }}</span>
               } @else {
-                <span>Registrar Cuenta →</span>
+                <span>{{ 'auth.register.submit' | translate }}</span>
               }
             </button>
           </div>
@@ -121,9 +124,9 @@
         <!-- Enlace a Login -->
         <div class="mt-6 pt-4 border-t border-[#6B5A52]/30 text-center">
           <p class="text-xs text-[#6B5A52]">
-            ¿Ya tienes una cuenta registrada?
+            {{ 'auth.register.haveAccount' | translate }}
             <a routerLink="/login" class="font-bold text-[#2A201B] hover:underline ml-1">
-              Iniciar sesión
+              {{ 'auth.register.loginLink' | translate }}
             </a>
           </p>
         </div>
@@ -135,7 +138,7 @@
     <!-- Pie de página informativo -->
     <div class="mt-4 text-center">
       <p class="text-[10.5px] font-mono text-[#6B5A52]">
-        Modelado Visual Colaborativo & Generación de Código
+        {{ 'common.collaborativeModeling' | translate }}
       </p>
     </div>
 

@@ -43,10 +43,12 @@ export interface AiChatMessage {
   status?: 'success' | 'clarification' | 'error' | 'pending';
 }
 
+import { TranslatePipe } from '../../../../../core/i18n';
+
 @Component({
   selector: 'app-ai-assistant-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent],
+  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe],
   providers: [
     provideIcons({
       heroSparkles,

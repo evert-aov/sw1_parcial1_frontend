@@ -26,11 +26,20 @@ import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Project, ProjectRole } from '../../../core/models/project.model';
 import { UserProfileModalComponent } from '../../diagrams/diagram-editor/components/user-profile-modal/user-profile-modal.component';
+import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
 
 @Component({
   selector: 'app-project-list',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, NgIconComponent, UserProfileModalComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    NgIconComponent,
+    UserProfileModalComponent,
+    TranslatePipe,
+    LanguageSelectorComponent,
+  ],
   providers: [
     provideIcons({
       heroFolderPlus,

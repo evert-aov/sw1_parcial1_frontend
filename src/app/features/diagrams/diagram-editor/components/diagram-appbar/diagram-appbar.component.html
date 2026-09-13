@@ -5,10 +5,10 @@
     <div class="flex items-center gap-2.5">
       <a
         routerLink="/projects"
-        title="Volver a la lista de proyectos"
+        [title]="'appbar.projects' | translate"
         class="bg-slate-800 hover:bg-slate-900 border border-slate-600 px-2 py-1 rounded text-xs text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs">
         <ng-icon name="heroFolder" class="text-xs"></ng-icon>
-        <span class="font-mono text-[11px]">Proyectos</span>
+        <span class="font-mono text-[11px]">{{ 'appbar.projects' | translate }}</span>
       </a>
 
       <div class="h-4 w-px bg-slate-600"></div>
@@ -30,10 +30,10 @@
         <div class="flex items-center gap-2 bg-slate-900/80 border border-slate-600/80 px-2.5 py-0.5 rounded-full shadow-inner">
           <button
             (click)="copyRoomCode()"
-            title="Clic para copiar código de sala"
+            [title]="'appbar.clickToCopy' | translate"
             class="text-emerald-300 text-[10.5px] font-mono flex items-center gap-1.5 cursor-pointer hover:text-emerald-200">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>SALA: <strong>{{ collaborationService.activeRoomCode() }}</strong></span>
+            <span>{{ 'appbar.room' | translate }}: <strong>{{ collaborationService.activeRoomCode() }}</strong></span>
           </button>
 
           <div class="h-3 w-px bg-slate-600"></div>
@@ -44,7 +44,7 @@
               <div
                 class="w-5.5 h-5.5 rounded-full border-2 border-slate-800 text-white font-bold text-[9.5px] flex items-center justify-center shadow-md select-none transition-transform hover:scale-125 cursor-default"
                 [style.backgroundColor]="collab.color"
-                [title]="collab.userName + ' (Conectado)'">
+                [title]="collab.userName">
                 {{ collab.userName.charAt(0).toUpperCase() }}
               </div>
             }
@@ -53,14 +53,14 @@
       }
     </div>
 
-    <!-- Derecha: Acciones, Exportar, Spring Boot y Perfil -->
+    <!-- Derecha: Acciones, Exportar, Spring Boot, Selector de Idioma y Perfil -->
     <div class="flex items-center gap-2">
 
       <!-- Badge de Rol Espectador si aplica -->
       @if (isReadOnly()) {
         <div class="bg-amber-950/80 text-amber-300 border border-amber-600/70 px-2.5 py-1 rounded text-xs font-mono flex items-center gap-1.5 shadow-inner">
           <ng-icon name="heroEye" class="text-xs"></ng-icon>
-          <span>Modo Espectador (Solo Lectura)</span>
+          <span>{{ 'appbar.spectatorMode' | translate }}</span>
         </div>
       }
 
@@ -69,17 +69,17 @@
         <button
           (click)="saveDiagram.emit()"
           [disabled]="isSaving()"
-          title="Guardar cambios en la Base de Datos (Ctrl+S)"
+          [title]="'appbar.saveTooltip' | translate"
           class="bg-[#6B5A52] hover:bg-[#52443E] text-white font-mono text-xs font-bold px-2.5 py-1 rounded flex items-center gap-1.5 border border-slate-900 shadow-xs transition-all cursor-pointer disabled:opacity-50">
           @if (isSaving()) {
             <span class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>Guardando...</span>
+            <span>{{ 'appbar.saving' | translate }}</span>
           } @else if (saveSuccessMessage()) {
             <ng-icon name="heroCheck" class="text-xs text-green-300"></ng-icon>
-            <span class="text-green-200">¡Guardado!</span>
+            <span class="text-green-200">{{ 'appbar.saved' | translate }}</span>
           } @else {
             <ng-icon name="heroCloudArrowUp" class="text-sm"></ng-icon>
-            <span>Guardar</span>
+            <span>{{ 'appbar.save' | translate }}</span>
           }
         </button>
       }
@@ -90,24 +90,24 @@
           (click)="isExportDropdownOpen.set(!isExportDropdownOpen()); isImportDropdownOpen.set(false)"
           class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-slate-600 shadow-xs cursor-pointer">
           <ng-icon name="heroArrowDownTray" class="text-xs text-blue-300"></ng-icon>
-          <span>Exportar</span>
+          <span>{{ 'appbar.export' | translate }}</span>
           <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
         </button>
 
         @if (isExportDropdownOpen()) {
-          <div class="absolute right-0 mt-1 w-52 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100">
+          <div class="absolute right-0 mt-1 w-56 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100">
             <div class="py-0.5">
               <button
                 (click)="exportBmp.emit(); isExportDropdownOpen.set(false)"
                 class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
                 <ng-icon name="heroPhoto" class="text-sm text-purple-600"></ng-icon>
-                <span>Imagen Bitmap (.bmp - EA)</span>
+                <span>{{ 'appbar.exportBmp' | translate }}</span>
               </button>
               <button
                 (click)="exportXmi.emit(); isExportDropdownOpen.set(false)"
                 class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
                 <ng-icon name="heroDocumentText" class="text-sm text-blue-600"></ng-icon>
-                <span>Enterprise Architect (.xmi)</span>
+                <span>{{ 'appbar.exportXmi' | translate }}</span>
               </button>
             </div>
             <div class="py-0.5">
@@ -115,13 +115,13 @@
                 (click)="exportJson.emit(); isExportDropdownOpen.set(false)"
                 class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
                 <ng-icon name="heroDocumentText" class="text-sm text-emerald-600"></ng-icon>
-                <span>Descargar AST (.json)</span>
+                <span>{{ 'appbar.exportJson' | translate }}</span>
               </button>
               <button
                 (click)="viewJson.emit(); isExportDropdownOpen.set(false)"
                 class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B]">
                 <ng-icon name="heroDocumentText" class="text-sm text-slate-600"></ng-icon>
-                <span>Ver JSON en Pantalla</span>
+                <span>JSON</span>
               </button>
             </div>
           </div>
@@ -134,43 +134,47 @@
           (click)="isImportDropdownOpen.set(!isImportDropdownOpen()); isExportDropdownOpen.set(false)"
           class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-slate-600 shadow-xs cursor-pointer">
           <ng-icon name="heroArrowUpTray" class="text-xs text-amber-300"></ng-icon>
-          <span>Importar</span>
+          <span>{{ 'appbar.import' | translate }}</span>
           <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
         </button>
 
         @if (isImportDropdownOpen()) {
-          <div class="absolute right-0 mt-1 w-52 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100">
+          <div class="absolute right-0 mt-1 w-56 bg-white border border-slate-300 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100">
             <button
               (click)="triggerFileInput()"
               class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-amber-700">
               <ng-icon name="heroArrowUpTray" class="text-sm"></ng-icon>
-              <span>Cargar Archivo (.xmi / .xml / .json)</span>
+              <span>{{ 'appbar.importXmi' | translate }}</span>
             </button>
             <button
               (click)="openImportJson.emit(); isImportDropdownOpen.set(false)"
               class="w-full text-left px-3 py-1.5 hover:bg-slate-100 flex items-center gap-2 cursor-pointer font-medium text-slate-700">
               <ng-icon name="heroDocumentText" class="text-sm text-slate-500"></ng-icon>
-              <span>Pegar Código JSON</span>
+              <span>JSON</span>
             </button>
           </div>
         }
         <input #fileInput type="file" accept=".json,.xml,.xmi" (change)="fileSelected.emit($event)" class="hidden">
       </div>
 
-      <!-- Botón ⚡ Generar Spring Boot -->
+      <!-- Botón ⚡ Generar Spring Boot & Flutter -->
       <button
         (click)="openSpringBoot.emit()"
+        [title]="'appbar.generateTooltip' | translate"
         class="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-xs font-bold px-3 py-1 rounded flex items-center gap-1.5 border border-emerald-900 shadow-xs cursor-pointer transition-all">
         <ng-icon name="heroBolt" class="text-sm text-amber-300"></ng-icon>
-        <span>⚡ Generar Spring Boot</span>
+        <span>⚡ {{ 'appbar.generateCode' | translate }}</span>
       </button>
+
+      <!-- Selector de Idioma (Español / English) -->
+      <app-language-selector [theme]="'dark'" />
 
       <!-- Usuario & Salir -->
       @if (authService.currentUser()) {
         <div class="flex items-center gap-1.5 pl-2 border-l border-slate-600">
           <button
             (click)="openProfile.emit()"
-            title="Ver perfil de usuario"
+            [title]="'appbar.profileTooltip' | translate"
             class="flex items-center gap-1 bg-slate-900 hover:bg-purple-950/80 px-2 py-0.5 rounded border border-slate-600 hover:border-purple-400 text-white transition-all cursor-pointer">
             <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-bold text-[9.5px]">
               {{ authService.currentUser()?.fullName?.charAt(0)?.toUpperCase() }}
@@ -179,9 +183,9 @@
           </button>
           <button
             (click)="authService.logout()"
-            title="Cerrar Sesión"
-            class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-[11px] px-1.5 py-0.5 rounded border border-slate-600 cursor-pointer">
-            Salir
+            [title]="'appbar.logoutTooltip' | translate"
+            class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-[11px] px-2 py-0.5 rounded border border-slate-600 cursor-pointer">
+            {{ 'appbar.logout' | translate }}
           </button>
         </div>
       }

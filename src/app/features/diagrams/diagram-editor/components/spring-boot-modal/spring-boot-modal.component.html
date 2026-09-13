@@ -10,7 +10,7 @@
           </div>
           <div>
             <h3 class="font-bold uppercase tracking-wider font-mono text-[12px] flex items-center gap-2">
-              <span>Generador de Código de Arquitectura</span>
+              <span>{{ 'codeGen.title' | translate }}</span>
               <span class="px-2 py-0.2 bg-emerald-600 text-white text-[9.5px] rounded-full font-mono font-bold">Clean Architecture</span>
             </h3>
             <p class="text-[10px] text-slate-200 font-mono">
@@ -222,7 +222,7 @@
                   (click)="copyCode()"
                   class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded flex items-center gap-1 text-[10.5px] transition-colors cursor-pointer">
                   <ng-icon [name]="isCopied() ? 'heroCheck' : 'heroClipboardDocument'" class="text-xs text-emerald-400"></ng-icon>
-                  <span>{{ isCopied() ? 'Copiado!' : 'Copiar' }}</span>
+                  <span>{{ isCopied() ? ('codeGen.copiedCode' | translate) : ('codeGen.copyCode' | translate) }}</span>
                 </button>
               </div>
             </div>
@@ -233,7 +233,7 @@
             </div>
           } @else {
             <div class="flex-1 flex items-center justify-center text-slate-500 font-mono text-xs">
-              Selecciona un archivo del explorador para ver su código fuente
+              {{ 'codeGen.selectFile' | translate }}
             </div>
           }
 
