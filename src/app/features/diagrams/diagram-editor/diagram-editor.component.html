@@ -38,12 +38,34 @@
       (addClass)="addClass()">
     </app-diagram-toolbox>
 
-    <!-- 2.2 [CANVAS INTERACTIVO] FOBLEX FLOW -->
-    <div
-      #flowContainer
-      (mousemove)="onCanvasMouseMove($event)"
-      (click)="onCanvasBackgroundClick()"
-      class="flex-1 relative w-full h-full uml-canvas-container cursor-default overflow-hidden">
+    <!-- 2.2 [CONTENEDOR CENTRAL]: BARRA DE PESTAÑAS EA + CANVAS FOBLEX FLOW -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+
+      <!-- Barra de Pestañas y Breadcrumbs estilo Enterprise Architect -->
+      <div class="bg-[#ECEEF2] dark:bg-[#12151B] border-b border-[#D0D4DC] dark:border-[#383F4C] px-3 py-1 flex items-center justify-between z-10 shrink-0 select-none">
+        <div class="flex items-center gap-1">
+          <div class="bg-white dark:bg-[#181B22] border-t-2 border-t-blue-600 border-x border-b-0 border-[#D0D4DC] dark:border-[#383F4C] px-3 py-1 text-[11px] font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 shadow-xs rounded-t-[2px]">
+            <ng-icon name="heroRectangleStack" class="text-xs text-blue-600 dark:text-blue-400"></ng-icon>
+            <span>*{{ currentDiagramName() || 'Diagrama Principal' }}</span>
+            <span class="text-[10px] text-slate-400 font-normal ml-0.5">· Class Diagram</span>
+          </div>
+        </div>
+
+        <div class="hidden sm:flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400 font-sans">
+          <ng-icon name="heroHome" class="text-xs text-slate-400"></ng-icon>
+          <span>/</span>
+          <span>Model</span>
+          <span>/</span>
+          <span class="font-medium text-slate-700 dark:text-slate-200">{{ currentDiagramName() }}</span>
+        </div>
+      </div>
+
+      <!-- CANVAS INTERACTIVO FOBLEX FLOW -->
+      <div
+        #flowContainer
+        (mousemove)="onCanvasMouseMove($event)"
+        (click)="onCanvasBackgroundClick()"
+        class="flex-1 relative w-full h-full uml-canvas-container cursor-default overflow-hidden">
 
       <!-- Botón Flotante para reabrir Toolbox cuando está oculto -->
       @if (!isToolboxOpen()) {
@@ -132,20 +154,20 @@
 
                 <!-- Marcadores Visuales según el tipo de Relación UML 2.5 -->
                 @if (conn.type === 'generalization' || conn.type === 'realization') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] dark:stroke-[#94A3B8] stroke-2">
-                    <polygon points="0,0 16,8 0,16" class="fill-white dark:fill-[#1A1D24] stroke-[#2A201B] dark:stroke-[#94A3B8]" stroke-width="1.8" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#43352B] dark:stroke-[#94A3B8] stroke-2">
+                    <polygon points="0,0 16,8 0,16" class="fill-white dark:fill-[#1A1D24] stroke-[#43352B] dark:stroke-[#94A3B8]" stroke-width="1.3" />
                   </svg>
                 } @else if (conn.type === 'composition') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] dark:stroke-[#94A3B8] stroke-2">
-                    <polygon points="0,8 8,3 16,8 8,13" class="fill-[#2A201B] dark:fill-[#94A3B8] stroke-[#2A201B] dark:stroke-[#94A3B8]" stroke-width="1.8" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#43352B] dark:stroke-[#94A3B8] stroke-2">
+                    <polygon points="0,8 8,3 16,8 8,13" class="fill-[#43352B] dark:fill-[#94A3B8] stroke-[#43352B] dark:stroke-[#94A3B8]" stroke-width="1.3" />
                   </svg>
                 } @else if (conn.type === 'aggregation') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] dark:stroke-[#94A3B8] stroke-2">
-                    <polygon points="0,8 8,3 16,8 8,13" class="fill-white dark:fill-[#1A1D24] stroke-[#2A201B] dark:stroke-[#94A3B8]" stroke-width="1.8" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#43352B] dark:stroke-[#94A3B8] stroke-2">
+                    <polygon points="0,8 8,3 16,8 8,13" class="fill-white dark:fill-[#1A1D24] stroke-[#43352B] dark:stroke-[#94A3B8]" stroke-width="1.3" />
                   </svg>
                 } @else if (conn.type === 'dependency') {
-                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#2A201B] dark:stroke-[#94A3B8] stroke-2">
-                    <polyline points="2,2 14,8 2,14" fill="none" class="stroke-[#2A201B] dark:stroke-[#94A3B8]" stroke-width="1.8" />
+                  <svg viewBox="0 0 16 16" width="16" height="16" class="stroke-[#43352B] dark:stroke-[#94A3B8] stroke-2">
+                    <polyline points="2,2 14,8 2,14" fill="none" class="stroke-[#43352B] dark:stroke-[#94A3B8]" stroke-width="1.5" />
                   </svg>
                 }
 
@@ -213,10 +235,10 @@
                 [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
                 [ngClass]="{
                   'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
-                  'font-sans text-[#2A201B] dark:text-slate-100 select-none relative group/node transition-shadow animate-in fade-in zoom-in-95 duration-300': !node.isAnchor,
-                  'ring-2 ring-purple-600 shadow-[0_0_15px_rgba(124,58,237,0.3)] z-30': !node.isAnchor && selectedNodeId() === node.id,
+                  'font-sans text-[#241C18] dark:text-slate-100 select-none relative group/node transition-shadow rounded-[2px] overflow-hidden': !node.isAnchor,
+                  'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)] z-30': !node.isAnchor && selectedNodeId() === node.id,
                   'ring-2 ring-indigo-400 z-20': !node.isAnchor && isNeighborNode(node.id),
-                  'ring-2 ring-[#6B5A52] dark:ring-[#94A3B8] shadow-xl': !node.isAnchor && selectedSourceNodeId() === node.id && selectedNodeId() !== node.id,
+                  'ring-2 ring-[#796354] dark:ring-[#94A3B8] shadow-md': !node.isAnchor && selectedSourceNodeId() === node.id && selectedNodeId() !== node.id,
                   'opacity-80': !node.isAnchor && selectedNodeId() !== null && selectedNodeId() !== node.id && !isNeighborNode(node.id),
                   'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                   'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
@@ -318,16 +340,16 @@
                     class="uml-connector-point absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                   </div>
 
-                  <!-- 1. CABECERA: TÍTULO DE LA CLASE UML -->
+                  <!-- 1. CABECERA: TÍTULO DE LA CLASE UML (ESTILO ENTERPRISE ARCHITECT) -->
                   <div
                     (click)="onNodeSelect(node.id, $event)"
                     [ngClass]="{
-                      'bg-purple-600 text-white border-b-[1.5px] border-purple-700': selectedNodeId() === node.id,
-                      'bg-indigo-100 text-indigo-950 border-b-[1.5px] border-indigo-300': isNeighborNode(node.id),
-                      'bg-transparent border-b-[1.5px] border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-100': selectedNodeId() !== node.id && !isNeighborNode(node.id)
+                      'bg-blue-600 text-white border-b border-blue-700': selectedNodeId() === node.id,
+                      'bg-indigo-100 text-indigo-950 border-b border-indigo-300': isNeighborNode(node.id),
+                      'bg-gradient-to-b from-[#FCF8F2] to-[#EFE1D1] dark:from-[#242834] dark:to-[#1A1D24] border-b border-[#796354] dark:border-[#383F4C] text-[#241C18] dark:text-slate-100': selectedNodeId() !== node.id && !isNeighborNode(node.id)
                     }"
                     class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors">
-                    <span class="font-bold text-xs text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">
+                    <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">
                       @if (isNodeLockedByOther(node.id)) {
                         <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
                       }
@@ -342,31 +364,33 @@
                     </button>
                   </div>
 
-                  <!-- 2. CUERPO: ATRIBUTOS TIPADOS -->
-                  <div class="px-2.5 py-1.5 space-y-1 border-b-[1.5px] border-[#6B5A52] dark:border-[#383F4C] bg-white/40 dark:bg-black/20 min-h-[30px]">
+                  <!-- 2. CUERPO: ATRIBUTOS TIPADOS ESTILO EA -->
+                  <div class="px-2.5 py-1.5 space-y-0.5 border-b border-[#796354] dark:border-[#383F4C] bg-[#FAF6F0] dark:bg-black/20 min-h-[30px]">
                     @if (node.attributes && node.attributes.length > 0) {
                       @for (attr of node.attributes; track attr.name) {
-                        <div class="flex items-center justify-between text-[11px] font-mono leading-tight">
-                          <span class="truncate font-medium text-[#2A201B] dark:text-slate-200">- {{ attr.name }}</span>
-                          <span class="text-[#6B5A52] dark:text-slate-400 text-[10px] truncate ml-1 font-bold">: {{ attr.type }}</span>
+                        <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200">
+                          <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537] dark:text-slate-400">-</span>
+                          <span class="truncate font-medium">{{ attr.name }}</span>
+                          <span class="text-[#5A4537] dark:text-slate-400 ml-0.5 font-normal">: {{ attr.type }}</span>
                         </div>
                       }
                     } @else {
-                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-0.5">sin atributos</div>
+                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-0.5 font-sans">sin atributos</div>
                     }
                   </div>
 
-                  <!-- 3. CUERPO: MÉTODOS / OPERACIONES CON RETORNO -->
-                  <div class="px-2.5 py-1.5 space-y-1 bg-white/40 dark:bg-black/20 min-h-[26px]">
+                  <!-- 3. CUERPO: MÉTODOS / OPERACIONES CON RETORNO ESTILO EA -->
+                  <div class="px-2.5 py-1.5 space-y-0.5 bg-[#FAF6F0] dark:bg-black/20 min-h-[26px]">
                     @if (node.methods && node.methods.length > 0) {
                       @for (m of node.methods; track m.name) {
-                        <div class="flex items-center justify-between text-[11px] font-mono leading-tight">
-                          <span class="truncate font-medium text-[#2A201B] dark:text-slate-200">+ {{ m.name }}({{ m.parameters || '' }})</span>
-                          <span class="text-[#6B5A52] dark:text-slate-400 text-[10px] truncate ml-1 font-bold">: {{ m.returnType || 'void' }}</span>
+                        <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200">
+                          <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537] dark:text-slate-400">+</span>
+                          <span class="truncate font-medium">{{ m.name }}({{ m.parameters || '' }})</span>
+                          <span class="text-[#5A4537] dark:text-slate-400 ml-0.5 font-normal">: {{ m.returnType || 'void' }}</span>
                         </div>
                       }
                     } @else {
-                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-0.5">sin métodos</div>
+                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-0.5 font-sans">sin métodos</div>
                     }
                   </div>
 
@@ -380,6 +404,7 @@
       </f-flow>
 
     </div>
+  </div>
 
     <!-- 2.3 [PANEL LATERAL DERECHO] COPILOT IA REFACTORIZADO EN COMPONENTE SEPARADO -->
     <app-ai-assistant-panel

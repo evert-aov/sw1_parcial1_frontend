@@ -1,7 +1,15 @@
 .uml-canvas-container,
 ::ng-deep f-flow {
-  background-color: #F9F7F5 !important;
-  background-image: radial-gradient(#6B5A52 1.2px, transparent 1.2px) !important;
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+}
+
+:host-context(.dark) .uml-canvas-container,
+:host-context(.dark) ::ng-deep f-flow,
+.dark .uml-canvas-container,
+.dark ::ng-deep f-flow {
+  background-color: #0F1115 !important;
+  background-image: radial-gradient(#334155 1.2px, transparent 1.2px) !important;
   background-size: 20px 20px !important;
 }
 
@@ -17,11 +25,18 @@
 
 ::ng-deep f-flow .f-node {
   padding: 0 !important;
-  border-radius: 0 !important;
-  background-color: #F2EBE6 !important;
-  border: 1.5px solid #6B5A52 !important;
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.18) !important;
+  border-radius: 2px !important;
+  background-color: #FAF6F0 !important;
+  border: 1px solid #796354 !important;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.14) !important;
   box-sizing: border-box !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow .f-node,
+.dark ::ng-deep f-flow .f-node {
+  background-color: #1A1D24 !important;
+  border: 1px solid #475569 !important;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5) !important;
 }
 
 ::ng-deep f-flow .uml-connector-point.uml-connector-inactive {
@@ -52,8 +67,16 @@
 ::ng-deep f-flow path[f-connection-path],
 ::ng-deep f-flow .f-connection-path {
   fill: none !important;
-  stroke: #2A201B !important;
-  stroke-width: 1.5px !important;
+  stroke: #43352B !important;
+  stroke-width: 1.3px !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow f-connection path,
+:host-context(.dark) ::ng-deep f-flow f-connection-for-create path,
+:host-context(.dark) ::ng-deep f-flow .f-connection path,
+:host-context(.dark) ::ng-deep f-flow path[f-connection-path],
+:host-context(.dark) ::ng-deep f-flow .f-connection-path {
+  stroke: #94A3B8 !important;
 }
 
 ::ng-deep f-flow f-connection.uml-relation-realization path[f-connection-path],
@@ -75,8 +98,18 @@
 ::ng-deep f-flow .uml-marker-hollow,
 ::ng-deep polygon.uml-marker-hollow {
   fill: #ffffff !important;
-  stroke: #1E293B !important;
-  stroke-width: 1.5px !important;
+  stroke: #43352B !important;
+  stroke-width: 1.3px !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow svg marker polygon.uml-marker-hollow,
+:host-context(.dark) ::ng-deep f-flow svg defs marker polygon.uml-marker-hollow,
+:host-context(.dark) ::ng-deep f-flow marker polygon.uml-marker-hollow,
+:host-context(.dark) ::ng-deep f-flow .f-marker polygon.uml-marker-hollow,
+:host-context(.dark) ::ng-deep f-flow .uml-marker-hollow,
+:host-context(.dark) ::ng-deep polygon.uml-marker-hollow {
+  fill: #1A1D24 !important;
+  stroke: #94A3B8 !important;
 }
 
 ::ng-deep f-flow svg marker polygon.uml-marker-filled,
@@ -85,9 +118,19 @@
 ::ng-deep f-flow .f-marker polygon.uml-marker-filled,
 ::ng-deep f-flow .uml-marker-filled,
 ::ng-deep polygon.uml-marker-filled {
-  fill: #1E293B !important;
-  stroke: #1E293B !important;
-  stroke-width: 1.5px !important;
+  fill: #43352B !important;
+  stroke: #43352B !important;
+  stroke-width: 1.3px !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow svg marker polygon.uml-marker-filled,
+:host-context(.dark) ::ng-deep f-flow svg defs marker polygon.uml-marker-filled,
+:host-context(.dark) ::ng-deep f-flow marker polygon.uml-marker-filled,
+:host-context(.dark) ::ng-deep f-flow .f-marker polygon.uml-marker-filled,
+:host-context(.dark) ::ng-deep f-flow .uml-marker-filled,
+:host-context(.dark) ::ng-deep polygon.uml-marker-filled {
+  fill: #94A3B8 !important;
+  stroke: #94A3B8 !important;
 }
 
 ::ng-deep f-flow svg marker polyline.uml-marker-open,
@@ -97,8 +140,17 @@
 ::ng-deep f-flow .uml-marker-open,
 ::ng-deep polyline.uml-marker-open {
   fill: none !important;
-  stroke: #1E293B !important;
-  stroke-width: 1.8px !important;
+  stroke: #43352B !important;
+  stroke-width: 1.5px !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow svg marker polyline.uml-marker-open,
+:host-context(.dark) ::ng-deep f-flow svg defs marker polyline.uml-marker-open,
+:host-context(.dark) ::ng-deep f-flow marker polyline.uml-marker-open,
+:host-context(.dark) ::ng-deep f-flow .f-marker polyline.uml-marker-open,
+:host-context(.dark) ::ng-deep f-flow .uml-marker-open,
+:host-context(.dark) ::ng-deep polyline.uml-marker-open {
+  stroke: #94A3B8 !important;
 }
 
 /* =========================================================================
