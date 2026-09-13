@@ -151,7 +151,7 @@ export const es = {
     exportXmi: 'Estándar OMG XMI 2.1 (CASE)',
     import: 'Importar',
     importXmi: 'Importar Archivo XMI (UML)',
-    generateCode: 'Generar Spring Boot & Flutter',
+    generateCode: 'Generar Full Stack',
     generateTooltip: 'Generar microservicio Spring Boot y app móvil Flutter',
     aiAssistant: 'Asistente IA',
     aiTooltip: 'Generación y sugerencias con Inteligencia Artificial',
