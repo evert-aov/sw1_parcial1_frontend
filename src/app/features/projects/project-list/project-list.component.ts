@@ -106,6 +106,8 @@ export class ProjectListComponent implements OnInit {
     role: ['EDITOR', [Validators.required]],
   });
 
+  readonly projects = computed(() => this.projectService.projects());
+
   // Proyectos filtrados
   readonly filteredProjects = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -118,6 +120,10 @@ export class ProjectListComponent implements OnInit {
         p.basePackage.toLowerCase().includes(q),
     );
   });
+
+  logout(): void {
+    this.authService.logout();
+  }
 
   ngOnInit(): void {
     this.projectService.loadProjects().subscribe();

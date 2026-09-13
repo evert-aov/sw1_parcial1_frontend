@@ -26,12 +26,12 @@
   --ff-node-padding: 0px !important;
   --ff-node-border-radius: 2px !important;
   --ff-node-border-color: transparent !important;
-  --ff-node-background-color: #1A1D24 !important;
+  --ff-node-background-color: #151A30 !important;
   --ff-node-shadow: none !important;
   --ff-canvas-background-color: transparent !important;
-  --ff-flow-background-color: #0F1115 !important;
+  --ff-flow-background-color: #0D1124 !important;
   --ff-color-surface-canvas: transparent !important;
-  --ff-color-surface-page: #0F1115 !important;
+  --ff-color-surface-page: #0D1124 !important;
 }
 
 html.dark {
@@ -43,14 +43,14 @@ html.dark {
   height: 8px;
 }
 .dark ::-webkit-scrollbar-track {
-  background: #12151B;
+  background: #0D1124;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #2D3340;
+  background: #252E54;
   border-radius: 4px;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #3E4554;
+  background: #354175;
 }
 
 f-flow .f-canvas,
@@ -72,9 +72,8 @@ f-flow {
 
 .dark .uml-canvas-container,
 .dark f-flow {
-  background-color: #0F1115 !important;
-  background-image: radial-gradient(#334155 1.2px, transparent 1.2px) !important;
-  background-size: 20px 20px !important;
+  background-color: #0D1124 !important;
+  background-image: none !important;
 }
 
 /* Nodos UML 2.5 estilo Enterprise Architect (EA) */
@@ -88,9 +87,9 @@ f-flow .f-node {
 }
 
 .dark f-flow .f-node {
-  background-color: #1A1D24 !important;
-  border: 1px solid #475569 !important;
-  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5) !important;
+  background-color: #151A30 !important;
+  border: 1px solid #3B487A !important;
+  box-shadow: 2px 2px 8px rgba(10, 13, 26, 0.7) !important;
 }
 
 f-flow .f-connector-source-target,
@@ -147,15 +146,16 @@ f-flow circle.f-connection-drag-handle {
 }
 
 .dark .uml-multiplicity-badge {
-  background-color: rgba(30, 41, 59, 0.88);
-  color: #F1F5F9;
-  border-color: transparent;
+  background-color: rgba(21, 26, 48, 0.95);
+  color: #C7D2FE;
+  border-color: #3B487A;
+  box-shadow: 1px 1px 3px rgba(10, 13, 26, 0.6);
 }
 
 .dark .uml-multiplicity-badge:hover {
-  background-color: #312E81;
+  background-color: #3730A3;
   border-color: #818CF8;
-  color: #E0E7FF;
+  color: #EEF2FF;
 }
 
 .uml-relation-name-badge {
@@ -183,15 +183,16 @@ f-flow circle.f-connection-drag-handle {
 }
 
 .dark .uml-relation-name-badge {
-  background-color: rgba(30, 34, 43, 0.88);
-  color: #CBD5E1;
-  border-color: transparent;
+  background-color: rgba(21, 26, 48, 0.95);
+  color: #C7D2FE;
+  border-color: #3B487A;
+  box-shadow: 1px 1px 3px rgba(10, 13, 26, 0.6);
 }
 
 .dark .uml-relation-name-badge:hover {
-  background-color: #312E81;
-  border-color: #6366F1;
-  color: #E0E7FF;
+  background-color: #3730A3;
+  border-color: #818CF8;
+  color: #EEF2FF;
 }
 
 /* Ocultar flecha nativa de datalist para evitar que recorte o tape el texto del tipo */
@@ -219,7 +220,7 @@ f-flow .f-connection-path {
 .dark f-flow .f-connection path,
 .dark f-flow path[f-connection-path],
 .dark f-flow .f-connection-path {
-  stroke: #94A3B8 !important;
+  stroke: #818CF8 !important;
 }
 
 f-flow f-connection.uml-relation-realization path[f-connection-path],
@@ -259,8 +260,8 @@ polygon.uml-marker-hollow {
 .dark f-flow .f-marker polygon.uml-marker-hollow,
 .dark f-flow .uml-marker-hollow,
 .dark polygon.uml-marker-hollow {
-  fill: #1A1D24 !important;
-  stroke: #94A3B8 !important;
+  fill: #151A30 !important;
+  stroke: #818CF8 !important;
 }
 
 /* Forzar relleno oscuro sólido en Composición estilo EA */
@@ -281,8 +282,8 @@ polygon.uml-marker-filled {
 .dark f-flow .f-marker polygon.uml-marker-filled,
 .dark f-flow .uml-marker-filled,
 .dark polygon.uml-marker-filled {
-  fill: #94A3B8 !important;
-  stroke: #94A3B8 !important;
+  fill: #818CF8 !important;
+  stroke: #818CF8 !important;
 }
 
 /* Forzar trazo abierto sin relleno en Dependencia */
@@ -303,5 +304,5 @@ polyline.uml-marker-open {
 .dark f-flow .f-marker polyline.uml-marker-open,
 .dark f-flow .uml-marker-open,
 .dark polyline.uml-marker-open {
-  stroke: #94A3B8 !important;
+  stroke: #818CF8 !important;
 }

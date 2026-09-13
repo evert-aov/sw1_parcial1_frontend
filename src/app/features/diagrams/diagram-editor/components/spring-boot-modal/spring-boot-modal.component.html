@@ -1,9 +1,9 @@
 @if (isOpen()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-    <div class="bg-[#F2EBE6] dark:bg-[#181B22] border-[1.5px] border-[#6B5A52] dark:border-[#383F4C] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-6xl w-full flex flex-col max-h-[94vh] overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150 rounded-sm">
+    <div class="bg-[#F2EBE6] dark:bg-[#14182E] border-[1.5px] border-[#6B5A52] dark:border-[#2D3762] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-6xl w-full flex flex-col max-h-[94vh] overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150 rounded-sm">
       
       <!-- 1. Header del Modal con Selector de Plataforma -->
-      <div class="px-4 py-3 bg-[#6B5A52] dark:bg-[#12151B] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 border-b border-transparent dark:border-[#383F4C]">
+      <div class="px-4 py-3 bg-[#6B5A52] dark:bg-[#101426] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 border-b border-transparent dark:border-[#2D3762]">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
             <ng-icon name="heroBolt" class="text-lg text-emerald-300"></ng-icon>
@@ -20,7 +20,7 @@
         </div>
 
         <!-- Selector de Plataforma (Fullstack / Spring Boot / Flutter) -->
-        <div class="flex items-center gap-1 bg-[#43342D] dark:bg-[#1E222B] p-1 rounded border border-[#8D7B72]/40 dark:border-[#383F4C] font-mono text-[10.5px]">
+        <div class="flex items-center gap-1 bg-[#43342D] dark:bg-[#1A203B] p-1 rounded border border-[#8D7B72]/40 dark:border-[#2D3762] font-mono text-[10.5px]">
           <button
             (click)="setPlatform('all')"
             [ngClass]="selectedPlatform() === 'all' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'text-slate-300 hover:text-white hover:bg-white/5'"
@@ -30,7 +30,7 @@
           </button>
           <button
             (click)="setPlatform('spring-boot')"
-            [ngClass]="selectedPlatform() === 'spring-boot' ? 'bg-[#6B5A52] dark:bg-slate-700 text-white font-bold shadow-xs' : 'text-slate-300 hover:text-white hover:bg-white/5'"
+            [ngClass]="selectedPlatform() === 'spring-boot' ? 'bg-[#6B5A52] dark:bg-[#252E56] text-white font-bold shadow-xs' : 'text-slate-300 hover:text-white hover:bg-white/5'"
             class="px-2.5 py-1 rounded transition-all cursor-pointer flex items-center gap-1.5">
             <ng-icon name="heroServer" class="text-xs text-emerald-300"></ng-icon>
             <span>Spring Boot</span>
@@ -60,14 +60,14 @@
       }
 
       <!-- 2. Parámetros de Configuración del Proyecto (Compacto) -->
-      <div class="p-3 bg-[#EAEAEA] dark:bg-[#14171E] border-b border-[#C0C0C0] dark:border-[#383F4C] shrink-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 font-mono text-[11px]">
+      <div class="p-3 bg-[#EAEAEA] dark:bg-[#12162A] border-b border-[#C0C0C0] dark:border-[#2D3762] shrink-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 font-mono text-[11px]">
         <div>
           <label class="text-slate-600 dark:text-slate-300 font-bold block mb-0.5 text-[10px]">{{ 'codeGen.packageBase' | translate }}:</label>
           <input
             [(ngModel)]="packageName"
             (change)="generatePreview()"
             type="text"
-            class="w-full px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+            class="w-full px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded focus:outline-none focus:ring-1 focus:ring-emerald-600" />
         </div>
         <div>
           <label class="text-slate-600 dark:text-slate-300 font-bold block mb-0.5 text-[10px]">{{ 'codeGen.artifactId' | translate }}:</label>
@@ -75,7 +75,7 @@
             [(ngModel)]="artifactId"
             (change)="generatePreview()"
             type="text"
-            class="w-full px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+            class="w-full px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded focus:outline-none focus:ring-1 focus:ring-emerald-600" />
         </div>
         <div>
           <label class="text-slate-600 dark:text-slate-300 font-bold block mb-0.5 text-[10px]">{{ 'codeGen.serverDbPort' | translate }}:</label>
@@ -85,28 +85,28 @@
               (change)="generatePreview()"
               type="number"
               placeholder="Server Port (8080)"
-              class="w-1/2 px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded focus:outline-none" />
+              class="w-1/2 px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded focus:outline-none" />
             <input
               [(ngModel)]="databasePort"
               (change)="generatePreview()"
               type="number"
               placeholder="DB Port (5432)"
-              class="w-1/2 px-2 py-1 bg-white dark:bg-[#101318] border border-[#6B5A52] dark:border-[#383F4C] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded focus:outline-none" />
+              class="w-1/2 px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 rounded focus:outline-none" />
           </div>
         </div>
         <div>
           <label class="text-slate-600 dark:text-slate-300 font-bold block mb-0.5 text-[10px]">{{ 'codeGen.usbConnection' | translate }}:</label>
-          <div class="px-2 py-1 bg-slate-200 dark:bg-[#1E222B] border border-slate-300 dark:border-[#383F4C] rounded text-[9.5px] text-slate-700 dark:text-slate-300 font-mono truncate">
+          <div class="px-2 py-1 bg-slate-200 dark:bg-[#1A203B] border border-slate-300 dark:border-[#2D3762] rounded text-[9.5px] text-slate-700 dark:text-slate-300 font-mono truncate">
             <code>adb reverse tcp:{{ serverPort() }} tcp:{{ serverPort() }}</code>
           </div>
         </div>
       </div>
 
       <!-- 3. Barra de Filtros por Capa / Categoría -->
-      <div class="bg-white dark:bg-[#161920] border-b border-[#C0C0C0] dark:border-[#383F4C] px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 text-[10.5px] font-mono">
+      <div class="bg-white dark:bg-[#121629] border-b border-[#C0C0C0] dark:border-[#2D3762] px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 text-[10.5px] font-mono">
         <button
           (click)="activeCategory.set('all')"
-          [ngClass]="activeCategory() === 'all' ? 'bg-[#6B5A52] dark:bg-slate-700 text-white font-bold' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'"
+          [ngClass]="activeCategory() === 'all' ? 'bg-[#6B5A52] dark:bg-[#252E56] text-white font-bold' : 'bg-slate-100 dark:bg-[#1C2242] hover:bg-slate-200 dark:hover:bg-[#252E56] text-slate-700 dark:text-slate-300'"
           class="px-2.5 py-1 rounded transition-colors cursor-pointer shrink-0">
           {{ 'codeGen.filterAll' | translate }} ({{ files().length }})
         </button>
@@ -176,8 +176,8 @@
       <div class="flex-1 flex overflow-hidden min-h-[380px]">
         
         <!-- Columna Izquierda: Lista de Archivos -->
-        <div class="w-80 bg-[#FAFAFA] dark:bg-[#14171E] border-r border-[#C0C0C0] dark:border-[#383F4C] overflow-y-auto flex flex-col shrink-0">
-          <div class="p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-[#101318] flex items-center justify-between font-mono text-[10px] text-slate-500 dark:text-slate-400">
+        <div class="w-80 bg-[#FAFAFA] dark:bg-[#12162A] border-r border-[#C0C0C0] dark:border-[#2D3762] overflow-y-auto flex flex-col shrink-0">
+          <div class="p-2 border-b border-slate-200 dark:border-[#283256] bg-slate-100 dark:bg-[#0E1225] flex items-center justify-between font-mono text-[10px] text-slate-500 dark:text-slate-400">
             <span>{{ 'codeGen.fileExplorer' | translate }} ({{ selectedPlatform().toUpperCase() }})</span>
             <span>{{ 'codeGen.filesCount' | translate:{ count: filteredFiles().length } }}</span>
           </div>
@@ -188,11 +188,11 @@
               <span>{{ 'codeGen.compiling' | translate:{ target: (selectedPlatform() === 'all' ? 'Spring Boot & Flutter' : selectedPlatform()) } }}</span>
             </div>
           } @else {
-            <div class="divide-y divide-slate-100 dark:divide-slate-800/80">
+            <div class="divide-y divide-slate-100 dark:divide-[#283256]">
               @for (file of filteredFiles(); track file.path) {
                 <button
                   (click)="selectFile(file)"
-                  [ngClass]="selectedFile()?.path === file.path ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-300 font-bold border-l-4 border-emerald-600' : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'"
+                  [ngClass]="selectedFile()?.path === file.path ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-300 font-bold border-l-4 border-emerald-600' : 'hover:bg-slate-100 dark:hover:bg-[#1E2442] text-slate-700 dark:text-slate-300'"
                   class="w-full p-2 text-left flex flex-col gap-1 transition-colors cursor-pointer">
                   <div class="flex items-center justify-between gap-1">
                     <span class="font-mono text-[11px] truncate">{{ file.filename }}</span>
@@ -259,7 +259,7 @@
       </div>
 
       <!-- 5. Footer con Acciones de Descarga -->
-      <div class="p-3 bg-white dark:bg-[#161920] border-t border-[#6B5A52]/30 dark:border-[#383F4C] flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
+      <div class="p-3 bg-white dark:bg-[#121629] border-t border-[#6B5A52]/30 dark:border-[#2D3762] flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
         <div class="flex items-center gap-2 text-[10.5px] font-mono text-slate-600 dark:text-slate-300">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span>
@@ -277,7 +277,7 @@
           <button
             (click)="generatePreview()"
             [disabled]="isGenerating() || !diagramId()"
-            class="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-mono text-xs font-bold rounded cursor-pointer transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            class="px-3.5 py-2 bg-slate-100 dark:bg-[#1C2242] hover:bg-slate-200 dark:hover:bg-[#252E56] text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-[#2D3762] font-mono text-xs font-bold rounded cursor-pointer transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
             <ng-icon name="heroArrowPath" class="text-xs" [ngClass]="{ 'animate-spin': isGenerating() }"></ng-icon>
             <span>{{ 'codeGen.refresh' | translate }}</span>
           </button>

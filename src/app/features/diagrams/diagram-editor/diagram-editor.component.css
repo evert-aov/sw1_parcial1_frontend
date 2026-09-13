@@ -8,9 +8,8 @@
 :host-context(.dark) ::ng-deep f-flow,
 .dark .uml-canvas-container,
 .dark ::ng-deep f-flow {
-  background-color: #0F1115 !important;
-  background-image: radial-gradient(#334155 1.2px, transparent 1.2px) !important;
-  background-size: 20px 20px !important;
+  background-color: #0D1124 !important;
+  background-image: none !important;
 }
 
 ::ng-deep f-canvas,
@@ -34,9 +33,9 @@
 
 :host-context(.dark) ::ng-deep f-flow .f-node,
 .dark ::ng-deep f-flow .f-node {
-  background-color: #1A1D24 !important;
-  border: 1px solid #475569 !important;
-  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5) !important;
+  background-color: #151A30 !important;
+  border: 1px solid #3B487A !important;
+  box-shadow: 2px 2px 8px rgba(10, 13, 26, 0.7) !important;
 }
 
 ::ng-deep f-flow .uml-connector-point.uml-connector-inactive {
@@ -76,7 +75,7 @@
 :host-context(.dark) ::ng-deep f-flow .f-connection path,
 :host-context(.dark) ::ng-deep f-flow path[f-connection-path],
 :host-context(.dark) ::ng-deep f-flow .f-connection-path {
-  stroke: #94A3B8 !important;
+  stroke: #818CF8 !important;
 }
 
 ::ng-deep f-flow f-connection.uml-relation-realization path[f-connection-path],
@@ -108,8 +107,8 @@
 :host-context(.dark) ::ng-deep f-flow .f-marker polygon.uml-marker-hollow,
 :host-context(.dark) ::ng-deep f-flow .uml-marker-hollow,
 :host-context(.dark) ::ng-deep polygon.uml-marker-hollow {
-  fill: #1A1D24 !important;
-  stroke: #94A3B8 !important;
+  fill: #151A30 !important;
+  stroke: #818CF8 !important;
 }
 
 ::ng-deep f-flow svg marker polygon.uml-marker-filled,
@@ -129,8 +128,8 @@
 :host-context(.dark) ::ng-deep f-flow .f-marker polygon.uml-marker-filled,
 :host-context(.dark) ::ng-deep f-flow .uml-marker-filled,
 :host-context(.dark) ::ng-deep polygon.uml-marker-filled {
-  fill: #94A3B8 !important;
-  stroke: #94A3B8 !important;
+  fill: #818CF8 !important;
+  stroke: #818CF8 !important;
 }
 
 ::ng-deep f-flow svg marker polyline.uml-marker-open,
@@ -150,7 +149,7 @@
 :host-context(.dark) ::ng-deep f-flow .f-marker polyline.uml-marker-open,
 :host-context(.dark) ::ng-deep f-flow .uml-marker-open,
 :host-context(.dark) ::ng-deep polyline.uml-marker-open {
-  stroke: #94A3B8 !important;
+  stroke: #818CF8 !important;
 }
 
 /* =========================================================================

@@ -1,19 +1,19 @@
   <!-- 1. [TOPBAR] LOGO | PROYECTO | AVATARES COLABORADORES | EXPORTAR | GENERAR SPRING BOOT - ESTILO ENTERPRISE ARCHITECT -->
-  <header class="bg-gradient-to-r from-[#1B4E8C] via-[#245D9E] to-[#2B6CB0] dark:from-[#111622] dark:via-[#161C2A] dark:to-[#121722] text-white border-b border-[#1A3E6B] dark:border-[#2C3444] shadow-md px-3 py-1.5 flex items-center justify-between gap-3 z-30 shrink-0">
+  <header class="bg-gradient-to-r from-[#1B4E8C] via-[#245D9E] to-[#2B6CB0] dark:from-[#151B38] dark:via-[#1A2246] dark:to-[#121730] text-white border-b border-[#1A3E6B] dark:border-[#283256] shadow-md px-3 py-1.5 flex items-center justify-between gap-3 z-30 shrink-0">
 
     <!-- Izquierda: Logo & Nombre del Proyecto -->
     <div class="flex items-center gap-2.5">
       <a
         routerLink="/projects"
         [title]="'appbar.projects' | translate"
-        class="bg-[#163F72] hover:bg-[#11315B] dark:bg-slate-800 dark:hover:bg-slate-900 border border-[#3A72AD] dark:border-slate-600 px-2 py-1 rounded text-xs text-white dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs">
+        class="bg-[#163F72] hover:bg-[#11315B] dark:bg-[#1C2242] dark:hover:bg-[#252E56] border border-[#3A72AD] dark:border-[#283256] px-2 py-1 rounded text-xs text-white dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs">
         <ng-icon name="heroFolder" class="text-xs text-sky-200 dark:text-slate-300"></ng-icon>
         <span class="font-mono text-[11px]">{{ 'appbar.projects' | translate }}</span>
       </a>
 
-      <div class="h-4 w-px bg-[#356AA3] dark:bg-slate-700"></div>
+      <div class="h-4 w-px bg-[#356AA3] dark:bg-[#283256]"></div>
 
-      <div class="bg-[#133763] dark:bg-slate-900 border border-[#3870AA] dark:border-slate-600 p-1 rounded shadow-inner flex items-center justify-center">
+      <div class="bg-[#133763] dark:bg-[#101426] border border-[#3870AA] dark:border-[#283256] p-1 rounded shadow-inner flex items-center justify-center">
         <ng-icon name="heroCube" class="text-base text-sky-200 dark:text-slate-100"></ng-icon>
       </div>
       <div>
@@ -27,7 +27,7 @@
     <!-- Centro: Avatares de Colaboradores Conectados en Tiempo Real -->
     <div class="flex items-center gap-2">
       @if (collaborationService.activeRoomCode()) {
-        <div class="flex items-center gap-2 bg-[#143966]/90 dark:bg-slate-900/80 border border-[#376EA7]/80 dark:border-slate-600/80 px-2.5 py-0.5 rounded-full shadow-inner">
+        <div class="flex items-center gap-2 bg-[#143966]/90 dark:bg-[#101426]/80 border border-[#376EA7]/80 dark:border-[#283256]/80 px-2.5 py-0.5 rounded-full shadow-inner">
           <button
             (click)="copyRoomCode()"
             [title]="'appbar.clickToCopy' | translate"
@@ -36,13 +36,13 @@
             <span>{{ 'appbar.room' | translate }}: <strong>{{ collaborationService.activeRoomCode() }}</strong></span>
           </button>
 
-          <div class="h-3 w-px bg-[#356AA3] dark:bg-slate-700"></div>
+          <div class="h-3 w-px bg-[#356AA3] dark:bg-[#283256]"></div>
 
           <!-- Avatares con colores diferenciados -->
           <div class="flex items-center -space-x-1.5">
             @for (collab of collaborationService.collaborators(); track collab.userId) {
               <div
-                class="w-5.5 h-5.5 rounded-full border-2 border-[#1B4E8C] dark:border-slate-800 text-white font-bold text-[9.5px] flex items-center justify-center shadow-md select-none transition-transform hover:scale-125 cursor-default"
+                class="w-5.5 h-5.5 rounded-full border-2 border-[#1B4E8C] dark:border-[#14182E] text-white font-bold text-[9.5px] flex items-center justify-center shadow-md select-none transition-transform hover:scale-125 cursor-default"
                 [style.backgroundColor]="collab.color"
                 [title]="collab.userName">
                 {{ collab.userName.charAt(0).toUpperCase() }}
@@ -88,24 +88,24 @@
       <div class="relative">
         <button
           (click)="isExportDropdownOpen.set(!isExportDropdownOpen()); isImportDropdownOpen.set(false)"
-          class="bg-[#1A4C84] hover:bg-[#153D6B] dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-[#3972AF] dark:border-slate-600 shadow-xs cursor-pointer">
+          class="bg-[#1A4C84] hover:bg-[#153D6B] dark:bg-[#1C2242] dark:hover:bg-[#252E56] text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-[#3972AF] dark:border-[#283256] shadow-xs cursor-pointer">
           <ng-icon name="heroArrowDownTray" class="text-xs text-sky-200"></ng-icon>
           <span>{{ 'appbar.export' | translate }}</span>
           <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
         </button>
 
         @if (isExportDropdownOpen()) {
-          <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100 dark:divide-slate-700">
+          <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-[#14182E] border border-slate-300 dark:border-[#2D3762] shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100 dark:divide-[#283256]">
             <div class="py-0.5">
               <button
                 (click)="exportBmp.emit(); isExportDropdownOpen.set(false)"
-                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
                 <ng-icon name="heroPhoto" class="text-sm text-purple-600 dark:text-purple-400"></ng-icon>
                 <span>{{ 'appbar.exportBmp' | translate }}</span>
               </button>
               <button
                 (click)="exportXmi.emit(); isExportDropdownOpen.set(false)"
-                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
                 <ng-icon name="heroDocumentText" class="text-sm text-blue-600 dark:text-blue-400"></ng-icon>
                 <span>{{ 'appbar.exportXmi' | translate }}</span>
               </button>
@@ -113,13 +113,13 @@
             <div class="py-0.5">
               <button
                 (click)="exportJson.emit(); isExportDropdownOpen.set(false)"
-                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
                 <ng-icon name="heroDocumentText" class="text-sm text-emerald-600 dark:text-emerald-400"></ng-icon>
                 <span>{{ 'appbar.exportJson' | translate }}</span>
               </button>
               <button
                 (click)="viewJson.emit(); isExportDropdownOpen.set(false)"
-                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
+                class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
                 <ng-icon name="heroDocumentText" class="text-sm text-slate-600 dark:text-slate-400"></ng-icon>
                 <span>JSON</span>
               </button>
@@ -132,23 +132,23 @@
       <div class="relative">
         <button
           (click)="isImportDropdownOpen.set(!isImportDropdownOpen()); isExportDropdownOpen.set(false)"
-          class="bg-[#1A4C84] hover:bg-[#153D6B] dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-[#3972AF] dark:border-slate-600 shadow-xs cursor-pointer">
+          class="bg-[#1A4C84] hover:bg-[#153D6B] dark:bg-[#1C2242] dark:hover:bg-[#252E56] text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-[#3972AF] dark:border-[#283256] shadow-xs cursor-pointer">
           <ng-icon name="heroArrowUpTray" class="text-xs text-amber-300"></ng-icon>
           <span>{{ 'appbar.import' | translate }}</span>
           <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
         </button>
 
         @if (isImportDropdownOpen()) {
-          <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-100">
+          <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-[#14182E] border border-slate-300 dark:border-[#2D3762] shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-100">
             <button
               (click)="triggerFileInput()"
-              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-amber-700 dark:text-amber-400">
+              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-amber-700 dark:text-amber-400">
               <ng-icon name="heroArrowUpTray" class="text-sm"></ng-icon>
               <span>{{ 'appbar.importXmi' | translate }}</span>
             </button>
             <button
               (click)="openImportJson.emit(); isImportDropdownOpen.set(false)"
-              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 cursor-pointer font-medium text-slate-700 dark:text-slate-300">
+              class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-slate-700 dark:text-slate-300">
               <ng-icon name="heroDocumentText" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
               <span>JSON</span>
             </button>
@@ -174,11 +174,11 @@
 
       <!-- Usuario & Salir -->
       @if (authService.currentUser()) {
-        <div class="flex items-center gap-1.5 pl-2 border-l border-[#356AA3] dark:border-slate-700">
+        <div class="flex items-center gap-1.5 pl-2 border-l border-[#356AA3] dark:border-[#283256]">
           <button
             (click)="openProfile.emit()"
             [title]="'appbar.profileTooltip' | translate"
-            class="flex items-center gap-1 bg-[#163D6C] hover:bg-[#123158] dark:bg-slate-900 px-2 py-0.5 rounded border border-[#366FA8] dark:border-slate-600 text-white transition-all cursor-pointer">
+            class="flex items-center gap-1 bg-[#163D6C] hover:bg-[#123158] dark:bg-[#101426] px-2 py-0.5 rounded border border-[#366FA8] dark:border-[#283256] text-white transition-all cursor-pointer">
             <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center font-bold text-[9.5px]">
               {{ authService.currentUser()?.fullName?.charAt(0)?.toUpperCase() }}
             </div>
@@ -187,7 +187,7 @@
           <button
             (click)="authService.logout()"
             [title]="'appbar.logoutTooltip' | translate"
-            class="bg-[#1A477C] hover:bg-red-900/80 dark:bg-slate-700 text-sky-100 hover:text-white dark:text-slate-300 text-[11px] px-2 py-0.5 rounded border border-[#366FA8] dark:border-slate-600 cursor-pointer">
+            class="bg-[#1A477C] hover:bg-red-900/80 dark:bg-[#1C2242] text-sky-100 hover:text-white dark:text-slate-300 text-[11px] px-2 py-0.5 rounded border border-[#366FA8] dark:border-[#283256] cursor-pointer">
             {{ 'appbar.logout' | translate }}
           </button>
         </div>
