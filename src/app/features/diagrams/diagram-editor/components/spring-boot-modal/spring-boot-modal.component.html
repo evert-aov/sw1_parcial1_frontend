@@ -234,16 +234,18 @@
             </div>
 
             <!-- Código con Scroll y Resaltado de Sintaxis (highlight.js) -->
-            <div class="flex-1 overflow-auto font-mono text-[11.5px] leading-relaxed select-text bg-[#0D1117] text-[#E6EDF3] flex">
-              <!-- Gutter de números de línea -->
-              <div class="select-none py-3.5 pl-3 pr-3 text-right text-slate-500/60 border-r border-slate-800 shrink-0 font-mono text-[11.5px] bg-[#090D13]">
-                @for (num of lineNumbers(); track num) {
-                  <div class="leading-relaxed">{{ num }}</div>
-                }
-              </div>
-              <!-- Contenido de código con highlight.js -->
-              <div class="py-3.5 px-4 overflow-x-auto flex-1 font-mono text-[11.5px]">
-                <pre class="whitespace-pre m-0 p-0 font-mono text-[11.5px]"><code class="hljs !bg-transparent !p-0 font-mono text-[11.5px] leading-relaxed" [innerHTML]="highlightedCode()"></code></pre>
+            <div class="flex-1 overflow-auto font-mono text-[11.5px] leading-relaxed select-text bg-[#0D1117] text-[#E6EDF3]">
+              <div class="flex min-w-full w-fit">
+                <!-- Gutter de números de línea sticky a la izquierda -->
+                <div class="sticky left-0 z-10 select-none py-3.5 pl-3 pr-3 text-right text-slate-500/60 border-r border-slate-800 shrink-0 font-mono text-[11.5px] bg-[#090D13]">
+                  @for (num of lineNumbers(); track num) {
+                    <div class="leading-relaxed">{{ num }}</div>
+                  }
+                </div>
+                <!-- Contenido de código con highlight.js (un solo contenedor de scroll) -->
+                <div class="py-3.5 px-4 flex-1 font-mono text-[11.5px]">
+                  <pre class="whitespace-pre m-0 p-0 font-mono text-[11.5px]"><code class="hljs !bg-transparent !p-0 font-mono text-[11.5px] leading-relaxed" [innerHTML]="highlightedCode()"></code></pre>
+                </div>
               </div>
             </div>
           } @else {
