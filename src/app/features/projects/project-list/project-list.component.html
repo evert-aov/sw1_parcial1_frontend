@@ -4,16 +4,16 @@
   <div class="absolute inset-0 bg-[radial-gradient(#6B5A52_0.75px,transparent_0.75px)] dark:bg-[radial-gradient(#94A3B8_0.75px,transparent_0.75px)] [background-size:16px_16px] opacity-15 dark:opacity-10 pointer-events-none z-0"></div>
 
   <!-- BARRA SUPERIOR ESTILO ENTERPRISE ARCHITECT -->
-  <header class="bg-gradient-to-b from-slate-700 to-slate-800 text-white border-b border-slate-900 shadow-md px-4 py-2 flex items-center justify-between z-30">
+  <header class="bg-gradient-to-r from-[#1B4E8C] via-[#245D9E] to-[#2B6CB0] dark:from-[#111622] dark:via-[#161C2A] dark:to-[#121722] text-white border-b border-[#1A3E6B] dark:border-[#2C3444] shadow-md px-4 py-2 flex items-center justify-between z-30">
     <div class="flex items-center gap-3">
-      <div class="bg-slate-900 border border-slate-600 p-1.5 rounded shadow-inner flex items-center justify-center">
-        <ng-icon name="heroCube" class="text-lg text-slate-100"></ng-icon>
+      <div class="bg-[#133763] dark:bg-slate-900 border border-[#3870AA] dark:border-slate-600 p-1.5 rounded shadow-inner flex items-center justify-center">
+        <ng-icon name="heroCube" class="text-lg text-sky-200 dark:text-slate-100"></ng-icon>
       </div>
       <div>
-        <h1 class="text-xs font-bold tracking-wide uppercase text-slate-100 flex items-center gap-1.5">
+        <h1 class="text-xs font-bold tracking-wide uppercase text-white flex items-center gap-1.5">
           UML/ER Collaborative Studio
         </h1>
-        <p class="text-[10px] font-mono text-slate-400">Enterprise Architect Suite & Spring Boot Generator</p>
+        <p class="text-[10px] font-mono text-sky-200 dark:text-slate-400">Enterprise Architect Suite & Spring Boot Generator</p>
       </div>
     </div>
 
@@ -25,16 +25,18 @@
         <button
           (click)="openProfileModal()"
           [title]="'profile.title' | translate"
-          class="flex items-center gap-1.5 bg-slate-900/60 hover:bg-slate-900 px-2.5 py-1 rounded border border-slate-600 hover:border-slate-400 text-xs text-slate-200 transition-all cursor-pointer">
-          <ng-icon name="heroUserCircle" class="text-sm text-purple-300"></ng-icon>
-          <span class="font-medium truncate max-w-[150px]" [title]="authService.currentUser()?.fullName">
+          class="flex items-center gap-1.5 bg-[#163D6C] hover:bg-[#123158] dark:bg-slate-900/60 dark:hover:bg-slate-900 px-2.5 py-1 rounded border border-[#366FA8] dark:border-slate-600 text-xs text-white dark:text-slate-200 transition-all cursor-pointer">
+          <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center font-bold text-[9.5px]">
+            {{ authService.currentUser()?.fullName?.charAt(0)?.toUpperCase() }}
+          </div>
+          <span class="font-medium truncate max-w-[150px] text-sky-100 dark:text-slate-200" [title]="authService.currentUser()?.fullName">
             {{ authService.currentUser()?.fullName }}
           </span>
         </button>
         <button
           (click)="authService.logout()"
           [title]="'auth.logout' | translate"
-          class="bg-slate-700 hover:bg-red-900/60 text-slate-300 hover:text-red-200 text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-slate-600 transition-colors cursor-pointer">
+          class="bg-[#1A477C] hover:bg-red-900/80 dark:bg-slate-700 text-sky-100 hover:text-white dark:text-slate-300 text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-[#366FA8] dark:border-slate-600 transition-colors cursor-pointer">
           <ng-icon name="heroArrowRightOnRectangle" class="text-xs"></ng-icon>
           <span>{{ 'auth.logout' | translate }}</span>
         </button>
