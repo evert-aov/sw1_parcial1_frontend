@@ -26,10 +26,10 @@
       <!-- Botón Manual Interactivo / Guía -->
       <button
         (click)="openGuide()"
-        title="Abrir Manual Interactivo / Guía de Usuario"
+        [title]="'guide.openTooltip' | translate"
         class="flex items-center gap-1.5 bg-[#163D6C] hover:bg-[#123158] dark:bg-[#101426]/60 dark:hover:bg-[#101426] px-2.5 py-1 rounded border border-[#366FA8] dark:border-[#283256] text-xs text-amber-300 hover:text-amber-200 transition-all cursor-pointer shadow-xs">
         <ng-icon name="heroAcademicCap" class="text-sm"></ng-icon>
-        <span class="font-medium hidden md:inline">Manual Interactivo</span>
+        <span class="font-medium hidden md:inline">{{ 'guide.interactiveManual' | translate }}</span>
       </button>
 
       <!-- Perfil de Usuario -->

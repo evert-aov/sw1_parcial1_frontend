@@ -1,9 +1,10 @@
-import { Component, signal, ViewChild, ElementRef, AfterViewChecked, inject } from '@angular/core';
+import { Component, signal, computed, effect, ViewChild, ElementRef, AfterViewChecked, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { UserGuideService } from '../../services/user-guide.service';
+import { TranslationService, TranslatePipe } from '../../i18n';
 import {
   heroAcademicCap,
   heroBookOpen,
@@ -53,7 +54,7 @@ export interface TourStep {
 @Component({
   selector: 'app-user-guide-chatbot',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent],
+  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe],
   templateUrl: './user-guide-chatbot.component.html',
   styleUrl: './user-guide-chatbot.component.css',
   providers: [
@@ -90,6 +91,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
   @ViewChild('pillsContainer') private pillsContainer!: ElementRef;
 
   guideService = inject(UserGuideService);
+  translationService = inject(TranslationService);
   private readonly sanitizer = inject(DomSanitizer);
 
   scrollPills(offset: number): void {
@@ -126,8 +128,8 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
   // Historial de mensajes
   messages = signal<ChatMessage[]>([]);
 
-  // Pasos del Tour Guiado
-  readonly tourSteps: TourStep[] = [
+  // Pasos del Tour Guiado en Español
+  readonly tourStepsEs: TourStep[] = [
     {
       title: '1. Crear y Configurar tu Proyecto',
       badge: 'Paso 1 de 7',
@@ -230,8 +232,117 @@ flutter run`,
     },
   ];
 
-  // Píldoras de sugerencias rápidas
-  readonly quickPills = [
+  // Pasos del Tour Guiado en Inglés
+  readonly tourStepsEn: TourStep[] = [
+    {
+      title: '1. Create & Configure your Project',
+      badge: 'Step 1 of 7',
+      description: 'The starting point is defining your software project in the Dashboard.',
+      details: [
+        'Go to the main "Projects" screen and click "+ New Project".',
+        'Enter the system name (e.g. "Sales System").',
+        'Define the base Java package (e.g. "com.uagrm.studio").',
+        'Select the Java version (Java 21 LTS recommended) and Spring Boot (3.4.0).',
+        'Done! Your project will create a main diagram ready for modeling.',
+      ],
+      tips: '💡 The base package configured here determines the folder structure of your Spring Boot backend.',
+    },
+    {
+      title: '2. Model UML Classes and Attributes',
+      badge: 'Step 2 of 7',
+      description: 'Build your entity-relationship model visually and intuitively.',
+      details: [
+        'Open the left Toolbox and click "+ Class" or double-click anywhere on the canvas.',
+        'Click on the class to open the properties panel.',
+        'Add attributes specifying visibility (+ public, - private, # protected).',
+        'Select data types: String, Long/Integer, UUID, Double, Boolean, LocalDate, LocalDateTime.',
+        'Check required modifiers: PK (Primary Key), AutoIncrement, Nullable, or Unique.',
+        'Add methods with typed return values and parameters if your business logic requires it.',
+      ],
+      tips: '💡 Defining a Long PK will automatically configure an autoincrementing numeric sequence (BIGSERIAL).',
+    },
+    {
+      title: '3. Connect Relationships & Multiplicities',
+      badge: 'Step 3 of 7',
+      description: 'Define database associations and referential integrity.',
+      details: [
+        'In the left Toolbox, select the relationship type: Association, Aggregation, Composition, Generalization, or Realization.',
+        'Click first on the source class, then click on the target class.',
+        'Configure multiplicities at both ends (1..1, 1..*, 0..*).',
+        'For example, for "Sale" and "Customer": a Sale has 1 Customer (1..1) and a Customer has many Sales (1..* or 0..*).',
+        'The generator will automatically generate JPA annotations (@ManyToOne, @OneToMany) and foreign keys in Flyway.',
+      ],
+      tips: '💡 To toggle between selection mode and connection mode, press Escape or click the cursor icon in the Toolbox.',
+    },
+    {
+      title: '4. Real-time Team Collaboration',
+      badge: 'Step 4 of 7',
+      description: 'Work concurrently with your team without overwriting changes.',
+      details: [
+        'On the project card in the Dashboard, click "Members".',
+        'Invite teammates via email and assign roles: OWNER, EDITOR, or VIEWER.',
+        'Upon entering the diagram, you will see real-time colored cursors for every active user.',
+        'Exclusive Lock System (NodeLock): When a user edits a class, it is temporarily locked for others to prevent conflicts.',
+        'Use the built-in room chat to coordinate development and modeling in real time.',
+      ],
+      tips: '💡 Users with VIEWER role can inspect the canvas and generate code, but cannot modify the model.',
+    },
+    {
+      title: '5. AI Copilot & Multimodal Vision',
+      badge: 'Step 5 of 7',
+      description: 'Mutate diagrams on the fly using Artificial Intelligence.',
+      details: [
+        'Open the "AI Copilot" panel on the right side of the editor.',
+        'Text Mode: Type instructions like "Create a Product entity with price, stock and category" or "Connect Product with SaleItem in 1-to-N relation".',
+        'Vision / Camera Mode: Upload a hand-drawn sketch on paper or capture with your webcam.',
+        'The AI analyzes the sketch and renders the classes and relationships directly on the canvas.',
+      ],
+      tips: '💡 You can instruct the AI to both create new classes and refactor existing entities.',
+    },
+    {
+      title: '6. Fullstack Code Generator (Spring Boot & Flutter)',
+      badge: 'Step 6 of 7',
+      description: 'Transform your visual diagram into production-ready software in seconds.',
+      details: [
+        'In the editor\'s top bar, click "Generator".',
+        'Toggle between "Spring Boot" and "Flutter" tabs to preview source code in real time.',
+        'Generated Backend: Spring Boot 3 with Layered Architecture (JPA Entities, DTOs, Mappers, Repositories, Services, REST Controllers, JWT Auth, Flyway migrations, and Docker Compose).',
+        'Generated Mobile: Flutter with Clean Architecture (BLoC, DataSources, Repositories, Entities, full CRUD screens, JWT Auth, and Local AI Assistant).',
+        'Click "Download ZIP" to download the packaged project.',
+      ],
+      tips: '💡 The backend includes native PostgreSQL in Docker and BCrypt password encryption.',
+    },
+    {
+      title: '7. Running on your Machine',
+      badge: 'Step 7 of 7',
+      description: 'Run the downloaded backend and mobile app in 3 simple steps.',
+      details: [
+        '1. Extract the ZIP file and open a terminal in the /backend folder.',
+        '2. Start PostgreSQL database with Docker Compose.',
+        '3. Run Spring Boot backend with Gradle.',
+        '4. In another terminal inside /mobile_flutter, run the app on your mobile device or emulator.',
+        'Default Admin credentials: admin@studio.com / admin123.',
+      ],
+      code: `# 1. Start PostgreSQL in Docker
+docker compose -f docker-compose.local.yml up -d db
+
+# 2. Run Spring Boot backend
+gradle bootRun
+
+# 3. In another terminal, run Flutter Mobile App
+cd ../mobile_flutter
+flutter run`,
+      tips: '💡 To restart the database from scratch, use: docker compose -f docker-compose.local.yml down -v',
+    },
+  ];
+
+  // Pasos del Tour activos según el idioma
+  readonly currentTourSteps = computed<TourStep[]>(() => {
+    return this.translationService.currentLang() === 'en' ? this.tourStepsEn : this.tourStepsEs;
+  });
+
+  // Píldoras de sugerencias rápidas en Español
+  readonly quickPillsEs = [
     { label: '🚀 Guía Rápida (Paso a Paso)', query: 'iniciar tour' },
     { label: '🐳 ¿Cómo correr con Docker y Gradle?', query: 'comandos de ejecucion' },
     { label: '⚡ ¿Cómo generar Spring Boot y Flutter?', query: 'como generar codigo' },
@@ -241,8 +352,34 @@ flutter run`,
     { label: '🔄 ¿Cómo importar/exportar a Enterprise Architect?', query: 'enterprise architect xmi' },
   ];
 
+  // Píldoras de sugerencias rápidas en Inglés
+  readonly quickPillsEn = [
+    { label: '🚀 Quick Guide (Step by Step)', query: 'start tour' },
+    { label: '🐳 How to run with Docker & Gradle?', query: 'run commands' },
+    { label: '⚡ How to generate Spring Boot & Flutter?', query: 'how to generate code' },
+    { label: '🎨 How to create classes & relations?', query: 'how to model classes' },
+    { label: '📱 How does Local AI work on mobile?', query: 'mobile ai and pocketpal' },
+    { label: '👥 How to collaborate in teams?', query: 'realtime collaboration' },
+    { label: '🔄 How to import/export Enterprise Architect?', query: 'enterprise architect xmi' },
+  ];
+
+  // Píldoras activas según el idioma
+  readonly quickPills = computed(() => {
+    return this.translationService.currentLang() === 'en' ? this.quickPillsEn : this.quickPillsEs;
+  });
+
   constructor() {
     this.initWelcomeMessage();
+
+    // Actualiza el mensaje de bienvenida automáticamente al cambiar el idioma si la conversación está en su estado inicial
+    effect(() => {
+      // Registrar dependencia del signal de idioma
+      this.translationService.currentLang();
+      const currentMsgs = this.messages();
+      if (currentMsgs.length <= 1 && (!currentMsgs[0] || currentMsgs[0].id.startsWith('welcome-'))) {
+        this.initWelcomeMessage();
+      }
+    });
   }
 
   ngAfterViewChecked(): void {
@@ -259,17 +396,26 @@ flutter run`,
   }
 
   initWelcomeMessage(): void {
+    const isEn = this.translationService.currentLang() === 'en';
     this.messages.set([
       {
         id: 'welcome-1',
         sender: 'bot',
-        text: '¡Hola! 👋 Soy tu **Asistente y Guía Interactivo de UML Architect & Code Generator**.\n\nHe reemplazado los manuales de usuario estáticos para ayudarte paso a paso en tiempo real. Puedes preguntarme cualquier duda sobre cómo usar la plataforma, modelar diagramas, generar código o ejecutar tus proyectos.',
+        text: isEn
+          ? 'Hello! 👋 I am your **Interactive Assistant and User Guide for UML Architect & Code Generator**.\n\nI have replaced static user manuals to help you step by step in real time. Feel free to ask any questions about using the platform, modeling diagrams, generating code, or running your projects.'
+          : '¡Hola! 👋 Soy tu **Asistente y Guía Interactivo de UML Architect & Code Generator**.\n\nHe reemplazado los manuales de usuario estáticos para ayudarte paso a paso en tiempo real. Puedes preguntarme cualquier duda sobre cómo usar la plataforma, modelar diagramas, generar código o ejecutar tus proyectos.',
         timestamp: new Date(),
-        quickActions: [
-          { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
-          { label: '🐳 Comandos para Correr el Proyecto', query: 'comandos de ejecucion' },
-          { label: '⚡ ¿Qué genera la plataforma?', query: 'arquitectura generada' },
-        ],
+        quickActions: isEn
+          ? [
+              { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
+              { label: '🐳 Project Run Commands', query: 'run commands' },
+              { label: '⚡ What does the platform generate?', query: 'generated architecture' },
+            ]
+          : [
+              { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
+              { label: '🐳 Comandos para Correr el Proyecto', query: 'comandos de ejecucion' },
+              { label: '⚡ ¿Qué genera la plataforma?', query: 'arquitectura generada' },
+            ],
       },
     ]);
   }
@@ -377,7 +523,7 @@ flutter run`,
 
   nextTourStep(): void {
     const nextIdx = this.currentTourStepIndex() + 1;
-    if (nextIdx < this.tourSteps.length) {
+    if (nextIdx < this.currentTourSteps().length) {
       this.currentTourStepIndex.set(nextIdx);
       this.sendTourStepMessage(nextIdx);
     } else {
@@ -394,7 +540,7 @@ flutter run`,
   }
 
   goToTourStep(index: number): void {
-    if (index >= 0 && index < this.tourSteps.length) {
+    if (index >= 0 && index < this.currentTourSteps().length) {
       this.currentTourStepIndex.set(index);
       this.sendTourStepMessage(index);
     }
@@ -402,20 +548,29 @@ flutter run`,
 
   finishTour(): void {
     this.isTourActive.set(false);
+    const isEn = this.translationService.currentLang() === 'en';
     this.addBotMessage(
-      '🎉 **¡Felicidades! Has completado el Tour Interactivo de UML Architect.**\n\nYa conoces todo el flujo: desde crear tu proyecto hasta modelar en el lienzo, generar código Fullstack y poner en marcha el backend y la app móvil.\n\n¿Tienes alguna duda específica? Escríbela en el chat y con gusto te respondo.',
+      isEn
+        ? '🎉 **Congratulations! You have completed the UML Architect Interactive Tour.**\n\nYou now know the entire workflow: from creating your project to modeling on the canvas, generating Fullstack code, and running the backend and mobile app.\n\nDo you have any specific questions? Type them in the chat and I will be happy to help!'
+        : '🎉 **¡Felicidades! Has completado el Tour Interactivo de UML Architect.**\n\nYa conoces todo el flujo: desde crear tu proyecto hasta modelar en el lienzo, generar código Fullstack y poner en marcha el backend y la app móvil.\n\n¿Tienes alguna duda específica? Escríbela en el chat y con gusto te respondo.',
       undefined,
       undefined,
-      [
-        { label: '🐳 Ver comandos Docker & Gradle', query: 'comandos de ejecucion' },
-        { label: '📱 Ver integración con PocketPal IA', query: 'ia en flutter y pocketpal' },
-        { label: '🔄 Reiniciar Tour', query: 'iniciar tour' },
-      ],
+      isEn
+        ? [
+            { label: '🐳 View Docker & Gradle commands', query: 'run commands' },
+            { label: '📱 View PocketPal AI integration', query: 'mobile ai and pocketpal' },
+            { label: '🔄 Restart Tour', query: 'start tour' },
+          ]
+        : [
+            { label: '🐳 Ver comandos Docker & Gradle', query: 'comandos de ejecucion' },
+            { label: '📱 Ver integración con PocketPal IA', query: 'ia en flutter y pocketpal' },
+            { label: '🔄 Reiniciar Tour', query: 'iniciar tour' },
+          ],
     );
   }
 
   private sendTourStepMessage(index: number): void {
-    const step = this.tourSteps[index];
+    const step = this.currentTourSteps()[index];
     const detailsFormatted = step.details.map((d) => `• ${d}`).join('\n');
     const text = `### 📘 ${step.title} (${step.badge})\n\n${step.description}\n\n${detailsFormatted}\n\n${step.tips}`;
 
@@ -473,15 +628,19 @@ flutter run`,
 
   private resolveUserQuery(rawInput: string): void {
     const text = rawInput.toLowerCase().trim();
+    const isEn = this.translationService.currentLang() === 'en';
 
     // 1. Iniciar o navegar en el tour
     if (
       text.includes('iniciar tour') ||
       text.includes('comenzar tour') ||
+      text.includes('start tour') ||
       text.includes('tour') ||
       text.includes('empezar') ||
+      text.includes('begin') ||
       text.includes('tutorial') ||
-      text.includes('paso a paso')
+      text.includes('paso a paso') ||
+      text.includes('step by step')
     ) {
       this.startTour();
       return;
@@ -493,30 +652,42 @@ flutter run`,
       text.includes('gradle') ||
       text.includes('bootrun') ||
       text.includes('comando') ||
+      text.includes('command') ||
       text.includes('ejecut') ||
       text.includes('correr') ||
+      text.includes('run') ||
       text.includes('compil') ||
+      text.includes('build') ||
       text.includes('levantar') ||
-      text.includes('arrancar')
+      text.includes('arrancar') ||
+      text.includes('start')
     ) {
       this.addBotMessage(
-        '### 🚀 Comandos para Ejecutar el Proyecto Descargado\n\nPara poner en marcha el proyecto generado en tu máquina local, sigue estos sencillos pasos desde tu terminal:\n\n**1. Iniciar la Base de Datos PostgreSQL:**\nDentro de la carpeta `/backend`, ejecuta Docker Compose en segundo plano.\n\n**2. Compilar y Ejecutar el Backend (Spring Boot 3):**\nEjecuta Gradle. Flyway aplicará automáticamente las migraciones y creará el usuario administrador por defecto (`admin@studio.com` / `admin123`).\n\n**3. Ejecutar la App Móvil (Flutter):**\nEn otra terminal, entra a `/mobile_flutter` y corre la aplicación en tu dispositivo o emulador.',
-        `# === PASO 1: Levantar PostgreSQL en Docker (puerto 5431/5432) ===
+        isEn
+          ? '### 🚀 Commands to Run the Downloaded Project\n\nTo start the generated project on your local machine, run these steps in your terminal:\n\n**1. Start PostgreSQL Database:**\nInside `/backend`, run Docker Compose in the background.\n\n**2. Build & Run Spring Boot Backend:**\nExecute Gradle. Flyway will automatically apply database migrations and seed the default admin account (`admin@studio.com` / `admin123`).\n\n**3. Run Flutter Mobile App:**\nIn another terminal, navigate to `/mobile_flutter` and run the app on your mobile device or emulator.'
+          : '### 🚀 Comandos para Ejecutar el Proyecto Descargado\n\nPara poner en marcha el proyecto generado en tu máquina local, sigue estos sencillos pasos desde tu terminal:\n\n**1. Iniciar la Base de Datos PostgreSQL:**\nDentro de la carpeta `/backend`, ejecuta Docker Compose en segundo plano.\n\n**2. Compilar y Ejecutar el Backend (Spring Boot 3):**\nEjecuta Gradle. Flyway aplicará automáticamente las migraciones y creará el usuario administrador por defecto (`admin@studio.com` / `admin123`).\n\n**3. Ejecutar la App Móvil (Flutter):**\nEn otra terminal, entra a `/mobile_flutter` y corre la aplicación en tu dispositivo o emulador.',
+        `# === STEP 1: Start PostgreSQL in Docker (port 5431/5432) ===
 cd backend
 docker compose -f docker-compose.local.yml up -d db
 
-# === PASO 2: Iniciar servidor Spring Boot 3 ===
+# === STEP 2: Start Spring Boot 3 Server ===
 gradle bootRun
 
-# === PASO 3 (Opcional): Ejecutar App Móvil Flutter ===
+# === STEP 3 (Optional): Run Flutter Mobile App ===
 cd ../mobile_flutter
 flutter run`,
         'bash',
-        [
-          { label: '🔑 ¿Cuáles son las credenciales por defecto?', query: 'credenciales por defecto' },
-          { label: '📱 ¿Cómo usar la IA con PocketPal?', query: 'ia en flutter y pocketpal' },
-          { label: '⚡ ¿Cómo generar el código?', query: 'como generar codigo' },
-        ],
+        isEn
+          ? [
+              { label: '🔑 Default credentials?', query: 'default credentials' },
+              { label: '📱 How to use PocketPal AI?', query: 'mobile ai and pocketpal' },
+              { label: '⚡ How to generate code?', query: 'how to generate code' },
+            ]
+          : [
+              { label: '🔑 ¿Cuáles son las credenciales por defecto?', query: 'credenciales por defecto' },
+              { label: '📱 ¿Cómo usar la IA con PocketPal?', query: 'ia en flutter y pocketpal' },
+              { label: '⚡ ¿Cómo generar el código?', query: 'como generar codigo' },
+            ],
       );
       return;
     }
@@ -524,21 +695,31 @@ flutter run`,
     // 3. Credenciales y Autenticación
     if (
       text.includes('credencial') ||
+      text.includes('credential') ||
       text.includes('admin') ||
       text.includes('usuario') ||
+      text.includes('user') ||
       text.includes('password') ||
-      text.includes('login') ||
       text.includes('contraseña') ||
-      text.includes('clave')
+      text.includes('clave') ||
+      text.includes('login') ||
+      text.includes('auth')
     ) {
       this.addBotMessage(
-        '### 🔑 Credenciales de Acceso por Defecto\n\nEl sistema inicializa automáticamente un usuario con rol de Administrador en la base de datos (con contraseña encriptada en BCrypt):\n\n• **Correo electrónico:** `admin@studio.com`\n• **Contraseña:** `admin123`\n• **Rol:** `ADMIN`\n\n**¿Cómo funciona la autenticación?**\n• El backend expone endpoints `/api/auth/login` y `/api/auth/register` protegidos con **JWT Token (Bearer)**.\n• La app móvil Flutter almacena de forma segura el token y los datos del perfil en local (`TokenStorageService`) y muestra el usuario conectado en la pantalla de **Mi Perfil**.',
+        isEn
+          ? '### 🔑 Default Access Credentials\n\nThe system automatically seeds an Administrator user in the database (with BCrypt encrypted password):\n\n• **Email:** `admin@studio.com`\n• **Password:** `admin123`\n• **Role:** `ADMIN`\n\n**How does authentication work?**\n• The backend exposes `/api/auth/login` and `/api/auth/register` endpoints protected with **JWT Tokens (Bearer)**.\n• The Flutter mobile app securely stores tokens and profile details locally (`TokenStorageService`) and displays the connected user on the **My Profile** screen.'
+          : '### 🔑 Credenciales de Acceso por Defecto\n\nEl sistema inicializa automáticamente un usuario con rol de Administrador en la base de datos (con contraseña encriptada en BCrypt):\n\n• **Correo electrónico:** `admin@studio.com`\n• **Contraseña:** `admin123`\n• **Rol:** `ADMIN`\n\n**¿Cómo funciona la autenticación?**\n• El backend expone endpoints `/api/auth/login` y `/api/auth/register` protegidos con **JWT Token (Bearer)**.\n• La app móvil Flutter almacena de forma segura el token y los datos del perfil en local (`TokenStorageService`) y muestra el usuario conectado en la pantalla de **Mi Perfil**.',
         undefined,
         undefined,
-        [
-          { label: '🐳 Ver comandos para correr el backend', query: 'comandos de ejecucion' },
-          { label: '📱 Ver funciones de la app móvil', query: 'ia en flutter y pocketpal' },
-        ],
+        isEn
+          ? [
+              { label: '🐳 View backend run commands', query: 'run commands' },
+              { label: '📱 View mobile app features', query: 'mobile ai and pocketpal' },
+            ]
+          : [
+              { label: '🐳 Ver comandos para correr el backend', query: 'comandos de ejecucion' },
+              { label: '📱 Ver funciones de la app móvil', query: 'ia en flutter y pocketpal' },
+            ],
       );
       return;
     }
@@ -546,21 +727,32 @@ flutter run`,
     // 4. Generación de Código
     if (
       text.includes('generar') ||
+      text.includes('generate') ||
+      text.includes('generator') ||
       text.includes('codigo') ||
       text.includes('código') ||
+      text.includes('code') ||
       text.includes('spring') ||
       text.includes('descargar') ||
+      text.includes('download') ||
       text.includes('zip') ||
       text.includes('export')
     ) {
       this.addBotMessage(
-        '### ⚡ Generador de Código Fullstack Automatizado\n\nUML Architect compila tu diagrama visual en código limpio listo para producción:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• **Controladores REST** tipados con Swagger/OpenAPI y DTOs de petición y respuesta.\n• **Servicios y Lógica de Negocio** desacoplada con Mappers.\n• **Repositorios Spring Data JPA** y Entidades con relaciones tipadas.\n• **Migraciones Flyway (SQL)** con soporte de UUID nativo (`pgcrypto`) y secuencias numéricas (`BIGSERIAL`).\n• **Seguridad JWT** con BCrypt y filtros de autorización.\n• **Docker Compose** preconfigurado.\n\n**2. Frontend Móvil (Flutter):**\n• **Clean Architecture** estructurada en Capas (Data, Domain, Presentation).\n• **Gestión de Estado BLoC** reactiva.\n• **Pantallas CRUD completas** con validaciones y tarjetas interactivas.\n• **Asistente IA Local** con soporte híbrido de PocketPal AI y motor semántico On-Device.\n\n**¿Cómo descargarlo?**\nEn la barra superior del editor, haz clic en el botón **"Generador"** y presiona **"Descargar ZIP"**.',
+        isEn
+          ? '### ⚡ Automated Fullstack Code Generator\n\nUML Architect compiles your visual diagram into clean, production-ready code:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• Typed **REST Controllers** with OpenAPI/Swagger and Request/Response DTOs.\n• Decoupled **Services & Business Logic** with Mappers.\n• **Spring Data JPA Repositories** and Entities with relational mappings.\n• **Flyway Migrations (SQL)** supporting native UUID (`pgcrypto`) and numeric autoincrement sequences (`BIGSERIAL`).\n• **JWT Security** with BCrypt and authorization filters.\n• Pre-configured **Docker Compose** files.\n\n**2. Mobile Frontend (Flutter):**\n• **Clean Architecture** layered structure (Data, Domain, Presentation).\n• Reactive **BLoC State Management**.\n• Complete **CRUD Screens** with validation and interactive cards.\n• **Local AI Assistant** with dual support for PocketPal AI and an On-Device semantic engine.\n\n**How to download?**\nIn the editor top bar, click the **"Generator"** button and press **"Download ZIP"**.'
+          : '### ⚡ Generador de Código Fullstack Automatizado\n\nUML Architect compila tu diagrama visual en código limpio listo para producción:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• **Controladores REST** tipados con Swagger/OpenAPI y DTOs de petición y respuesta.\n• **Servicios y Lógica de Negocio** desacoplada con Mappers.\n• **Repositorios Spring Data JPA** y Entidades con relaciones tipadas.\n• **Migraciones Flyway (SQL)** con soporte de UUID nativo (`pgcrypto`) y secuencias numéricas (`BIGSERIAL`).\n• **Seguridad JWT** con BCrypt y filtros de autorización.\n• **Docker Compose** preconfigurado.\n\n**2. Frontend Móvil (Flutter):**\n• **Clean Architecture** estructurada en Capas (Data, Domain, Presentation).\n• **Gestión de Estado BLoC** reactiva.\n• **Pantallas CRUD completas** con validaciones y tarjetas interactivas.\n• **Asistente IA Local** con soporte híbrido de PocketPal AI y motor semántico On-Device.\n\n**¿Cómo descargarlo?**\nEn la barra superior del editor, haz clic en el botón **"Generador"** y presiona **"Descargar ZIP"**.',
         undefined,
         undefined,
-        [
-          { label: '🐳 ¿Cómo ejecuto el ZIP descargado?', query: 'comandos de ejecucion' },
-          { label: '🎨 ¿Cómo creo clases en el lienzo?', query: 'como modelar clases y relaciones' },
-        ],
+        isEn
+          ? [
+              { label: '🐳 How to execute the downloaded ZIP?', query: 'run commands' },
+              { label: '🎨 How to create classes on canvas?', query: 'how to model classes' },
+            ]
+          : [
+              { label: '🐳 ¿Cómo ejecuto el ZIP descargado?', query: 'comandos de ejecucion' },
+              { label: '🎨 ¿Cómo creo clases en el lienzo?', query: 'como modelar clases y relaciones' },
+            ],
       );
       return;
     }
@@ -571,21 +763,33 @@ flutter run`,
       text.includes('flutter') ||
       text.includes('movil') ||
       text.includes('móvil') ||
+      text.includes('mobile') ||
       text.includes('ia local') ||
+      text.includes('local ai') ||
       text.includes('gemma') ||
       text.includes('qwen') ||
       text.includes('voz') ||
+      text.includes('voice') ||
       text.includes('microfono') ||
-      text.includes('audio')
+      text.includes('microphone') ||
+      text.includes('audio') ||
+      text.includes('speech')
     ) {
       this.addBotMessage(
-        '### 📱 Inteligencia Artificial Híbrida en la App Móvil\n\nLa app móvil Flutter incluye un asistente inteligente con **arquitectura híbrida de doble motor**:\n\n**1. Motor 1: Conexión con PocketPal AI (Local Server)**\n• Si tienes instalada la app **PocketPal** en tu móvil, activa la opción de servidor local.\n• PocketPal expone un servidor HTTP en `http://127.0.0.1:8080` con tus modelos locales (Gemma 3, Qwen 2.5, Bonsai, etc.).\n• En el asistente de la app Flutter, pulsa el icono de **Ajustes** y selecciona el chip preconfigurado `📱 PocketPal (Móvil)`.\n\n**2. Motor 2: Procesador Semántico On-Device (100% Autónomo)**\n• Si PocketPal está cerrado o no quieres consumir memoria en un modelo pesado, la app activa automáticamente el motor semántico nativo.\n• Entiende órdenes en lenguaje natural para todo el ciclo CRUD:\n  - *"regístrame un usuario con nombre Ana, email ana@gmail.com, password 123"*\n  - *"actualiza el cliente 2 cambiando el teléfono a 77889900"*\n  - *"elimina la compra con id 5"*\n  - *"lista las ventas"*\n\n**3. Dictado por Voz:**\n• Pulsa el botón del micrófono y habla en español para enviar tus comandos sin teclear.',
+        isEn
+          ? '### 📱 Hybrid Local AI in the Mobile App\n\nThe Flutter mobile application includes an intelligent assistant powered by a **dual-engine hybrid architecture**:\n\n**1. Engine 1: PocketPal AI Connection (Local Server)**\n• If you have the **PocketPal** app installed on your device, enable the local server option.\n• PocketPal runs an HTTP server on `http://127.0.0.1:8080` hosting your local models (Gemma 3, Qwen 2.5, Bonsai, etc.).\n• In the Flutter app assistant, tap the **Settings** icon and select the preset chip `📱 PocketPal (Mobile)`.\n\n**2. Engine 2: On-Device Semantic Processor (100% Autonomous)**\n• If PocketPal is closed or you want to conserve memory, the app automatically activates the native semantic engine.\n• It understands natural language for the entire CRUD lifecycle:\n  - *"register a user named Ana, email ana@gmail.com, password 123"*\n  - *"update customer 2 changing phone to 77889900"*\n  - *"delete purchase with id 5"*\n  - *"list all sales"*\n\n**3. Voice Dictation (Speech-to-Text):**\n• Tap the microphone button and speak to execute commands hands-free.'
+          : '### 📱 Inteligencia Artificial Híbrida en la App Móvil\n\nLa app móvil Flutter incluye un asistente inteligente con **arquitectura híbrida de doble motor**:\n\n**1. Motor 1: Conexión con PocketPal AI (Local Server)**\n• Si tienes instalada la app **PocketPal** en tu móvil, activa la opción de servidor local.\n• PocketPal expone un servidor HTTP en `http://127.0.0.1:8080` con tus modelos locales (Gemma 3, Qwen 2.5, Bonsai, etc.).\n• En el asistente de la app Flutter, pulsa el icono de **Ajustes** y selecciona el chip preconfigurado `📱 PocketPal (Móvil)`.\n\n**2. Motor 2: Procesador Semántico On-Device (100% Autónomo)**\n• Si PocketPal está cerrado o no quieres consumir memoria en un modelo pesado, la app activa automáticamente el motor semántico nativo.\n• Entiende órdenes en lenguaje natural para todo el ciclo CRUD:\n  - *"regístrame un usuario con nombre Ana, email ana@gmail.com, password 123"*\n  - *"actualiza el cliente 2 cambiando el teléfono a 77889900"*\n  - *"elimina la compra con id 5"*\n  - *"lista las ventas"*\n\n**3. Dictado por Voz:**\n• Pulsa el botón del micrófono y habla en español para enviar tus comandos sin teclear.',
         undefined,
         undefined,
-        [
-          { label: '🐳 Ver comandos para correr el backend', query: 'comandos de ejecucion' },
-          { label: '🔑 Ver credenciales de administrador', query: 'credenciales por defecto' },
-        ],
+        isEn
+          ? [
+              { label: '🐳 View backend run commands', query: 'run commands' },
+              { label: '🔑 View admin credentials', query: 'default credentials' },
+            ]
+          : [
+              { label: '🐳 Ver comandos para correr el backend', query: 'comandos de ejecucion' },
+              { label: '🔑 Ver credenciales de administrador', query: 'credenciales por defecto' },
+            ],
       );
       return;
     }
@@ -593,22 +797,35 @@ flutter run`,
     // 6. Modelado UML: Clases, Atributos y Métodos
     if (
       text.includes('clase') ||
+      text.includes('class') ||
       text.includes('atributo') ||
+      text.includes('attribute') ||
       text.includes('metodo') ||
       text.includes('método') ||
+      text.includes('method') ||
       text.includes('pk') ||
       text.includes('clave primaria') ||
+      text.includes('primary key') ||
       text.includes('tipo') ||
-      text.includes('dato')
+      text.includes('type') ||
+      text.includes('dato') ||
+      text.includes('data')
     ) {
       this.addBotMessage(
-        '### 🎨 Modelado de Clases y Atributos UML\n\n**¿Cómo agregar una clase?**\n• Haz clic en el botón `+ Clase` del Toolbox lateral izquierdo o haz doble clic en cualquier área vacía del lienzo.\n\n**Tipos de datos soportados por el generador:**\n• `String`: Textos, nombres, correos, descripciones (`VARCHAR(255)` / `TEXT`).\n• `Long` / `Integer`: Números enteros, cantidades, identificadores numéricos (`BIGINT` / `INTEGER`).\n• `UUID`: Identificadores únicos universales (`UUID` con generación nativa en PostgreSQL).\n• `Double` / `BigDecimal`: Montos, precios, subtotales, totales con decimales.\n• `Boolean`: Banderas lógicas (`true` / `false`).\n• `LocalDate` / `LocalDateTime`: Fechas y marcas de tiempo (`DATE` / `TIMESTAMP`).\n\n**Modificadores:**\n• **PK:** Define la clave primaria.\n• **AutoIncrement:** Habilita secuencias automáticas en base de datos (`BIGSERIAL`).\n• **Unique:** Asegura que no existan valores duplicados (ej: emails, números de factura, NIT).\n• **Nullable:** Permite que el campo acepte nulos.',
+        isEn
+          ? '### 🎨 Modeling UML Classes & Attributes\n\n**How to add a class?**\n• Click the `+ Class` button on the left Toolbox or double-click anywhere on the empty canvas.\n\n**Supported data types:**\n• `String`: Text, names, emails, descriptions (`VARCHAR(255)` / `TEXT`).\n• `Long` / `Integer`: Whole numbers, counts, numeric identifiers (`BIGINT` / `INTEGER`).\n• `UUID`: Universally unique identifiers (`UUID` with native generation in PostgreSQL).\n• `Double` / `BigDecimal`: Amounts, prices, decimals.\n• `Boolean`: Logical flags (`true` / `false`).\n• `LocalDate` / `LocalDateTime`: Dates and timestamps (`DATE` / `TIMESTAMP`).\n\n**Modifiers:**\n• **PK:** Marks the Primary Key.\n• **AutoIncrement:** Enables automatic database sequences (`BIGSERIAL`).\n• **Unique:** Ensures non-duplicate values (e.g. emails, invoice numbers).\n• **Nullable:** Allows null values.'
+          : '### 🎨 Modelado de Clases y Atributos UML\n\n**¿Cómo agregar una clase?**\n• Haz clic en el botón `+ Clase` del Toolbox lateral izquierdo o haz doble clic en cualquier área vacía del lienzo.\n\n**Tipos de datos soportados por el generador:**\n• `String`: Textos, nombres, correos, descripciones (`VARCHAR(255)` / `TEXT`).\n• `Long` / `Integer`: Números enteros, cantidades, identificadores numéricos (`BIGINT` / `INTEGER`).\n• `UUID`: Identificadores únicos universales (`UUID` con generación nativa en PostgreSQL).\n• `Double` / `BigDecimal`: Montos, precios, subtotales, totales con decimales.\n• `Boolean`: Banderas lógicas (`true` / `false`).\n• `LocalDate` / `LocalDateTime`: Fechas y marcas de tiempo (`DATE` / `TIMESTAMP`).\n\n**Modificadores:**\n• **PK:** Define la clave primaria.\n• **AutoIncrement:** Habilita secuencias automáticas en base de datos (`BIGSERIAL`).\n• **Unique:** Asegura que no existan valores duplicados (ej: emails, números de factura, NIT).\n• **Nullable:** Permite que el campo acepte nulos.',
         undefined,
         undefined,
-        [
-          { label: '🔗 ¿Cómo conecto relaciones entre clases?', query: 'como conectar relaciones' },
-          { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
-        ],
+        isEn
+          ? [
+              { label: '🔗 How to connect relationships?', query: 'how to connect relations' },
+              { label: '⚡ Generate Spring Boot code', query: 'how to generate code' },
+            ]
+          : [
+              { label: '🔗 ¿Cómo conecto relaciones entre clases?', query: 'como conectar relaciones' },
+              { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
+            ],
       );
       return;
     }
@@ -617,26 +834,42 @@ flutter run`,
     if (
       text.includes('relacion') ||
       text.includes('relación') ||
+      text.includes('relation') ||
+      text.includes('relationship') ||
       text.includes('conectar') ||
+      text.includes('connect') ||
       text.includes('multiplicidad') ||
+      text.includes('multiplicity') ||
       text.includes('asociacion') ||
       text.includes('asociación') ||
+      text.includes('association') ||
       text.includes('composicion') ||
       text.includes('composición') ||
+      text.includes('composition') ||
       text.includes('agregacion') ||
       text.includes('agregación') ||
+      text.includes('aggregation') ||
       text.includes('herencia') ||
+      text.includes('inheritance') ||
+      text.includes('generalization') ||
       text.includes('foreign key') ||
       text.includes('fk')
     ) {
       this.addBotMessage(
-        '### 🔗 Conexión de Relaciones y Multiplicidades\n\n**Pasos para conectar dos clases:**\n1. En el Toolbox lateral izquierdo, haz clic sobre el tipo de relación que deseas crear (Asociación, Agregación, Composición, Herencia o Realización).\n2. El cursor se activará en modo de conexión.\n3. Haz clic en la **Clase Origen** (ej: `Venta`).\n4. Haz clic en la **Clase Destino** (ej: `Cliente`).\n5. Se creará el enlace visual en el lienzo.\n\n**Tipos de Relaciones Semánticas:**\n• **Asociación Simple:** Conexión estándar entre dos entidades.\n• **Agregación (Rombo hueco):** Relación "todo-parte" donde las partes pueden existir independientemente.\n• **Composición (Rombo relleno):** Relación fuerte de pertenencia de ciclo de vida (ej: `Venta` y `DetalleVenta`).\n• **Herencia / Generalización (Flecha triangular hueca):** Define subclases y superclases.\n\n**Multiplicidades:**\n• Puedes asignar `1..1`, `0..1`, `1..*` o `*` en cada extremo. El generador traducirá esto a `@ManyToOne`, `@OneToMany` o `@OneToOne` en Spring Boot y las claves foráneas correspondientes en PostgreSQL.',
+        isEn
+          ? '### 🔗 Connecting Relationships & Multiplicities\n\n**Steps to connect two classes:**\n1. In the left Toolbox, click on the relationship type (Association, Aggregation, Composition, Generalization, or Realization).\n2. The cursor activates connection mode.\n3. Click on the **Source Class** (e.g. `Sale`).\n4. Click on the **Target Class** (e.g. `Customer`).\n5. The interactive link is rendered on the canvas.\n\n**Semantic Relationship Types:**\n• **Simple Association:** Standard connection between entities.\n• **Aggregation (Hollow diamond):** "Whole-part" relationship where parts can exist independently.\n• **Composition (Solid diamond):** Strong lifecycle ownership (e.g. `Sale` and `SaleItem`).\n• **Generalization / Inheritance (Hollow triangle arrow):** Defines subclasses and superclasses.\n\n**Multiplicities:**\n• Assign `1..1`, `0..1`, `1..*` or `*` to each end. The generator maps this to `@ManyToOne`, `@OneToMany` or `@OneToOne` in Spring Boot and creates foreign keys in Flyway.'
+          : '### 🔗 Conexión de Relaciones y Multiplicidades\n\n**Pasos para conectar dos clases:**\n1. En el Toolbox lateral izquierdo, haz clic sobre el tipo de relación que deseas crear (Asociación, Agregación, Composición, Herencia o Realización).\n2. El cursor se activará en modo de conexión.\n3. Haz clic en la **Clase Origen** (ej: `Venta`).\n4. Haz clic en la **Clase Destino** (ej: `Cliente`).\n5. Se creará el enlace visual en el lienzo.\n\n**Tipos de Relaciones Semánticas:**\n• **Asociación Simple:** Conexión estándar entre dos entidades.\n• **Agregación (Rombo hueco):** Relación "todo-parte" donde las partes pueden existir independientemente.\n• **Composición (Rombo relleno):** Relación fuerte de pertenencia de ciclo de vida (ej: `Venta` y `DetalleVenta`).\n• **Herencia / Generalización (Flecha triangular hueca):** Define subclases y superclases.\n\n**Multiplicidades:**\n• Puedes asignar `1..1`, `0..1`, `1..*` o `*` en cada extremo. El generador traducirá esto a `@ManyToOne`, `@OneToMany` o `@OneToOne` en Spring Boot y las claves foráneas correspondientes en PostgreSQL.',
         undefined,
         undefined,
-        [
-          { label: '🎨 ¿Cómo crear atributos y clases?', query: 'como modelar clases y atributos' },
-          { label: '⚡ ¿Cómo generar código?', query: 'como generar codigo' },
-        ],
+        isEn
+          ? [
+              { label: '🎨 How to model classes & attributes?', query: 'how to model classes' },
+              { label: '⚡ How to generate code?', query: 'how to generate code' },
+            ]
+          : [
+              { label: '🎨 ¿Cómo crear atributos y clases?', query: 'como modelar clases y atributos' },
+              { label: '⚡ ¿Cómo generar código?', query: 'como generar codigo' },
+            ],
       );
       return;
     }
@@ -644,22 +877,36 @@ flutter run`,
     // 8. Colaboración en Vivo
     if (
       text.includes('colabora') ||
+      text.includes('collaborat') ||
       text.includes('equipo') ||
+      text.includes('team') ||
       text.includes('miembro') ||
+      text.includes('member') ||
       text.includes('invitar') ||
+      text.includes('invite') ||
       text.includes('tiempo real') ||
+      text.includes('real time') ||
+      text.includes('realtime') ||
       text.includes('bloqueo') ||
+      text.includes('lock') ||
       text.includes('nodelock') ||
       text.includes('socket')
     ) {
       this.addBotMessage(
-        '### 👥 Colaboración Multiusuario en Tiempo Real\n\nUML Architect permite que múltiples desarrolladores trabajen en el mismo diagrama simultáneamente mediante **WebSockets (Socket.io)**:\n\n**1. Invitar Miembros:**\n• En el Dashboard de Proyectos, haz clic en el botón **"Miembros"** de la tarjeta del proyecto.\n• Ingresa el correo de tu colega y asígnale un rol:\n  - **OWNER:** Propietario del proyecto con control total.\n  - **EDITOR:** Puede crear, modificar y eliminar clases y relaciones en tiempo real.\n  - **VIEWER:** Solo lectura (puede explorar el lienzo y generar código).\n\n**2. Cursores Remotos:**\n• Verás los cursores de tus compañeros moviéndose por el lienzo en tiempo real con su nombre y color.\n\n**3. Bloqueo de Nodos (NodeLock):**\n• Cuando alguien abre para editar una clase, el sistema bloquea temporalmente esa entidad para los demás evitando sobreescrituras accidentales.',
+        isEn
+          ? '### 👥 Real-Time Multi-User Collaboration\n\nUML Architect enables multiple developers to work on the same diagram simultaneously using **WebSockets (Socket.io)**:\n\n**1. Invite Members:**\n• In the Projects Dashboard, click the **"Members"** button on the project card.\n• Enter your teammate\'s email and assign a role:\n  - **OWNER:** Full administrative control.\n  - **EDITOR:** Can create, edit, and delete classes and relations in real time.\n  - **VIEWER:** Read-only access (can inspect diagram and generate code).\n\n**2. Remote Cursors:**\n• See your teammates\' live colored cursors moving across the canvas with their name.\n\n**3. NodeLock Concurrency Protection:**\n• When a user opens a class to edit, the system locks that entity for others, preventing conflicting overwrites.'
+          : '### 👥 Colaboración Multiusuario en Tiempo Real\n\nUML Architect permite que múltiples desarrolladores trabajen en el mismo diagrama simultáneamente mediante **WebSockets (Socket.io)**:\n\n**1. Invitar Miembros:**\n• En el Dashboard de Proyectos, haz clic en el botón **"Miembros"** de la tarjeta del proyecto.\n• Ingresa el correo de tu colega y asígnale un rol:\n  - **OWNER:** Propietario del proyecto con control total.\n  - **EDITOR:** Puede crear, modificar y eliminar clases y relaciones en tiempo real.\n  - **VIEWER:** Solo lectura (puede explorar el lienzo y generar código).\n\n**2. Cursores Remotos:**\n• Verás los cursores de tus compañeros moviéndose por el lienzo en tiempo real con su nombre y color.\n\n**3. Bloqueo de Nodos (NodeLock):**\n• Cuando alguien abre para editar una clase, el sistema bloquea temporalmente esa entidad para los demás evitando sobreescrituras accidentales.',
         undefined,
         undefined,
-        [
-          { label: '🚀 Iniciar Tour Guiado', query: 'iniciar tour' },
-          { label: '⚡ Generar código del diagrama', query: 'como generar codigo' },
-        ],
+        isEn
+          ? [
+              { label: '🚀 Start Guided Tour', query: 'start tour' },
+              { label: '⚡ Generate project code', query: 'how to generate code' },
+            ]
+          : [
+              { label: '🚀 Iniciar Tour Guiado', query: 'iniciar tour' },
+              { label: '⚡ Generar código del diagrama', query: 'como generar codigo' },
+            ],
       );
       return;
     }
@@ -669,16 +916,26 @@ flutter run`,
       text.includes('xmi') ||
       text.includes('enterprise architect') ||
       text.includes('ea') ||
-      text.includes('importar')
+      text.includes('importar') ||
+      text.includes('import') ||
+      text.includes('exportar') ||
+      text.includes('export')
     ) {
       this.addBotMessage(
-        '### 🔄 Interoperabilidad con Enterprise Architect (XMI 2.1)\n\nEl sistema cuenta con compatibilidad bidireccional completa con **Enterprise Architect**:\n\n**1. Exportar a Enterprise Architect:**\n• En la barra superior, haz clic en **"Exportar"** y selecciona **"Enterprise Architect (.xmi)"**.\n• Genera un archivo estándar XMI 2.1 con diagramas, clases, atributos, visibilidades y relaciones reconocibles por Sparx Systems Enterprise Architect.\n\n**2. Importar desde Enterprise Architect:**\n• En la barra superior, selecciona **"Importar XMI"** y sube tu archivo `.xmi`.\n• El conversor transformará automáticamente los elementos XMI en nodos y conexiones interactivas en el lienzo web.\n\n**3. Historial de Versiones:**\n• Puedes guardar snapshots del diagrama y restaurar versiones anteriores en cualquier momento.',
+        isEn
+          ? '### 🔄 Enterprise Architect Interoperability (XMI 2.1)\n\nThe system offers complete bidirectional compatibility with **Enterprise Architect**:\n\n**1. Export to Enterprise Architect:**\n• In the top bar, click **"Export"** and select **"Enterprise Architect (.xmi)"**.\n• Generates a standard XMI 2.1 file containing diagrams, classes, attributes, visibilities, and relationships compatible with Sparx Systems Enterprise Architect.\n\n**2. Import from Enterprise Architect:**\n• In the top bar, click **"Import XMI"** and upload your `.xmi` file.\n• The parser converts XMI entities into interactive canvas nodes and connectors.\n\n**3. Version History:**\n• Save diagram snapshots and restore previous versions at any time.'
+          : '### 🔄 Interoperabilidad con Enterprise Architect (XMI 2.1)\n\nEl sistema cuenta con compatibilidad bidireccional completa con **Enterprise Architect**:\n\n**1. Exportar a Enterprise Architect:**\n• En la barra superior, haz clic en **"Exportar"** y selecciona **"Enterprise Architect (.xmi)"**.\n• Genera un archivo estándar XMI 2.1 con diagramas, clases, atributos, visibilidades y relaciones reconocibles por Sparx Systems Enterprise Architect.\n\n**2. Importar desde Enterprise Architect:**\n• En la barra superior, selecciona **"Importar XMI"** y sube tu archivo `.xmi`.\n• El conversor transformará automáticamente los elementos XMI en nodos y conexiones interactivas en el lienzo web.\n\n**3. Historial de Versiones:**\n• Puedes guardar snapshots del diagrama y restaurar versiones anteriores en cualquier momento.',
         undefined,
         undefined,
-        [
-          { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
-          { label: '🚀 Ver Tour Guiado', query: 'iniciar tour' },
-        ],
+        isEn
+          ? [
+              { label: '⚡ Generate Spring Boot code', query: 'how to generate code' },
+              { label: '🚀 View Guided Tour', query: 'start tour' },
+            ]
+          : [
+              { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
+              { label: '🚀 Ver Tour Guiado', query: 'iniciar tour' },
+            ],
       );
       return;
     }
@@ -687,36 +944,57 @@ flutter run`,
     if (
       text.includes('copilot') ||
       text.includes('asistente') ||
+      text.includes('assistant') ||
       text.includes('gemini') ||
       text.includes('camara') ||
       text.includes('cámara') ||
+      text.includes('camera') ||
       text.includes('foto') ||
-      text.includes('boceto')
+      text.includes('photo') ||
+      text.includes('boceto') ||
+      text.includes('sketch')
     ) {
       this.addBotMessage(
-        '### 🤖 Copilot de Inteligencia Artificial en el Lienzo\n\nEn la esquina superior derecha del editor, haz clic en el botón flotante **"Copilot IA"**:\n\n• **Comandos en Lenguaje Natural:**\n  Escribe en español lo que deseas en el diagrama. Ejemplo:\n  *"Crea un módulo de compras con Proveedor, Compra y DetalleCompra con sus relaciones"*\n\n• **Entrada Visual Multimodal (Cámara o Foto):**\n  ¿Tienes un diagrama dibujado en una pizarra o en una hoja de papel? Sube la foto o activa tu cámara web. La IA interpretará los rectángulos, textos y flechas y colocará las clases y relaciones directamente en el lienzo.',
+        isEn
+          ? '### 🤖 AI Copilot on the Canvas\n\nIn the editor, click the **"AI Copilot"** button:\n\n• **Natural Language Prompts:**\n  Instruct the AI in plain English or Spanish. For example:\n  *"Create a billing module with Customer, Invoice and InvoiceItem with their relationships"*\n\n• **Multimodal Visual Input (Camera / Sketch):**\n  Have a diagram drawn on a whiteboard or paper? Upload a picture or turn on your webcam. The AI parses the shapes and text and renders the classes and relations directly on your canvas.'
+          : '### 🤖 Copilot de Inteligencia Artificial en el Lienzo\n\nEn la esquina superior derecha del editor, haz clic en el botón flotante **"Copilot IA"**:\n\n• **Comandos en Lenguaje Natural:**\n  Escribe en español lo que deseas en el diagrama. Ejemplo:\n  *"Crea un módulo de compras con Proveedor, Compra y DetalleCompra con sus relaciones"*\n\n• **Entrada Visual Multimodal (Cámara o Foto):**\n  ¿Tienes un diagrama dibujado en una pizarra o en una hoja de papel? Sube la foto o activa tu cámara web. La IA interpretará los rectángulos, textos y flechas y colocará las clases y relaciones directamente en el lienzo.',
         undefined,
         undefined,
-        [
-          { label: '🎨 ¿Cómo editar clases manualmente?', query: 'como modelar clases y atributos' },
-          { label: '⚡ Generar código del diagrama', query: 'como generar codigo' },
-        ],
+        isEn
+          ? [
+              { label: '🎨 How to edit classes manually?', query: 'how to model classes' },
+              { label: '⚡ Generate project code', query: 'how to generate code' },
+            ]
+          : [
+              { label: '🎨 ¿Cómo editar clases manualmente?', query: 'como modelar clases y atributos' },
+              { label: '⚡ Generar código del diagrama', query: 'como generar codigo' },
+            ],
       );
       return;
     }
 
     // 11. Respuesta por Defecto (Fallback Inteligente con Recomendaciones)
     this.addBotMessage(
-      `Entiendo tu consulta sobre: "${rawInput}".\n\nAquí tienes los temas principales del **Manual Interactivo** para ayudarte de inmediato. Selecciona cualquiera de las opciones rápidas:`,
+      isEn
+        ? `I understand your query regarding: "${rawInput}".\n\nHere are the primary topics from the **Interactive Manual** to assist you right away. Select any quick option below:`
+        : `Entiendo tu consulta sobre: "${rawInput}".\n\nAquí tienes los temas principales del **Manual Interactivo** para ayudarte de inmediato. Selecciona cualquiera de las opciones rápidas:`,
       undefined,
       undefined,
-      [
-        { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
-        { label: '🐳 Comandos para Correr Docker y Gradle', query: 'comandos de ejecucion' },
-        { label: '⚡ Generar Código Spring Boot y Flutter', query: 'como generar codigo' },
-        { label: '📱 App Móvil y PocketPal IA', query: 'ia en flutter y pocketpal' },
-        { label: '🎨 Crear Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
-      ],
+      isEn
+        ? [
+            { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
+            { label: '🐳 Docker & Gradle Run Commands', query: 'run commands' },
+            { label: '⚡ Generate Spring Boot & Flutter', query: 'how to generate code' },
+            { label: '📱 Mobile App & PocketPal AI', query: 'mobile ai and pocketpal' },
+            { label: '🎨 Create UML Classes & Relations', query: 'how to model classes' },
+          ]
+        : [
+            { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
+            { label: '🐳 Comandos para Correr Docker y Gradle', query: 'comandos de ejecucion' },
+            { label: '⚡ Generar Código Spring Boot y Flutter', query: 'como generar codigo' },
+            { label: '📱 App Móvil y PocketPal IA', query: 'ia en flutter y pocketpal' },
+            { label: '🎨 Crear Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
+          ],
     );
   }
 }

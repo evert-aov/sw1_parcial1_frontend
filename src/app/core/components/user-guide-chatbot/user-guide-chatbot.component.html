@@ -6,13 +6,13 @@
       (click)="toggleOpen()"
       class="hidden md:flex items-center gap-2 bg-white dark:bg-[#151B38] text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-[#283256] shadow-xl px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:scale-105 transition-all animate-bounce">
       <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-      <span>👋 ¿Nuevo usuario? <strong>Manual Interactivo</strong></span>
+      <span [innerHTML]="'guide.launcherBadge' | translate"></span>
     </div>
 
     <!-- Botón Circular Principal -->
     <button
       (click)="toggleOpen()"
-      [title]="'Abrir Guía y Manual Interactivo'"
+      [title]="'guide.openTooltip' | translate"
       class="relative group bg-gradient-to-tr from-[#1B4E8C] via-[#2B6CB0] to-indigo-600 hover:from-[#153D6F] hover:to-indigo-500 text-white p-3.5 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white/20 cursor-pointer">
       <ng-icon name="heroAcademicCap" class="text-2xl"></ng-icon>
       <!-- Indicador online -->
@@ -38,12 +38,12 @@
         </div>
         <div>
           <div class="flex items-center gap-1.5">
-            <h3 class="font-bold text-xs sm:text-sm tracking-tight leading-none text-white">Manual Interactivo</h3>
+            <h3 class="font-bold text-xs sm:text-sm tracking-tight leading-none text-white">{{ 'guide.title' | translate }}</h3>
             <span class="text-[9.5px] font-mono bg-emerald-500/20 text-emerald-200 px-1.5 py-0.2 rounded border border-emerald-400/30">
               UML Studio
             </span>
           </div>
-          <p class="text-[10.5px] font-sans text-sky-200 dark:text-slate-300 mt-0.5">Asistente y Guía para Nuevos Usuarios</p>
+          <p class="text-[10.5px] font-sans text-sky-200 dark:text-slate-300 mt-0.5">{{ 'guide.subtitle' | translate }}</p>
         </div>
       </div>
 
@@ -52,7 +52,7 @@
         <!-- Reiniciar Chat -->
         <button
           (click)="resetChat()"
-          title="Reiniciar conversación y volver al inicio"
+          [title]="'guide.resetTooltip' | translate"
           class="p-1.5 text-sky-100 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer">
           <ng-icon name="heroArrowPath" class="text-sm"></ng-icon>
         </button>
@@ -60,7 +60,7 @@
         <!-- Maximizar / Restaurar -->
         <button
           (click)="toggleExpand()"
-          [title]="isExpanded() ? 'Restaurar tamaño normal' : 'Maximizar a pantalla completa'"
+          [title]="isExpanded() ? ('guide.restoreTooltip' | translate) : ('guide.maximizeTooltip' | translate)"
           class="p-1.5 text-sky-100 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer">
           <ng-icon [name]="isExpanded() ? 'heroArrowsPointingIn' : 'heroArrowsPointingOut'" class="text-sm"></ng-icon>
         </button>
@@ -68,7 +68,7 @@
         <!-- Cerrar -->
         <button
           (click)="toggleOpen()"
-          title="Cerrar manual interactivo"
+          [title]="'guide.closeTooltip' | translate"
           class="p-1.5 text-sky-100 hover:text-red-300 hover:bg-red-500/20 rounded transition-colors cursor-pointer ml-0.5">
           <ng-icon name="heroXMark" class="text-base"></ng-icon>
         </button>
@@ -80,11 +80,11 @@
       <div class="bg-indigo-50 dark:bg-[#1A2246] border-b border-indigo-200 dark:border-[#283256] px-4 py-2 flex items-center justify-between shrink-0 select-none text-xs">
         <div class="flex items-center gap-2">
           <span class="font-mono font-bold text-indigo-700 dark:text-indigo-300">
-            Paso {{ currentTourStepIndex() + 1 }} de {{ tourSteps.length }}
+            {{ 'guide.stepIndicator' | translate:{ current: currentTourStepIndex() + 1, total: currentTourSteps().length } }}
           </span>
           <span class="text-slate-400">|</span>
           <span class="font-medium text-slate-700 dark:text-slate-200 truncate max-w-[170px] sm:max-w-xs">
-            {{ tourSteps[currentTourStepIndex()].title }}
+            {{ currentTourSteps()[currentTourStepIndex()].title }}
           </span>
         </div>
 
@@ -95,15 +95,15 @@
             [disabled]="currentTourStepIndex() === 0"
             class="px-2 py-1 bg-white dark:bg-[#11162B] border border-slate-300 dark:border-[#283256] text-slate-700 dark:text-slate-200 rounded text-[11px] font-semibold cursor-pointer disabled:opacity-40 flex items-center gap-1">
             <ng-icon name="heroArrowLeft" class="text-xs"></ng-icon>
-            <span class="hidden sm:inline">Anterior</span>
+            <span class="hidden sm:inline">{{ 'guide.prev' | translate }}</span>
           </button>
 
           <!-- Siguiente paso o Finalizar -->
-          @if (currentTourStepIndex() < tourSteps.length - 1) {
+          @if (currentTourStepIndex() < currentTourSteps().length - 1) {
             <button
               (click)="nextTourStep()"
               class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[11px] font-semibold cursor-pointer flex items-center gap-1 shadow-xs">
-              <span>Siguiente</span>
+              <span>{{ 'guide.next' | translate }}</span>
               <ng-icon name="heroArrowRight" class="text-xs"></ng-icon>
             </button>
           } @else {
@@ -111,7 +111,7 @@
               (click)="finishTour()"
               class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-semibold cursor-pointer flex items-center gap-1 shadow-xs">
               <ng-icon name="heroCheck" class="text-xs"></ng-icon>
-              <span>Finalizar</span>
+              <span>{{ 'guide.finish' | translate }}</span>
             </button>
           }
         </div>
@@ -166,10 +166,10 @@
                       class="flex items-center gap-1 hover:text-white transition-colors cursor-pointer text-[10px]">
                       @if (copiedCodeId() === msg.id) {
                         <ng-icon name="heroCheck" class="text-xs text-emerald-400"></ng-icon>
-                        <span class="text-emerald-400 font-semibold">¡Copiado!</span>
+                        <span class="text-emerald-400 font-semibold">{{ 'guide.copied' | translate }}</span>
                       } @else {
                         <ng-icon name="heroClipboardDocument" class="text-xs"></ng-icon>
-                        <span>Copiar</span>
+                        <span>{{ 'guide.copy' | translate }}</span>
                       }
                     </button>
                   </div>
@@ -212,7 +212,7 @@
             <span class="w-1.5 h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
             <span class="w-1.5 h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
             <span class="w-1.5 h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-bounce"></span>
-            <span class="ml-1 text-[11px] font-mono">Buscando en la guía...</span>
+            <span class="ml-1 text-[11px] font-mono">{{ 'guide.searching' | translate }}</span>
           </div>
         </div>
       }
@@ -226,7 +226,7 @@
       <button
         type="button"
         (click)="scrollPills(-160)"
-        title="Desplazar temas a la izquierda"
+        [title]="'guide.scrollLeft' | translate"
         class="p-1 rounded-full text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-[#1A2246] transition-colors cursor-pointer shrink-0">
         <ng-icon name="heroChevronLeft" class="text-sm"></ng-icon>
       </button>
@@ -239,10 +239,10 @@
         
         <span class="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1 sticky left-0 bg-slate-100/90 dark:bg-[#151B38]/90 py-0.5 px-1 rounded backdrop-blur-xs z-10">
           <ng-icon name="heroLightBulb" class="text-amber-500"></ng-icon>
-          <span>Temas:</span>
+          <span>{{ 'guide.topicsLabel' | translate }}</span>
         </span>
 
-        @for (pill of quickPills; track pill.label) {
+        @for (pill of quickPills(); track pill.label) {
           <button
             type="button"
             (click)="sendMessage(pill.query)"
@@ -256,7 +256,7 @@
       <button
         type="button"
         (click)="scrollPills(160)"
-        title="Desplazar temas a la derecha"
+        [title]="'guide.scrollRight' | translate"
         class="p-1 rounded-full text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-[#1A2246] transition-colors cursor-pointer shrink-0">
         <ng-icon name="heroChevronRight" class="text-sm"></ng-icon>
       </button>
@@ -271,7 +271,7 @@
           [ngModel]="userInput()"
           (ngModelChange)="userInput.set($event)"
           name="guideQuery"
-          placeholder="Escribe una pregunta sobre el sistema o 'tour'..."
+          [placeholder]="'guide.inputPlaceholder' | translate"
           class="flex-1 px-3.5 py-2 bg-slate-50 dark:bg-[#0D1124] border border-slate-300 dark:border-[#283256] rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
         />
         <button
@@ -282,7 +282,7 @@
         </button>
       </form>
       <p class="text-[9.5px] text-slate-400 dark:text-slate-500 mt-1.5 text-center font-mono">
-        💡 Pulsa Enter para enviar o usa las opciones rápidas arriba.
+        {{ 'guide.inputTip' | translate }}
       </p>
     </div>
 
