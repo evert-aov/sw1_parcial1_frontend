@@ -23,14 +23,12 @@ import {
   heroPaperAirplane,
   heroClipboardDocumentCheck,
   heroChatBubbleLeftRight,
-  heroClock,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { AiAssistantService, AiResponse } from '../../../../../core/services/ai-assistant.service';
 import {
   UmlClassNode,
   UmlConnection,
-  SessionActivityEvent,
 } from '../../../../../core/models/diagram.model';
 
 export interface AiChatMessage {
@@ -62,7 +60,6 @@ import { TranslatePipe } from '../../../../../core/i18n';
       heroPaperAirplane,
       heroClipboardDocumentCheck,
       heroChatBubbleLeftRight,
-      heroClock,
     }),
   ],
   templateUrl: './ai-assistant-panel.component.html',
@@ -81,7 +78,6 @@ export class AiAssistantPanelComponent implements OnDestroy {
   readonly roomCode = input<string | null>(null);
   readonly currentNodes = input<UmlClassNode[]>([]);
   readonly currentConnections = input<UmlConnection[]>([]);
-  readonly sessionHistory = input<SessionActivityEvent[]>([]);
 
   // Outputs
   readonly closePanel = output<void>();
@@ -91,10 +87,8 @@ export class AiAssistantPanelComponent implements OnDestroy {
     summary: string;
     rawResponse?: any;
   }>();
-  readonly logActivity = output<Omit<SessionActivityEvent, 'id' | 'timestamp'>>();
 
   // Estados reactivos internos
-  readonly activeAiTab = signal<'chat' | 'history'>('chat');
   readonly isAiProcessing = signal<boolean>(false);
   readonly aiPrompt = signal<string>('');
   readonly attachedImageBase64 = signal<string | null>(null);
@@ -162,7 +156,6 @@ export class AiAssistantPanelComponent implements OnDestroy {
 
     const dId = this.diagramId() || 'temp_diagram';
     const rCode = this.roomCode() || undefined;
-    const recentHistory = this.sessionHistory().slice(-12);
 
     if (imageBase64) {
       this.aiService
@@ -174,7 +167,6 @@ export class AiAssistantPanelComponent implements OnDestroy {
           rCode,
           this.currentNodes(),
           this.currentConnections(),
-          recentHistory,
         )
         .subscribe({
           next: (res) => this.handleAiResponse(res, '📸 Reconocimiento de Boceto / Imagen'),
@@ -188,7 +180,6 @@ export class AiAssistantPanelComponent implements OnDestroy {
           rCode,
           this.currentNodes(),
           this.currentConnections(),
-          recentHistory,
         )
         .subscribe({
           next: (res) => this.handleAiResponse(res, '✨ Copilot IA (Prompt)'),
@@ -230,17 +221,6 @@ export class AiAssistantPanelComponent implements OnDestroy {
         connections: res.connections || [],
         summary,
         rawResponse: res,
-      });
-    }
-
-    if (res.success) {
-      this.logActivity.emit({
-        type: 'ai_mutation',
-        title: sourceTag,
-        description: summary,
-        actor: '🤖 Copilot IA',
-        icon: 'heroSparkles',
-        badgeClass: 'bg-purple-100 text-purple-800 border-purple-300',
       });
     }
 
@@ -444,30 +424,6 @@ export class AiAssistantPanelComponent implements OnDestroy {
       this.attachedImageName.set(`foto_camara_${Date.now()}.jpg`);
     }
     this.closeWebcamModal();
-  }
-
-  // -------------------------------------------------------------
-  // HISTORIAL DE SESIÓN
-  // -------------------------------------------------------------
-  copySessionHistory(): void {
-    const text = this.sessionHistory()
-      .map(
-        (h) =>
-          `[${new Date(h.timestamp).toLocaleTimeString()}] ${h.title} (${h.actor}): ${h.description}`
-      )
-      .join('\n');
-
-    navigator.clipboard.writeText(text).then(() => {
-      alert('Historial de sesión copiado al portapapeles.');
-    });
-  }
-
-  askAiAboutSession(): void {
-    const count = this.sessionHistory().length;
-    this.activeAiTab.set('chat');
-    this.aiPrompt.set(
-      `Analiza los ${count} eventos del historial de esta sesión y resume la arquitectura UML que hemos construido hasta ahora.`
-    );
   }
 
   private scrollToBottom(): void {

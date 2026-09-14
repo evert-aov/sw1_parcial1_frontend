@@ -24,33 +24,6 @@
           <ng-icon name="heroChevronRight" class="text-sm"></ng-icon>
         </button>
       </div>
-
-      <!-- Selector de Pestañas: Chat vs Historial -->
-      <div class="flex border-t border-slate-300 dark:border-[#283256] bg-slate-200/60 dark:bg-[#0E1222] text-xs font-medium">
-        <button
-          (click)="activeAiTab.set('chat')"
-          [ngClass]="{
-            'bg-[#F4F4F6] dark:bg-[#151A30] text-purple-900 dark:text-purple-300 border-b-2 border-purple-600 font-bold shadow-xs': activeAiTab() === 'chat',
-            'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1E2442]': activeAiTab() !== 'chat'
-          }"
-          class="flex-1 py-1.5 px-3 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-          <ng-icon name="heroChatBubbleLeftRight" class="text-xs"></ng-icon>
-          <span>{{ 'ai.chatTab' | translate }}</span>
-        </button>
-        <button
-          (click)="activeAiTab.set('history')"
-          [ngClass]="{
-            'bg-[#F4F4F6] dark:bg-[#151A30] text-purple-900 dark:text-purple-300 border-b-2 border-purple-600 font-bold shadow-xs': activeAiTab() === 'history',
-            'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1E2442]': activeAiTab() !== 'history'
-          }"
-          class="flex-1 py-1.5 px-3 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-          <ng-icon name="heroClock" class="text-xs"></ng-icon>
-          <span>{{ 'ai.historyTab' | translate }}</span>
-          <span class="px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-purple-200 dark:bg-purple-900/70 text-purple-900 dark:text-purple-200 font-bold">
-            {{ sessionHistory().length }}
-          </span>
-        </button>
-      </div>
     </div>
 
     <!-- Input oculto para subir imágenes de diagramas -->
@@ -61,9 +34,8 @@
       (change)="onImageSelected($event)"
       class="hidden" />
 
-    <!-- 1. FEED CONVERSACIONAL DE CHAT (SCROLLABLE) O HISTORIAL -->
-    @if (activeAiTab() === 'chat') {
-      <div #chatScrollContainer class="flex-1 p-3.5 overflow-y-auto space-y-3 min-h-0 bg-[#F4F4F6] dark:bg-[#0D1124]">
+    <!-- 1. FEED CONVERSACIONAL DE CHAT (SCROLLABLE) -->
+    <div #chatScrollContainer class="flex-1 p-3.5 overflow-y-auto space-y-3 min-h-0 bg-[#F4F4F6] dark:bg-[#0D1124]">
         @for (msg of aiChatMessages(); track msg.id) {
           
           <!-- Mensaje del Usuario -->
@@ -140,58 +112,6 @@
           </div>
         }
       </div>
-    } @else {
-      <!-- Vista de Historial de Sesión -->
-      <div class="flex-1 p-3.5 overflow-y-auto space-y-2.5 min-h-0 bg-[#F4F4F6] dark:bg-[#0D1124]">
-        <div class="p-2.5 bg-purple-50 dark:bg-[#1A203E] border border-purple-200 dark:border-[#2D3762] rounded-lg flex items-center justify-between shadow-xs">
-          <div>
-            <p class="font-bold text-[11.5px] text-purple-950 dark:text-purple-200">Registro de Auditoría de Sesión</p>
-            <p class="text-[9.5px] text-purple-700 dark:text-purple-300">Historial cronológico de cambios y mutaciones IA.</p>
-          </div>
-          <div class="flex items-center gap-1">
-            <button
-              (click)="copySessionHistory()"
-              title="Copiar log al portapapeles"
-              class="p-1.5 bg-white dark:bg-[#151A30] hover:bg-purple-100 dark:hover:bg-[#252E56] border border-purple-300 dark:border-[#3B487A] rounded text-purple-800 dark:text-purple-200 cursor-pointer shadow-xs flex items-center gap-1 text-[10px] font-medium">
-              <ng-icon name="heroClipboard" class="text-xs"></ng-icon>
-              <span>Copiar</span>
-            </button>
-            <button
-              (click)="askAiAboutSession()"
-              title="Consultar al Asistente IA sobre esta sesión"
-              class="px-2 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer shadow-xs">
-              <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
-              <span>Analizar</span>
-            </button>
-          </div>
-        </div>
-
-        @if (sessionHistory().length === 0) {
-          <div class="p-8 text-center text-slate-400 dark:text-slate-500 text-xs italic">
-            No hay actividades registradas en esta sesión aún.
-          </div>
-        } @else {
-          <div class="space-y-2">
-            @for (act of sessionHistory(); track act.id) {
-              <div class="p-2.5 bg-white dark:bg-[#151A30] border border-slate-300 dark:border-[#2D3762] rounded-lg shadow-xs space-y-1 animate-in fade-in">
-                <div class="flex items-center justify-between gap-1.5">
-                  <div class="flex items-center gap-1.5 truncate">
-                    <span class="px-1.5 py-0.5 rounded text-[9.5px] font-mono border font-semibold" [ngClass]="act.badgeClass">
-                      {{ act.title }}
-                    </span>
-                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">por {{ act.actor }}</span>
-                  </div>
-                  <span class="text-[9.5px] font-mono text-slate-400 dark:text-slate-500 shrink-0">
-                    {{ act.timestamp | date:'HH:mm:ss' }}
-                  </span>
-                </div>
-                <p class="text-[11px] text-slate-700 dark:text-slate-300 leading-snug">{{ act.description }}</p>
-              </div>
-            }
-          </div>
-        }
-      </div>
-    }
 
     <!-- 2. BANDEJA DE ENTRADA INFERIOR (AMPLIA, TIPO CHAT) -->
     <div class="p-3 bg-white dark:bg-[#121629] border-t border-[#C0C0C0] dark:border-[#283256] shrink-0 space-y-2">

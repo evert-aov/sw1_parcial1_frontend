@@ -25,7 +25,6 @@ export interface UmlLineStyleItem {
 export const UML_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'association', label: 'Association', icon: '───', description: 'Relación estructural simple entre dos clases' },
   { id: 'generalization', label: 'Generalization', icon: '─▷', description: 'Herencia: la subclase hereda de la superclase' },
-  { id: 'realization', label: 'Realization', icon: '┈▷', description: 'Implementación de una interfaz' },
   { id: 'composition', label: 'Composition', icon: '◆──', description: 'Pertenencia fuerte del todo a las partes' },
   { id: 'aggregation', label: 'Aggregation', icon: '◇──', description: 'Pertenencia débil o contenedor independiente' },
   { id: 'dependency', label: 'Dependency', icon: '┈>', description: 'Uso temporal o dependencia débil' },
@@ -142,16 +141,4 @@ export interface SaveDiagramAstRequest {
     targetMultiplicity?: string;
     assocAnchorNodeId?: string | null;
   }[];
-}
-
-export interface SessionActivityEvent {
-  id: string;
-  timestamp: Date;
-  type: 'ai_mutation' | 'ai_chat' | 'create_node' | 'update_node' | 'delete_node' | 'create_conn' | 'update_conn' | 'delete_conn' | 'import_file' | 'export_file';
-  title: string;
-  description: string;
-  metadata?: Record<string, any>;
-  actor: string;
-  icon: string;
-  badgeClass: string;
 }

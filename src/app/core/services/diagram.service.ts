@@ -80,16 +80,4 @@ export class DiagramService {
       }),
     );
   }
-
-  logActivity(diagramId: string, payload: { type: string; title: string; description: string; actor?: string; badgeClass?: string; metadata?: any }): Observable<any> {
-    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${diagramId}/activities`, payload).pipe(
-      map((res) => res.data || res),
-    );
-  }
-
-  getActivities(diagramId: string): Observable<any[]> {
-    return this.http.get<ApiResponse<any[]>>(`${this.apiUrl}/${diagramId}/activities`).pipe(
-      map((res) => (res.data || res) as any[]),
-    );
-  }
 }
