@@ -40,6 +40,12 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
   * Modal interactivo con árbol de archivos en tiempo real.
   * Visor de sintaxis con selector de plataforma (**Spring Boot 3 / Flyway / PostgreSQL** o **Flutter / Dart**).
   * Descarga directa del proyecto completo empaquetado en archivo `.zip`.
+* **Guía Interactiva de Usuario & Chatbot Inteligente**:
+  * **Sustituto del Manual Tradicional**: Asistente conversacional flotante disponible en toda la aplicación para orientar a nuevos usuarios en tiempo real.
+  * **Tour Guiado en 7 Pasos**: Flujo paso a paso con controles de navegación (Anterior, Siguiente, Finalizar) cubriendo desde la creación de proyectos hasta el despliegue con Docker y Flutter.
+  * **Chatbot con Búsqueda Semántica**: Respuestas instantáneas en lenguaje natural con renderizado enriquecido (Rich HTML), títulos estilizados, viñetas y alertas.
+  * **Bloques de Código con Copia en 1 Clic**: Snippets de terminal para Docker, Gradle y Flutter con retroalimentación visual de copiado.
+  * **Carrusel de Temas con Scroll y Flechas**: Selector horizontal con botones de desplazamiento suave, soporte de rueda de ratón (`mousewheel`) y barra de scroll estilizada (`topics-scrollbar`).
 * **Gestión de Proyectos & Seguridad**:
   * Dashboard de proyectos con control de miembros y asignación de roles (`OWNER`, `EDITOR`, `VIEWER`).
   * Autenticación JWT persistente con interceptores HTTP reactivos y guardias de ruta.
@@ -102,17 +108,21 @@ frontend/
 │   └── app/
 │       ├── app.config.ts             # Proveedores globales (Router, HttpClient con interceptores)
 │       ├── app.routes.ts             # Rutas de la aplicación y guards de autenticación
-│       ├── core/                     # Servicios singleton y lógica compartida
+│       ├── core/                     # Servicios singleton, componentes globales y lógica compartida
+│       │   ├── components/           # Componentes globales reutilizables
+│       │   │   ├── theme-toggle/     # Selector de tema (Claro / Oscuro)
+│       │   │   └── user-guide-chatbot/ # 🤖 Guía interactiva & Manual de usuario con Chatbot
 │       │   ├── guards/               # AuthGuard
 │       │   ├── interceptors/         # jwtInterceptor
 │       │   ├── models/               # Modelos TypeScript (diagram, project, user, auth)
-│       │   └── services/             # Servicios HTTP y WebSocket
+│       │   └── services/             # Servicios HTTP, WebSocket y Guía
 │       │       ├── auth.service.ts
 │       │       ├── diagram.service.ts
 │       │       ├── project.service.ts
 │       │       ├── collaboration.service.ts
 │       │       ├── ai-assistant.service.ts
 │       │       ├── code-generator.service.ts
+│       │       ├── user-guide.service.ts
 │       │       └── xmi.service.ts
 │       └── features/                 # Módulos de funcionalidad (UI)
 │           ├── auth/                 # Login y Registro
@@ -122,6 +132,7 @@ frontend/
 │                   ├── components/
 │                   │   ├── ai-assistant-panel/
 │                   │   ├── diagram-appbar/
+│                   │   ├── diagram-toolbox/
 │                   │   ├── spring-boot-modal/
 │                   │   ├── user-profile-modal/
 │                   │   ├── xmi-import-modal/
@@ -167,10 +178,11 @@ frontend/
 
 ## 🧩 Módulos y Componentes Clave
 
+* **`UserGuideChatbotComponent`**: Manual de usuario interactivo global tipo chatbot con tour guiado en 7 etapas, búsqueda semántica en lenguaje natural, renderizado Markdown enriquecido, bloques con copia de comandos y carrusel de temas con scroll y flechas.
 * **`DiagramEditorComponent`**: Lienzo principal con soporte de zoom, pan, selección múltiple, creación de nodos mediante doble clic o menú contextual, y conexión visual de relaciones UML.
 * **`AiAssistantPanelComponent`**: Asistente inteligente lateral con integración de cámara web para captura en vivo y prompts en lenguaje natural.
 * **`SpringBootModalComponent`**: Modal de generación de código fullstack con explorador de archivos y visor de código en tiempo real para Java/Spring Boot y Dart/Flutter.
-* **`DiagramAppbarComponent`**: Barra de herramientas superior con opciones de guardado, historial de versiones XMI, exportación a imagen PNG, control de colaboradores y estado de conexión en vivo.
+* **`DiagramAppbarComponent`**: Barra de herramientas superior con opciones de guardado, historial de versiones XMI, exportación a imagen PNG, control de colaboradores, botón de Manual Interactivo y estado de conexión en vivo.
 
 ---
 
