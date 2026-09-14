@@ -16,6 +16,8 @@ import {
   heroXMark,
   heroChevronDown,
   heroChevronUp,
+  heroChevronLeft,
+  heroChevronRight,
   heroArrowsPointingOut,
   heroArrowsPointingIn,
   heroArrowPath,
@@ -67,6 +69,8 @@ export interface TourStep {
       heroXMark,
       heroChevronDown,
       heroChevronUp,
+      heroChevronLeft,
+      heroChevronRight,
       heroArrowsPointingOut,
       heroArrowsPointingIn,
       heroArrowPath,
@@ -82,8 +86,25 @@ export interface TourStep {
 })
 export class UserGuideChatbotComponent implements AfterViewChecked {
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
+  @ViewChild('pillsContainer') private pillsContainer!: ElementRef;
 
   guideService = inject(UserGuideService);
+
+  scrollPills(offset: number): void {
+    if (this.pillsContainer) {
+      this.pillsContainer.nativeElement.scrollBy({
+        left: offset,
+        behavior: 'smooth',
+      });
+    }
+  }
+
+  onPillsWheel(event: WheelEvent): void {
+    if (this.pillsContainer && event.deltaY !== 0) {
+      event.preventDefault();
+      this.pillsContainer.nativeElement.scrollLeft += event.deltaY;
+    }
+  }
 
   // Estado del widget
   get isOpen() {

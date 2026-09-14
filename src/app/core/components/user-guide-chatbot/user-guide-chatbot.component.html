@@ -218,19 +218,48 @@
 
     </div>
 
-    <!-- 4. PÍLDORAS DE PREGUNTAS FRECUENTES (CARRUSEL HORIZONTAL) -->
-    <div class="px-3 py-2 bg-slate-100 dark:bg-[#151B38]/80 border-t border-slate-200 dark:border-[#283256] overflow-x-auto flex items-center gap-1.5 no-scrollbar shrink-0 select-none">
-      <span class="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
-        <ng-icon name="heroLightBulb" class="text-amber-500"></ng-icon>
-        <span>Temas:</span>
-      </span>
-      @for (pill of quickPills; track pill.label) {
-        <button
-          (click)="sendMessage(pill.query)"
-          class="px-2.5 py-1 bg-white hover:bg-indigo-50 dark:bg-[#101426] dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 rounded-full text-[10.5px] border border-slate-300 dark:border-[#283256] shrink-0 transition-colors cursor-pointer shadow-2xs font-medium">
-          {{ pill.label }}
-        </button>
-      }
+    <!-- 4. PÍLDORAS DE PREGUNTAS FRECUENTES (CARRUSEL HORIZONTAL CON CONTROLES Y SCROLLBAR ELEGANTE) -->
+    <div class="px-2 py-2 bg-slate-100 dark:bg-[#151B38]/90 border-t border-slate-200 dark:border-[#283256] flex items-center gap-1 shrink-0 select-none">
+      
+      <!-- Botón Flecha Izquierda -->
+      <button
+        type="button"
+        (click)="scrollPills(-160)"
+        title="Desplazar temas a la izquierda"
+        class="p-1 rounded-full text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-[#1A2246] transition-colors cursor-pointer shrink-0">
+        <ng-icon name="heroChevronLeft" class="text-sm"></ng-icon>
+      </button>
+
+      <!-- Contenedor scrollable horizontal con scrollbar visible y mousewheel horizontal -->
+      <div
+        #pillsContainer
+        (wheel)="onPillsWheel($event)"
+        class="flex-1 overflow-x-auto pb-1.5 pt-0.5 flex items-center gap-1.5 topics-scrollbar">
+        
+        <span class="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1 sticky left-0 bg-slate-100/90 dark:bg-[#151B38]/90 py-0.5 px-1 rounded backdrop-blur-xs z-10">
+          <ng-icon name="heroLightBulb" class="text-amber-500"></ng-icon>
+          <span>Temas:</span>
+        </span>
+
+        @for (pill of quickPills; track pill.label) {
+          <button
+            type="button"
+            (click)="sendMessage(pill.query)"
+            class="px-2.5 py-1 bg-white hover:bg-indigo-50 dark:bg-[#101426] dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 rounded-full text-[10.5px] border border-slate-300 dark:border-[#283256] shrink-0 transition-colors cursor-pointer shadow-2xs font-medium whitespace-nowrap">
+            {{ pill.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Botón Flecha Derecha -->
+      <button
+        type="button"
+        (click)="scrollPills(160)"
+        title="Desplazar temas a la derecha"
+        class="p-1 rounded-full text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-[#1A2246] transition-colors cursor-pointer shrink-0">
+        <ng-icon name="heroChevronRight" class="text-sm"></ng-icon>
+      </button>
+
     </div>
 
     <!-- 5. BARRA INFERIOR DE ENTRADA DE TEXTO -->
