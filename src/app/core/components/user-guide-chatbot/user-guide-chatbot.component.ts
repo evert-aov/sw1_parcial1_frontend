@@ -1,4 +1,4 @@
-import { Component, signal, computed, effect, ViewChild, ElementRef, AfterViewChecked, inject } from '@angular/core';
+import { Component, signal, computed, ViewChild, ElementRef, AfterViewChecked, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -93,6 +93,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
   guideService = inject(UserGuideService);
   translationService = inject(TranslationService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly initialTimestamp = new Date();
 
   scrollPills(offset: number): void {
     if (this.pillsContainer) {
@@ -125,8 +126,37 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
   // Input del usuario
   userInput = signal<string>('');
 
-  // Historial de mensajes
-  messages = signal<ChatMessage[]>([]);
+  // Mensajes de la conversación (preguntas del usuario, respuestas del bot y pasos del tour)
+  conversationMessages = signal<ChatMessage[]>([]);
+
+  // Mensaje de bienvenida reactivo que se adapta instantáneamente al cambiar el idioma
+  readonly welcomeMessage = computed<ChatMessage>(() => {
+    const isEn = this.translationService.currentLang() === 'en';
+    return {
+      id: 'welcome-1',
+      sender: 'bot',
+      text: isEn
+        ? 'Hello! 👋 I am your **Interactive Assistant and User Guide for UML Architect & Code Generator**.\n\nI have replaced static user manuals to help you step by step in real time. Feel free to ask any questions about using the platform, modeling diagrams, generating code, or running your projects.'
+        : '¡Hola! 👋 Soy tu **Asistente y Guía Interactivo de UML Architect & Code Generator**.\n\nHe reemplazado los manuales de usuario estáticos para ayudarte paso a paso en tiempo real. Puedes preguntarme cualquier duda sobre cómo usar la plataforma, modelar diagramas, generar código o ejecutar tus proyectos.',
+      timestamp: this.initialTimestamp,
+      quickActions: isEn
+        ? [
+            { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
+            { label: '🐳 Project Run Commands', query: 'run commands' },
+            { label: '⚡ What does the platform generate?', query: 'generated architecture' },
+          ]
+        : [
+            { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
+            { label: '🐳 Comandos para Correr el Proyecto', query: 'comandos de ejecucion' },
+            { label: '⚡ ¿Qué genera la plataforma?', query: 'arquitectura generada' },
+          ],
+    };
+  });
+
+  // Lista de todos los mensajes visibles en el chat
+  readonly messages = computed<ChatMessage[]>(() => {
+    return [this.welcomeMessage(), ...this.conversationMessages()];
+  });
 
   // Pasos del Tour Guiado en Español
   readonly tourStepsEs: TourStep[] = [
@@ -368,20 +398,6 @@ flutter run`,
     return this.translationService.currentLang() === 'en' ? this.quickPillsEn : this.quickPillsEs;
   });
 
-  constructor() {
-    this.initWelcomeMessage();
-
-    // Actualiza el mensaje de bienvenida automáticamente al cambiar el idioma si la conversación está en su estado inicial
-    effect(() => {
-      // Registrar dependencia del signal de idioma
-      this.translationService.currentLang();
-      const currentMsgs = this.messages();
-      if (currentMsgs.length <= 1 && (!currentMsgs[0] || currentMsgs[0].id.startsWith('welcome-'))) {
-        this.initWelcomeMessage();
-      }
-    });
-  }
-
   ngAfterViewChecked(): void {
     this.scrollToBottom();
   }
@@ -395,31 +411,6 @@ flutter run`,
     } catch (_) {}
   }
 
-  initWelcomeMessage(): void {
-    const isEn = this.translationService.currentLang() === 'en';
-    this.messages.set([
-      {
-        id: 'welcome-1',
-        sender: 'bot',
-        text: isEn
-          ? 'Hello! 👋 I am your **Interactive Assistant and User Guide for UML Architect & Code Generator**.\n\nI have replaced static user manuals to help you step by step in real time. Feel free to ask any questions about using the platform, modeling diagrams, generating code, or running your projects.'
-          : '¡Hola! 👋 Soy tu **Asistente y Guía Interactivo de UML Architect & Code Generator**.\n\nHe reemplazado los manuales de usuario estáticos para ayudarte paso a paso en tiempo real. Puedes preguntarme cualquier duda sobre cómo usar la plataforma, modelar diagramas, generar código o ejecutar tus proyectos.',
-        timestamp: new Date(),
-        quickActions: isEn
-          ? [
-              { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
-              { label: '🐳 Project Run Commands', query: 'run commands' },
-              { label: '⚡ What does the platform generate?', query: 'generated architecture' },
-            ]
-          : [
-              { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
-              { label: '🐳 Comandos para Correr el Proyecto', query: 'comandos de ejecucion' },
-              { label: '⚡ ¿Qué genera la plataforma?', query: 'arquitectura generada' },
-            ],
-      },
-    ]);
-  }
-
   toggleOpen(): void {
     this.guideService.toggleGuide();
   }
@@ -431,7 +422,7 @@ flutter run`,
   resetChat(): void {
     this.isTourActive.set(false);
     this.currentTourStepIndex.set(0);
-    this.initWelcomeMessage();
+    this.conversationMessages.set([]);
   }
 
   copyCode(code: string, id: string): void {
@@ -583,8 +574,8 @@ flutter run`,
     const query = (textToSend ?? this.userInput()).trim();
     if (!query) return;
 
-    // Agregar mensaje del usuario
-    this.messages.update((msgs) => [
+    // Agregar mensaje del usuario a conversationMessages
+    this.conversationMessages.update((msgs) => [
       ...msgs,
       {
         id: 'user-' + Date.now(),
@@ -612,7 +603,7 @@ flutter run`,
     codeLanguage?: string,
     quickActions?: { label: string; query: string }[],
   ): void {
-    this.messages.update((msgs) => [
+    this.conversationMessages.update((msgs) => [
       ...msgs,
       {
         id: 'bot-' + Date.now(),
