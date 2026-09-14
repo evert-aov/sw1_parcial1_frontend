@@ -242,13 +242,21 @@ f-flow f-connection.uml-relation-aggregation path[f-connection-path] {
   stroke-dasharray: none !important;
 }
 
+/* Forzar que los marcadores SVG no se recorten en los bordes */
+f-flow marker,
+f-flow svg[fMarker],
+f-flow .f-marker {
+  overflow: visible !important;
+}
+
 /* Forzar relleno blanco / hueco en marcadores UML (anula el fill: currentColor de Foblex Flow) */
 f-flow svg marker polygon.uml-marker-hollow,
 f-flow svg defs marker polygon.uml-marker-hollow,
 f-flow marker polygon.uml-marker-hollow,
 f-flow .f-marker polygon.uml-marker-hollow,
 f-flow .uml-marker-hollow,
-polygon.uml-marker-hollow {
+polygon.uml-marker-hollow,
+path.uml-marker-hollow {
   fill: #ffffff !important;
   stroke: #43352B !important;
   stroke-width: 1.3px !important;
@@ -259,7 +267,8 @@ polygon.uml-marker-hollow {
 .dark f-flow marker polygon.uml-marker-hollow,
 .dark f-flow .f-marker polygon.uml-marker-hollow,
 .dark f-flow .uml-marker-hollow,
-.dark polygon.uml-marker-hollow {
+.dark polygon.uml-marker-hollow,
+.dark path.uml-marker-hollow {
   fill: #151A30 !important;
   stroke: #818CF8 !important;
 }
@@ -270,7 +279,8 @@ f-flow svg defs marker polygon.uml-marker-filled,
 f-flow marker polygon.uml-marker-filled,
 f-flow .f-marker polygon.uml-marker-filled,
 f-flow .uml-marker-filled,
-polygon.uml-marker-filled {
+polygon.uml-marker-filled,
+path.uml-marker-filled {
   fill: #43352B !important;
   stroke: #43352B !important;
   stroke-width: 1.3px !important;
@@ -281,7 +291,8 @@ polygon.uml-marker-filled {
 .dark f-flow marker polygon.uml-marker-filled,
 .dark f-flow .f-marker polygon.uml-marker-filled,
 .dark f-flow .uml-marker-filled,
-.dark polygon.uml-marker-filled {
+.dark polygon.uml-marker-filled,
+.dark path.uml-marker-filled {
   fill: #818CF8 !important;
   stroke: #818CF8 !important;
 }
@@ -292,10 +303,13 @@ f-flow svg defs marker polyline.uml-marker-open,
 f-flow marker polyline.uml-marker-open,
 f-flow .f-marker polyline.uml-marker-open,
 f-flow .uml-marker-open,
-polyline.uml-marker-open {
+polyline.uml-marker-open,
+path.uml-marker-open {
   fill: none !important;
   stroke: #43352B !important;
   stroke-width: 1.5px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
 }
 
 .dark f-flow svg marker polyline.uml-marker-open,
@@ -303,6 +317,8 @@ polyline.uml-marker-open {
 .dark f-flow marker polyline.uml-marker-open,
 .dark f-flow .f-marker polyline.uml-marker-open,
 .dark f-flow .uml-marker-open,
-.dark polyline.uml-marker-open {
+.dark polyline.uml-marker-open,
+.dark path.uml-marker-open {
   stroke: #818CF8 !important;
 }
+
