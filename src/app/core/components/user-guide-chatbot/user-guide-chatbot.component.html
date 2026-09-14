@@ -147,9 +147,10 @@
                 'bg-white dark:bg-[#151B38] text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-[#283256] rounded-bl-xs': msg.sender === 'bot'
               }">
               
-              <!-- Texto del Mensaje (con formato de saltos de línea) -->
-              <div class="whitespace-pre-line text-xs">
-                {{ msg.text }}
+              <!-- Texto del Mensaje Renderizado en HTML/Markdown Enriquecido -->
+              <div
+                class="text-xs leading-relaxed markdown-content"
+                [innerHTML]="formatMarkdown(msg.text, msg.sender)">
               </div>
 
               <!-- Bloque de Código ejecutable (si existe) -->

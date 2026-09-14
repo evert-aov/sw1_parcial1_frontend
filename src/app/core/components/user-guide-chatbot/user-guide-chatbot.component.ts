@@ -1,6 +1,7 @@
 import { Component, signal, ViewChild, ElementRef, AfterViewChecked, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { UserGuideService } from '../../services/user-guide.service';
 import {
@@ -89,6 +90,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
   @ViewChild('pillsContainer') private pillsContainer!: ElementRef;
 
   guideService = inject(UserGuideService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   scrollPills(offset: number): void {
     if (this.pillsContainer) {
@@ -292,6 +294,77 @@ flutter run`,
     setTimeout(() => {
       this.copiedCodeId.set(null);
     }, 2000);
+  }
+
+  formatMarkdown(rawText: string, sender: 'bot' | 'user' = 'bot'): SafeHtml {
+    if (!rawText) return '';
+    if (sender === 'user') {
+      const escaped = rawText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br/>');
+      return this.sanitizer.bypassSecurityTrustHtml(escaped);
+    }
+
+    let html = rawText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // 1. Headers ### H3
+    html = html.replace(
+      /^###\s+(.+)$/gm,
+      '<h4 class="font-bold text-sm text-slate-900 dark:text-slate-100 mt-2.5 mb-1.5 flex items-center gap-1.5 pb-0.5 border-b border-slate-200/60 dark:border-slate-700/50">$1</h4>'
+    );
+
+    // 2. Headers ## H2
+    html = html.replace(
+      /^##\s+(.+)$/gm,
+      '<h3 class="font-bold text-base text-slate-900 dark:text-slate-100 mt-3 mb-2">$1</h3>'
+    );
+
+    // 3. Negrita **texto**
+    html = html.replace(
+      /\*\*([^*]+)\*\*/g,
+      '<strong class="font-bold text-slate-900 dark:text-white">$1</strong>'
+    );
+
+    // 4. Código en línea `codigo`
+    html = html.replace(
+      /`([^`]+)`/g,
+      '<code class="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-[#1E2548] text-indigo-700 dark:text-indigo-300 font-mono text-[11px] border border-slate-300/80 dark:border-[#2D3762]">$1</code>'
+    );
+
+    // 5. Cajas de Tips / Alertas con icono
+    html = html.replace(
+      /^💡\s+(.+)$/gm,
+      '<div class="p-2.5 my-2.5 bg-amber-50 dark:bg-amber-950/30 border-l-3 border-amber-500 rounded-r text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed flex items-start gap-2 shadow-2xs"><span class="shrink-0 text-sm">💡</span><div class="flex-1">$1</div></div>'
+    );
+    html = html.replace(
+      /^🎉\s+(.+)$/gm,
+      '<div class="p-2.5 my-2.5 bg-emerald-50 dark:bg-emerald-950/30 border-l-3 border-emerald-500 rounded-r text-emerald-900 dark:text-emerald-200 text-[11px] leading-relaxed flex items-start gap-2 shadow-2xs"><span class="shrink-0 text-sm">🎉</span><div class="flex-1">$1</div></div>'
+    );
+
+    // 6. Viñetas con sub-niveles: "  - texto"
+    html = html.replace(
+      /^\s{2,}[-•*]\s+(.+)$/gm,
+      '<div class="flex items-start gap-2 my-1 text-slate-600 dark:text-slate-300 pl-4 text-[11px]"><span class="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500 mt-1.5 shrink-0"></span><span class="flex-1">$1</span></div>'
+    );
+
+    // 7. Viñetas principales: "• texto" o "- texto"
+    html = html.replace(
+      /^[•\-*]\s+(.+)$/gm,
+      '<div class="flex items-start gap-2 my-1 text-slate-700 dark:text-slate-200 pl-0.5 text-xs"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 mt-1.5 shrink-0"></span><span class="flex-1">$1</span></div>'
+    );
+
+    // 8. Párrafos y saltos de línea dobles
+    html = html.replace(/\n\n/g, '<div class="h-2"></div>');
+
+    // 9. Saltos de línea simples (que no sean después o antes de tags de bloque)
+    html = html.replace(/(?<!(<\/h[234]>|<\/div>))\n(?!(<h[234]>|<div))/g, '<br/>');
+
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
   // ==================== LÓGICA DEL TOUR GUIADO ====================
