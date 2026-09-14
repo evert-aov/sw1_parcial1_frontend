@@ -23,9 +23,11 @@ import {
   heroEye,
   heroCheck,
   heroPhoto,
+  heroAcademicCap,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
+import { UserGuideService } from '../../../../../core/services/user-guide.service';
 import { TranslatePipe, LanguageSelectorComponent } from '../../../../../core/i18n';
 import { ThemeToggleComponent } from '../../../../../core/components/theme-toggle/theme-toggle.component';
 
@@ -55,6 +57,7 @@ import { ThemeToggleComponent } from '../../../../../core/components/theme-toggl
       heroEye,
       heroCheck,
       heroPhoto,
+      heroAcademicCap,
     }),
   ],
   templateUrl: './diagram-appbar.component.html',
@@ -62,6 +65,11 @@ import { ThemeToggleComponent } from '../../../../../core/components/theme-toggl
 export class DiagramAppbarComponent {
   readonly authService = inject(AuthService);
   readonly collaborationService = inject(CollaborationService);
+  readonly guideService = inject(UserGuideService);
+
+  openGuide(): void {
+    this.guideService.openGuide();
+  }
 
   @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>;
 

@@ -183,6 +183,15 @@
         </div>
       </button>
 
+      <!-- Botón Manual Interactivo / Guía -->
+      <button
+        (click)="openGuide()"
+        title="Abrir Manual Interactivo / Guía de Usuario"
+        class="bg-[#163D6C] hover:bg-[#123158] dark:bg-[#101426] px-2.5 py-1 rounded border border-[#366FA8] dark:border-[#283256] text-amber-300 hover:text-amber-200 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-xs">
+        <ng-icon name="heroAcademicCap" class="text-sm"></ng-icon>
+        <span class="hidden xl:inline">Manual</span>
+      </button>
+
       <!-- Selector de Tema (Claro / Oscuro) -->
       <app-theme-toggle [variant]="'dark'" />
 

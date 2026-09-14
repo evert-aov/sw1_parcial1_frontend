@@ -20,10 +20,12 @@ import {
   heroShieldCheck,
   heroCheck,
   heroArrowTopRightOnSquare,
+  heroAcademicCap,
 } from '@ng-icons/heroicons/outline';
 
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UserGuideService } from '../../../core/services/user-guide.service';
 import { Project, ProjectRole } from '../../../core/models/project.model';
 import { UserProfileModalComponent } from '../../diagrams/diagram-editor/components/user-profile-modal/user-profile-modal.component';
 import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
@@ -60,6 +62,7 @@ import { ThemeToggleComponent } from '../../../core/components/theme-toggle/them
       heroShieldCheck,
       heroCheck,
       heroArrowTopRightOnSquare,
+      heroAcademicCap,
     }),
   ],
   templateUrl: './project-list.component.html',
@@ -69,7 +72,12 @@ export class ProjectListComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   readonly projectService = inject(ProjectService);
   readonly authService = inject(AuthService);
+  readonly guideService = inject(UserGuideService);
   private readonly router = inject(Router);
+
+  openGuide(prompt?: string): void {
+    this.guideService.openGuide(prompt);
+  }
 
   // Filtro de búsqueda
   readonly searchQuery = signal<string>('');
