@@ -40,6 +40,7 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
   * Modal interactivo con árbol de archivos en tiempo real.
   * Visor de sintaxis con selector de plataforma (**Spring Boot 3 / Flyway / PostgreSQL** o **Flutter / Dart**).
   * Descarga directa del proyecto completo empaquetado en archivo `.zip`.
+  * Integración con **Amazon S3** para almacenamiento y distribución en la nube mediante URLs prefirmadas seguras.
 * **Guía Interactiva de Usuario & Chatbot Inteligente**:
   * **Sustituto del Manual Tradicional**: Asistente conversacional flotante disponible en toda la aplicación para orientar a nuevos usuarios en tiempo real.
   * **Tour Guiado en 7 Pasos**: Flujo paso a paso con controles de navegación (Anterior, Siguiente, Finalizar) cubriendo desde la creación de proyectos hasta el despliegue con Docker y Flutter.
