@@ -6,6 +6,7 @@ import {
   output,
   ElementRef,
   ViewChild,
+  OnInit,
   OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -23,9 +24,13 @@ import {
   heroPaperAirplane,
   heroClipboardDocumentCheck,
   heroChatBubbleLeftRight,
+  heroCpuChip,
+  heroArrowPath,
+  heroChevronDown,
+  heroChevronUp,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { AiAssistantService, AiResponse } from '../../../../../core/services/ai-assistant.service';
+import { AiAssistantService, AiResponse, AiModelOption } from '../../../../../core/services/ai-assistant.service';
 import {
   UmlClassNode,
   UmlConnection,
@@ -37,6 +42,8 @@ export interface AiChatMessage {
   text: string;
   imagePreview?: string;
   changesSummary?: string;
+  providerUsed?: 'ollama' | 'vertex';
+  modelUsed?: string;
   timestamp: Date;
   status?: 'success' | 'clarification' | 'error' | 'pending';
 }
@@ -60,11 +67,15 @@ import { TranslatePipe } from '../../../../../core/i18n';
       heroPaperAirplane,
       heroClipboardDocumentCheck,
       heroChatBubbleLeftRight,
+      heroCpuChip,
+      heroArrowPath,
+      heroChevronDown,
+      heroChevronUp,
     }),
   ],
   templateUrl: './ai-assistant-panel.component.html',
 })
-export class AiAssistantPanelComponent implements OnDestroy {
+export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   private readonly aiService = inject(AiAssistantService);
 
@@ -88,6 +99,14 @@ export class AiAssistantPanelComponent implements OnDestroy {
     rawResponse?: any;
   }>();
 
+  // Modelos de IA disponibles y seleccionados por el usuario
+  readonly availableModels = signal<AiModelOption[]>([]);
+  readonly selectedModelId = signal<string>('');
+  readonly selectedProvider = signal<'ollama' | 'vertex'>('ollama');
+  readonly isOllamaAvailable = signal<boolean>(false);
+  readonly isLoadingModels = signal<boolean>(false);
+  readonly isModelDropdownOpen = signal<boolean>(false);
+
   // Estados reactivos internos
   readonly isAiProcessing = signal<boolean>(false);
   readonly aiPrompt = signal<string>('');
@@ -101,13 +120,90 @@ export class AiAssistantPanelComponent implements OnDestroy {
     {
       id: 'welcome',
       sender: 'assistant',
-      text: '¡Hola! Soy tu Copilot de Modelado UML con Gemini 2.5 Flash.\n\nPuedes pedirme crear tablas, agregar atributos, conectar entidades, o adjuntar una foto/captura de una pizarra o cuaderno dibujado a mano para digitalizarlo automáticamente.',
+      text: '¡Hola! Soy tu Copilot de Modelado UML.\n\nPuedes elegir entre tus modelos locales de Ollama (ej: Qwen 2.5 Coder) o Gemini en la nube mediante el selector de modelos. Pídeme crear tablas, agregar atributos, conectar entidades, o adjuntar un boceto para digitalizarlo.',
       timestamp: new Date(),
     },
   ]);
 
   private speechRecognition: any = null;
   private webcamMediaStream: MediaStream | null = null;
+
+  ngOnInit(): void {
+    this.loadAvailableModels();
+  }
+
+  loadAvailableModels(): void {
+    this.isLoadingModels.set(true);
+    this.aiService.getAvailableModels().subscribe({
+      next: (res) => {
+        this.isLoadingModels.set(false);
+        const data = (res as any)?.data || res;
+        const models: AiModelOption[] = data?.models || [];
+        this.availableModels.set(models);
+        this.isOllamaAvailable.set(data?.isOllamaAvailable ?? false);
+
+        // Verificar si existe una preferencia guardada en localStorage
+        const savedModelId = localStorage.getItem('uml_preferred_ai_model');
+        const foundSaved = models.find((m) => m.id === savedModelId);
+
+        if (foundSaved) {
+          this.selectedModelId.set(foundSaved.id);
+          this.selectedProvider.set(foundSaved.provider);
+        } else if (data?.defaultModel) {
+          const def = models.find((m) => m.id === data.defaultModel);
+          this.selectedModelId.set(data.defaultModel);
+          this.selectedProvider.set(def ? def.provider : (data.defaultProvider || 'ollama'));
+        } else if (models.length > 0) {
+          this.selectedModelId.set(models[0].id);
+          this.selectedProvider.set(models[0].provider);
+        }
+      },
+      error: (err) => {
+        this.isLoadingModels.set(false);
+        console.warn('No se pudieron listar los modelos de IA:', err);
+        // Fallback en caso de error de red
+        this.availableModels.set([
+          {
+            id: 'gemini-2.5-flash',
+            name: 'Google Gemini 2.5 Flash',
+            provider: 'vertex',
+            isLocal: false,
+            description: 'Google Cloud Vertex AI',
+          },
+        ]);
+        this.selectedModelId.set('gemini-2.5-flash');
+        this.selectedProvider.set('vertex');
+      },
+    });
+  }
+
+  toggleModelDropdown(): void {
+    this.isModelDropdownOpen.update((v) => !v);
+  }
+
+  closeModelDropdown(): void {
+    this.isModelDropdownOpen.set(false);
+  }
+
+  selectModel(model: AiModelOption): void {
+    this.selectedModelId.set(model.id);
+    this.selectedProvider.set(model.provider);
+    localStorage.setItem('uml_preferred_ai_model', model.id);
+    this.closeModelDropdown();
+  }
+
+  onModelChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const modelId = target.value;
+    const model = this.availableModels().find((m) => m.id === modelId);
+    if (model) {
+      this.selectModel(model);
+    }
+  }
+
+  getSelectedModel(): AiModelOption | undefined {
+    return this.availableModels().find((m) => m.id === this.selectedModelId());
+  }
 
   ngOnDestroy(): void {
     if (this.speechRecognition && this.isVoiceListening()) {
@@ -156,6 +252,8 @@ export class AiAssistantPanelComponent implements OnDestroy {
 
     const dId = this.diagramId() || 'temp_diagram';
     const rCode = this.roomCode() || undefined;
+    const provider = this.selectedProvider();
+    const model = this.selectedModelId();
 
     if (imageBase64) {
       this.aiService
@@ -167,6 +265,8 @@ export class AiAssistantPanelComponent implements OnDestroy {
           rCode,
           this.currentNodes(),
           this.currentConnections(),
+          [],
+          { provider: 'vertex', model: 'gemini-2.5-flash' },
         )
         .subscribe({
           next: (res) => this.handleAiResponse(res, '📸 Reconocimiento de Boceto / Imagen'),
@@ -180,6 +280,8 @@ export class AiAssistantPanelComponent implements OnDestroy {
           rCode,
           this.currentNodes(),
           this.currentConnections(),
+          [],
+          { provider, model },
         )
         .subscribe({
           next: (res) => this.handleAiResponse(res, '✨ Copilot IA (Prompt)'),
@@ -211,6 +313,8 @@ export class AiAssistantPanelComponent implements OnDestroy {
         text: res.message || (isClarification ? 'Por favor aclara la solicitud.' : '¡Diagrama modelado con éxito!'),
         changesSummary: summary,
         status,
+        providerUsed: res.providerUsed,
+        modelUsed: res.modelUsed,
         timestamp: new Date(),
       },
     ]);
