@@ -377,7 +377,7 @@ flutter run`,
     { label: '🐳 ¿Cómo correr con Docker y Gradle?', query: 'comandos de ejecucion' },
     { label: '⚡ ¿Cómo generar Spring Boot y Flutter?', query: 'como generar codigo' },
     { label: '🎨 ¿Cómo crear clases y relaciones?', query: 'como modelar clases y relaciones' },
-    { label: '📱 ¿Cómo funciona la IA Local en el móvil?', query: 'ia en flutter y pocketpal' },
+    { label: '📱 ¿Cómo funciona la IA Local en el móvil?', query: 'ia en flutter y qwen' },
     { label: '👥 ¿Cómo colaborar en equipo?', query: 'colaboracion en tiempo real' },
     { label: '🔄 ¿Cómo importar/exportar a Enterprise Architect?', query: 'enterprise architect xmi' },
   ];
@@ -388,7 +388,7 @@ flutter run`,
     { label: '🐳 How to run with Docker & Gradle?', query: 'run commands' },
     { label: '⚡ How to generate Spring Boot & Flutter?', query: 'how to generate code' },
     { label: '🎨 How to create classes & relations?', query: 'how to model classes' },
-    { label: '📱 How does Local AI work on mobile?', query: 'mobile ai and pocketpal' },
+    { label: '📱 How does Local AI work on mobile?', query: 'mobile ai and qwen' },
     { label: '👥 How to collaborate in teams?', query: 'realtime collaboration' },
     { label: '🔄 How to import/export Enterprise Architect?', query: 'enterprise architect xmi' },
   ];
@@ -549,12 +549,12 @@ flutter run`,
       isEn
         ? [
             { label: '🐳 View Docker & Gradle commands', query: 'run commands' },
-            { label: '📱 View PocketPal AI integration', query: 'mobile ai and pocketpal' },
+            { label: '📱 View Qwen2.5 Local AI integration', query: 'mobile ai and qwen' },
             { label: '🔄 Restart Tour', query: 'start tour' },
           ]
         : [
             { label: '🐳 Ver comandos Docker & Gradle', query: 'comandos de ejecucion' },
-            { label: '📱 Ver integración con PocketPal IA', query: 'ia en flutter y pocketpal' },
+            { label: '📱 Ver integración con IA local Qwen2.5', query: 'ia en flutter y qwen' },
             { label: '🔄 Reiniciar Tour', query: 'iniciar tour' },
           ],
     );
@@ -671,12 +671,12 @@ flutter run`,
         isEn
           ? [
               { label: '🔑 Default credentials?', query: 'default credentials' },
-              { label: '📱 How to use PocketPal AI?', query: 'mobile ai and pocketpal' },
+              { label: '📱 How to use Qwen2.5 AI?', query: 'mobile ai and qwen' },
               { label: '⚡ How to generate code?', query: 'how to generate code' },
             ]
           : [
               { label: '🔑 ¿Cuáles son las credenciales por defecto?', query: 'credenciales por defecto' },
-              { label: '📱 ¿Cómo usar la IA con PocketPal?', query: 'ia en flutter y pocketpal' },
+              { label: '📱 ¿Cómo usar la IA local Qwen2.5?', query: 'ia en flutter y qwen' },
               { label: '⚡ ¿Cómo generar el código?', query: 'como generar codigo' },
             ],
       );
@@ -705,11 +705,11 @@ flutter run`,
         isEn
           ? [
               { label: '🐳 View backend run commands', query: 'run commands' },
-              { label: '📱 View mobile app features', query: 'mobile ai and pocketpal' },
+              { label: '📱 View mobile app features', query: 'mobile ai and qwen' },
             ]
           : [
               { label: '🐳 Ver comandos para correr el backend', query: 'comandos de ejecucion' },
-              { label: '📱 Ver funciones de la app móvil', query: 'ia en flutter y pocketpal' },
+              { label: '📱 Ver funciones de la app móvil', query: 'ia en flutter y qwen' },
             ],
       );
       return;
@@ -731,8 +731,8 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### ⚡ Automated Fullstack Code Generator\n\nUML Architect compiles your visual diagram into clean, production-ready code:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• Typed **REST Controllers** with OpenAPI/Swagger and Request/Response DTOs.\n• Decoupled **Services & Business Logic** with Mappers.\n• **Spring Data JPA Repositories** and Entities with relational mappings.\n• **Flyway Migrations (SQL)** supporting native UUID (`pgcrypto`) and numeric autoincrement sequences (`BIGSERIAL`).\n• **JWT Security** with BCrypt and authorization filters.\n• Pre-configured **Docker Compose** files.\n\n**2. Mobile Frontend (Flutter):**\n• **Clean Architecture** layered structure (Data, Domain, Presentation).\n• Reactive **BLoC State Management**.\n• Complete **CRUD Screens** with validation and interactive cards.\n• **Local AI Assistant** with dual support for PocketPal AI and an On-Device semantic engine.\n\n**How to download?**\nIn the editor top bar, click the **"Generator"** button and press **"Download ZIP"**.'
-          : '### ⚡ Generador de Código Fullstack Automatizado\n\nUML Architect compila tu diagrama visual en código limpio listo para producción:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• **Controladores REST** tipados con Swagger/OpenAPI y DTOs de petición y respuesta.\n• **Servicios y Lógica de Negocio** desacoplada con Mappers.\n• **Repositorios Spring Data JPA** y Entidades con relaciones tipadas.\n• **Migraciones Flyway (SQL)** con soporte de UUID nativo (`pgcrypto`) y secuencias numéricas (`BIGSERIAL`).\n• **Seguridad JWT** con BCrypt y filtros de autorización.\n• **Docker Compose** preconfigurado.\n\n**2. Frontend Móvil (Flutter):**\n• **Clean Architecture** estructurada en Capas (Data, Domain, Presentation).\n• **Gestión de Estado BLoC** reactiva.\n• **Pantallas CRUD completas** con validaciones y tarjetas interactivas.\n• **Asistente IA Local** con soporte híbrido de PocketPal AI y motor semántico On-Device.\n\n**¿Cómo descargarlo?**\nEn la barra superior del editor, haz clic en el botón **"Generador"** y presiona **"Descargar ZIP"**.',
+          ? '### ⚡ Automated Fullstack Code Generator\n\nUML Architect compiles your visual diagram into clean, production-ready code:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• Typed **REST Controllers** with OpenAPI/Swagger and Request/Response DTOs.\n• Decoupled **Services & Business Logic** with Mappers.\n• **Spring Data JPA Repositories** and Entities with relational mappings.\n• **Flyway Migrations (SQL)** supporting native UUID (`pgcrypto`) and numeric autoincrement sequences (`BIGSERIAL`).\n• **JWT Security** with BCrypt and authorization filters.\n• Pre-configured **Docker Compose** files.\n\n**2. Mobile Frontend (Flutter):**\n• **Clean Architecture** layered structure (Data, Domain, Presentation).\n• Reactive **BLoC State Management**.\n• Complete **CRUD Screens** with validation and interactive cards.\n• **Local AI Assistant** with on-device **Qwen 2.5 GGUF** download via llama.cpp and native semantic engine.\n\n**How to download?**\nIn the editor top bar, click the **"Generator"** button and press **"Download ZIP"**.'
+          : '### ⚡ Generador de Código Fullstack Automatizado\n\nUML Architect compila tu diagrama visual en código limpio listo para producción:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• **Controladores REST** tipados con Swagger/OpenAPI y DTOs de petición y respuesta.\n• **Servicios y Lógica de Negocio** desacoplada con Mappers.\n• **Repositorios Spring Data JPA** y Entidades con relaciones tipadas.\n• **Migraciones Flyway (SQL)** con soporte de UUID nativo (`pgcrypto`) y secuencias numéricas (`BIGSERIAL`).\n• **Seguridad JWT** con BCrypt y filtros de autorización.\n• **Docker Compose** preconfigurado.\n\n**2. Frontend Móvil (Flutter):**\n• **Clean Architecture** estructurada en Capas (Data, Domain, Presentation).\n• **Gestión de Estado BLoC** reactiva.\n• **Pantallas CRUD completas** con validaciones y tarjetas interactivas.\n• **Asistente IA Local** con descarga on-device de **Qwen 2.5 GGUF** vía llama.cpp y motor semántico nativo.\n\n**¿Cómo descargarlo?**\nEn la barra superior del editor, haz clic en el botón **"Generador"** y presiona **"Descargar ZIP"**.',
         undefined,
         undefined,
         isEn
@@ -748,7 +748,7 @@ flutter run`,
       return;
     }
 
-    // 5. Inteligencia Artificial en el Móvil y PocketPal
+    // 5. Inteligencia Artificial en el Móvil y Qwen 2.5
     if (
       text.includes('pocketpal') ||
       text.includes('flutter') ||
@@ -768,8 +768,8 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 📱 Hybrid Local AI in the Mobile App\n\nThe Flutter mobile application includes an intelligent assistant powered by a **dual-engine hybrid architecture**:\n\n**1. Engine 1: PocketPal AI Connection (Local Server)**\n• If you have the **PocketPal** app installed on your device, enable the local server option.\n• PocketPal runs an HTTP server on `http://127.0.0.1:8080` hosting your local models (Gemma 3, Qwen 2.5, Bonsai, etc.).\n• In the Flutter app assistant, tap the **Settings** icon and select the preset chip `📱 PocketPal (Mobile)`.\n\n**2. Engine 2: On-Device Semantic Processor (100% Autonomous)**\n• If PocketPal is closed or you want to conserve memory, the app automatically activates the native semantic engine.\n• It understands natural language for the entire CRUD lifecycle:\n  - *"register a user named Ana, email ana@gmail.com, password 123"*\n  - *"update customer 2 changing phone to 77889900"*\n  - *"delete purchase with id 5"*\n  - *"list all sales"*\n\n**3. Voice Dictation (Speech-to-Text):**\n• Tap the microphone button and speak to execute commands hands-free.'
-          : '### 📱 Inteligencia Artificial Híbrida en la App Móvil\n\nLa app móvil Flutter incluye un asistente inteligente con **arquitectura híbrida de doble motor**:\n\n**1. Motor 1: Conexión con PocketPal AI (Local Server)**\n• Si tienes instalada la app **PocketPal** en tu móvil, activa la opción de servidor local.\n• PocketPal expone un servidor HTTP en `http://127.0.0.1:8080` con tus modelos locales (Gemma 3, Qwen 2.5, Bonsai, etc.).\n• En el asistente de la app Flutter, pulsa el icono de **Ajustes** y selecciona el chip preconfigurado `📱 PocketPal (Móvil)`.\n\n**2. Motor 2: Procesador Semántico On-Device (100% Autónomo)**\n• Si PocketPal está cerrado o no quieres consumir memoria en un modelo pesado, la app activa automáticamente el motor semántico nativo.\n• Entiende órdenes en lenguaje natural para todo el ciclo CRUD:\n  - *"regístrame un usuario con nombre Ana, email ana@gmail.com, password 123"*\n  - *"actualiza el cliente 2 cambiando el teléfono a 77889900"*\n  - *"elimina la compra con id 5"*\n  - *"lista las ventas"*\n\n**3. Dictado por Voz:**\n• Pulsa el botón del micrófono y habla en español para enviar tus comandos sin teclear.',
+          ? '### 📱 Autonomous On-Device Local AI in the Mobile App\n\nThe Flutter mobile application includes an intelligent assistant that runs **100% locally on your smartphone without requiring external apps like PocketPal**:\n\n**1. On-Device Qwen 2.5 GGUF Inference:**\n• Inside the Flutter app, tap the AI chat screen.\n• Tap **"Download / Load Qwen"** to fetch the lightweight, quantized **Qwen 2.5 model (`qwen2.5-0.5b-instruct-q4_k_m.gguf`)** directly from Hugging Face onto device storage.\n• In-memory inference is executed locally using **llama.cpp / fllama**, providing fast conversational responses with zero data leaving your phone.\n\n**2. Autonomous On-Device Semantic Engine:**\n• If the model is not yet loaded or you want zero RAM overhead, the app automatically switches to its native regex and semantic processor.\n• It executes full CRUD operations directly against the backend REST API:\n  - *"register a user named Ana, email ana@gmail.com, password 123"*\n  - *"update customer 2 changing phone to 77889900"*\n  - *"delete purchase with id 5"*\n  - *"list all sales"*\n\n**3. Voice Dictation (Speech-to-Text):**\n• Tap the microphone button to dictate commands in natural language.'
+          : '### 📱 Inteligencia Artificial Local On-Device en la App Móvil\n\nLa app móvil Flutter incluye un asistente inteligente que se ejecuta **100% en local en tu teléfono, sin necesidad de apps externas como PocketPal**:\n\n**1. Inferencia On-Device con Qwen 2.5 GGUF:**\n• Dentro de la app Flutter, ingresa a la pantalla del Asistente IA.\n• Pulsa **"Cargar Qwen"** o **"Descargar"**: la app descargará automáticamente el modelo cuantizado **Qwen 2.5 (`qwen2.5-0.5b-instruct-q4_k_m.gguf`)** directamente desde Hugging Face al almacenamiento del teléfono.\n• La inferencia se ejecuta en el dispositivo mediante **llama.cpp / fllama**, respondiendo en lenguaje natural de forma privada sin conexión a servidores externos.\n\n**2. Motor Semántico On-Device Autónomo:**\n• Si el modelo no está cargado o prefieres ahorrar batería/RAM, la app activa automáticamente el motor semántico nativo.\n• Entiende órdenes en lenguaje natural para ejecutar todo el ciclo CRUD en la API REST:\n  - *"regístrame un usuario con nombre Ana, email ana@gmail.com, password 123"*\n  - *"actualiza el cliente 2 cambiando el teléfono a 77889900"*\n  - *"elimina la compra con id 5"*\n  - *"lista las ventas"*\n\n**3. Dictado por Voz:**\n• Pulsa el botón del micrófono y habla en español para enviar tus comandos sin teclear.',
         undefined,
         undefined,
         isEn
@@ -976,14 +976,14 @@ flutter run`,
             { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
             { label: '🐳 Docker & Gradle Run Commands', query: 'run commands' },
             { label: '⚡ Generate Spring Boot & Flutter', query: 'how to generate code' },
-            { label: '📱 Mobile App & PocketPal AI', query: 'mobile ai and pocketpal' },
+            { label: '📱 Mobile App & Qwen2.5 Local AI', query: 'mobile ai and qwen' },
             { label: '🎨 Create UML Classes & Relations', query: 'how to model classes' },
           ]
         : [
             { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
             { label: '🐳 Comandos para Correr Docker y Gradle', query: 'comandos de ejecucion' },
             { label: '⚡ Generar Código Spring Boot y Flutter', query: 'como generar codigo' },
-            { label: '📱 App Móvil y PocketPal IA', query: 'ia en flutter y pocketpal' },
+            { label: '📱 App Móvil e IA Local Qwen2.5', query: 'ia en flutter y qwen' },
             { label: '🎨 Crear Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
           ],
     );

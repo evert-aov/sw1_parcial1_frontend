@@ -29,18 +29,18 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
   * Arrastre de nodos en vivo entre colaboradores.
   * Sistema de bloqueo exclusivo de nodos (`NodeLock`) para evitar conflictos de edición simultánea.
   * Chat integrado en vivo en cada sala de diagrama.
-* **Copilot de Inteligencia Artificial & Visión Multimodal**:
-  * Panel lateral flotante con historial conversacional.
-  * Mutaciones estructurales en caliente ejecutadas a partir de comandos en lenguaje natural.
+* **Copilot de Inteligencia Artificial Híbrido (Local & Multimodal)**:
+  * Panel lateral flotante con historial conversacional reactivo.
+  * Soporte de inferencia soberana local con **Ollama (`qwen2.5:3b`)** para mutaciones del AST sin salida de datos a internet, con respaldo cloud en **Google Gemini 2.5 Flash**.
   * Entrada visual mediante captura de cámara web (Webcam) o subida de imágenes para transformar bocetos en diagramas UML interactivos.
 * **Interoperabilidad CASE (Enterprise Architect)**:
   * Exportación e importación de archivos estándar **XMI 2.1**.
   * Historial de versiones del diagrama con previsualización y restauración instantánea.
 * **Explorador y Generador de Código Fullstack**:
-  * Modal interactivo con árbol de archivos en tiempo real.
-  * Visor de sintaxis con selector de plataforma (**Spring Boot 3 / Flyway / PostgreSQL** o **Flutter / Dart**).
-  * Descarga directa del proyecto completo empaquetado en archivo `.zip`.
-  * Integración con **Amazon S3** para almacenamiento y distribución en la nube mediante URLs prefirmadas seguras.
+  * Modal interactivo con árbol de archivos en tiempo real y resaltado de sintaxis.
+  * **Spring Boot 3 (Java 21)** con JPA, Flyway, Docker Compose y PostgreSQL.
+  * **Flutter Móvil (Clean Architecture / BLoC)** con **Asistente IA On-Device** integrado que descarga automáticamente el modelo **Qwen 2.5 GGUF** (`qwen2.5-0.5b-instruct-q4_k_m.gguf` desde Hugging Face) ejecutando inferencia 100% offline con `llama.cpp` en el dispositivo móvil, sin necesidad de apps externas.
+  * Descarga directa del proyecto completo empaquetado en `.zip` o distribución en la nube mediante URLs prefirmadas de **Amazon S3**.
 * **Guía Interactiva de Usuario & Chatbot Inteligente**:
   * **Sustituto del Manual Tradicional**: Asistente conversacional flotante disponible en toda la aplicación para orientar a nuevos usuarios en tiempo real.
   * **Tour Guiado en 7 Pasos**: Flujo paso a paso con controles de navegación (Anterior, Siguiente, Finalizar) cubriendo desde la creación de proyectos hasta el despliegue con Docker y Flutter.
