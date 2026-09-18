@@ -5,6 +5,7 @@ import {
   signal,
   inject,
   computed,
+  effect,
   OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -206,13 +207,31 @@ export class SpringBootModalComponent implements OnInit {
       .replace(/'/g, '&#039;');
   }
 
+  constructor() {
+    effect(() => {
+      const open = this.isOpen();
+      const diagId = this.diagramId();
+      const name = this.diagramName();
+
+      if (open) {
+        if (name) {
+          const clean = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          this.artifactId.set(clean || 'sistema-app');
+          this.projectName.set(name);
+        }
+        if (diagId) {
+          this.generatePreview();
+        }
+      }
+    });
+  }
+
   ngOnInit(): void {
     if (this.diagramName()) {
       const clean = this.diagramName().toLowerCase().replace(/[^a-z0-9]+/g, '-');
       this.artifactId.set(clean || 'sistema-app');
       this.projectName.set(this.diagramName());
     }
-    this.generatePreview();
   }
 
   setPlatform(plat: 'all' | 'spring-boot' | 'flutter'): void {
@@ -312,9 +331,11 @@ export class SpringBootModalComponent implements OnInit {
         window.URL.revokeObjectURL(url);
         this.isDownloading.set(false);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error al descargar ZIP:', err);
         this.isDownloading.set(false);
-        alert('Error al descargar el archivo ZIP.');
+        const errMsg = err?.error?.message || err?.message || 'Error al descargar el archivo ZIP.';
+        alert(`Error al descargar el archivo ZIP: ${errMsg}`);
       },
     });
   }

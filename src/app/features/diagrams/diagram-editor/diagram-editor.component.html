@@ -264,7 +264,7 @@
                 [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
                 [ngClass]="{
                   'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
-                  'font-sans text-[#241C18] dark:text-slate-100 select-none relative group/node transition-shadow rounded-[2px] overflow-hidden': !node.isAnchor,
+                  'font-sans text-[#241C18] dark:text-slate-100 select-none relative group/node transition-shadow rounded-none overflow-hidden': !node.isAnchor,
                   'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)] z-30': !node.isAnchor && selectedNodeId() === node.id,
                   'ring-2 ring-indigo-400 z-20': !node.isAnchor && isNeighborNode(node.id),
                   'ring-2 ring-[#796354] dark:ring-[#94A3B8] shadow-md': !node.isAnchor && selectedSourceNodeId() === node.id && selectedNodeId() !== node.id,
@@ -375,7 +375,7 @@
                     [ngClass]="{
                       'bg-blue-600 text-white border-b border-blue-700': selectedNodeId() === node.id,
                       'bg-indigo-100 text-indigo-950 border-b border-indigo-300': isNeighborNode(node.id),
-                      'bg-gradient-to-b from-[#FCF8F2] to-[#EFE1D1] dark:from-[#252E56] dark:to-[#1A203E] border-b border-[#796354] dark:border-[#3B487A] text-[#241C18] dark:text-slate-100': selectedNodeId() !== node.id && !isNeighborNode(node.id)
+                      'bg-[#FFFDF9] dark:bg-[#1A203E] border-b border-[#796354] dark:border-[#3B487A] text-[#241C18] dark:text-slate-100': selectedNodeId() !== node.id && !isNeighborNode(node.id)
                     }"
                     class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors">
                     <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">
@@ -394,7 +394,7 @@
                   </div>
 
                   <!-- 2. CUERPO: ATRIBUTOS TIPADOS ESTILO EA -->
-                  <div class="px-2.5 py-1.5 space-y-0.5 border-b border-[#796354] dark:border-[#3B487A] bg-[#FAF6F0] dark:bg-[#101428]/40 min-h-[30px]">
+                  <div class="px-2.5 py-1.5 space-y-0.5 bg-[#FFFDF9] dark:bg-[#101428]/40 min-h-[28px]">
                     @if (node.attributes && node.attributes.length > 0) {
                       @for (attr of node.attributes; track attr.name) {
                         <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200">
@@ -403,14 +403,12 @@
                           <span class="text-[#5A4537] dark:text-[#A5B4FC] ml-0.5 font-normal">: {{ attr.type }}</span>
                         </div>
                       }
-                    } @else {
-                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-0.5 font-sans">sin atributos</div>
                     }
                   </div>
 
-                  <!-- 3. CUERPO: MÉTODOS / OPERACIONES CON RETORNO ESTILO EA -->
-                  <div class="px-2.5 py-1.5 space-y-0.5 bg-[#FAF6F0] dark:bg-[#101428]/40 min-h-[26px]">
-                    @if (node.methods && node.methods.length > 0) {
+                  <!-- 3. CUERPO: MÉTODOS / OPERACIONES CON RETORNO ESTILO EA (SOLO SI TIENE MÉTODOS) -->
+                  @if (node.methods && node.methods.length > 0) {
+                    <div class="px-2.5 py-1.5 space-y-0.5 border-t border-[#796354] dark:border-[#3B487A] bg-[#FFFDF9] dark:bg-[#101428]/40">
                       @for (m of node.methods; track m.name) {
                         <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200">
                           <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537] dark:text-slate-400">+</span>
@@ -418,10 +416,8 @@
                           <span class="text-[#5A4537] dark:text-[#A5B4FC] ml-0.5 font-normal">: {{ m.returnType || 'void' }}</span>
                         </div>
                       }
-                    } @else {
-                      <div class="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-0.5 font-sans">sin métodos</div>
-                    }
-                  </div>
+                    </div>
+                  }
 
                 }
 

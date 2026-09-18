@@ -24,10 +24,10 @@
 
 ::ng-deep f-flow .f-node {
   padding: 0 !important;
-  border-radius: 2px !important;
-  background-color: #FAF6F0 !important;
+  border-radius: 0 !important;
+  background-color: #FFFDF9 !important;
   border: 1px solid #796354 !important;
-  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.14) !important;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15) !important;
   box-sizing: border-box !important;
 }
 
@@ -35,7 +35,7 @@
 .dark ::ng-deep f-flow .f-node {
   background-color: #151A30 !important;
   border: 1px solid #3B487A !important;
-  box-shadow: 2px 2px 8px rgba(10, 13, 26, 0.7) !important;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.45) !important;
 }
 
 ::ng-deep f-flow .uml-connector-point.uml-connector-inactive {

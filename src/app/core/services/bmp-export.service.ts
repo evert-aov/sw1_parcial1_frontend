@@ -244,9 +244,11 @@ export class BmpExportService {
   }
 
   private calculateNodeHeight(node: UmlClassNode): number {
-    const headerHeight = 36;
-    const attrHeight = Math.max(1, (node.attributes || []).length) * 18 + 12;
-    const methodHeight = (node.methods || []).length > 0 ? (node.methods.length * 18 + 12) : 10;
+    const headerHeight = 32;
+    const attrCount = (node.attributes || []).length;
+    const attrHeight = attrCount > 0 ? (attrCount * 18 + 12) : 24;
+    const methodCount = (node.methods || []).length;
+    const methodHeight = methodCount > 0 ? (methodCount * 18 + 14) : 0;
     return headerHeight + attrHeight + methodHeight;
   }
 
@@ -434,76 +436,66 @@ export class BmpExportService {
   ): void {
     ctx.save();
 
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetX = 3;
-    ctx.shadowOffsetY = 3;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 4;
+    ctx.shadowOffsetY = 4;
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.strokeStyle = '#6B5A52';
-    ctx.lineWidth = 1.5;
+    ctx.fillStyle = '#FFFDF9';
+    ctx.strokeStyle = '#796354';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, 6);
+    ctx.rect(x, y, w, h);
     ctx.fill();
     ctx.stroke();
 
     ctx.shadowColor = 'transparent';
 
-    const headerHeight = 34;
-    ctx.fillStyle = '#6B5A52';
+    const headerHeight = 30;
+    ctx.fillStyle = '#FFFDF9';
     ctx.beginPath();
-    ctx.roundRect(x, y, w, headerHeight, [6, 6, 0, 0]);
+    ctx.rect(x, y, w, headerHeight);
     ctx.fill();
+    ctx.strokeStyle = '#796354';
+    ctx.beginPath();
+    ctx.moveTo(x, y + headerHeight);
+    ctx.lineTo(x + w, y + headerHeight);
+    ctx.stroke();
 
     ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = '#241C18';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(node.name, x + w / 2, y + headerHeight / 2);
 
     let currentY = y + headerHeight + 12;
-    ctx.font = '10.5px monospace';
+    ctx.font = '11px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
     const attributes = node.attributes || [];
-    if (attributes.length === 0) {
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = 'italic 10px sans-serif';
-      ctx.fillText('(sin atributos)', x + 12, currentY);
-      currentY += 16;
-    } else {
-      for (const attr of attributes) {
-        ctx.fillStyle = '#2A201B';
-        ctx.font = '10.5px monospace';
-        const isPk = attr.name.toLowerCase() === 'id';
-        const prefix = isPk ? '🔑 ' : '• ';
-        ctx.fillText(`${prefix}${attr.name}: ${attr.type}`, x + 12, currentY);
-        currentY += 18;
-      }
+    for (const attr of attributes) {
+      ctx.fillStyle = '#241C18';
+      ctx.fillText(`- ${attr.name}: ${attr.type}`, x + 10, currentY);
+      currentY += 18;
     }
 
-    currentY += 4;
-    ctx.strokeStyle = '#E2E8F0';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x, currentY);
-    ctx.lineTo(x + w, currentY);
-    ctx.stroke();
-
-    currentY += 12;
     const methods = node.methods || [];
-    if (methods.length === 0) {
-      ctx.fillStyle = '#CBD5E1';
-      ctx.font = 'italic 9.5px sans-serif';
-      ctx.fillText('(sin métodos)', x + 12, currentY);
-    } else {
+    if (methods.length > 0) {
+      currentY += 2;
+      ctx.strokeStyle = '#796354';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, currentY);
+      ctx.lineTo(x + w, currentY);
+      ctx.stroke();
+
+      currentY += 12;
       for (const m of methods) {
-        ctx.fillStyle = '#0F766E';
-        ctx.font = '10px monospace';
+        ctx.fillStyle = '#241C18';
         const params = m.parameters ? `(${m.parameters})` : '()';
         const ret = m.returnType ? `: ${m.returnType}` : ': void';
-        ctx.fillText(`+ ${m.name}${params}${ret}`, x + 12, currentY);
+        ctx.fillText(`+ ${m.name}${params}${ret}`, x + 10, currentY);
         currentY += 18;
       }
     }
