@@ -1,4 +1,4 @@
-import { Component, inject, signal, input, output, effect } from '@angular/core';
+import { Component, inject, signal, input, output, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -27,32 +27,60 @@ export class UserProfileModalComponent {
 
   readonly isRefreshing = signal<boolean>(false);
   readonly isSaving = signal<boolean>(false);
+  readonly isDirty = signal<boolean>(false);
   readonly editFullName = signal<string>('');
   readonly editPassword = signal<string>('');
   readonly saveSuccessMessage = signal<string | null>(null);
 
+  private wasOpen = false;
+
   constructor() {
     effect(() => {
-      if (this.isOpen()) {
-        this.editFullName.set(this.authService.currentUser()?.fullName || '');
-        this.editPassword.set('');
-        this.saveSuccessMessage.set(null);
-        this.refreshProfile();
+      const open = this.isOpen();
+      if (open && !this.wasOpen) {
+        this.wasOpen = true;
+        untracked(() => {
+          this.initForm();
+        });
+      } else if (!open) {
+        this.wasOpen = false;
       }
     });
+  }
+
+  private initForm(): void {
+    this.isDirty.set(false);
+    this.editFullName.set(this.authService.currentUser()?.fullName || '');
+    this.editPassword.set('');
+    this.saveSuccessMessage.set(null);
+    this.refreshProfile(false);
   }
 
   closeModal(): void {
     this.close.emit();
   }
 
-  refreshProfile(): void {
+  onFullNameChange(value: string): void {
+    this.isDirty.set(true);
+    this.editFullName.set(value);
+  }
+
+  onPasswordChange(value: string): void {
+    this.isDirty.set(true);
+    this.editPassword.set(value);
+  }
+
+  refreshProfile(force: boolean = false): void {
     this.isRefreshing.set(true);
     this.authService.fetchProfile().subscribe({
       next: (user) => {
         this.isRefreshing.set(false);
-        if (!this.editFullName()) {
+        if (force || !this.isDirty()) {
           this.editFullName.set(user.fullName || '');
+          if (force) {
+            this.editPassword.set('');
+            this.isDirty.set(false);
+          }
         }
       },
       error: () => {
@@ -83,6 +111,7 @@ export class UserProfileModalComponent {
     this.authService.updateProfile(payload).subscribe({
       next: () => {
         this.isSaving.set(false);
+        this.isDirty.set(false);
         this.editPassword.set('');
         this.saveSuccessMessage.set('¡Perfil y datos actualizados con éxito!');
         setTimeout(() => this.saveSuccessMessage.set(null), 3000);
