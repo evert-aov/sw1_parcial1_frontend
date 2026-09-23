@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import {
   FFlowModule,
+  FFlowComponent,
   FCreateConnectionEvent,
   FReassignConnectionEvent,
   FCanvasComponent,
@@ -159,6 +160,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly bmpExportService = inject(BmpExportService);
   private readonly route = inject(ActivatedRoute);
 
+  @ViewChild(FFlowComponent) fFlow?: FFlowComponent;
   @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
   @ViewChild(FZoomDirective) fZoom?: FZoomDirective;
   @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
@@ -266,7 +268,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const cleanConns = this.sanitizeClientConnections(data.connections || [], cleanNodes);
         this.connections.set(cleanConns);
         this.updateConnectionEndpoints();
-        setTimeout(() => this.updateConnectionEndpoints(), 60);
+        requestAnimationFrame(() => {
+          this.updateConnectionEndpoints();
+          this.fFlow?.redraw();
+          this.canvas?.redraw();
+        });
       }
     });
 
@@ -387,9 +393,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.collaborationService.joinRoom(diagramId);
 
       this.hasUnsavedChanges.set(false);
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         this.updateConnectionEndpoints();
-      }, 50);
+        requestAnimationFrame(() => {
+          this.updateConnectionEndpoints();
+          this.fFlow?.reset();
+          this.fFlow?.redraw();
+          this.canvas?.redraw();
+        });
+      });
     });
   }
 
@@ -626,6 +638,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   updateConnectionEndpoints(): void {
     const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
 
+    let anchorMoved = false;
     for (const conn of this.connections()) {
       if (conn.assocAnchorNodeId) {
         const anchorNode = nodeMap.get(conn.assocAnchorNodeId);
@@ -640,12 +653,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           const tSide = optimal.targetId.split('_').pop() || 'left';
           const p1 = this.getConnectorPoint(sourceNode, sSide);
           const p2 = this.getConnectorPoint(targetNode, tSide);
-          anchorNode.position = {
-            x: Math.round((p1.x + p2.x) / 2),
-            y: Math.round((p1.y + p2.y) / 2),
-          };
+          const newX = Math.round((p1.x + p2.x) / 2);
+          const newY = Math.round((p1.y + p2.y) / 2);
+          if (!anchorNode.position || anchorNode.position.x !== newX || anchorNode.position.y !== newY) {
+            anchorNode.position = { x: newX, y: newY };
+            anchorMoved = true;
+          }
         }
       }
+    }
+
+    if (anchorMoved) {
+      this.nodes.update((nodes) => nodes.map((n) => ({ ...n })));
     }
 
     this.connections.update((conns) =>
@@ -659,13 +678,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
             const sourceNode = nodeMap.get(conn.sourceNodeId);
             const targetNode = nodeMap.get(conn.targetNodeId);
-            if (sourceNode && targetNode && sourceNode.isAnchor) {
-              const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-              return {
-                ...conn,
-                sourceId: sourceNode.id,
-                targetId: optimal.targetId,
-              };
+            if (sourceNode && targetNode) {
+              if (sourceNode.isAnchor) {
+                const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+                return {
+                  ...conn,
+                  sourceId: sourceNode.id,
+                  targetId: optimal.targetId,
+                };
+              } else if (targetNode.isAnchor) {
+                const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+                return {
+                  ...conn,
+                  sourceId: optimal.sourceId,
+                  targetId: targetNode.id,
+                };
+              }
             }
           }
 
@@ -808,6 +836,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onFlowLoaded(): void {
     this.updateConnectionEndpoints();
+    this.fFlow?.redraw();
+    this.canvas?.redraw();
   }
 
   onConnectionCreated(event: FCreateConnectionEvent): void {
@@ -916,6 +946,38 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       assocAnchorNodeId: anchorId,
     };
 
+    // Extraer atributos ID de las tablas a las que se asocia (sin id propio ni fechaRegistro)
+    const getEntityFk = (node: UmlClassNode): { name: string; type: string } => {
+      const pkAttr = (node.attributes || []).find((a) =>
+        /^(id|.*_id|.*id)$/i.test(a.name.trim()),
+      ) || (node.attributes || [])[0];
+
+      const pkType = pkAttr?.type || 'UUID';
+
+      let base = node.name.trim();
+      if (base.toLowerCase().endsWith('es') && base.length > 3) {
+        base = base.slice(0, -2);
+      } else if (base.toLowerCase().endsWith('s') && base.length > 2 && !base.toLowerCase().endsWith('ss')) {
+        base = base.slice(0, -1);
+      }
+      const camelBase = base.charAt(0).toLowerCase() + base.slice(1);
+
+      let fkName = `${camelBase}Id`;
+      if (pkAttr && pkAttr.name.trim().toLowerCase() !== 'id') {
+        fkName = pkAttr.name.trim();
+      }
+
+      return { name: fkName, type: pkType };
+    };
+
+    const sourceFk = getEntityFk(sourceNode);
+    const targetFk = getEntityFk(targetNode);
+
+    if (sourceFk.name.toLowerCase() === targetFk.name.toLowerCase()) {
+      sourceFk.name = `${sourceNode.name.toLowerCase()}Id`;
+      targetFk.name = `${targetNode.name.toLowerCase()}Id`;
+    }
+
     const assocNode: UmlClassNode = {
       id: assocNodeId,
       name: assocName,
@@ -924,13 +986,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         y: anchorNode.position.y + 120,
       },
       width: 220,
-      attributes: [
-        { name: 'id', type: 'UUID' },
-        { name: 'fechaRegistro', type: 'LocalDateTime' },
-      ],
-      methods: [
-        { name: 'getId', parameters: '', returnType: 'UUID' },
-      ],
+      attributes: [sourceFk, targetFk],
+      methods: [],
       assocMainConnId: mainConnId,
     };
 
@@ -951,6 +1008,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.markAsUnsaved();
     this.setPointerMode();
     this.updateConnectionEndpoints();
+    requestAnimationFrame(() => {
+      this.updateConnectionEndpoints();
+      this.fFlow?.reset();
+      this.fFlow?.redraw();
+      this.canvas?.redraw();
+    });
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
   }
 
@@ -1189,28 +1252,65 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   private applyAiMutationWithAnimation(targetNodes: UmlClassNode[], targetConns: UmlConnection[]): void {
     const cleanNodes = this.applyAiNodesMutation(targetNodes);
-    this.nodes.set(cleanNodes);
+    // Precalcular la posición del ancla antes de emitir a señales para que nazca en el punto medio
+    const nodeMap = new Map(cleanNodes.map((n) => [n.id, n]));
+    for (const conn of targetConns) {
+      if (conn.assocAnchorNodeId) {
+        const anchorNode = nodeMap.get(conn.assocAnchorNodeId);
+        const baseSourceId = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+        const baseTargetId = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        const sourceNode = baseSourceId ? nodeMap.get(baseSourceId) : undefined;
+        const targetNode = baseTargetId ? nodeMap.get(baseTargetId) : undefined;
+        if (anchorNode && sourceNode && targetNode) {
+          const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+          const sSide = optimal.sourceId.split('_').pop() || 'right';
+          const tSide = optimal.targetId.split('_').pop() || 'left';
+          const p1 = this.getConnectorPoint(sourceNode, sSide);
+          const p2 = this.getConnectorPoint(targetNode, tSide);
+          anchorNode.position = {
+            x: Math.round((p1.x + p2.x) / 2),
+            y: Math.round((p1.y + p2.y) / 2),
+          };
+        }
+      }
+    }
+
     const cleanConns = this.sanitizeClientConnections(targetConns, cleanNodes);
+    this.nodes.set(cleanNodes);
     this.connections.set(cleanConns);
     this.markAsUnsaved();
-    this.updateConnectionEndpoints();
-    setTimeout(() => {
+
+    // Redibujado secuencial: frame 1 tras cambio de señal, frame 2 tras layout del DOM, y frame 3 post-fitView
+    requestAnimationFrame(() => {
       this.updateConnectionEndpoints();
-      this.fitView();
-    }, 100);
+      requestAnimationFrame(() => {
+        this.updateConnectionEndpoints();
+        this.fFlow?.reset();
+        this.fFlow?.redraw();
+        this.canvas?.redraw();
+        setTimeout(() => {
+          this.updateConnectionEndpoints();
+          this.fitView();
+          setTimeout(() => {
+            this.fFlow?.redraw();
+            this.canvas?.redraw();
+          }, 80);
+        }, 80);
+      });
+    });
   }
 
   private applyAiNodesMutation(targetNodes: any[]): UmlClassNode[] {
     return targetNodes.map((n, i) => ({
       id: n.id || `class_ai_${Date.now()}_${i}`,
-      name: n.name || `Clase_${i + 1}`,
+      name: n.name || (n.isAnchor ? '' : `Clase_${i + 1}`),
       position: {
         x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
         y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
       },
-      width: n.width || 220,
-      height: n.height,
-      isAnchor: n.isAnchor,
+      width: n.isAnchor ? 0 : (n.width || 220),
+      height: n.isAnchor ? 0 : n.height,
+      isAnchor: !!n.isAnchor,
       assocMainConnId: n.assocMainConnId,
       attributes: (n.attributes || []).map((a: any) => ({
         name: a.name,
@@ -1225,6 +1325,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   private sanitizeClientConnections(conns: any[], validNodes: UmlClassNode[]): UmlConnection[] {
+    const nodeMap = new Map(validNodes.map((n) => [n.id, n]));
     const nodeIds = new Set(validNodes.map((n) => n.id));
     return conns
       .filter((c) => {
@@ -1232,19 +1333,51 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
         return nodeIds.has(s) && nodeIds.has(t);
       })
-      .map((c) => ({
-        id: c.id || `conn_ai_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        sourceNodeId: c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, ''),
-        targetNodeId: c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, ''),
-        sourceId: c.sourceId || `${c.sourceNodeId}_right`,
-        targetId: c.targetId || `${c.targetNodeId}_left`,
-        type: (c.type as UmlRelationshipType) || 'association',
-        lineStyle: (c.lineStyle as UmlLineStyle) || this.defaultLineStyle(),
-        name: c.name || undefined,
-        sourceMultiplicity: c.sourceMultiplicity || '',
-        targetMultiplicity: c.targetMultiplicity || '',
-        assocAnchorNodeId: c.assocAnchorNodeId || undefined,
-      }));
+      .map((c) => {
+        const sourceNodeId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+        const targetNodeId = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        const sourceNode = nodeMap.get(sourceNodeId);
+        const targetNode = nodeMap.get(targetNodeId);
+
+        let sourceId = c.sourceId;
+        let targetId = c.targetId;
+
+        if (sourceNode && targetNode) {
+          if (c.type === 'association_class') {
+            if (sourceNode.isAnchor) {
+              const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+              sourceId = sourceNode.id;
+              targetId = optimal.targetId;
+            } else if (targetNode.isAnchor) {
+              const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+              sourceId = optimal.sourceId;
+              targetId = targetNode.id;
+            } else {
+              const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+              sourceId = optimal.sourceId;
+              targetId = optimal.targetId;
+            }
+          } else if (!sourceNode.isAnchor && !targetNode.isAnchor) {
+            const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+            sourceId = optimal.sourceId;
+            targetId = optimal.targetId;
+          }
+        }
+
+        return {
+          id: c.id || `conn_ai_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          sourceNodeId,
+          targetNodeId,
+          sourceId: sourceId || `${sourceNodeId}_right`,
+          targetId: targetId || `${targetNodeId}_left`,
+          type: (c.type as UmlRelationshipType) || 'association',
+          lineStyle: (c.lineStyle as UmlLineStyle) || this.defaultLineStyle(),
+          name: c.name || undefined,
+          sourceMultiplicity: c.sourceMultiplicity || '',
+          targetMultiplicity: c.targetMultiplicity || '',
+          assocAnchorNodeId: c.assocAnchorNodeId || undefined,
+        };
+      });
   }
 
   async downloadBmpFile(): Promise<void> {
