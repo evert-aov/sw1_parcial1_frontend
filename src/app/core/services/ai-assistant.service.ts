@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 export interface AiModelOption {
   id: string;
   name: string;
-  provider: 'ollama' | 'vertex';
+  provider: 'vertex';
   isLocal: boolean;
   parameterSize?: string;
   sizeMb?: number;
@@ -17,7 +17,7 @@ export interface AiModelOption {
 
 export interface AvailableModelsResponse {
   defaultModel: string;
-  defaultProvider: 'ollama' | 'vertex';
+  defaultProvider: 'vertex';
   isOllamaAvailable: boolean;
   models: AiModelOption[];
 }
@@ -29,7 +29,7 @@ export interface AiResponse {
   nodes: UmlClassNode[];
   connections: UmlConnection[];
   changesSummary: string;
-  providerUsed?: 'ollama' | 'vertex';
+  providerUsed?: 'vertex';
   modelUsed?: string;
 }
 
@@ -53,7 +53,7 @@ export class AiAssistantService {
     currentNodes: UmlClassNode[] = [],
     currentConnections: UmlConnection[] = [],
     sessionHistory: any[] = [],
-    options?: { provider?: 'ollama' | 'vertex'; model?: string },
+    options?: { provider?: string; model?: string },
   ): Observable<AiResponse> {
     return this.http.post<any>(`${this.apiUrl}/prompt`, {
       prompt,
@@ -62,8 +62,8 @@ export class AiAssistantService {
       currentNodes,
       currentConnections,
       sessionHistory,
-      provider: options?.provider,
-      model: options?.model,
+      provider: options?.provider || 'vertex',
+      model: options?.model || 'gemini-2.5-flash',
     }).pipe(
       map((res) => (res && res.data ? res.data : res) as AiResponse),
     );
@@ -78,7 +78,7 @@ export class AiAssistantService {
     currentNodes: UmlClassNode[] = [],
     currentConnections: UmlConnection[] = [],
     sessionHistory: any[] = [],
-    options?: { provider?: 'ollama' | 'vertex'; model?: string },
+    options?: { provider?: string; model?: string },
   ): Observable<AiResponse> {
     return this.http.post<any>(`${this.apiUrl}/vision-diagram`, {
       imageBase64,
@@ -89,8 +89,35 @@ export class AiAssistantService {
       currentNodes,
       currentConnections,
       sessionHistory,
-      provider: options?.provider,
-      model: options?.model,
+      provider: options?.provider || 'vertex',
+      model: options?.model || 'gemini-2.5-flash',
+    }).pipe(
+      map((res) => (res && res.data ? res.data : res) as AiResponse),
+    );
+  }
+
+  sendAudioPrompt(
+    audioBase64: string,
+    mimeType: string,
+    prompt: string | undefined,
+    diagramId: string,
+    roomCode?: string,
+    currentNodes: UmlClassNode[] = [],
+    currentConnections: UmlConnection[] = [],
+    sessionHistory: any[] = [],
+    options?: { provider?: string; model?: string },
+  ): Observable<AiResponse> {
+    return this.http.post<any>(`${this.apiUrl}/audio-prompt`, {
+      audioBase64,
+      mimeType,
+      prompt,
+      diagramId,
+      roomCode,
+      currentNodes,
+      currentConnections,
+      sessionHistory,
+      provider: options?.provider || 'vertex',
+      model: options?.model || 'gemini-2.5-flash',
     }).pipe(
       map((res) => (res && res.data ? res.data : res) as AiResponse),
     );

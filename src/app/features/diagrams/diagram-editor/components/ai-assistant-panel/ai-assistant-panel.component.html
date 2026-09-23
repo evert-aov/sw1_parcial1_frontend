@@ -2,26 +2,22 @@
 @if (isOpen()) {
   <aside class="w-[430px] bg-[#EFEFEF] dark:bg-[#121629] border-l border-[#B8B8B8] dark:border-[#283256] flex flex-col shrink-0 text-xs text-slate-800 dark:text-slate-200 shadow-2xl z-20 animate-in slide-in-from-right duration-150 h-full">
     
-    <!-- Header Panel IA con Selector de Modelo -->
+    <!-- Header Panel IA con Modelo Gemini -->
     <div class="bg-gradient-to-b from-[#EAEAEA] to-[#DCDCDC] dark:from-[#1E2442] dark:to-[#161B33] border-b border-[#C0C0C0] dark:border-[#283256] shrink-0 shadow-xs">
       <div class="px-3.5 py-2 flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div
-            [ngClass]="selectedProvider() === 'ollama' ? 'bg-emerald-100 dark:bg-emerald-900/40 border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-300' : 'bg-purple-100 dark:bg-purple-900/40 border-purple-300 dark:border-purple-600 text-purple-600 dark:text-purple-300'"
-            class="w-6 h-6 rounded-full border flex items-center justify-center shadow-xs transition-colors">
-            <ng-icon [name]="selectedProvider() === 'ollama' ? 'heroCpuChip' : 'heroSparkles'" class="text-sm"></ng-icon>
+          <div class="w-6 h-6 rounded-full border bg-purple-100 dark:bg-purple-900/40 border-purple-300 dark:border-purple-600 text-purple-600 dark:text-purple-300 flex items-center justify-center shadow-xs transition-colors">
+            <ng-icon name="heroSparkles" class="text-sm"></ng-icon>
           </div>
           <div>
             <div class="font-bold text-slate-900 dark:text-slate-100 leading-tight flex items-center gap-1.5">
               <span>{{ 'ai.title' | translate }}</span>
-              <span
-                [ngClass]="selectedProvider() === 'ollama' ? 'bg-emerald-700 dark:bg-emerald-600' : 'bg-purple-700 dark:bg-purple-600'"
-                class="px-1.5 py-0.2 rounded-full text-[9px] text-white font-mono font-medium transition-colors">
-                {{ selectedProvider() === 'ollama' ? 'Ollama Local' : 'Vertex AI' }}
+              <span class="px-1.5 py-0.2 rounded-full text-[9px] text-white font-mono font-medium bg-purple-700 dark:bg-purple-600 transition-colors">
+                Google Gemini
               </span>
             </div>
             <span class="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[200px] block">
-              {{ getSelectedModel()?.name || 'Copilot UML' }}
+              Gemini 2.5 Flash • Multimodal
             </span>
           </div>
         </div>
@@ -34,107 +30,18 @@
       </div>
     </div>
 
-    <!-- Barra de Selección de Modelo de IA (Local Ollama / Nube Vertex) -->
-    <div class="px-3 py-2 bg-white/70 dark:bg-[#151A30] border-b border-[#C0C0C0] dark:border-[#283256] flex flex-col gap-1.5 shrink-0">
-      <div class="flex items-center justify-between">
-        <label for="ai-model-select" class="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-          <ng-icon [name]="selectedProvider() === 'ollama' ? 'heroCpuChip' : 'heroSparkles'" class="text-xs" [ngClass]="selectedProvider() === 'ollama' ? 'text-emerald-600 dark:text-emerald-400' : 'text-purple-600 dark:text-purple-400'"></ng-icon>
-          <span>Modelo de Inferencia</span>
-        </label>
-
-        <div class="flex items-center gap-1.5">
-          @if (isOllamaAvailable()) {
-            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Ollama Local Activo
-            </span>
-          } @else {
-            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-              Solo Nube
-            </span>
-          }
-
-          <button
-            (click)="loadAvailableModels()"
-            type="button"
-            title="Actualizar lista de modelos desde Ollama"
-            class="p-1 rounded text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#252E56] transition-colors cursor-pointer"
-            [disabled]="isLoadingModels()">
-            <ng-icon name="heroArrowPath" class="text-xs" [ngClass]="{ 'animate-spin': isLoadingModels() }"></ng-icon>
-          </button>
-        </div>
+    <!-- Barra Informativa del Motor IA Gemini -->
+    <div class="px-3.5 py-2 bg-white/70 dark:bg-[#151A30] border-b border-[#C0C0C0] dark:border-[#283256] flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-1.5">
+        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+        <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300 font-mono">
+          Google Vertex AI (Gemini 2.5 Flash)
+        </span>
       </div>
-
-      <!-- Selector Desplegable Personalizado (Custom Dropdown) -->
-      <div class="relative">
-        <!-- Botón Desplegable -->
-        <button
-          type="button"
-          (click)="toggleModelDropdown()"
-          class="w-full text-left text-xs font-mono py-1.5 px-2.5 bg-white dark:bg-[#0E1225] border border-slate-300 dark:border-[#2D3762] hover:border-purple-500 dark:hover:border-purple-500 rounded flex items-center justify-between text-slate-800 dark:text-slate-200 transition-colors cursor-pointer shadow-xs focus:ring-1 focus:ring-purple-600 focus:outline-none">
-          <div class="flex items-center gap-2 truncate">
-            <span class="text-xs shrink-0">{{ getSelectedModel()?.isLocal ? '⚡' : '☁️' }}</span>
-            <span class="font-semibold truncate text-[11.5px]">
-              {{ getSelectedModel()?.name || 'Selecciona un modelo...' }}
-            </span>
-            @if (getSelectedModel()?.parameterSize; as pSize) {
-              <span class="text-[9px] px-1 py-0.2 rounded bg-slate-100 dark:bg-[#1E2442] text-slate-600 dark:text-slate-400 font-mono shrink-0">
-                {{ pSize }}
-              </span>
-            }
-          </div>
-          <ng-icon [name]="isModelDropdownOpen() ? 'heroChevronUp' : 'heroChevronDown'" class="text-xs text-slate-400 shrink-0 ml-1.5"></ng-icon>
-        </button>
-
-        <!-- Menú Desplegable Flotante -->
-        @if (isModelDropdownOpen()) {
-          <!-- Backdrop invisible para capturar clics fuera -->
-          <div (click)="closeModelDropdown()" class="fixed inset-0 z-40 bg-transparent"></div>
-
-          <!-- Panel de opciones -->
-          <div class="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#151A30] border border-slate-300 dark:border-[#3B487A] rounded-md shadow-2xl z-50 overflow-hidden text-xs divide-y divide-slate-100 dark:divide-[#222B4D] animate-in fade-in zoom-in-95 duration-100 max-h-64 overflow-y-auto">
-            @for (m of availableModels(); track m.id) {
-              <button
-                type="button"
-                (click)="selectModel(m)"
-                class="w-full text-left p-2 hover:bg-purple-50 dark:hover:bg-[#1E2442] flex items-center justify-between gap-2 transition-colors cursor-pointer"
-                [ngClass]="{ 'bg-purple-50/70 dark:bg-[#1B213D] border-l-2 border-purple-600': m.id === selectedModelId() }">
-                <div class="space-y-0.5 min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5 font-medium text-slate-900 dark:text-slate-100">
-                    <span class="text-[11px]">{{ m.isLocal ? '⚡' : '☁️' }}</span>
-                    <span class="font-semibold text-xs truncate">{{ m.name }}</span>
-                    <span
-                      [ngClass]="m.isLocal ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800' : 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800'"
-                      class="px-1.5 py-0.2 rounded text-[8.5px] font-mono border">
-                      {{ m.isLocal ? 'Local Ollama' : 'Cloud Vertex' }}
-                    </span>
-                  </div>
-                  <div class="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                    <span class="truncate">{{ m.description }}</span>
-                    @if (m.sizeMb) {
-                      <span class="shrink-0 text-slate-400">• {{ m.sizeMb }} MB</span>
-                    }
-                  </div>
-                </div>
-                @if (m.id === selectedModelId()) {
-                  <span class="text-purple-600 dark:text-purple-400 font-bold text-sm shrink-0 pl-1">✓</span>
-                }
-              </button>
-            }
-          </div>
-        }
+      <div class="flex items-center gap-1 text-[9px] font-mono text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 font-semibold">
+        <ng-icon name="heroSparkles" class="text-[10px]"></ng-icon>
+        <span>Texto • Visión • Audio</span>
       </div>
-
-      <!-- Detalle del Modelo Activo -->
-      @if (getSelectedModel(); as sel) {
-        <div class="text-[9px] font-mono text-slate-500 dark:text-slate-400 flex items-center justify-between px-0.5">
-          <span class="truncate">{{ sel.description || (sel.isLocal ? 'Ejecución en tu máquina' : 'Google Cloud Vertex AI') }}</span>
-          @if (sel.sizeMb) {
-            <span class="text-slate-400 dark:text-slate-500 shrink-0 ml-1 font-semibold">{{ sel.sizeMb }} MB</span>
-          }
-        </div>
-      }
     </div>
 
     <!-- Input oculto para subir imágenes de diagramas -->
@@ -156,6 +63,17 @@
                 @if (msg.imagePreview) {
                   <div class="p-1 bg-white dark:bg-[#151A30] border border-purple-200 dark:border-purple-800 rounded-md shadow-xs mb-1">
                     <img [src]="msg.imagePreview" class="max-h-36 max-w-full rounded object-contain" alt="Imagen adjunta" />
+                  </div>
+                }
+                @if (msg.audioInfo) {
+                  <div class="p-1.5 bg-white/15 dark:bg-white/10 border border-white/25 rounded-md flex items-center gap-2 mb-1 text-white">
+                    <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                      <ng-icon name="heroMicrophone" class="text-xs"></ng-icon>
+                    </div>
+                    <div class="text-[10px] font-mono leading-tight">
+                      <p class="font-semibold">Audio enviado a Gemini</p>
+                      <p class="text-white/80">{{ msg.audioInfo.duration ? msg.audioInfo.duration + 's' : 'Multimodal' }} • {{ msg.audioInfo.mimeType || 'audio/webm' }}</p>
+                    </div>
                   </div>
                 }
                 <div class="p-2.5 bg-gradient-to-r from-purple-700 to-indigo-800 dark:from-purple-800 dark:to-indigo-900 text-white rounded-2xl rounded-tr-xs text-[11.5px] shadow-sm leading-relaxed">
@@ -204,11 +122,9 @@
 
                   @if (msg.modelUsed) {
                     <div class="pt-0.5 flex items-center gap-1 text-[9px] font-mono">
-                      <span
-                        [ngClass]="msg.providerUsed === 'ollama' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800' : 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800'"
-                        class="px-1.5 py-0.5 rounded border flex items-center gap-1 font-semibold">
-                        <ng-icon [name]="msg.providerUsed === 'ollama' ? 'heroCpuChip' : 'heroSparkles'" class="text-[10px]"></ng-icon>
-                        <span>{{ msg.providerUsed === 'ollama' ? '⚡ Local' : '☁️ Nube' }}: {{ msg.modelUsed }}</span>
+                      <span class="px-1.5 py-0.5 rounded border flex items-center gap-1 font-semibold bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800">
+                        <ng-icon name="heroSparkles" class="text-[10px]"></ng-icon>
+                        <span>Google Gemini: {{ msg.modelUsed }}</span>
                       </span>
                     </div>
                   }
@@ -266,9 +182,6 @@
               <p class="text-[11px] font-mono text-purple-900 dark:text-purple-200 truncate font-medium">{{ attachedImageName() }}</p>
               <p class="text-[9px] text-purple-600 dark:text-purple-400">
                 Imagen lista para digitalizar con Gemini Vision
-                @if (selectedProvider() === 'ollama') {
-                  <span class="text-amber-600 dark:text-amber-400 font-semibold">(visión multimodal en nube)</span>
-                }
               </p>
             </div>
           </div>
@@ -281,14 +194,44 @@
         </div>
       }
 
-      <!-- Indicador de Grabación de Voz Activa -->
-      @if (isVoiceListening()) {
-        <div class="px-2.5 py-1 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded text-[10.5px] font-mono text-red-700 dark:text-red-300 flex items-center justify-between animate-pulse">
-          <div class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-red-600"></span>
-            <span>Escuchando tu voz... Habla ahora.</span>
+      <!-- Preview de Audio Adjunto (Grabación de voz lista para Gemini) -->
+      @if (attachedAudioBase64()) {
+        <div class="p-1.5 bg-indigo-50 dark:bg-[#1A203E] border border-indigo-300 dark:border-[#3B487A] rounded flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 truncate">
+            <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
+              <ng-icon name="heroMicrophone" class="text-sm"></ng-icon>
+            </div>
+            <div class="truncate">
+              <p class="text-[11px] font-mono text-indigo-900 dark:text-indigo-200 truncate font-medium">
+                {{ attachedAudioDuration() ? 'Audio grabado (' + attachedAudioDuration() + 's)' : 'Audio listo' }}
+              </p>
+              <p class="text-[9px] text-indigo-600 dark:text-indigo-400">
+                Se enviará a Gemini 2.5 Flash para procesamiento multimodal directo
+              </p>
+            </div>
           </div>
-          <button (click)="toggleVoiceRecognition()" class="text-red-800 dark:text-red-400 font-bold underline text-[10px] cursor-pointer">Detener</button>
+          <button
+            (click)="removeAttachedAudio()"
+            title="Quitar audio"
+            class="text-indigo-600 dark:text-indigo-400 hover:text-red-700 dark:hover:text-red-400 font-bold text-base px-1.5 cursor-pointer">
+            &times;
+          </button>
+        </div>
+      }
+
+      <!-- Indicador de Grabación de Audio Activa -->
+      @if (isRecordingAudio()) {
+        <div class="px-2.5 py-1.5 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700 rounded text-[11px] font-mono text-red-700 dark:text-red-300 flex items-center justify-between animate-pulse">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-600"></span>
+            <span class="font-semibold">Grabando audio... ({{ recordingSeconds() }}s) Habla ahora</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button (click)="cancelAudioRecording()" class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 text-[10px] cursor-pointer">Cancelar</button>
+            <button (click)="stopAudioRecording(false)" class="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded font-bold text-[10px] cursor-pointer flex items-center gap-1">
+              <span>Terminar</span>
+            </button>
+          </div>
         </div>
       }
 
@@ -304,22 +247,22 @@
           (keydown)="onAiInputKeyDown($any($event))"
           (paste)="onPasteImage($event)"
           rows="4"
-          [placeholder]="attachedImageBase64() ? 'Instrucción opcional para la imagen (o presiona Enter para digitalizar todo)...' : 'Escribe tu instrucción, pega una captura (Ctrl+V) o arrastra una imagen aquí...'"
+          [placeholder]="attachedAudioBase64() ? 'Instrucción o comentario opcional para acompañar el audio (o presiona Enter para enviar)...' : attachedImageBase64() ? 'Instrucción opcional para la imagen (o presiona Enter para digitalizar todo)...' : 'Escribe tu instrucción, graba un comando por voz, pega una captura (Ctrl+V) o arrastra una imagen aquí...'"
           class="w-full p-2.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent focus:outline-none resize-none min-h-[95px] pr-28"></textarea>
 
         <!-- Botones de Acción Multimedia e interactivos en la esquina inferior derecha -->
         <div class="absolute bottom-2 right-2 flex items-center gap-1">
-          <!-- Botón Micrófono / Dictado por Voz -->
+          <!-- Botón Micrófono / Grabación de Audio -->
           <button
-            (click)="toggleVoiceRecognition()"
+            (click)="toggleAudioRecording()"
             type="button"
-            [title]="isVoiceListening() ? 'Detener dictado por voz' : 'Dictar comando por voz'"
+            [title]="isRecordingAudio() ? 'Detener grabación de audio' : 'Grabar comando de voz para Gemini'"
             [ngClass]="{
-              'bg-red-600 text-white animate-pulse ring-2 ring-red-400': isVoiceListening(),
-              'bg-slate-100 dark:bg-[#1E2442] text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-[#2E3766] hover:text-purple-800 dark:hover:text-purple-200 border border-slate-300 dark:border-[#3B487A]': !isVoiceListening()
+              'bg-red-600 text-white animate-pulse ring-2 ring-red-400': isRecordingAudio(),
+              'bg-slate-100 dark:bg-[#1E2442] text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-[#2E3766] hover:text-purple-800 dark:hover:text-purple-200 border border-slate-300 dark:border-[#3B487A]': !isRecordingAudio()
             }"
             class="p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs">
-            <ng-icon [name]="isVoiceListening() ? 'heroStop' : 'heroMicrophone'" class="text-xs"></ng-icon>
+            <ng-icon [name]="isRecordingAudio() ? 'heroStop' : 'heroMicrophone'" class="text-xs"></ng-icon>
           </button>
 
           <!-- Botón Pegar del Portapapeles (1 clic) -->
@@ -352,7 +295,7 @@
           <!-- Botón Enviar Mensaje (Enter) -->
           <button
             (click)="applyAiPrompt()"
-            [disabled]="isAiProcessing() || (!aiPrompt().trim() && !attachedImageBase64())"
+            [disabled]="isAiProcessing() || (!aiPrompt().trim() && !attachedImageBase64() && !attachedAudioBase64())"
             title="Enviar mensaje (Enter)"
             class="p-1.5 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs disabled:opacity-30 disabled:cursor-not-allowed">
             <ng-icon name="heroPaperAirplane" class="text-xs"></ng-icon>

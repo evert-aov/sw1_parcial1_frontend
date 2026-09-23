@@ -41,8 +41,12 @@ export interface AiChatMessage {
   sender: 'user' | 'assistant';
   text: string;
   imagePreview?: string;
+  audioInfo?: {
+    duration?: number;
+    mimeType?: string;
+  };
   changesSummary?: string;
-  providerUsed?: 'ollama' | 'vertex';
+  providerUsed?: 'vertex';
   modelUsed?: string;
   timestamp: Date;
   status?: 'success' | 'clarification' | 'error' | 'pending';
@@ -101,8 +105,8 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
 
   // Modelos de IA disponibles y seleccionados por el usuario
   readonly availableModels = signal<AiModelOption[]>([]);
-  readonly selectedModelId = signal<string>('');
-  readonly selectedProvider = signal<'ollama' | 'vertex'>('ollama');
+  readonly selectedModelId = signal<string>('gemini-2.5-flash');
+  readonly selectedProvider = signal<'vertex'>('vertex');
   readonly isOllamaAvailable = signal<boolean>(false);
   readonly isLoadingModels = signal<boolean>(false);
   readonly isModelDropdownOpen = signal<boolean>(false);
@@ -112,7 +116,12 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   readonly aiPrompt = signal<string>('');
   readonly attachedImageBase64 = signal<string | null>(null);
   readonly attachedImageName = signal<string | null>(null);
-  readonly isVoiceListening = signal<boolean>(false);
+  readonly isRecordingAudio = signal<boolean>(false);
+  readonly isVoiceListening = this.isRecordingAudio; // Alias para compatibilidad
+  readonly recordingSeconds = signal<number>(0);
+  readonly attachedAudioBase64 = signal<string | null>(null);
+  readonly attachedAudioMimeType = signal<string>('audio/webm');
+  readonly attachedAudioDuration = signal<number>(0);
   readonly showWebcamModal = signal<boolean>(false);
 
   // Historial conversacional
@@ -120,12 +129,16 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
     {
       id: 'welcome',
       sender: 'assistant',
-      text: '¡Hola! Soy tu Copilot de Modelado UML.\n\nPuedes elegir entre tus modelos locales de Ollama (ej: Qwen 2.5 Coder) o Gemini en la nube mediante el selector de modelos. Pídeme crear tablas, agregar atributos, conectar entidades, o adjuntar un boceto para digitalizarlo.',
+      text: '¡Hola! Soy tu Copilot de Modelado UML impulsado por Google Gemini.\n\nPídeme crear tablas, agregar atributos, conectar entidades, dictar comandos por voz con Gemini Multimodal, o adjuntar un boceto para digitalizarlo automáticamente.',
       timestamp: new Date(),
     },
   ]);
 
-  private speechRecognition: any = null;
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioStream: MediaStream | null = null;
+  private audioChunks: Blob[] = [];
+  private recordingTimer: any = null;
+  private recordedMimeType = 'audio/webm';
   private webcamMediaStream: MediaStream | null = null;
 
   ngOnInit(): void {
@@ -140,35 +153,18 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
         const data = (res as any)?.data || res;
         const models: AiModelOption[] = data?.models || [];
         this.availableModels.set(models);
-        this.isOllamaAvailable.set(data?.isOllamaAvailable ?? false);
-
-        // Verificar si existe una preferencia guardada en localStorage
-        const savedModelId = localStorage.getItem('uml_preferred_ai_model');
-        const foundSaved = models.find((m) => m.id === savedModelId);
-
-        if (foundSaved) {
-          this.selectedModelId.set(foundSaved.id);
-          this.selectedProvider.set(foundSaved.provider);
-        } else if (data?.defaultModel) {
-          const def = models.find((m) => m.id === data.defaultModel);
-          this.selectedModelId.set(data.defaultModel);
-          this.selectedProvider.set(def ? def.provider : (data.defaultProvider || 'ollama'));
-        } else if (models.length > 0) {
-          this.selectedModelId.set(models[0].id);
-          this.selectedProvider.set(models[0].provider);
-        }
+        this.selectedModelId.set(data?.defaultModel || 'gemini-2.5-flash');
+        this.selectedProvider.set('vertex');
       },
-      error: (err) => {
+      error: () => {
         this.isLoadingModels.set(false);
-        console.warn('No se pudieron listar los modelos de IA:', err);
-        // Fallback en caso de error de red
         this.availableModels.set([
           {
             id: 'gemini-2.5-flash',
             name: 'Google Gemini 2.5 Flash',
             provider: 'vertex',
             isLocal: false,
-            description: 'Google Cloud Vertex AI',
+            description: 'Google Vertex AI (Nativo: Texto, Visión y Audio)',
           },
         ]);
         this.selectedModelId.set('gemini-2.5-flash');
@@ -206,9 +202,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.speechRecognition && this.isVoiceListening()) {
-      this.speechRecognition.stop();
-    }
+    this.cancelAudioRecording();
     this.stopWebcam();
   }
 
@@ -224,17 +218,27 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   // -------------------------------------------------------------
-  // PROMPT / ENVÍO DE MENSAJES (TEXTO / VISIÓN)
+  // PROMPT / ENVÍO DE MENSAJES (TEXTO / VISIÓN / AUDIO MULTIMODAL)
   // -------------------------------------------------------------
   applyAiPrompt(): void {
     const promptText = this.aiPrompt().trim();
     const imageBase64 = this.attachedImageBase64();
+    const audioBase64 = this.attachedAudioBase64();
+    const audioMimeType = this.attachedAudioMimeType();
+    const audioDuration = this.attachedAudioDuration();
 
-    if ((!promptText && !imageBase64) || this.isAiProcessing()) {
+    if ((!promptText && !imageBase64 && !audioBase64) || this.isAiProcessing()) {
       return;
     }
 
-    const userMessageText = promptText || (imageBase64 ? 'Digitalizar diagrama desde imagen adjunta' : '');
+    let userMessageText = promptText;
+    if (audioBase64 && !promptText) {
+      userMessageText = `🎙️ [Comando de Voz] (${audioDuration ? audioDuration + 's' : 'audio'})`;
+    } else if (audioBase64 && promptText) {
+      userMessageText = `🎙️ [Comando de Voz (${audioDuration ? audioDuration + 's' : 'audio'})]: ${promptText}`;
+    } else if (!promptText && imageBase64) {
+      userMessageText = 'Digitalizar diagrama desde imagen adjunta';
+    }
 
     this.aiChatMessages.update((msgs) => [
       ...msgs,
@@ -244,6 +248,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
         text: userMessageText,
         timestamp: new Date(),
         imagePreview: imageBase64 || undefined,
+        audioInfo: audioBase64 ? { duration: audioDuration, mimeType: audioMimeType } : undefined,
       },
     ]);
 
@@ -255,7 +260,24 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
     const provider = this.selectedProvider();
     const model = this.selectedModelId();
 
-    if (imageBase64) {
+    if (audioBase64) {
+      this.aiService
+        .sendAudioPrompt(
+          audioBase64,
+          audioMimeType,
+          promptText || undefined,
+          dId,
+          rCode,
+          this.currentNodes(),
+          this.currentConnections(),
+          [],
+          { provider: 'vertex', model: 'gemini-2.5-flash' },
+        )
+        .subscribe({
+          next: (res) => this.handleAiResponse(res, '🎙️ Comando de Voz (Gemini Multimodal)'),
+          error: (err) => this.handleAiError(err),
+        });
+    } else if (imageBase64) {
       this.aiService
         .sendVisionPrompt(
           imageBase64,
@@ -292,6 +314,8 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
     this.aiPrompt.set('');
     this.attachedImageBase64.set(null);
     this.attachedImageName.set(null);
+    this.attachedAudioBase64.set(null);
+    this.attachedAudioDuration.set(0);
   }
 
   private handleAiResponse(res: AiResponse, sourceTag: string): void {
@@ -350,54 +374,137 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   }
 
   // -------------------------------------------------------------
-  // DICTADO POR VOZ (WEB SPEECH API)
+  // GRABACIÓN DE AUDIO MULTIMODAL DIRECTO (GEMINI 2.5 FLASH)
   // -------------------------------------------------------------
+  toggleAudioRecording(): void {
+    if (this.isRecordingAudio()) {
+      this.stopAudioRecording();
+    } else {
+      this.startAudioRecording();
+    }
+  }
+
+  // Alias para mantener compatibilidad con plantillas existentes
   toggleVoiceRecognition(): void {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    this.toggleAudioRecording();
+  }
 
-    if (!SpeechRecognition) {
-      alert('Tu navegador no soporta reconocimiento de voz nativo (Web Speech API). Usa Chrome o Edge.');
-      return;
-    }
-
-    if (this.isVoiceListening()) {
-      this.speechRecognition?.stop();
-      this.isVoiceListening.set(false);
-      return;
-    }
-
+  async startAudioRecording(): Promise<void> {
     try {
-      this.speechRecognition = new SpeechRecognition();
-      this.speechRecognition.lang = 'es-ES';
-      this.speechRecognition.continuous = false;
-      this.speechRecognition.interimResults = false;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Tu navegador no soporta captura de audio desde el micrófono (MediaDevices API).');
+        return;
+      }
 
-      this.speechRecognition.onstart = () => {
-        this.isVoiceListening.set(true);
-      };
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioStream = stream;
+      this.audioChunks = [];
 
-      this.speechRecognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          const current = this.aiPrompt().trim();
-          this.aiPrompt.set(current ? `${current} ${transcript}` : transcript);
+      let mimeType = 'audio/webm';
+      if (typeof MediaRecorder !== 'undefined') {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg';
         }
-        this.isVoiceListening.set(false);
+      }
+
+      this.recordedMimeType = mimeType;
+      this.mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+      this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          this.audioChunks.push(event.data);
+        }
       };
 
-      this.speechRecognition.onerror = () => {
-        this.isVoiceListening.set(false);
-      };
+      this.mediaRecorder.start(250);
+      this.isRecordingAudio.set(true);
+      this.recordingSeconds.set(0);
 
-      this.speechRecognition.onend = () => {
-        this.isVoiceListening.set(false);
-      };
-
-      this.speechRecognition.start();
-    } catch {
-      this.isVoiceListening.set(false);
+      if (this.recordingTimer) {
+        clearInterval(this.recordingTimer);
+      }
+      this.recordingTimer = setInterval(() => {
+        this.recordingSeconds.update((s) => s + 1);
+      }, 1000);
+    } catch (err: any) {
+      console.error('Error al acceder al micrófono:', err);
+      alert('No se pudo acceder al micrófono: ' + (err.message || 'Permiso denegado'));
+      this.isRecordingAudio.set(false);
     }
+  }
+
+  stopAudioRecording(autoSend = false): void {
+    if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+      this.isRecordingAudio.set(false);
+      return;
+    }
+
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer);
+      this.recordingTimer = null;
+    }
+
+    const duration = this.recordingSeconds();
+
+    this.mediaRecorder.onstop = async () => {
+      this.cleanupAudioStream();
+      const audioBlob = new Blob(this.audioChunks, { type: this.recordedMimeType });
+      const base64 = await this.blobToBase64(audioBlob);
+      this.attachedAudioBase64.set(base64);
+      this.attachedAudioMimeType.set(this.recordedMimeType);
+      this.attachedAudioDuration.set(duration);
+      this.isRecordingAudio.set(false);
+
+      if (autoSend) {
+        this.applyAiPrompt();
+      }
+    };
+
+    this.mediaRecorder.stop();
+  }
+
+  cancelAudioRecording(): void {
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer);
+      this.recordingTimer = null;
+    }
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.onstop = null;
+      this.mediaRecorder.stop();
+    }
+    this.cleanupAudioStream();
+    this.audioChunks = [];
+    this.isRecordingAudio.set(false);
+    this.recordingSeconds.set(0);
+  }
+
+  removeAttachedAudio(): void {
+    this.attachedAudioBase64.set(null);
+    this.attachedAudioDuration.set(0);
+  }
+
+  private cleanupAudioStream(): void {
+    if (this.audioStream) {
+      this.audioStream.getTracks().forEach((track) => track.stop());
+      this.audioStream = null;
+    }
+  }
+
+  private blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 
   // -------------------------------------------------------------

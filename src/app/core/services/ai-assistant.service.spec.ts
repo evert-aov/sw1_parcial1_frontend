@@ -19,16 +19,10 @@ describe('AiAssistantService', () => {
 
   it('debe solicitar la lista de modelos disponibles a /ai/models', () => {
     const mockResponse: AvailableModelsResponse = {
-      defaultModel: 'qwen2.5:3b',
-      defaultProvider: 'ollama',
-      isOllamaAvailable: true,
+      defaultModel: 'gemini-2.5-flash',
+      defaultProvider: 'vertex',
+      isOllamaAvailable: false,
       models: [
-        {
-          id: 'qwen2.5:3b',
-          name: 'Qwen 2.5 (3B)',
-          provider: 'ollama',
-          isLocal: true,
-        },
         {
           id: 'gemini-2.5-flash',
           name: 'Google Gemini 2.5 Flash',
@@ -42,8 +36,8 @@ describe('AiAssistantService', () => {
 
     service.getAvailableModels().subscribe((res) => {
       expect(res).toEqual(mockResponse);
-      expect(res.models.length).toBe(2);
-      expect(res.isOllamaAvailable).toBe(true);
+      expect(res.models.length).toBe(1);
+      expect(res.isOllamaAvailable).toBe(false);
     });
 
     expect(mockHttpClient.get).toHaveBeenCalledWith(expect.stringContaining('/ai/models'));
@@ -57,8 +51,8 @@ describe('AiAssistantService', () => {
       nodes: [],
       connections: [],
       changesSummary: 'Cambio aplicado',
-      providerUsed: 'ollama',
-      modelUsed: 'qwen2.5-coder:7b',
+      providerUsed: 'vertex',
+      modelUsed: 'gemini-2.5-flash',
     };
 
     mockHttpClient.post.mockReturnValue(of(mockAiResponse));
@@ -71,12 +65,12 @@ describe('AiAssistantService', () => {
         [],
         [],
         [],
-        { provider: 'ollama', model: 'qwen2.5-coder:7b' },
+        { provider: 'vertex', model: 'gemini-2.5-flash' },
       )
       .subscribe((res) => {
         expect(res).toEqual(mockAiResponse);
-        expect(res.providerUsed).toBe('ollama');
-        expect(res.modelUsed).toBe('qwen2.5-coder:7b');
+        expect(res.providerUsed).toBe('vertex');
+        expect(res.modelUsed).toBe('gemini-2.5-flash');
       });
 
     expect(mockHttpClient.post).toHaveBeenCalledWith(
@@ -85,8 +79,8 @@ describe('AiAssistantService', () => {
         prompt: 'Crea tabla Factura',
         diagramId: 'diag-123',
         roomCode: 'ROOM-1',
-        provider: 'ollama',
-        model: 'qwen2.5-coder:7b',
+        provider: 'vertex',
+        model: 'gemini-2.5-flash',
       }),
     );
   });
