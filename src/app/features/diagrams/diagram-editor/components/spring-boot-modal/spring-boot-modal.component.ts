@@ -133,6 +133,9 @@ export class SpringBootModalComponent implements OnInit {
     if (cat === 'spring-boot') {
       return all.filter((f) => f.path.includes('backend') || f.path.startsWith('src/') || f.language === 'java');
     }
+    if (cat === 'postman') {
+      return all.filter((f) => f.filename === 'postman_collection.json' || f.path.includes('postman'));
+    }
     return all.filter((f) => f.layer === cat);
   });
 
