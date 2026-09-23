@@ -37,6 +37,7 @@ import {
   GenerateCodeRequest,
 } from '../../../../../core/services/code-generator.service';
 import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
+import { Project } from '../../../../../core/models/project.model';
 import { TranslatePipe } from '../../../../../core/i18n';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import hljs from 'highlight.js/lib/core';
@@ -96,6 +97,7 @@ export class SpringBootModalComponent implements OnInit {
   readonly diagramName = input<string>('Diagrama UML');
   readonly nodes = input<UmlClassNode[]>([]);
   readonly connections = input<UmlConnection[]>([]);
+  readonly project = input<Project | null>(null);
 
   readonly closeModal = output<void>();
 
@@ -107,6 +109,7 @@ export class SpringBootModalComponent implements OnInit {
   artifactId = signal<string>('sistema-app');
   projectName = signal<string>('Sistema App Fullstack');
   javaVersion = signal<string>('21');
+  springBootVersion = signal<string>('3.4.0');
   databaseName = signal<string>('uml_studio_db');
   databaseUser = signal<string>('postgres');
   databasePassword = signal<string>('postgres');
@@ -215,8 +218,20 @@ export class SpringBootModalComponent implements OnInit {
       const open = this.isOpen();
       const diagId = this.diagramId();
       const name = this.diagramName();
+      const proj = this.project();
 
       if (open) {
+        if (proj) {
+          if (proj.javaVersion) {
+            this.javaVersion.set(String(proj.javaVersion));
+          }
+          if (proj.springBootVersion) {
+            this.springBootVersion.set(proj.springBootVersion);
+          }
+          if (proj.basePackage) {
+            this.packageName.set(proj.basePackage);
+          }
+        }
         if (name) {
           const clean = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
           this.artifactId.set(clean || 'sistema-app');
@@ -260,6 +275,7 @@ export class SpringBootModalComponent implements OnInit {
       artifactId: this.artifactId(),
       projectName: this.projectName(),
       javaVersion: this.javaVersion(),
+      springBootVersion: this.springBootVersion(),
       databaseName: this.databaseName(),
       databaseUser: this.databaseUser(),
       databasePassword: this.databasePassword(),
@@ -315,6 +331,7 @@ export class SpringBootModalComponent implements OnInit {
       artifactId: this.artifactId(),
       projectName: this.projectName(),
       javaVersion: this.javaVersion(),
+      springBootVersion: this.springBootVersion(),
       databaseName: this.databaseName(),
       databaseUser: this.databaseUser(),
       databasePassword: this.databasePassword(),

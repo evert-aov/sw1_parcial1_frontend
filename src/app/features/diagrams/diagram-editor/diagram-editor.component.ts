@@ -62,6 +62,7 @@ import {
 import { AuthService } from '../../../core/services/auth.service';
 import { DiagramService } from '../../../core/services/diagram.service';
 import { ProjectService } from '../../../core/services/project.service';
+import { Project } from '../../../core/models/project.model';
 import { CollaborationService, NodeLock } from '../../../core/services/collaboration.service';
 import { AiAssistantService } from '../../../core/services/ai-assistant.service';
 import { XmiService } from '../../../core/services/xmi.service';
@@ -168,6 +169,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // Contexto del diagrama y proyecto
   currentDiagramId = signal<string | null>(null);
   currentProjectId = signal<string | null>(null);
+  currentProject = signal<Project | null>(null);
   currentDiagramName = signal<string>('Diagrama UML');
   saveSuccessMessage = signal<boolean>(false);
   hasUnsavedChanges = signal<boolean>(false);
@@ -293,6 +295,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         this.currentProjectId.set(projectId);
         this.projectService.getProject(projectId).subscribe({
           next: (project) => {
+            this.currentProject.set(project);
             const user = this.authService.currentUser();
             if (user && project) {
               if (project.userRole) {
@@ -391,6 +394,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
 
       this.collaborationService.joinRoom(diagramId);
+
+      if (diagram.projectId && !this.currentProject()) {
+        this.currentProjectId.set(diagram.projectId);
+        this.projectService.getProject(diagram.projectId).subscribe({
+          next: (proj) => {
+            this.currentProject.set(proj);
+          },
+          error: () => {},
+        });
+      }
 
       this.hasUnsavedChanges.set(false);
       requestAnimationFrame(() => {

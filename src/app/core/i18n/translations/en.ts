@@ -277,6 +277,8 @@ export const en = {
     warningDesc: 'You must save the diagram on the server before generating architecture and downloading the project.',
     packageBase: 'Base Package',
     artifactId: 'Artifact / App ID',
+    javaVersion: 'Java Version',
+    springBootVersion: 'Spring Boot Version',
     serverDbPort: 'Server & DB Port',
     usbConnection: 'USB Mobile Connection',
     filterAll: 'All',
