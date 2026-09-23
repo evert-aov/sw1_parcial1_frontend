@@ -593,6 +593,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
+    if (sourceNode.id === targetNode.id) {
+      return {
+        sourceId: `${sourceNode.id}_top`,
+        targetId: `${targetNode.id}_right`,
+      };
+    }
+
     const sWidth = sourceNode.isAnchor ? 0 : sourceNode.width || 220;
     const sHeight = sourceNode.isAnchor ? 0 : this.getNodeHeight(sourceNode);
     const tWidth = targetNode.isAnchor ? 0 : targetNode.width || 220;
@@ -646,6 +653,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       default:
         return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
     }
+  }
+
+  isRecursiveConn(conn: UmlConnection): boolean {
+    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+    return !!s && s === t;
+  }
+
+  getConnSide(connectorId: string | undefined, defaultSide: 'top' | 'right' | 'bottom' | 'left' = 'top'): 'top' | 'right' | 'bottom' | 'left' {
+    if (!connectorId) return defaultSide;
+    if (connectorId.endsWith('_top')) return 'top';
+    if (connectorId.endsWith('_right')) return 'right';
+    if (connectorId.endsWith('_bottom')) return 'bottom';
+    if (connectorId.endsWith('_left')) return 'left';
+    return defaultSide;
   }
 
   updateConnectionEndpoints(): void {
@@ -716,6 +738,29 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           const targetNode = nodeMap.get(baseTargetId);
 
           if (sourceNode && targetNode && !sourceNode.isAnchor && !targetNode.isAnchor) {
+            if (baseSourceId === baseTargetId) {
+              const validConnectors = [
+                `${baseSourceId}_top`,
+                `${baseSourceId}_right`,
+                `${baseSourceId}_bottom`,
+                `${baseSourceId}_left`,
+              ];
+              const curSource = conn.sourceId;
+              const curTarget = conn.targetId;
+              const hasDistinct =
+                validConnectors.includes(curSource) &&
+                validConnectors.includes(curTarget) &&
+                curSource !== curTarget;
+
+              return {
+                ...conn,
+                sourceNodeId: baseSourceId,
+                targetNodeId: baseTargetId,
+                sourceId: hasDistinct ? curSource : `${baseSourceId}_top`,
+                targetId: hasDistinct ? curTarget : `${baseTargetId}_right`,
+              };
+            }
+
             const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
             return {
               ...conn,
@@ -813,8 +858,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (currentSource === null) {
       this.selectedSourceNodeId.set(nodeId);
       this.onCanvasMouseMove(event);
-    } else if (currentSource === nodeId) {
-      this.selectedSourceNodeId.set(null);
     } else {
       const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
       const sourceNode = nodeMap.get(currentSource);
@@ -823,24 +866,41 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       if (!sourceNode || !targetNode) return;
 
       if (activeRel === 'association_class') {
+        if (currentSource === nodeId) {
+          alert('Las clases de asociación conectan dos tablas distintas.');
+          this.selectedSourceNodeId.set(null);
+          return;
+        }
         this.createAssociationClassBetween(sourceNode, targetNode);
         return;
       }
 
-      const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+      let sourceId: string;
+      let targetId: string;
+      if (currentSource === nodeId) {
+        sourceId = `${currentSource}_top`;
+        targetId = `${nodeId}_right`;
+      } else {
+        const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+        sourceId = optimal.sourceId;
+        targetId = optimal.targetId;
+      }
+
+      const isInheritance = activeRel === 'generalization' || activeRel === 'realization';
       const newConn: UmlConnection = {
         id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         sourceNodeId: currentSource,
         targetNodeId: nodeId,
-        sourceId: optimal.sourceId,
-        targetId: optimal.targetId,
+        sourceId,
+        targetId,
         type: activeRel,
         lineStyle: this.defaultLineStyle(),
-        sourceMultiplicity: '1',
-        targetMultiplicity: '1..*',
+        sourceMultiplicity: isInheritance ? '' : '1',
+        targetMultiplicity: isInheritance ? '' : '0..*',
       };
 
       this.connections.update((list) => [...list, newConn]);
+      this.markAsUnsaved();
       this.setPointerMode();
       this.updateConnectionEndpoints();
       this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
@@ -860,8 +920,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const baseSourceId = event.fOutputId.replace(/_(top|bottom|left|right)$/, '');
     const baseTargetId = event.fInputId.replace(/_(top|bottom|left|right)$/, '');
 
-    if (baseSourceId === baseTargetId) return;
-
     if (this.isNodeLockedByOther(baseSourceId) || this.isNodeLockedByOther(baseTargetId)) {
       alert('🔒 No se pueden crear conexiones hacia/desde una tabla que está siendo editada.');
       return;
@@ -872,6 +930,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const targetNode = nodeMap.get(baseTargetId);
 
     if (relType === 'association_class' && sourceNode && targetNode) {
+      if (baseSourceId === baseTargetId) {
+        alert('Las clases de asociación conectan dos tablas distintas.');
+        return;
+      }
       this.createAssociationClassBetween(sourceNode, targetNode);
       return;
     }
@@ -880,11 +942,30 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     let targetId = event.fInputId;
 
     if (sourceNode && targetNode) {
-      const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-      sourceId = optimal.sourceId;
-      targetId = optimal.targetId;
+      if (baseSourceId === baseTargetId) {
+        const validConnectors = [
+          `${baseSourceId}_top`,
+          `${baseSourceId}_right`,
+          `${baseSourceId}_bottom`,
+          `${baseSourceId}_left`,
+        ];
+        const isDistinctConnectors =
+          validConnectors.includes(sourceId) &&
+          validConnectors.includes(targetId) &&
+          sourceId !== targetId;
+
+        if (!isDistinctConnectors) {
+          sourceId = `${baseSourceId}_top`;
+          targetId = `${baseTargetId}_right`;
+        }
+      } else {
+        const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+        sourceId = optimal.sourceId;
+        targetId = optimal.targetId;
+      }
     }
 
+    const isInheritance = relType === 'generalization' || relType === 'realization';
     const newConnection: UmlConnection = {
       id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       sourceNodeId: baseSourceId,
@@ -893,8 +974,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       targetId,
       type: relType,
       lineStyle: this.defaultLineStyle(),
-      sourceMultiplicity: '1',
-      targetMultiplicity: '1..*',
+      sourceMultiplicity: isInheritance ? '' : '1',
+      targetMultiplicity: isInheritance ? '' : '0..*',
     };
 
     this.connections.update((list) => [...list, newConnection]);
@@ -1202,6 +1283,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const edited = this.editingConnection();
     if (!edited) return;
 
+    if (edited.type === 'generalization' || edited.type === 'realization') {
+      edited.sourceMultiplicity = '';
+      edited.targetMultiplicity = '';
+    }
+
     this.connections.update((list) => list.map((c) => (c.id === edited.id ? edited : c)));
     this.markAsUnsaved();
     this.closeEditConnModal();
@@ -1356,7 +1442,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         let targetId = c.targetId;
 
         if (sourceNode && targetNode) {
-          if (c.type === 'association_class') {
+          if (sourceNodeId === targetNodeId) {
+            const validConnectors = [
+              `${sourceNodeId}_top`,
+              `${sourceNodeId}_right`,
+              `${sourceNodeId}_bottom`,
+              `${sourceNodeId}_left`,
+            ];
+            const hasDistinct =
+              validConnectors.includes(sourceId) &&
+              validConnectors.includes(targetId) &&
+              sourceId !== targetId;
+            sourceId = hasDistinct ? sourceId : `${sourceNodeId}_top`;
+            targetId = hasDistinct ? targetId : `${targetNodeId}_right`;
+          } else if (c.type === 'association_class') {
             if (sourceNode.isAnchor) {
               const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
               sourceId = sourceNode.id;
@@ -1386,8 +1485,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           type: (c.type as UmlRelationshipType) || 'association',
           lineStyle: (c.lineStyle as UmlLineStyle) || this.defaultLineStyle(),
           name: c.name || undefined,
-          sourceMultiplicity: c.sourceMultiplicity || '',
-          targetMultiplicity: c.targetMultiplicity || '',
+          sourceMultiplicity: c.sourceMultiplicity || (sourceNodeId === targetNodeId ? '1' : ''),
+          targetMultiplicity: c.targetMultiplicity || (sourceNodeId === targetNodeId ? '0..*' : ''),
           assocAnchorNodeId: c.assocAnchorNodeId || undefined,
         };
       });

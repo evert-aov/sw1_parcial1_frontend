@@ -382,7 +382,9 @@ export class BmpExportService {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    if (conn.sourceMultiplicity) {
+    const isInheritance = conn.type === 'generalization' || conn.type === 'realization';
+
+    if (conn.sourceMultiplicity && !isInheritance) {
       const pos = this.interpolatePoint(start, end, 0.18);
       this.drawBadge(ctx, pos.x, pos.y - 10, conn.sourceMultiplicity, '#0284C7', '#E0F2FE');
     }
@@ -392,7 +394,7 @@ export class BmpExportService {
       this.drawBadge(ctx, mid.x, mid.y - 12, conn.name, '#475569', '#F8FAFC');
     }
 
-    if (conn.targetMultiplicity) {
+    if (conn.targetMultiplicity && !isInheritance) {
       const pos = this.interpolatePoint(start, end, 0.82);
       this.drawBadge(ctx, pos.x, pos.y - 10, conn.targetMultiplicity, '#0284C7', '#E0F2FE');
     }
