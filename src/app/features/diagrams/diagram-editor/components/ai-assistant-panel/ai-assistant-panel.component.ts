@@ -456,8 +456,9 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
       this.cleanupAudioStream();
       const audioBlob = new Blob(this.audioChunks, { type: this.recordedMimeType });
       const base64 = await this.blobToBase64(audioBlob);
+      const cleanMime = (this.recordedMimeType || 'audio/webm').split(';')[0].trim();
       this.attachedAudioBase64.set(base64);
-      this.attachedAudioMimeType.set(this.recordedMimeType);
+      this.attachedAudioMimeType.set(cleanMime);
       this.attachedAudioDuration.set(duration);
       this.isRecordingAudio.set(false);
 
