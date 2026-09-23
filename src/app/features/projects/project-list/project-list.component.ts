@@ -96,7 +96,7 @@ export class ProjectListComponent implements OnInit {
     description: [''],
     basePackage: ['com.example.app', [Validators.required, Validators.maxLength(150)]],
     javaVersion: [21, [Validators.required]],
-    springBootVersion: ['3.3.0', [Validators.required]],
+    springBootVersion: ['3.4.0', [Validators.required]],
   });
 
   // Formulario Editar Proyecto
@@ -105,7 +105,7 @@ export class ProjectListComponent implements OnInit {
     description: [''],
     basePackage: ['com.example.app', [Validators.required, Validators.maxLength(150)]],
     javaVersion: [21, [Validators.required]],
-    springBootVersion: ['3.3.0', [Validators.required]],
+    springBootVersion: ['3.4.0', [Validators.required]],
   });
 
   // Formulario Agregar Miembro
@@ -144,7 +144,7 @@ export class ProjectListComponent implements OnInit {
       description: '',
       basePackage: 'com.example.app',
       javaVersion: 21,
-      springBootVersion: '3.3.0',
+      springBootVersion: '3.4.0',
     });
     this.isCreateModalOpen.set(true);
   }
