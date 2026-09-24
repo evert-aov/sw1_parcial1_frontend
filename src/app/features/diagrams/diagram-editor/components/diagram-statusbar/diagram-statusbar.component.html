@@ -1,0 +1,57 @@
+<footer class="bg-gradient-to-r from-slate-800 to-slate-900 text-slate-300 border-t border-slate-950 px-3 py-1 text-[11px] font-mono flex items-center justify-between z-30 shrink-0">
+  <div class="flex items-center gap-3">
+    <!-- Estado WebSockets Yjs -->
+    <div class="flex items-center gap-1.5">
+      <span
+        class="w-2 h-2 rounded-full"
+        [ngClass]="isConnected() ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'"></span>
+      <span [ngClass]="isConnected() ? 'text-emerald-300' : 'text-red-400'">
+        {{ isConnected() ? ('editor.statusbar.connected' | translate) : ('editor.statusbar.disconnected' | translate) }}
+      </span>
+    </div>
+
+    <div class="h-3 w-px bg-slate-700"></div>
+
+    <!-- Resumen Nodos / Conexiones -->
+    <span class="text-slate-400">
+      {{ 'editor.statusbar.classes' | translate }}: <strong class="text-slate-200">{{ classCount() }}</strong> |
+      {{ 'editor.statusbar.relations' | translate }}: <strong class="text-slate-200">{{ relationCount() }}</strong>
+    </span>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <!-- Estilo de Línea Activo -->
+    <span class="text-slate-400">
+      Routing: <strong class="text-amber-300">{{ lineStyle() }}</strong>
+    </span>
+
+    <div class="h-3 w-px bg-slate-700"></div>
+
+    <!-- Nivel de Zoom Sincronizado e Interactivo -->
+    <span class="text-slate-400 flex items-center gap-1.5">
+      Zoom:
+      <button
+        (click)="zoomOut.emit()"
+        title="Alejar (-)"
+        class="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs leading-none cursor-pointer">
+        -
+      </button>
+      <button
+        (click)="resetView.emit()"
+        title="Clic para restablecer al 100%"
+        class="hover:text-sky-300 transition-colors cursor-pointer">
+        <strong class="text-slate-200">{{ zoomLevel() }}%</strong>
+      </button>
+      <button
+        (click)="zoomIn.emit()"
+        title="Acercar (+)"
+        class="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs leading-none cursor-pointer">
+        +
+      </button>
+    </span>
+
+    <div class="h-3 w-px bg-slate-700"></div>
+
+    <span class="text-slate-500">UTF-8 • XMI 2.1 / JSON AST</span>
+  </div>
+</footer>

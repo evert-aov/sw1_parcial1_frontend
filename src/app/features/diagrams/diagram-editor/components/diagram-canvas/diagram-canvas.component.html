@@ -1,0 +1,328 @@
+<div
+  #flowContainer
+  (scroll)="onViewportScroll($event)"
+  (mousedown)="onCanvasMouseDown($event)"
+  (mousemove)="onCanvasMouseMove($event)"
+  (click)="onCanvasBackgroundClick($event)"
+  class="flex-1 relative w-full h-full overflow-auto cursor-default bg-white dark:bg-[#0D1124] uml-viewport select-none">
+
+  <!-- TABLERO / LIENZO A PANTALLA COMPLETA (OCUPA TODO EL ESPACIO, MÍNIMO 1500px x 1000px) -->
+  <div
+    #boardElement
+    [style.min-width.px]="boardWidth()"
+    [style.min-height.px]="boardHeight()"
+    class="relative w-full h-full bg-white dark:bg-[#0D1124]">
+
+    <!-- Cursores Remotos Colaborativos en Vivo (posicionados sobre la hoja) -->
+    @for (cursor of remoteCursors(); track cursor.userId) {
+      <div
+        class="absolute pointer-events-none z-40 flex items-center gap-1 transition-all duration-75"
+        [style.left.px]="cursor.x"
+        [style.top.px]="cursor.y">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="drop-shadow-md">
+          <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z" [attr.fill]="cursor.color" stroke="white" stroke-width="1.5" />
+        </svg>
+        <span
+          class="text-[9.5px] font-mono font-bold text-white px-1.5 py-0.5 rounded shadow-md whitespace-nowrap"
+          [style.backgroundColor]="cursor.color">
+          {{ cursor.userName }}
+        </span>
+      </div>
+    }
+
+    <!-- FOBLEX FLOW INTERACTIVE CANVAS -->
+    <f-flow
+      fDraggable
+      [fCanvasMoveTrigger]="canvasMoveTrigger"
+      (fLoaded)="onFlowLoaded()"
+      (fFullRendered)="onFlowLoaded()"
+      (fCreateConnection)="onConnectionCreated($event)"
+      (fReassignConnection)="onConnectionReassigned($event)"
+      (fMoveNodes)="onMoveNodes($event)"
+      (fSelectionChange)="onSelectionChange($event)"
+      class="w-full h-full block">
+
+      <f-canvas
+        fZoom
+        [fWheelTrigger]="zoomWheelTrigger"
+        [fDblClickTrigger]="dblClickZoomTrigger"
+        (fCanvasChange)="onCanvasChange($any($event))">
+
+        <!-- CONEXIONES UML SEGÚN RELACIÓN -->
+        <ng-container ngProjectAs="[fConnections]">
+          @for (conn of connections(); track conn.id) {
+            <f-connection
+              [fConnectionId]="conn.id"
+              [fOutputId]="conn.sourceId"
+              [fInputId]="conn.targetId"
+              [fType]="conn.lineStyle || defaultLineStyle()"
+              [fBehavior]="isRecursiveConn(conn) ? 'fixed' : 'floating'"
+              [fOutputSide]="isRecursiveConn(conn) ? getConnSide(conn.sourceId, 'top') : undefined"
+              [fInputSide]="isRecursiveConn(conn) ? getConnSide(conn.targetId, 'right') : undefined"
+              (dblclick)="onConnectionDblClick(conn, $event)"
+              [class]="'uml-relation-' + (conn.type || 'association')"
+              [class.ring-2]="isConnectionSelected(conn.id)"
+              [class.ring-purple-500]="isConnectionSelected(conn.id)"
+              [class.shadow-md]="isConnectionSelected(conn.id)"
+              [class.opacity-30]="isConnectionDimmed(conn.id)">
+
+              <!-- Marcadores Visuales según el tipo de Relación UML 2.5 -->
+              @if (conn.type === 'generalization' || conn.type === 'realization') {
+                <svg fMarker [width]="16" [height]="16" [refX]="15" [refY]="8" viewBox="0 0 16 16" markerUnits="userSpaceOnUse" type="end-all-states">
+                  <polygon points="1,1 15,8 1,15" class="uml-marker-hollow" />
+                </svg>
+              } @else if (conn.type === 'composition') {
+                @if (isDiamondAtStart(conn)) {
+                  <svg fMarker [width]="18" [height]="14" [refX]="1" [refY]="7" viewBox="0 0 18 14" markerUnits="userSpaceOnUse" type="start-all-states">
+                    <polygon points="1,7 9,1 17,7 9,13" class="uml-marker-filled" />
+                  </svg>
+                } @else {
+                  <svg fMarker [width]="18" [height]="14" [refX]="17" [refY]="7" viewBox="0 0 18 14" markerUnits="userSpaceOnUse" type="end-all-states">
+                    <polygon points="1,7 9,1 17,7 9,13" class="uml-marker-filled" />
+                  </svg>
+                }
+              } @else if (conn.type === 'aggregation') {
+                @if (isDiamondAtStart(conn)) {
+                  <svg fMarker [width]="18" [height]="14" [refX]="1" [refY]="7" viewBox="0 0 18 14" markerUnits="userSpaceOnUse" type="start-all-states">
+                    <polygon points="1,7 9,1 17,7 9,13" class="uml-marker-hollow" />
+                  </svg>
+                } @else {
+                  <svg fMarker [width]="18" [height]="14" [refX]="17" [refY]="7" viewBox="0 0 18 14" markerUnits="userSpaceOnUse" type="end-all-states">
+                    <polygon points="1,7 9,1 17,7 9,13" class="uml-marker-hollow" />
+                  </svg>
+                }
+              } @else if (conn.type === 'dependency') {
+                <svg fMarker [width]="16" [height]="16" [refX]="14" [refY]="8" viewBox="0 0 16 16" markerUnits="userSpaceOnUse" type="end-all-states">
+                  <polyline points="2,2 14,8 2,14" class="uml-marker-open" />
+                </svg>
+              }
+
+              <!-- Etiquetas de Multiplicidad y Nombre -->
+              @if (conn.sourceMultiplicity && conn.type !== 'generalization' && conn.type !== 'realization' && !conn.assocAnchorNodeId && conn.type !== 'association_class') {
+                <div
+                  fConnectionContent
+                  [position]="0.15"
+                  [offset]="-12"
+                  (dblclick)="onConnectionDblClick(conn, $event)"
+                  title="Multiplicidad Origen (doble clic para editar)"
+                  class="uml-multiplicity-badge">
+                  {{ conn.sourceMultiplicity }}
+                </div>
+              }
+
+              @if (conn.name && conn.type !== 'association_class' && !conn.assocAnchorNodeId) {
+                <div
+                  fConnectionContent
+                  [position]="0.5"
+                  [offset]="-14"
+                  (dblclick)="onConnectionDblClick(conn, $event)"
+                  title="Nombre de Relación (doble clic para editar)"
+                  class="uml-relation-name-badge">
+                  {{ conn.name }}
+                </div>
+              }
+
+              @if (conn.targetMultiplicity && conn.type !== 'generalization' && conn.type !== 'realization' && !conn.assocAnchorNodeId && conn.type !== 'association_class') {
+                <div
+                  fConnectionContent
+                  [position]="0.85"
+                  [offset]="-12"
+                  (dblclick)="onConnectionDblClick(conn, $event)"
+                  title="Multiplicidad Destino (doble clic para editar)"
+                  class="uml-multiplicity-badge">
+                  {{ conn.targetMultiplicity }}
+                </div>
+              }
+            </f-connection>
+          }
+        </ng-container>
+
+        <!-- NODOS DEL DIAGRAMA (CLASES UML 2.5 Y NODOS ANCLA) -->
+        <ng-container ngProjectAs="[fNodes]">
+          @for (node of nodes(); track node.id) {
+            @if (node.isAnchor) {
+              <!-- NODO ANCLA INVISIBLE/PUNTO MEDIO -->
+              <div
+                fNode
+                [fNodeId]="node.id"
+                [fNodePosition]="node.position"
+                class="absolute pointer-events-none select-none z-20 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 w-4 h-4">
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id"
+                  [fConnectorSelfConnectable]="true"
+                  class="w-1.5 h-1.5 rounded-full bg-slate-500/40">
+                </div>
+              </div>
+            } @else {
+              <!-- TARJETA DE CLASE UML ESTILO ENTERPRISE ARCHITECT -->
+              <div
+                fNode
+                fDragHandle
+                [fNodeId]="node.id"
+                [fNodePosition]="node.position"
+                (dblclick)="onNodeDblClick(node, $event)"
+                [style.width.px]="node.width || 220"
+                class="absolute select-none group/node font-sans transition-shadow duration-100"
+                [ngClass]="{
+                  'ring-2 ring-blue-500 shadow-xl z-30': isNodeSelected(node.id),
+                  'shadow-xs hover:shadow-md z-10': !isNodeSelected(node.id)
+                }">
+
+                <!-- CONTENEDOR VISUAL CON BORDE ENTERPRISE ARCHITECT -->
+                <div
+                  class="border-[1.5px] border-[#796354] dark:border-[#3B487A] bg-[#FFFBF5] dark:bg-[#151930] shadow-[1px_1px_0px_rgba(0,0,0,0.15)] flex flex-col relative overflow-hidden transition-all duration-100"
+                  [ngClass]="{
+                    'border-red-500 ring-2 ring-red-400': isNodeLockedByOther(node.id),
+                    'border-blue-500 ring-1 ring-blue-400': isNodeSelected(node.id),
+                    'border-indigo-400 ring-1 ring-indigo-300': !isNodeSelected(node.id) && isNeighborNode(node.id)
+                  }">
+
+                  <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
+                  <div
+                    fConnector
+                    fConnectorType="source-target"
+                    [fConnectorId]="node.id"
+                    [fConnectorSelfConnectable]="true"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    [ngClass]="{
+                      'pointer-events-auto cursor-crosshair': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'pointer-events-none': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="absolute inset-0 z-40 bg-transparent"
+                    (click)="onTableClick(node.id, $event)">
+                  </div>
+
+                  <!-- 4 PUNTOS DE REFERENCIA GUÍA -->
+                  <div
+                    fConnector
+                    fConnectorType="source-target"
+                    [fConnectorId]="node.id + '_top'"
+                    fConnectableSide="top"
+                    [fConnectorSelfConnectable]="true"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    (click)="onTableClick(node.id, $event)"
+                    title="Conectar por arriba"
+                    [ngClass]="{
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="uml-connector-point absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  </div>
+
+                  <div
+                    fConnector
+                    fConnectorType="source-target"
+                    [fConnectorId]="node.id + '_right'"
+                    fConnectableSide="right"
+                    [fConnectorSelfConnectable]="true"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    (click)="onTableClick(node.id, $event)"
+                    title="Conectar por la derecha"
+                    [ngClass]="{
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="uml-connector-point absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  </div>
+
+                  <div
+                    fConnector
+                    fConnectorType="source-target"
+                    [fConnectorId]="node.id + '_bottom'"
+                    fConnectableSide="bottom"
+                    [fConnectorSelfConnectable]="true"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    (click)="onTableClick(node.id, $event)"
+                    title="Conectar por abajo"
+                    [ngClass]="{
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="uml-connector-point absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  </div>
+
+                  <div
+                    fConnector
+                    fConnectorType="source-target"
+                    [fConnectorId]="node.id + '_left'"
+                    fConnectableSide="left"
+                    [fConnectorSelfConnectable]="true"
+                    [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                    (click)="onTableClick(node.id, $event)"
+                    title="Conectar por la izquierda"
+                    [ngClass]="{
+                      'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                      'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                    }"
+                    class="uml-connector-point absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  </div>
+
+                  <!-- 1. CABECERA: TÍTULO DE LA CLASE UML (ESTILO ENTERPRISE ARCHITECT) -->
+                  <div
+                    (click)="onNodeClick(node.id, $event)"
+                    [ngClass]="{
+                      'bg-blue-600 text-white border-b border-blue-700': isNodeSelected(node.id),
+                      'bg-indigo-100 text-indigo-950 border-b border-indigo-300': !isNodeSelected(node.id) && isNeighborNode(node.id),
+                      'bg-[#FFFDF9] dark:bg-[#1A203E] border-b border-[#796354] dark:border-[#3B487A] text-[#241C18] dark:text-slate-100': !isNodeSelected(node.id) && !isNeighborNode(node.id)
+                    }"
+                    class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors">
+                    <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">
+                      @if (isNodeLockedByOther(node.id)) {
+                        <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
+                      }
+                      {{ node.name }}
+                    </span>
+                    <button
+                      (click)="onDeleteNode(node.id, $event)"
+                      [disabled]="isNodeLockedByOther(node.id)"
+                      title="Eliminar clase"
+                      class="opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity disabled:opacity-0">
+                      &times;
+                    </button>
+                  </div>
+
+                  <!-- 2. SECCIÓN DE ATRIBUTOS -->
+                  <div class="px-2.5 py-1.5 text-[11px] font-mono border-b border-[#796354] dark:border-[#3B487A] bg-transparent min-h-[24px]">
+                    @for (attr of node.attributes; track attr.name) {
+                      <div class="truncate text-[#382B24] dark:text-slate-200 leading-tight py-0.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <span class="font-bold text-[#6B5A52] dark:text-slate-400 select-none mr-1">-</span>
+                        <span class="font-medium">{{ attr.name }}</span>: <span class="text-[#78350F] dark:text-amber-400 font-semibold">{{ attr.type }}</span>
+                      </div>
+                    }
+                    @if (!node.attributes || node.attributes.length === 0) {
+                      <div class="text-[#8C7A70] dark:text-slate-500 italic text-[10px] py-0.5">
+                        {{ 'editor.noAttributes' | translate }}
+                      </div>
+                    }
+                  </div>
+
+                  <!-- 3. SECCIÓN DE MÉTODOS -->
+                  <div class="px-2.5 py-1.5 text-[11px] font-mono bg-transparent min-h-[24px]">
+                    @for (method of node.methods; track method.name) {
+                      <div class="truncate text-[#382B24] dark:text-slate-200 leading-tight py-0.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <span class="font-bold text-[#6B5A52] dark:text-slate-400 select-none mr-1">+</span>
+                        <span class="font-medium">{{ method.name }}</span>({{ method.parameters }}): <span class="text-[#1D4ED8] dark:text-sky-400 font-semibold">{{ method.returnType }}</span>
+                      </div>
+                    }
+                    @if (!node.methods || node.methods.length === 0) {
+                      <div class="text-[#8C7A70] dark:text-slate-500 italic text-[10px] py-0.5">
+                        {{ 'editor.noOperations' | translate }}
+                      </div>
+                    }
+                  </div>
+
+                </div>
+              </div>
+            }
+          }
+        </ng-container>
+
+      </f-canvas>
+
+      <f-selection-area [fTrigger]="selectionAreaTrigger"></f-selection-area>
+    </f-flow>
+
+  </div>
+</div>

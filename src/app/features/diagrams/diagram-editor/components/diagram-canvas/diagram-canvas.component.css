@@ -1,0 +1,212 @@
+.uml-viewport {
+  overflow: auto !important;
+  background-color: #FFFFFF !important;
+}
+
+:host-context(.dark) .uml-viewport,
+.dark .uml-viewport {
+  background-color: #0D1124 !important;
+}
+
+/* Scrollbars clásicos y precisos para el viewport del diagrama estilo EA */
+.uml-viewport::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.uml-viewport::-webkit-scrollbar-track {
+  background: #F1F3F5;
+}
+
+.uml-viewport::-webkit-scrollbar-thumb {
+  background: #C1C7D0;
+  border: 2px solid #F1F3F5;
+}
+
+.uml-viewport::-webkit-scrollbar-thumb:hover {
+  background: #8993A4;
+}
+
+:host-context(.dark) .uml-viewport::-webkit-scrollbar-track,
+.dark .uml-viewport::-webkit-scrollbar-track {
+  background: #0D1124;
+}
+
+:host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb,
+.dark .uml-viewport::-webkit-scrollbar-thumb {
+  background: #2D3762;
+  border: 2px solid #0D1124;
+}
+
+:host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb:hover,
+.dark .uml-viewport::-webkit-scrollbar-thumb:hover {
+  background: #4A5588;
+}
+
+::ng-deep f-flow {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow,
+.dark ::ng-deep f-flow {
+  background-color: #0D1124 !important;
+  background-image: none !important;
+}
+
+::ng-deep f-canvas,
+::ng-deep .f-canvas {
+  background: transparent !important;
+}
+
+/* Área de Selección Rectangular (Marquee) */
+::ng-deep f-selection-area,
+::ng-deep .f-selection-area {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  border: 1.5px dashed #2563EB !important;
+  border-radius: 2px !important;
+  pointer-events: none !important;
+  z-index: 50 !important;
+}
+
+:host-context(.dark) ::ng-deep f-selection-area,
+.dark ::ng-deep f-selection-area {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+  border-color: #818CF8 !important;
+}
+
+/* Estilos de Conexiones UML */
+::ng-deep .f-connection {
+  stroke: #2D3748;
+  stroke-width: 1.5px;
+}
+
+::ng-deep .uml-relation-dependency .f-connection-drag-handle,
+::ng-deep .uml-relation-dependency path {
+  stroke-dasharray: 5, 4 !important;
+}
+
+::ng-deep .uml-relation-realization .f-connection-drag-handle,
+::ng-deep .uml-relation-realization path {
+  stroke-dasharray: 6, 4 !important;
+}
+
+::ng-deep .uml-relation-association_class .f-connection-drag-handle,
+::ng-deep .uml-relation-association_class path {
+  stroke-dasharray: 4, 4 !important;
+  stroke: #4B5563 !important;
+}
+
+/* Marcadores Visuales UML */
+.uml-marker-filled {
+  fill: #1A202C;
+  stroke: #1A202C;
+  stroke-width: 1;
+}
+
+.uml-marker-hollow {
+  fill: #FFFFFF;
+  stroke: #1A202C;
+  stroke-width: 1.5;
+}
+
+.uml-marker-open {
+  fill: none;
+  stroke: #1A202C;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:host-context(.dark) .uml-marker-filled,
+.dark .uml-marker-filled {
+  fill: #E2E8F0;
+  stroke: #E2E8F0;
+}
+
+:host-context(.dark) .uml-marker-hollow,
+.dark .uml-marker-hollow {
+  fill: #12162A;
+  stroke: #E2E8F0;
+}
+
+:host-context(.dark) .uml-marker-open,
+.dark .uml-marker-open {
+  stroke: #E2E8F0;
+}
+
+/* Etiquetas de Multiplicidad y Nombre */
+.uml-multiplicity-badge {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1A202C;
+  border: 1px solid #CBD5E1;
+  padding: 1px 4px;
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 600;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+:host-context(.dark) .uml-multiplicity-badge,
+.dark .uml-multiplicity-badge {
+  background: rgba(20, 24, 46, 0.95);
+  color: #E2E8F0;
+  border-color: #2D3762;
+}
+
+.uml-relation-name-badge {
+  background: rgba(255, 255, 255, 0.95);
+  color: #2B6CB0;
+  border: 1px solid #90CDF4;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-family: sans-serif;
+  font-style: italic;
+  font-weight: 600;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+:host-context(.dark) .uml-relation-name-badge,
+.dark .uml-relation-name-badge {
+  background: rgba(20, 24, 46, 0.95);
+  color: #93C5FD;
+  border-color: #3B82F6;
+}
+
+/* Conectores UML */
+.uml-connector-point {
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.uml-connector-active {
+  background-color: #3B82F6;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 0 2px #2563EB;
+}
+
+.uml-connector-inactive {
+  background-color: #94A3B8;
+  border: 1.5px solid #FFFFFF;
+  opacity: 0.6;
+}
+
+:host-context(.dark) .uml-connector-active,
+.dark .uml-connector-active {
+  background-color: #6366F1;
+  border-color: #1E293B;
+  box-shadow: 0 0 0 2px #4F46E5;
+}
+
+:host-context(.dark) .uml-connector-inactive,
+.dark .uml-connector-inactive {
+  background-color: #475569;
+  border-color: #1E293B;
+}

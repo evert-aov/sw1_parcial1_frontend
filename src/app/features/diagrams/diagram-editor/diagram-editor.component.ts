@@ -13,18 +13,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import {
-  FFlowModule,
-  FFlowComponent,
   FCreateConnectionEvent,
   FReassignConnectionEvent,
   FMoveNodesEvent,
   FSelectionChangeEvent,
-  FCanvasComponent,
-  FZoomDirective,
-  FCanvasChangeEvent,
-  FTriggerEvent,
-  primaryButtonEventTrigger,
-  isOnFlowBackground,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
@@ -73,6 +65,7 @@ import { XmiService } from '../../../core/services/xmi.service';
 import { XmiClientParser } from '../../../core/services/xmi-client-parser';
 import { BmpExportService } from '../../../core/services/bmp-export.service';
 import {
+  DiagramType,
   UmlRelationshipType,
   UmlLineStyle,
   UmlAttribute,
@@ -87,10 +80,15 @@ import {
 import { Subject, debounceTime } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
-import { DiagramToolboxComponent } from './components/diagram-toolbox/diagram-toolbox.component';
+import { DiagramSidebarComponent } from './components/diagram-sidebar/diagram-sidebar.component';
+import { DiagramCanvasComponent } from './components/diagram-canvas/diagram-canvas.component';
+import { DiagramStatusbarComponent } from './components/diagram-statusbar/diagram-statusbar.component';
 import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
 import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
+import { EditNodeModalComponent } from './components/edit-node-modal/edit-node-modal.component';
+import { EditConnectionModalComponent } from './components/edit-connection-modal/edit-connection-modal.component';
+import { JsonModalComponent } from './components/json-modal/json-modal.component';
 import { TranslatePipe, TranslationService } from '../../../core/i18n';
 
 export interface UmlDiagramProject {
@@ -114,13 +112,17 @@ export interface DiagramHistorySnapshot {
   imports: [
     CommonModule,
     FormsModule,
-    FFlowModule,
     NgIconComponent,
     DiagramAppbarComponent,
-    DiagramToolboxComponent,
+    DiagramSidebarComponent,
+    DiagramCanvasComponent,
+    DiagramStatusbarComponent,
     AiAssistantPanelComponent,
     UserProfileModalComponent,
     SpringBootModalComponent,
+    EditNodeModalComponent,
+    EditConnectionModalComponent,
+    JsonModalComponent,
     TranslatePipe,
   ],
   providers: [
@@ -179,11 +181,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     return this.collaborationService.isMultiUserEditing();
   });
 
-  @ViewChild(FFlowComponent) fFlow?: FFlowComponent;
-  @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
-  @ViewChild(FZoomDirective) fZoom?: FZoomDirective;
-  @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
-  @ViewChild('boardElement') boardElementRef?: ElementRef<HTMLElement>;
+  @ViewChild('diagramCanvas') diagramCanvas?: DiagramCanvasComponent;
 
   // Contexto del diagrama y proyecto
   currentDiagramId = signal<string | null>(null);
@@ -193,6 +191,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   saveSuccessMessage = signal<boolean>(false);
   hasUnsavedChanges = signal<boolean>(false);
   zoomLevel = signal<number>(100);
+
+  // Tipos de Diagrama & Paneles (Arquitectura Extensible para Casos de Uso, Secuencia, etc.)
+  readonly activeDiagramType = signal<DiagramType>('class');
 
   // Pipelines reactivos para auto-guardado en tiempo real (Google Docs style)
   private readonly autoSave$ = new Subject<void>();
@@ -236,25 +237,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   selectedSourceNodeId = signal<string | null>(null);
   selectedNodeId = signal<string | null>(null);
   selectedNodeIds = signal<Set<string>>(new Set());
+  readonly selectedNodeIdsList = computed(() => {
+    const set = this.selectedNodeIds();
+    const single = this.selectedNodeId();
+    const result = new Set(set);
+    if (single) result.add(single);
+    return Array.from(result);
+  });
   defaultLineStyle = signal<UmlLineStyle>('segment');
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  // Control de movimiento del lienzo: el lienzo/pizarra es estático, solo se pueden mover las clases
-  canvasMoveTrigger = (): boolean => false;
-
-  // Control de selección de área rectangular (arrastrar con clic izquierdo sobre fondo vacío)
-  selectionAreaTrigger = (event: MouseEvent | TouchEvent): boolean => {
-    if (this.selectedRelationType() !== null || this.isReadOnly()) return false;
-    return primaryButtonEventTrigger(event) && isOnFlowBackground(event);
-  };
-
-  // Control de zoom del lienzo: la rueda del ratón solo hace zoom cuando se presiona Ctrl (o Cmd)
-  zoomWheelTrigger = (event: FTriggerEvent): boolean => {
-    return (event instanceof WheelEvent || 'ctrlKey' in event) && (event.ctrlKey || event.metaKey);
-  };
-
-  // Desactivar zoom por doble clic en el lienzo para que el zoom solo ocurra con Ctrl+scroll o botones
-  dblClickZoomTrigger = (_event: FTriggerEvent): boolean => false;
 
   private canvasMouseDownPos = { x: 0, y: 0 };
 
@@ -272,8 +263,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly canUndo = computed(() => this.historyUndoCount() > 0 && !this.isReadOnly());
   readonly canRedo = computed(() => this.historyRedoCount() > 0 && !this.isReadOnly());
 
-  // Paneles laterales
-  isToolboxOpen = signal<boolean>(true);
+  // Paneles laterales (Toolbox / Sidebar y Copilot IA)
+  readonly isSidebarOpen = signal<boolean>(true);
+  readonly isToolboxOpen = this.isSidebarOpen;
   isAiPanelOpen = signal<boolean>(true);
   isExportDropdownOpen = signal<boolean>(false);
   isImportDropdownOpen = signal<boolean>(false);
@@ -361,8 +353,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         this.updateConnectionEndpoints();
         requestAnimationFrame(() => {
           this.updateConnectionEndpoints();
-          this.fFlow?.redraw();
-          this.canvas?.redraw();
+          this.diagramCanvas?.redraw();
         });
       }
     });
@@ -573,9 +564,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         this.updateConnectionEndpoints();
         requestAnimationFrame(() => {
           this.updateConnectionEndpoints();
-          this.fFlow?.reset();
-          this.fFlow?.redraw();
-          this.canvas?.redraw();
+          this.diagramCanvas?.reset();
           this.restoreViewportScroll(diagramId);
         });
       });
@@ -833,7 +822,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             this.collaborationService.sendNodeDrag(other.id, other.position);
           }
         }
-        this.fFlow?.redraw();
+        this.diagramCanvas?.redraw();
       }
     }
     this.lastNodeDragPos.set(node.id, { x: newPosition.x, y: newPosition.y });
@@ -874,16 +863,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onCanvasMouseMove(event: MouseEvent): void {
-    const flowEl = this.boardElementRef?.nativeElement || this.fFlow?.hostElement || this.flowContainerRef?.nativeElement;
+    const flowEl = this.diagramCanvas?.getExportElement();
     if (!flowEl) return;
 
     const rect = flowEl.getBoundingClientRect();
     const rawX = event.clientX - rect.left;
     const rawY = event.clientY - rect.top;
 
-    const scale = this.canvas?.transform?.scale || 1;
-    const posX = this.canvas?.transform?.position?.x || 0;
-    const posY = this.canvas?.transform?.position?.y || 0;
+    const scale = this.diagramCanvas?.canvas?.transform?.scale || 1;
+    const posX = this.diagramCanvas?.canvas?.transform?.position?.x || 0;
+    const posY = this.diagramCanvas?.canvas?.transform?.position?.y || 0;
 
     const canvasX = (rawX - posX) / scale;
     const canvasY = (rawY - posY) / scale;
@@ -1104,7 +1093,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.selectedSourceNodeId.set(null);
     this.selectedNodeId.set(null);
     this.selectedNodeIds.set(new Set());
-    this.fFlow?.clearSelection();
+    this.diagramCanvas?.clearSelection();
   }
 
   onSelectionChange(event: FSelectionChangeEvent): void {
@@ -1141,7 +1130,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const allIds = nonAnchorNodes.map((n) => n.id);
     this.selectedNodeIds.set(new Set(allIds));
     this.selectedNodeId.set(nonAnchorNodes[0]?.id || null);
-    this.fFlow?.select(allIds, []);
+    this.diagramCanvas?.select(allIds, []);
   }
 
   deleteSelected(): void {
@@ -1158,6 +1147,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
     this.selectedNodeIds.set(new Set());
     this.selectedNodeId.set(null);
+    this.diagramCanvas?.clearSelection();
   }
 
   onNodeSelect(nodeId: string, event: MouseEvent): void {
@@ -1180,9 +1170,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.selectedNodeIds.set(current);
       const ids = Array.from(current);
       if (ids.length > 0) {
-        this.fFlow?.select(ids, []);
+        this.diagramCanvas?.select(ids, []);
       } else {
-        this.fFlow?.clearSelection();
+        this.diagramCanvas?.clearSelection();
       }
     } else {
       // Si el usuario acaba de arrastrar una selección múltiple, conservar la selección de todas
@@ -1194,9 +1184,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.selectedNodeId.update((curr) => (curr === nodeId ? null : nodeId));
       if (!this.selectedNodeId()) {
         this.selectedNodeIds.set(new Set());
-        this.fFlow?.clearSelection();
+        this.diagramCanvas?.clearSelection();
       } else {
-        this.fFlow?.select([nodeId], []);
+        this.diagramCanvas?.select([nodeId], []);
       }
     }
   }
@@ -1244,9 +1234,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
     requestAnimationFrame(() => {
       this.updateConnectionEndpoints();
-      this.fFlow?.reset();
-      this.fFlow?.redraw();
-      this.canvas?.redraw();
+      this.diagramCanvas?.reset();
       this.isApplyingHistory = false;
     });
 
@@ -1282,9 +1270,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
     requestAnimationFrame(() => {
       this.updateConnectionEndpoints();
-      this.fFlow?.reset();
-      this.fFlow?.redraw();
-      this.canvas?.redraw();
+      this.diagramCanvas?.reset();
       this.isApplyingHistory = false;
     });
 
@@ -1423,8 +1409,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onFlowLoaded(): void {
     this.updateConnectionEndpoints();
-    this.fFlow?.redraw();
-    this.canvas?.redraw();
+    this.diagramCanvas?.redraw();
     this.syncZoomFromCanvas();
   }
 
@@ -1622,9 +1607,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
     requestAnimationFrame(() => {
       this.updateConnectionEndpoints();
-      this.fFlow?.reset();
-      this.fFlow?.redraw();
-      this.canvas?.redraw();
+      this.diagramCanvas?.reset();
     });
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
   }
@@ -1632,8 +1615,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   addClass(): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const scrollLeft = this.flowContainerRef?.nativeElement?.scrollLeft || 0;
-    const scrollTop = this.flowContainerRef?.nativeElement?.scrollTop || 0;
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
     const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
     const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
@@ -1949,15 +1933,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
       requestAnimationFrame(() => {
         this.updateConnectionEndpoints();
-        this.fFlow?.reset();
-        this.fFlow?.redraw();
-        this.canvas?.redraw();
+        this.diagramCanvas?.reset();
         setTimeout(() => {
           this.updateConnectionEndpoints();
           this.fitView();
           setTimeout(() => {
-            this.fFlow?.redraw();
-            this.canvas?.redraw();
+            this.diagramCanvas?.redraw();
           }, 80);
         }, 80);
       });
@@ -2062,7 +2043,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
-    const containerEl = this.boardElementRef?.nativeElement || this.flowContainerRef?.nativeElement;
+    const containerEl = this.diagramCanvas?.getExportElement();
     if (containerEl) {
       await this.bmpExportService.exportElementToBmp(
         containerEl,
@@ -2308,89 +2289,62 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   syncZoomFromCanvas(): void {
-    if (this.canvas?.transform?.scale !== undefined) {
-      this.zoomLevel.set(Math.round(this.canvas.transform.scale * 100));
-    }
+    this.diagramCanvas?.syncZoomFromCanvas();
   }
 
-  onCanvasChange(event?: FCanvasChangeEvent): void {
-    if (event?.scale !== undefined) {
-      this.zoomLevel.set(Math.round(event.scale * 100));
-    } else {
-      this.syncZoomFromCanvas();
-    }
+  onZoomChanged(zoom: number): void {
+    this.zoomLevel.set(zoom);
   }
 
   zoomIn(): void {
-    this.fZoom?.zoomIn();
-    requestAnimationFrame(() => {
-      this.syncZoomFromCanvas();
-    });
+    this.diagramCanvas?.zoomIn();
   }
 
   zoomOut(): void {
-    this.fZoom?.zoomOut();
-    requestAnimationFrame(() => {
-      this.syncZoomFromCanvas();
-    });
-  }
-
-  onViewportScroll(event: Event): void {
-    const el = event.target as HTMLElement;
-    if (!el) return;
-    const diagramId = this.currentDiagramId();
-    if (diagramId) {
-      sessionStorage.setItem(
-        `diagram_scroll_${diagramId}`,
-        JSON.stringify({ left: el.scrollLeft, top: el.scrollTop }),
-      );
-    }
+    this.diagramCanvas?.zoomOut();
   }
 
   restoreViewportScroll(diagramId: string | null): void {
-    if (!diagramId) return;
-    const saved = sessionStorage.getItem(`diagram_scroll_${diagramId}`);
-    if (saved && this.flowContainerRef?.nativeElement) {
-      try {
-        const { left, top } = JSON.parse(saved);
-        this.flowContainerRef.nativeElement.scrollLeft = left;
-        this.flowContainerRef.nativeElement.scrollTop = top;
-        return;
-      } catch (_) {}
-    }
-    this.centerViewportOnBoard();
+    this.diagramCanvas?.restoreViewportScroll(diagramId);
   }
 
   centerViewportOnBoard(): void {
-    const el = this.flowContainerRef?.nativeElement;
-    if (!el) return;
-    // En Enterprise Architect, el origen del lienzo inicia en la esquina superior izquierda (0, 0)
-    el.scrollLeft = 0;
-    el.scrollTop = 0;
+    this.diagramCanvas?.centerViewportOnBoard();
   }
 
   resetView(): void {
-    if (this.canvas) {
-      this.canvas.resetScale();
-      if (this.canvas.transform) {
-        this.canvas.transform.position = { x: 0, y: 0 };
-        this.canvas.transform.scaledPosition = { x: 0, y: 0 };
-        this.canvas.redraw();
-      }
-    } else if (this.fZoom) {
-      this.fZoom.reset();
-    }
-    this.zoomLevel.set(100);
-    if (this.flowContainerRef?.nativeElement) {
-      this.flowContainerRef.nativeElement.scrollLeft = 0;
-      this.flowContainerRef.nativeElement.scrollTop = 0;
-    }
-    requestAnimationFrame(() => {
-      this.syncZoomFromCanvas();
-    });
+    this.diagramCanvas?.resetView();
   }
 
   fitView(): void {
-    this.resetView();
+    this.diagramCanvas?.fitView();
+  }
+
+  onDiagramTypeChange(type: DiagramType): void {
+    this.activeDiagramType.set(type);
+  }
+
+  onSaveEditedNode(savedNode: UmlClassNode): void {
+    this.pushSnapshot();
+    this.nodes.update((list) =>
+      list.map((n) => (n.id === savedNode.id ? savedNode : n))
+    );
+    this.updateConnectionEndpoints();
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_class');
+  }
+
+  onSaveEditedConnection(savedConn: UmlConnection): void {
+    this.pushSnapshot();
+    this.connections.update((list) =>
+      list.map((c) => (c.id === savedConn.id ? savedConn : c))
+    );
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
+  }
+
+  onApplyImportedJson(json: string): void {
+    this.jsonContent.set(json);
+    this.applyImportedJson();
   }
 }

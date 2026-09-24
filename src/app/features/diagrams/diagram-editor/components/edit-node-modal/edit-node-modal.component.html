@@ -1,0 +1,129 @@
+@if (isOpen() && editingNode()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-[#F2EBE6] dark:bg-[#14182E] border-[1.5px] border-[#6B5A52] dark:border-[#2D3762] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+      
+      <div class="border-b-[1.5px] border-[#6B5A52] dark:border-[#2D3762] bg-white/40 dark:bg-[#101428]/40 px-4 py-2.5 flex items-center justify-between">
+        <h3 class="font-bold text-[#2A201B] dark:text-slate-100 uppercase tracking-wide">{{ 'editor.nodeModal.title' | translate }}</h3>
+        <button (click)="onClose()" class="text-[#6B5A52] dark:text-slate-400 hover:text-[#2A201B] dark:hover:text-slate-200 font-bold text-base cursor-pointer">&times;</button>
+      </div>
+
+      <div class="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+        
+        <!-- Nombre de la Clase -->
+        <div>
+          <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.nodeModal.className' | translate }}</label>
+          <input
+            type="text"
+            [(ngModel)]="editingNode()!.name"
+            placeholder="e.g. Usuario, Pedido"
+            class="w-full px-3 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner font-medium text-xs"
+          />
+        </div>
+
+        <!-- Atributos con Tipos Estrictamente Predefinidos -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px]">{{ 'editor.nodeModal.attributes' | translate }}</label>
+            <button
+              (click)="addAttribute()"
+              class="px-2.5 py-0.5 bg-[#6B5A52] dark:bg-[#252E56] hover:bg-[#52443E] dark:hover:bg-[#323D70] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] dark:border-[#3B487A] cursor-pointer">
+              {{ 'editor.nodeModal.addAttribute' | translate }}
+            </button>
+          </div>
+          <div class="space-y-1.5">
+            @for (attr of editingNode()!.attributes; track $index) {
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-[#6B5A52] dark:text-slate-400 select-none text-xs">-</span>
+                <input
+                  type="text"
+                  [(ngModel)]="attr.name"
+                  placeholder="nombre"
+                  class="flex-1 px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-medium text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500"
+                />
+                <span class="text-[#6B5A52] dark:text-slate-400 font-mono">:</span>
+                
+                <select
+                  [(ngModel)]="attr.type"
+                  class="w-36 px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-mono font-medium text-[#2A201B] dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 cursor-pointer">
+                  @for (t of predefinedTypes; track t) {
+                    <option [value]="t">{{ t }}</option>
+                  }
+                </select>
+
+                <button
+                  (click)="removeAttribute($index)"
+                  [title]="'editor.nodeModal.deleteAttribute' | translate"
+                  class="text-red-600 hover:text-red-800 p-1 font-bold text-sm cursor-pointer">
+                  &times;
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Métodos con Retorno Estrictamente Predefinido -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px]">{{ 'editor.nodeModal.operations' | translate }}</label>
+            <button
+              (click)="addMethod()"
+              class="px-2.5 py-0.5 bg-[#6B5A52] dark:bg-[#252E56] hover:bg-[#52443E] dark:hover:bg-[#323D70] text-white font-mono text-[10.5px] font-bold border border-[#2A201B] dark:border-[#3B487A] cursor-pointer">
+              {{ 'editor.nodeModal.addOperation' | translate }}
+            </button>
+          </div>
+          <div class="space-y-1.5">
+            @for (m of editingNode()!.methods; track $index) {
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-[#6B5A52] dark:text-slate-400 select-none text-xs">+</span>
+                <input
+                  type="text"
+                  [(ngModel)]="m.name"
+                  placeholder="método"
+                  class="flex-1 px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-medium text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500"
+                />
+                <span class="text-[#6B5A52] dark:text-slate-400 font-mono text-xs">(</span>
+                <input
+                  type="text"
+                  [(ngModel)]="m.parameters"
+                  placeholder="params"
+                  class="w-24 px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-mono text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500"
+                />
+                <span class="text-[#6B5A52] dark:text-slate-400 font-mono text-xs">):</span>
+                
+                <select
+                  [(ngModel)]="m.returnType"
+                  class="w-32 px-2 py-1 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-mono font-medium text-[#2A201B] dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 cursor-pointer">
+                  @for (rt of predefinedReturnTypes; track rt) {
+                    <option [value]="rt">{{ rt }}</option>
+                  }
+                </select>
+
+                <button
+                  (click)="removeMethod($index)"
+                  [title]="'editor.nodeModal.deleteOperation' | translate"
+                  class="text-red-600 hover:text-red-800 p-1 font-bold text-sm cursor-pointer">
+                  &times;
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-3 border-t border-[#6B5A52]/30 dark:border-[#2D3762] flex justify-end gap-2 bg-white/30 dark:bg-[#101428]/40">
+        <button
+          (click)="onClose()"
+          class="px-3.5 py-1.5 bg-white dark:bg-[#0E1225] hover:bg-slate-100 dark:hover:bg-[#1C2242] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-200 font-mono cursor-pointer">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button
+          (click)="onSave()"
+          class="px-4 py-1.5 bg-[#6B5A52] dark:bg-[#4F46E5] hover:bg-[#52443E] dark:hover:bg-[#4338CA] text-white font-mono font-bold uppercase border border-[#2A201B] dark:border-[#3730A3] cursor-pointer">
+          {{ 'editor.nodeModal.save' | translate }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

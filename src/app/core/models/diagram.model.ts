@@ -1,3 +1,22 @@
+export type DiagramType = 'class' | 'use_case' | 'communication' | 'sequence' | 'package';
+
+export interface DiagramTypeItem {
+  id: DiagramType;
+  label: string;
+  shortLabel: string;
+  icon: string;
+  description: string;
+  supported: boolean;
+}
+
+export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
+  { id: 'class', label: 'Diagrama de Clases', shortLabel: 'Clases', icon: 'heroSquare3Stack3d', description: 'Estructura estática, atributos, métodos y relaciones UML 2.5', supported: true },
+  { id: 'use_case', label: 'Casos de Uso', shortLabel: 'Casos Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: false },
+  { id: 'sequence', label: 'Secuencia', shortLabel: 'Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: false },
+  { id: 'communication', label: 'Comunicación', shortLabel: 'Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: false },
+  { id: 'package', label: 'Paquetes', shortLabel: 'Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: false },
+];
+
 export type UmlRelationshipType =
   | 'association'
   | 'generalization'
@@ -36,6 +55,18 @@ export const UML_LINE_STYLES: UmlLineStyleItem[] = [
   { id: 'straight', label: 'Direct (Directa / Recta)', shortcut: 'Ctrl+Shift+D' },
   { id: 'bezier', label: 'Bezier (Curva Suave)' },
   { id: 'adaptive-curve', label: 'Orthogonal - Rounded (Curva Adaptativa)' },
+];
+
+export const UML_MULTIPLICITY_OPTIONS: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];
+
+export const UML_PREDEFINED_TYPES: string[] = [
+  'UUID', 'String', 'Integer', 'Long', 'Boolean', 'Double',
+  'Float', 'BigDecimal', 'LocalDate', 'LocalDateTime', 'Date', 'Text', 'byte[]'
+];
+
+export const UML_PREDEFINED_RETURN_TYPES: string[] = [
+  'void', 'String', 'Integer', 'Long', 'Boolean', 'Double',
+  'Float', 'BigDecimal', 'LocalDate', 'LocalDateTime', 'Date', 'UUID', 'List<T>', 'Set<T>', 'byte[]'
 ];
 
 export interface UmlAttribute {

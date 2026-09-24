@@ -1,0 +1,57 @@
+@if (isOpen()) {
+  <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-[#14182E] rounded shadow-2xl border border-slate-300 dark:border-[#2D3762] w-full max-w-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+
+      <div class="px-4 py-2.5 bg-slate-800 dark:bg-[#101426] text-white flex items-center justify-between border-b border-transparent dark:border-[#2D3762]">
+        <div class="flex items-center gap-2">
+          <ng-icon name="heroDocumentText" class="text-slate-300 text-base"></ng-icon>
+          <h2 class="text-xs font-bold">
+            {{ mode() === 'export' ? ('editor.jsonModal.exportTitle' | translate) : ('editor.jsonModal.importTitle' | translate) }}
+          </h2>
+        </div>
+        <button (click)="onClose()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <ng-icon name="heroXMark" class="text-base"></ng-icon>
+        </button>
+      </div>
+
+      <div class="p-4 flex-1 flex flex-col gap-2">
+        <p class="text-xs text-slate-600 dark:text-slate-300">
+          {{ mode() === 'export'
+             ? ('editor.jsonModal.exportDesc' | translate)
+             : ('editor.jsonModal.importDesc' | translate) }}
+        </p>
+
+        <textarea
+          [(ngModel)]="jsonContent"
+          rows="14"
+          class="w-full bg-slate-950 text-emerald-400 font-mono text-xs p-3 rounded border border-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
+          [placeholder]="'editor.jsonModal.placeholder' | translate"></textarea>
+      </div>
+
+      <div class="px-4 py-2.5 bg-slate-50 dark:bg-[#0E1225] border-t border-slate-200 dark:border-[#2D3762] flex justify-end gap-2">
+        <button
+          (click)="onClose()"
+          class="px-3 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E2442] rounded font-medium cursor-pointer">
+          {{ 'common.close' | translate }}
+        </button>
+
+        @if (mode() === 'export') {
+          <button
+            (click)="copyToClipboard()"
+            class="px-3.5 py-1 text-xs bg-slate-800 hover:bg-slate-900 dark:bg-[#252E56] dark:hover:bg-[#323D70] text-white rounded font-medium shadow-xs flex items-center gap-1.5 border border-slate-700 dark:border-[#3B487A] cursor-pointer">
+            <ng-icon name="heroClipboardDocument" class="text-sm"></ng-icon>
+            {{ 'editor.jsonModal.copy' | translate }}
+          </button>
+        } @else {
+          <button
+            (click)="onApply()"
+            class="px-3.5 py-1 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded font-medium shadow-xs flex items-center gap-1.5 cursor-pointer">
+            <ng-icon name="heroCheck" class="text-sm"></ng-icon>
+            {{ 'editor.jsonModal.apply' | translate }}
+          </button>
+        }
+      </div>
+
+    </div>
+  </div>
+}
