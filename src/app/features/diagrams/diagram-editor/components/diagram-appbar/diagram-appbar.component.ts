@@ -15,6 +15,7 @@ import {
   heroBolt,
   heroSparkles,
   heroChevronDown,
+  heroChevronUp,
   heroArrowRightOnRectangle,
   heroUserCircle,
   heroClipboardDocument,
@@ -60,6 +61,7 @@ export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'star
       heroBolt,
       heroSparkles,
       heroChevronDown,
+      heroChevronUp,
       heroArrowRightOnRectangle,
       heroUserCircle,
       heroClipboardDocument,
@@ -90,6 +92,27 @@ export class DiagramAppbarComponent {
 
   // Tab activo en el Ribbon al estilo Enterprise Architect
   readonly activeTab = signal<RibbonTab>('publish');
+
+  // Estado de minimización / colapso del Ribbon (doble clic)
+  readonly isCollapsed = signal<boolean>(false);
+
+  toggleCollapse(): void {
+    this.isCollapsed.update(val => !val);
+  }
+
+  onTabClick(tab: RibbonTab): void {
+    if (this.isCollapsed() && this.activeTab() === tab) {
+      this.isCollapsed.set(false);
+    } else {
+      this.activeTab.set(tab);
+    }
+  }
+
+  onTabDblClick(tab: RibbonTab, event?: MouseEvent): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    this.toggleCollapse();
+  }
 
   openGuide(): void {
     this.guideService.openGuide();

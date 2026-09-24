@@ -91,94 +91,118 @@
   </div>
 
   <!-- =========================================================================
-       2. RIBBON TABS STRIP (ESTILO EXACTO ENTERPRISE ARCHITECT) ~26px
+       2. RIBBON TABS STRIP (ESTILO EXACTO ENTERPRISE ARCHITECT) ~27px
+       Doble clic para minimizar/expandir el Ribbon
        ========================================================================= -->
-  <div class="h-[27px] px-2 flex items-end gap-0.5 bg-[#E4E7ED] dark:bg-[#0E1222] border-b border-[#D0D4DC] dark:border-[#202844] overflow-x-auto text-[11px]">
-    <!-- Tab Publish (Como en la captura de Enterprise Architect) -->
-    <button
-      (click)="activeTab.set('publish')"
-      [class.border-b-2]="activeTab() === 'publish'"
-      [class.border-b-blue-600]="activeTab() === 'publish'"
-      [class.text-blue-700]="activeTab() === 'publish'"
-      [class.dark:text-sky-300]="activeTab() === 'publish'"
-      [class.bg-[#F7F8FA]]="activeTab() === 'publish'"
-      [class.dark:bg-[#141933]]="activeTab() === 'publish'"
-      [class.font-semibold]="activeTab() === 'publish'"
-      [class.text-slate-600]="activeTab() !== 'publish'"
-      [class.dark:text-slate-400]="activeTab() !== 'publish'"
-      class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-      {{ 'ribbon.tabs.publish' | translate }}
-    </button>
+  <div
+    (dblclick)="toggleCollapse()"
+    [title]="isCollapsed() ? 'Doble clic para expandir el Ribbon' : 'Doble clic para minimizar el Ribbon'"
+    class="h-[27px] px-2 flex items-end justify-between bg-[#E4E7ED] dark:bg-[#0E1222] border-b border-[#D0D4DC] dark:border-[#202844] select-none text-[11px]">
+    
+    <div class="flex items-end gap-0.5 overflow-x-auto">
+      <!-- Tab Publish (Como en la captura de Enterprise Architect) -->
+      <button
+        (click)="onTabClick('publish')"
+        (dblclick)="onTabDblClick('publish', $event)"
+        [class.border-b-2]="activeTab() === 'publish' && !isCollapsed()"
+        [class.border-b-blue-600]="activeTab() === 'publish' && !isCollapsed()"
+        [class.text-blue-700]="activeTab() === 'publish'"
+        [class.dark:text-sky-300]="activeTab() === 'publish'"
+        [class.bg-[#F7F8FA]]="activeTab() === 'publish' && !isCollapsed()"
+        [class.dark:bg-[#141933]]="activeTab() === 'publish' && !isCollapsed()"
+        [class.font-semibold]="activeTab() === 'publish'"
+        [class.text-slate-600]="activeTab() !== 'publish'"
+        [class.dark:text-slate-400]="activeTab() !== 'publish'"
+        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
+        {{ 'ribbon.tabs.publish' | translate }}
+      </button>
 
-    <!-- Tab Design -->
-    <button
-      (click)="activeTab.set('design')"
-      [class.border-b-2]="activeTab() === 'design'"
-      [class.border-b-blue-600]="activeTab() === 'design'"
-      [class.text-blue-700]="activeTab() === 'design'"
-      [class.dark:text-sky-300]="activeTab() === 'design'"
-      [class.bg-[#F7F8FA]]="activeTab() === 'design'"
-      [class.dark:bg-[#141933]]="activeTab() === 'design'"
-      [class.font-semibold]="activeTab() === 'design'"
-      [class.text-slate-600]="activeTab() !== 'design'"
-      [class.dark:text-slate-400]="activeTab() !== 'design'"
-      class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-      {{ 'ribbon.tabs.design' | translate }}
-    </button>
+      <!-- Tab Design -->
+      <button
+        (click)="onTabClick('design')"
+        (dblclick)="onTabDblClick('design', $event)"
+        [class.border-b-2]="activeTab() === 'design' && !isCollapsed()"
+        [class.border-b-blue-600]="activeTab() === 'design' && !isCollapsed()"
+        [class.text-blue-700]="activeTab() === 'design'"
+        [class.dark:text-sky-300]="activeTab() === 'design'"
+        [class.bg-[#F7F8FA]]="activeTab() === 'design' && !isCollapsed()"
+        [class.dark:bg-[#141933]]="activeTab() === 'design' && !isCollapsed()"
+        [class.font-semibold]="activeTab() === 'design'"
+        [class.text-slate-600]="activeTab() !== 'design'"
+        [class.dark:text-slate-400]="activeTab() !== 'design'"
+        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
+        {{ 'ribbon.tabs.design' | translate }}
+      </button>
 
-    <!-- Tab Develop -->
-    <button
-      (click)="activeTab.set('develop')"
-      [class.border-b-2]="activeTab() === 'develop'"
-      [class.border-b-blue-600]="activeTab() === 'develop'"
-      [class.text-blue-700]="activeTab() === 'develop'"
-      [class.dark:text-sky-300]="activeTab() === 'develop'"
-      [class.bg-[#F7F8FA]]="activeTab() === 'develop'"
-      [class.dark:bg-[#141933]]="activeTab() === 'develop'"
-      [class.font-semibold]="activeTab() === 'develop'"
-      [class.text-slate-600]="activeTab() !== 'develop'"
-      [class.dark:text-slate-400]="activeTab() !== 'develop'"
-      class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-      {{ 'ribbon.tabs.develop' | translate }}
-    </button>
+      <!-- Tab Develop -->
+      <button
+        (click)="onTabClick('develop')"
+        (dblclick)="onTabDblClick('develop', $event)"
+        [class.border-b-2]="activeTab() === 'develop' && !isCollapsed()"
+        [class.border-b-blue-600]="activeTab() === 'develop' && !isCollapsed()"
+        [class.text-blue-700]="activeTab() === 'develop'"
+        [class.dark:text-sky-300]="activeTab() === 'develop'"
+        [class.bg-[#F7F8FA]]="activeTab() === 'develop' && !isCollapsed()"
+        [class.dark:bg-[#141933]]="activeTab() === 'develop' && !isCollapsed()"
+        [class.font-semibold]="activeTab() === 'develop'"
+        [class.text-slate-600]="activeTab() !== 'develop'"
+        [class.dark:text-slate-400]="activeTab() !== 'develop'"
+        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
+        {{ 'ribbon.tabs.develop' | translate }}
+      </button>
 
-    <!-- Tab Collaborate -->
-    <button
-      (click)="activeTab.set('collaborate')"
-      [class.border-b-2]="activeTab() === 'collaborate'"
-      [class.border-b-blue-600]="activeTab() === 'collaborate'"
-      [class.text-blue-700]="activeTab() === 'collaborate'"
-      [class.dark:text-sky-300]="activeTab() === 'collaborate'"
-      [class.bg-[#F7F8FA]]="activeTab() === 'collaborate'"
-      [class.dark:bg-[#141933]]="activeTab() === 'collaborate'"
-      [class.font-semibold]="activeTab() === 'collaborate'"
-      [class.text-slate-600]="activeTab() !== 'collaborate'"
-      [class.dark:text-slate-400]="activeTab() !== 'collaborate'"
-      class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-      {{ 'ribbon.tabs.collaborate' | translate }}
-    </button>
+      <!-- Tab Collaborate -->
+      <button
+        (click)="onTabClick('collaborate')"
+        (dblclick)="onTabDblClick('collaborate', $event)"
+        [class.border-b-2]="activeTab() === 'collaborate' && !isCollapsed()"
+        [class.border-b-blue-600]="activeTab() === 'collaborate' && !isCollapsed()"
+        [class.text-blue-700]="activeTab() === 'collaborate'"
+        [class.dark:text-sky-300]="activeTab() === 'collaborate'"
+        [class.bg-[#F7F8FA]]="activeTab() === 'collaborate' && !isCollapsed()"
+        [class.dark:bg-[#141933]]="activeTab() === 'collaborate' && !isCollapsed()"
+        [class.font-semibold]="activeTab() === 'collaborate'"
+        [class.text-slate-600]="activeTab() !== 'collaborate'"
+        [class.dark:text-slate-400]="activeTab() !== 'collaborate'"
+        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
+        {{ 'ribbon.tabs.collaborate' | translate }}
+      </button>
 
-    <!-- Tab Start -->
-    <button
-      (click)="activeTab.set('start')"
-      [class.border-b-2]="activeTab() === 'start'"
-      [class.border-b-blue-600]="activeTab() === 'start'"
-      [class.text-blue-700]="activeTab() === 'start'"
-      [class.dark:text-sky-300]="activeTab() === 'start'"
-      [class.bg-[#F7F8FA]]="activeTab() === 'start'"
-      [class.dark:bg-[#141933]]="activeTab() === 'start'"
-      [class.font-semibold]="activeTab() === 'start'"
-      [class.text-slate-600]="activeTab() !== 'start'"
-      [class.dark:text-slate-400]="activeTab() !== 'start'"
-      class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-      {{ 'ribbon.tabs.start' | translate }}
-    </button>
+      <!-- Tab Start -->
+      <button
+        (click)="onTabClick('start')"
+        (dblclick)="onTabDblClick('start', $event)"
+        [class.border-b-2]="activeTab() === 'start' && !isCollapsed()"
+        [class.border-b-blue-600]="activeTab() === 'start' && !isCollapsed()"
+        [class.text-blue-700]="activeTab() === 'start'"
+        [class.dark:text-sky-300]="activeTab() === 'start'"
+        [class.bg-[#F7F8FA]]="activeTab() === 'start' && !isCollapsed()"
+        [class.dark:bg-[#141933]]="activeTab() === 'start' && !isCollapsed()"
+        [class.font-semibold]="activeTab() === 'start'"
+        [class.text-slate-600]="activeTab() !== 'start'"
+        [class.dark:text-slate-400]="activeTab() !== 'start'"
+        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
+        {{ 'ribbon.tabs.start' | translate }}
+      </button>
+    </div>
+
+    <!-- Botón Chevron para Colapsar/Expandir en el extremo derecho -->
+    <div class="flex items-center pb-1 pr-1">
+      <button
+        (click)="toggleCollapse()"
+        [title]="isCollapsed() ? 'Expandir Ribbon (Doble clic en pestañas)' : 'Minimizar Ribbon (Doble clic en pestañas)'"
+        class="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-300/60 dark:hover:bg-[#1A2246] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer">
+        <ng-icon [name]="isCollapsed() ? 'heroChevronDown' : 'heroChevronUp'" class="text-xs"></ng-icon>
+      </button>
+    </div>
   </div>
 
   <!-- =========================================================================
        3. RIBBON ACTION BAR (SEPARADO EN SECCIONES ESTILO ENTERPRISE ARCHITECT)
+       Ocultable con doble clic
        ========================================================================= -->
-  <div class="bg-[#F7F8FA] dark:bg-[#141933] px-2 py-1 flex items-stretch overflow-x-auto min-h-[76px] transition-colors">
+  @if (!isCollapsed()) {
+    <div class="bg-[#F7F8FA] dark:bg-[#141933] px-2 py-1 flex items-stretch overflow-x-auto min-h-[76px] transition-all duration-150 animate-in fade-in duration-100">
 
     <!-- TAB 1: PUBLISH (IDÉNTICO A LA CAPTURA DE EA DEL USUARIO) -->
     @if (activeTab() === 'publish') {
@@ -668,9 +692,10 @@
       </div>
     }
 
-    <!-- Input Oculto de Archivos para Importación -->
-    <input #fileInput type="file" accept=".json,.xml,.xmi" (change)="fileSelected.emit($event)" class="hidden">
+    </div>
+  }
 
-  </div>
+  <!-- Input Oculto de Archivos para Importación (Siempre en DOM) -->
+  <input #fileInput type="file" accept=".json,.xml,.xmi" (change)="fileSelected.emit($event)" class="hidden">
 
 </header>
