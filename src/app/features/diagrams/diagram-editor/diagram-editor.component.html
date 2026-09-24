@@ -146,6 +146,7 @@
         (fFullRendered)="onFlowLoaded()"
         (fCreateConnection)="onConnectionCreated($event)"
         (fReassignConnection)="onConnectionReassigned($event)"
+        (fMoveNodes)="onMoveNodes($event)"
         class="w-full h-full block">
 
         <f-canvas
@@ -271,6 +272,7 @@
             @for (node of nodes(); track node.id) {
               <div
                 fNode
+                [fNodeId]="node.id"
                 fDragHandle
                 [fNodeDraggingDisabled]="node.isAnchor || selectedRelationType() !== null || isNodeLockedByOther(node.id)"
                 [(fNodePosition)]="node.position"
@@ -281,6 +283,7 @@
                 [style.minWidth.px]="node.isAnchor ? 0 : node.width"
                 [style.minHeight.px]="node.isAnchor ? 0 : (node.height || null)"
                 [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
+                [class.f-selected]="isNodeSelected(node.id)"
                 [ngClass]="{
                   'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
                   'font-sans text-[#241C18] dark:text-slate-100 select-none relative group/node transition-shadow rounded-none overflow-hidden': !node.isAnchor,

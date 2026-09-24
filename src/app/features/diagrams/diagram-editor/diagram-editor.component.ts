@@ -17,6 +17,7 @@ import {
   FFlowComponent,
   FCreateConnectionEvent,
   FReassignConnectionEvent,
+  FMoveNodesEvent,
   FCanvasComponent,
   FZoomDirective,
   FCanvasChangeEvent,
@@ -243,6 +244,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private readonly maxHistoryLength = 50;
   private isApplyingHistory = false;
   private isDraggingNode = false;
+  private hasMovedDuringPointerDown = false;
   private lastNodeDragPos = new Map<string, { x: number; y: number }>();
 
   historyUndoCount = signal<number>(0);
@@ -607,10 +609,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } catch (_) {}
   }
 
+  @HostListener('window:mousedown')
+  onWindowMouseDown(): void {
+    this.hasMovedDuringPointerDown = false;
+  }
+
   @HostListener('window:mouseup')
   onWindowMouseUp(): void {
     this.isDraggingNode = false;
     this.lastNodeDragPos.clear();
+    setTimeout(() => {
+      this.hasMovedDuringPointerDown = false;
+    }, 50);
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -758,6 +768,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    this.hasMovedDuringPointerDown = true;
 
     if (!this.isDraggingNode) {
       this.isDraggingNode = true;
@@ -791,6 +802,34 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
     this.collaborationService.sendNodeDrag(node.id, newPosition);
     this.nodeDragEnd$.next();
+  }
+
+  onMoveNodes(event: FMoveNodesEvent): void {
+    if (this.isReadOnly()) return;
+    this.hasMovedDuringPointerDown = true;
+
+    if (!this.isDraggingNode) {
+      this.isDraggingNode = true;
+      this.pushSnapshot();
+    }
+
+    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
+    let anyMoved = false;
+
+    for (const item of event.nodes) {
+      const node = nodeMap.get(item.id);
+      if (node && (node.position.x !== Math.round(item.position.x) || node.position.y !== Math.round(item.position.y))) {
+        node.position = { x: Math.round(item.position.x), y: Math.round(item.position.y) };
+        anyMoved = true;
+        this.collaborationService.sendNodeDrag(node.id, node.position);
+      }
+    }
+
+    if (anyMoved) {
+      this.markAsUnsaved();
+      this.updateConnectionEndpoints();
+      this.nodeDragEnd$.next();
+    }
   }
 
   onCanvasMouseMove(event: MouseEvent): void {
@@ -1013,6 +1052,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.selectedSourceNodeId.set(null);
     this.selectedNodeId.set(null);
     this.selectedNodeIds.set(new Set());
+    this.fFlow?.clearSelection();
   }
 
   isNodeSelected(nodeId: string): boolean {
@@ -1027,9 +1067,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.selectedRelationType() !== null) return;
     const nonAnchorNodes = this.nodes().filter((n) => !n.isAnchor);
     if (nonAnchorNodes.length === 0) return;
-    const allIds = new Set(nonAnchorNodes.map((n) => n.id));
-    this.selectedNodeIds.set(allIds);
+    const allIds = nonAnchorNodes.map((n) => n.id);
+    this.selectedNodeIds.set(new Set(allIds));
     this.selectedNodeId.set(nonAnchorNodes[0]?.id || null);
+    this.fFlow?.select(allIds, []);
   }
 
   deleteSelected(): void {
@@ -1066,11 +1107,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         this.selectedNodeId.set(nodeId);
       }
       this.selectedNodeIds.set(current);
+      const ids = Array.from(current);
+      if (ids.length > 0) {
+        this.fFlow?.select(ids, []);
+      } else {
+        this.fFlow?.clearSelection();
+      }
     } else {
+      // Si el usuario acaba de arrastrar una selección múltiple, conservar la selección de todas
+      if (this.hasMovedDuringPointerDown && this.selectedNodeIds().has(nodeId) && this.selectedNodeIds().size > 1) {
+        return;
+      }
+
       this.selectedNodeIds.set(new Set([nodeId]));
       this.selectedNodeId.update((curr) => (curr === nodeId ? null : nodeId));
       if (!this.selectedNodeId()) {
         this.selectedNodeIds.set(new Set());
+        this.fFlow?.clearSelection();
+      } else {
+        this.fFlow?.select([nodeId], []);
       }
     }
   }
