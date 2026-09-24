@@ -9,6 +9,7 @@
     [hasUnsavedChanges]="hasUnsavedChanges()"
     [isReadOnly]="isReadOnly()"
     [isMultiUserEditing]="hasMultipleActiveUsers()"
+    [isToolboxOpen]="isToolboxOpen()"
     (saveDiagram)="saveToBackend()"
     (exportBmp)="downloadBmpFile()"
     (exportXmi)="downloadXmiFile()"
@@ -17,7 +18,14 @@
     (fileSelected)="onFileSelected($event)"
     (openImportJson)="openImportModal()"
     (openSpringBoot)="showSpringBootModal.set(true)"
-    (openProfile)="openProfileModal()">
+    (openProfile)="openProfileModal()"
+    (toggleToolbox)="isToolboxOpen.set(!isToolboxOpen())"
+    (zoomIn)="zoomIn()"
+    (zoomOut)="zoomOut()"
+    (fitView)="fitView()"
+    (resetView)="resetView()"
+    (addClass)="addClass()"
+    (setPointerMode)="setPointerMode()">
   </app-diagram-appbar>
 
   <!-- 2. [BODY] TOOLBOX IZQUIERDO + CANVAS FOBLEX FLOW + ASISTENTE IA DERECHO -->

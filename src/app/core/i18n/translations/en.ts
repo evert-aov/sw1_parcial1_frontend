@@ -166,6 +166,26 @@ export const en = {
     logout: 'Log Out',
     logoutTooltip: 'Sign Out of Session',
   },
+  ribbon: {
+    tabs: {
+      start: 'Start',
+      design: 'Design',
+      develop: 'Develop',
+      publish: 'Publish',
+      collaborate: 'Collaborate',
+    },
+    sections: {
+      project: 'Project',
+      diagramImage: 'Diagram Image',
+      modelExchange: 'Model Exchange',
+      modelReports: 'Model Reports',
+      codeEngineering: 'Code Engineering',
+      umlElements: 'UML Elements',
+      diagramView: 'Diagram View',
+      liveSession: 'Live Session',
+      collaborators: 'Collaborators',
+    },
+  },
   toolbar: {
     title: 'Modeling Tools',
     pointer: 'Select / Move',

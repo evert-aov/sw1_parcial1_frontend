@@ -24,12 +24,23 @@ import {
   heroCheck,
   heroPhoto,
   heroAcademicCap,
+  heroMagnifyingGlassPlus,
+  heroMagnifyingGlassMinus,
+  heroArrowsPointingOut,
+  heroArrowPath,
+  heroPlus,
+  heroSquares2x2,
+  heroCursorArrowRays,
+  heroBars3,
+  heroPrinter,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
 import { UserGuideService } from '../../../../../core/services/user-guide.service';
 import { TranslatePipe, LanguageSelectorComponent, TranslationService } from '../../../../../core/i18n';
 import { ThemeToggleComponent } from '../../../../../core/components/theme-toggle/theme-toggle.component';
+
+export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'start';
 
 @Component({
   selector: 'app-diagram-appbar',
@@ -58,6 +69,15 @@ import { ThemeToggleComponent } from '../../../../../core/components/theme-toggl
       heroCheck,
       heroPhoto,
       heroAcademicCap,
+      heroMagnifyingGlassPlus,
+      heroMagnifyingGlassMinus,
+      heroArrowsPointingOut,
+      heroArrowPath,
+      heroPlus,
+      heroSquares2x2,
+      heroCursorArrowRays,
+      heroBars3,
+      heroPrinter,
     }),
   ],
   templateUrl: './diagram-appbar.component.html',
@@ -67,6 +87,9 @@ export class DiagramAppbarComponent {
   readonly collaborationService = inject(CollaborationService);
   readonly guideService = inject(UserGuideService);
   readonly translationService = inject(TranslationService);
+
+  // Tab activo en el Ribbon al estilo Enterprise Architect
+  readonly activeTab = signal<RibbonTab>('publish');
 
   openGuide(): void {
     this.guideService.openGuide();
@@ -82,6 +105,7 @@ export class DiagramAppbarComponent {
   readonly hasUnsavedChanges = input<boolean>(false);
   readonly isReadOnly = input<boolean>(false);
   readonly isMultiUserEditing = input<boolean | undefined>(undefined);
+  readonly isToolboxOpen = input<boolean>(true);
 
   // Indica si hay 2 o más usuarios editando simultáneamente
   readonly multiUserBlocked = computed(() => {
@@ -101,68 +125,59 @@ export class DiagramAppbarComponent {
   readonly openImportJson = output<void>();
   readonly openSpringBoot = output<void>();
   readonly openProfile = output<void>();
-
-  // Estados de dropdowns locales
-  readonly isExportDropdownOpen = signal<boolean>(false);
-  readonly isImportDropdownOpen = signal<boolean>(false);
+  readonly toggleToolbox = output<void>();
+  readonly zoomIn = output<void>();
+  readonly zoomOut = output<void>();
+  readonly fitView = output<void>();
+  readonly resetView = output<void>();
+  readonly addClass = output<void>();
+  readonly setPointerMode = output<void>();
 
   handleExportBmp(): void {
     if (this.multiUserBlocked()) {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      this.isExportDropdownOpen.set(false);
       return;
     }
     this.exportBmp.emit();
-    this.isExportDropdownOpen.set(false);
   }
 
   handleExportXmi(): void {
     if (this.multiUserBlocked()) {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      this.isExportDropdownOpen.set(false);
       return;
     }
     this.exportXmi.emit();
-    this.isExportDropdownOpen.set(false);
   }
 
   handleExportJson(): void {
     if (this.multiUserBlocked()) {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      this.isExportDropdownOpen.set(false);
       return;
     }
     this.exportJson.emit();
-    this.isExportDropdownOpen.set(false);
   }
 
   handleViewJson(): void {
     if (this.multiUserBlocked()) {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      this.isExportDropdownOpen.set(false);
       return;
     }
     this.viewJson.emit();
-    this.isExportDropdownOpen.set(false);
   }
 
   handleOpenImportJson(): void {
     if (this.multiUserBlocked()) {
       alert(this.translationService.translate('appbar.multiUserImportBlocked'));
-      this.isImportDropdownOpen.set(false);
       return;
     }
     this.openImportJson.emit();
-    this.isImportDropdownOpen.set(false);
   }
 
   triggerFileInput(): void {
     if (this.multiUserBlocked()) {
       alert(this.translationService.translate('appbar.multiUserImportBlocked'));
-      this.isImportDropdownOpen.set(false);
       return;
     }
-    this.isImportDropdownOpen.set(false);
     this.fileInputRef?.nativeElement?.click();
   }
 

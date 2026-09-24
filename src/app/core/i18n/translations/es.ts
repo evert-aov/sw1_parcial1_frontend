@@ -166,6 +166,26 @@ export const es = {
     logout: 'Salir',
     logoutTooltip: 'Cerrar Sesión',
   },
+  ribbon: {
+    tabs: {
+      start: 'Inicio',
+      design: 'Diseño',
+      develop: 'Desarrollo',
+      publish: 'Publicar',
+      collaborate: 'Colaborar',
+    },
+    sections: {
+      project: 'Proyecto',
+      diagramImage: 'Diagram Image',
+      modelExchange: 'Model Exchange',
+      modelReports: 'Model Reports',
+      codeEngineering: 'Code Engineering',
+      umlElements: 'Elementos UML',
+      diagramView: 'Vista del Lienzo',
+      liveSession: 'Sesión en Vivo',
+      collaborators: 'Colaboradores',
+    },
+  },
   toolbar: {
     title: 'Herramientas de Modelado',
     pointer: 'Seleccionar / Mover',
