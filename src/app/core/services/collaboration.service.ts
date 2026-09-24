@@ -62,6 +62,8 @@ export class CollaborationService {
   readonly remoteNodeDrag$ = new Subject<{ nodeId: string; position: { x: number; y: number }; userId: string }>();
   readonly remoteDiagramSync$ = new Subject<{ nodes: UmlClassNode[]; connections: UmlConnection[]; userId: string; action: string }>();
   readonly nodeLockRejected$ = new Subject<{ nodeId: string; lockedBy: NodeLock }>();
+  readonly onConnect$ = new Subject<void>();
+  readonly lastServerSave$ = new Subject<{ diagramId: string; savedAt: string }>();
 
   // Control de frecuencia de cursores
   private lastCursorSent = 0;
@@ -99,12 +101,17 @@ export class CollaborationService {
       if (diagramId) {
         this.emitJoinRoom(diagramId);
       }
+      this.onConnect$.next();
     });
 
     this.socket.on('disconnect', () => {
       this.isConnected.set(false);
       this.remoteCursors.set([]);
       this.activeNodeLocks.set(new Map());
+    });
+
+    this.socket.on('diagram_saved', (data: { diagramId: string; savedAt: string }) => {
+      this.lastServerSave$.next(data);
     });
 
     this.socket.on('room_participants_updated', (data: { diagramId?: string; roomCode?: string; participants: Collaborator[] }) => {
@@ -346,7 +353,12 @@ export class CollaborationService {
     });
   }
 
-  sendDiagramSync(nodes: UmlClassNode[], connections: UmlConnection[], action = 'update'): void {
+  sendDiagramSync(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    action = 'update',
+    defaultLineStyle = 'segment',
+  ): void {
     const user = this.getCurrentUser();
     const diagramId = this.currentDiagramId();
     const roomCode = this.activeRoomCode();
@@ -359,6 +371,7 @@ export class CollaborationService {
       connections,
       userId: user?.id || 'anon',
       action,
+      defaultLineStyle,
     });
   }
 

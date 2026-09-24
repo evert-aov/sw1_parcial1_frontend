@@ -6,6 +6,7 @@
     [diagramId]="currentDiagramId()"
     [isSaving]="diagramService.isSaving()"
     [saveSuccessMessage]="saveSuccessMessage()"
+    [hasUnsavedChanges]="hasUnsavedChanges()"
     [isReadOnly]="isReadOnly()"
     [isMultiUserEditing]="hasMultipleActiveUsers()"
     (saveDiagram)="saveToBackend()"

@@ -79,6 +79,7 @@ export class DiagramAppbarComponent {
   readonly diagramId = input<string | null>(null);
   readonly isSaving = input<boolean>(false);
   readonly saveSuccessMessage = input<boolean>(false);
+  readonly hasUnsavedChanges = input<boolean>(false);
   readonly isReadOnly = input<boolean>(false);
   readonly isMultiUserEditing = input<boolean | undefined>(undefined);
 
