@@ -7,6 +7,7 @@
     [isSaving]="diagramService.isSaving()"
     [saveSuccessMessage]="saveSuccessMessage()"
     [isReadOnly]="isReadOnly()"
+    [isMultiUserEditing]="hasMultipleActiveUsers()"
     (saveDiagram)="saveToBackend()"
     (exportBmp)="downloadBmpFile()"
     (exportXmi)="downloadXmiFile()"

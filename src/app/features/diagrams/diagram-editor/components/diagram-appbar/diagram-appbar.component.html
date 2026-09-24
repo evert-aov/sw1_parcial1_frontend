@@ -88,23 +88,37 @@
       <div class="relative">
         <button
           (click)="isExportDropdownOpen.set(!isExportDropdownOpen()); isImportDropdownOpen.set(false)"
+          [class.opacity-70]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
           class="bg-[#1A4C84] hover:bg-[#153D6B] dark:bg-[#1C2242] dark:hover:bg-[#252E56] text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-[#3972AF] dark:border-[#283256] shadow-xs cursor-pointer">
           <ng-icon name="heroArrowDownTray" class="text-xs text-sky-200"></ng-icon>
           <span>{{ 'appbar.export' | translate }}</span>
-          <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
+          @if (multiUserBlocked()) {
+            <span class="text-[9px] bg-amber-500/90 text-black px-1 py-0.2 rounded font-bold ml-0.5" [title]="'appbar.multiUserExportBlocked' | translate">🔒</span>
+          } @else {
+            <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
+          }
         </button>
 
         @if (isExportDropdownOpen()) {
           <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-[#14182E] border border-slate-300 dark:border-[#2D3762] shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100 dark:divide-[#283256]">
+            @if (multiUserBlocked()) {
+              <div class="px-2.5 py-1.5 bg-amber-50 dark:bg-amber-950/40 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
+                <span class="text-xs">⚠️</span>
+                <span>{{ 'appbar.multiUserBanner' | translate }}</span>
+              </div>
+            }
             <div class="py-0.5">
               <button
-                (click)="exportBmp.emit(); isExportDropdownOpen.set(false)"
+                (click)="handleExportBmp()"
+                [class.opacity-50]="multiUserBlocked()"
                 class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
                 <ng-icon name="heroPhoto" class="text-sm text-purple-600 dark:text-purple-400"></ng-icon>
                 <span>{{ 'appbar.exportBmp' | translate }}</span>
               </button>
               <button
-                (click)="exportXmi.emit(); isExportDropdownOpen.set(false)"
+                (click)="handleExportXmi()"
+                [class.opacity-50]="multiUserBlocked()"
                 class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
                 <ng-icon name="heroDocumentText" class="text-sm text-blue-600 dark:text-blue-400"></ng-icon>
                 <span>{{ 'appbar.exportXmi' | translate }}</span>
@@ -112,13 +126,15 @@
             </div>
             <div class="py-0.5">
               <button
-                (click)="exportJson.emit(); isExportDropdownOpen.set(false)"
+                (click)="handleExportJson()"
+                [class.opacity-50]="multiUserBlocked()"
                 class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
                 <ng-icon name="heroDocumentText" class="text-sm text-emerald-600 dark:text-emerald-400"></ng-icon>
                 <span>{{ 'appbar.exportJson' | translate }}</span>
               </button>
               <button
-                (click)="viewJson.emit(); isExportDropdownOpen.set(false)"
+                (click)="handleViewJson()"
+                [class.opacity-50]="multiUserBlocked()"
                 class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-[#2A201B] dark:text-slate-200">
                 <ng-icon name="heroDocumentText" class="text-sm text-slate-600 dark:text-slate-400"></ng-icon>
                 <span>JSON</span>
@@ -132,22 +148,36 @@
       <div class="relative">
         <button
           (click)="isImportDropdownOpen.set(!isImportDropdownOpen()); isExportDropdownOpen.set(false)"
+          [class.opacity-70]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserImportBlocked' | translate) : ''"
           class="bg-[#1A4C84] hover:bg-[#153D6B] dark:bg-[#1C2242] dark:hover:bg-[#252E56] text-white text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-[#3972AF] dark:border-[#283256] shadow-xs cursor-pointer">
           <ng-icon name="heroArrowUpTray" class="text-xs text-amber-300"></ng-icon>
           <span>{{ 'appbar.import' | translate }}</span>
-          <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
+          @if (multiUserBlocked()) {
+            <span class="text-[9px] bg-amber-500/90 text-black px-1 py-0.2 rounded font-bold ml-0.5" [title]="'appbar.multiUserImportBlocked' | translate">🔒</span>
+          } @else {
+            <ng-icon name="heroChevronDown" class="text-[10px] ml-0.5"></ng-icon>
+          }
         </button>
 
         @if (isImportDropdownOpen()) {
           <div class="absolute right-0 mt-1 w-56 bg-white dark:bg-[#14182E] border border-slate-300 dark:border-[#2D3762] shadow-xl rounded-md py-1 z-50 text-xs text-slate-800 dark:text-slate-200 animate-in fade-in zoom-in-95 duration-100">
+            @if (multiUserBlocked()) {
+              <div class="px-2.5 py-1.5 bg-amber-50 dark:bg-amber-950/40 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-1.5 border-b border-amber-200 dark:border-amber-900/60">
+                <span class="text-xs">⚠️</span>
+                <span>{{ 'appbar.multiUserBanner' | translate }}</span>
+              </div>
+            }
             <button
               (click)="triggerFileInput()"
+              [class.opacity-50]="multiUserBlocked()"
               class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-amber-700 dark:text-amber-400">
               <ng-icon name="heroArrowUpTray" class="text-sm"></ng-icon>
               <span>{{ 'appbar.importXmi' | translate }}</span>
             </button>
             <button
-              (click)="openImportJson.emit(); isImportDropdownOpen.set(false)"
+              (click)="handleOpenImportJson()"
+              [class.opacity-50]="multiUserBlocked()"
               class="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-[#1E2442] flex items-center gap-2 cursor-pointer font-medium text-slate-700 dark:text-slate-300">
               <ng-icon name="heroDocumentText" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
               <span>JSON</span>

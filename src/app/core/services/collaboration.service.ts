@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Subject } from 'rxjs';
 import { AuthService } from './auth.service';
@@ -51,6 +51,12 @@ export class CollaborationService {
   readonly remoteCursors = signal<RemoteCursor[]>([]);
   readonly activeNodeLocks = signal<Map<string, NodeLock>>(new Map());
   readonly chatMessages = signal<ChatMessage[]>([]);
+
+  // Indica si hay 2 o más usuarios editando concurrentemente en la sala
+  readonly isMultiUserEditing = computed(() => {
+    const connected = (this.collaborators() || []).filter((c) => c.isConnected !== false);
+    return connected.length >= 2;
+  });
 
   // Observables para cambios remotos
   readonly remoteNodeDrag$ = new Subject<{ nodeId: string; position: { x: number; y: number }; userId: string }>();

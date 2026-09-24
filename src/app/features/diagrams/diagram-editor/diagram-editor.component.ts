@@ -85,7 +85,7 @@ import { DiagramToolboxComponent } from './components/diagram-toolbox/diagram-to
 import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
 import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
-import { TranslatePipe } from '../../../core/i18n';
+import { TranslatePipe, TranslationService } from '../../../core/i18n';
 
 export interface UmlDiagramProject {
   version: string;
@@ -159,7 +159,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly aiAssistantService = inject(AiAssistantService);
   readonly xmiService = inject(XmiService);
   readonly bmpExportService = inject(BmpExportService);
+  readonly translationService = inject(TranslationService);
   private readonly route = inject(ActivatedRoute);
+
+  // Indica si hay 2 o más usuarios editando concurrentemente en la sala
+  readonly hasMultipleActiveUsers = computed(() => {
+    return this.collaborationService.isMultiUserEditing();
+  });
 
   @ViewChild(FFlowComponent) fFlow?: FFlowComponent;
   @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
@@ -1493,6 +1499,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   async downloadBmpFile(): Promise<void> {
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
     const containerEl = this.flowContainerRef?.nativeElement;
     if (containerEl) {
       await this.bmpExportService.exportElementToBmp(
@@ -1509,6 +1519,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   downloadXmiFile(): void {
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
     const diagId = this.currentDiagramId();
     if (diagId) {
       this.xmiService.exportDiagram(diagId).subscribe({
@@ -1520,6 +1534,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           a.click();
           window.URL.revokeObjectURL(url);
         },
+        error: (err: any) => {
+          const errMsg = err?.error?.message || err?.message || 'Error al exportar XMI.';
+          alert(`Error al exportar XMI: ${errMsg}`);
+        },
       });
     } else {
       alert('Debes guardar el diagrama antes de exportar XMI.');
@@ -1527,6 +1545,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   downloadJsonFile(): void {
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
     const project: UmlDiagramProject = {
       version: '1.0',
       name: this.currentDiagramName(),
@@ -1546,6 +1568,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   openExportModal(): void {
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
     const project: UmlDiagramProject = {
       version: '1.0',
       name: this.currentDiagramName(),
@@ -1560,6 +1586,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   openImportModal(): void {
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserImportBlocked'));
+      return;
+    }
     this.jsonContent.set('');
     this.jsonModalMode.set('import');
     this.showJsonModal.set(true);
@@ -1567,6 +1597,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   applyImportedJson(): void {
     if (this.isReadOnly()) return;
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserImportBlocked'));
+      return;
+    }
     try {
       const project = JSON.parse(this.jsonContent()) as UmlDiagramProject;
       if (project.nodes && project.connections) {
@@ -1608,6 +1642,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onFileSelected(event: Event): void {
     if (this.isReadOnly()) return;
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserImportBlocked'));
+      const target = event.target as HTMLInputElement;
+      if (target) target.value = '';
+      return;
+    }
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
     if (!file) return;

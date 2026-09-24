@@ -1,4 +1,4 @@
-import { Component, inject, signal, input, output, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, computed, input, output, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -28,7 +28,7 @@ import {
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
 import { UserGuideService } from '../../../../../core/services/user-guide.service';
-import { TranslatePipe, LanguageSelectorComponent } from '../../../../../core/i18n';
+import { TranslatePipe, LanguageSelectorComponent, TranslationService } from '../../../../../core/i18n';
 import { ThemeToggleComponent } from '../../../../../core/components/theme-toggle/theme-toggle.component';
 
 @Component({
@@ -66,6 +66,7 @@ export class DiagramAppbarComponent {
   readonly authService = inject(AuthService);
   readonly collaborationService = inject(CollaborationService);
   readonly guideService = inject(UserGuideService);
+  readonly translationService = inject(TranslationService);
 
   openGuide(): void {
     this.guideService.openGuide();
@@ -79,6 +80,15 @@ export class DiagramAppbarComponent {
   readonly isSaving = input<boolean>(false);
   readonly saveSuccessMessage = input<boolean>(false);
   readonly isReadOnly = input<boolean>(false);
+  readonly isMultiUserEditing = input<boolean | undefined>(undefined);
+
+  // Indica si hay 2 o más usuarios editando simultáneamente
+  readonly multiUserBlocked = computed(() => {
+    if (this.isMultiUserEditing() !== undefined) {
+      return !!this.isMultiUserEditing();
+    }
+    return this.collaborationService.isMultiUserEditing();
+  });
 
   // Outputs
   readonly saveDiagram = output<void>();
@@ -95,7 +105,62 @@ export class DiagramAppbarComponent {
   readonly isExportDropdownOpen = signal<boolean>(false);
   readonly isImportDropdownOpen = signal<boolean>(false);
 
+  handleExportBmp(): void {
+    if (this.multiUserBlocked()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.isExportDropdownOpen.set(false);
+      return;
+    }
+    this.exportBmp.emit();
+    this.isExportDropdownOpen.set(false);
+  }
+
+  handleExportXmi(): void {
+    if (this.multiUserBlocked()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.isExportDropdownOpen.set(false);
+      return;
+    }
+    this.exportXmi.emit();
+    this.isExportDropdownOpen.set(false);
+  }
+
+  handleExportJson(): void {
+    if (this.multiUserBlocked()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.isExportDropdownOpen.set(false);
+      return;
+    }
+    this.exportJson.emit();
+    this.isExportDropdownOpen.set(false);
+  }
+
+  handleViewJson(): void {
+    if (this.multiUserBlocked()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.isExportDropdownOpen.set(false);
+      return;
+    }
+    this.viewJson.emit();
+    this.isExportDropdownOpen.set(false);
+  }
+
+  handleOpenImportJson(): void {
+    if (this.multiUserBlocked()) {
+      alert(this.translationService.translate('appbar.multiUserImportBlocked'));
+      this.isImportDropdownOpen.set(false);
+      return;
+    }
+    this.openImportJson.emit();
+    this.isImportDropdownOpen.set(false);
+  }
+
   triggerFileInput(): void {
+    if (this.multiUserBlocked()) {
+      alert(this.translationService.translate('appbar.multiUserImportBlocked'));
+      this.isImportDropdownOpen.set(false);
+      return;
+    }
     this.isImportDropdownOpen.set(false);
     this.fileInputRef?.nativeElement?.click();
   }
