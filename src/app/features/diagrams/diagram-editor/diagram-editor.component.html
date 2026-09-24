@@ -145,7 +145,7 @@
 
         <f-canvas
           fZoom
-          (fCanvasChangeEvent)="onCanvasChange($any($event))">
+          (fCanvasChange)="onCanvasChange($any($event))">
 
           <!-- CONEXIONES UML SEGÚN RELACIÓN -->
           <ng-container ngProjectAs="[fConnections]">
@@ -491,9 +491,27 @@
 
       <div class="h-3 w-px bg-slate-700"></div>
 
-      <!-- Nivel de Zoom -->
-      <span class="text-slate-400">
-        Zoom: <strong class="text-slate-200">{{ zoomLevel() }}%</strong>
+      <!-- Nivel de Zoom Sincronizado e Interactivo -->
+      <span class="text-slate-400 flex items-center gap-1.5">
+        Zoom:
+        <button
+          (click)="zoomOut()"
+          title="Alejar (-)"
+          class="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs leading-none cursor-pointer">
+          -
+        </button>
+        <button
+          (click)="resetView()"
+          title="Clic para restablecer al 100%"
+          class="hover:text-sky-300 transition-colors cursor-pointer">
+          <strong class="text-slate-200">{{ zoomLevel() }}%</strong>
+        </button>
+        <button
+          (click)="zoomIn()"
+          title="Acercar (+)"
+          class="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs leading-none cursor-pointer">
+          +
+        </button>
       </span>
 
       <div class="h-3 w-px bg-slate-700"></div>

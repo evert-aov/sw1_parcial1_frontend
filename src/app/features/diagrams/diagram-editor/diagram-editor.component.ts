@@ -1072,6 +1072,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
     this.fFlow?.redraw();
     this.canvas?.redraw();
+    this.syncZoomFromCanvas();
   }
 
   onConnectionCreated(event: FCreateConnectionEvent): void {
@@ -1940,31 +1941,50 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.isProfileModalOpen.set(true);
   }
 
-  onCanvasChange(event: FCanvasChangeEvent): void {
-    if (event.scale !== undefined) {
+  syncZoomFromCanvas(): void {
+    if (this.canvas?.transform?.scale !== undefined) {
+      this.zoomLevel.set(Math.round(this.canvas.transform.scale * 100));
+    }
+  }
+
+  onCanvasChange(event?: FCanvasChangeEvent): void {
+    if (event?.scale !== undefined) {
       this.zoomLevel.set(Math.round(event.scale * 100));
+    } else {
+      this.syncZoomFromCanvas();
     }
   }
 
   zoomIn(): void {
     this.fZoom?.zoomIn();
+    requestAnimationFrame(() => {
+      this.syncZoomFromCanvas();
+    });
   }
 
   zoomOut(): void {
     this.fZoom?.zoomOut();
+    requestAnimationFrame(() => {
+      this.syncZoomFromCanvas();
+    });
   }
 
   resetView(): void {
     if (this.canvas) {
       this.canvas.resetScaleAndCenter();
-      this.zoomLevel.set(100);
     } else if (this.fZoom) {
       this.fZoom.reset();
-      this.zoomLevel.set(100);
     }
+    this.zoomLevel.set(100);
+    requestAnimationFrame(() => {
+      this.syncZoomFromCanvas();
+    });
   }
 
   fitView(): void {
     this.canvas?.fitToScreen();
+    requestAnimationFrame(() => {
+      this.syncZoomFromCanvas();
+    });
   }
 }
