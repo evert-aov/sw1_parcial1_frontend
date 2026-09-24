@@ -153,6 +153,8 @@
 
         <f-canvas
           fZoom
+          [fWheelTrigger]="zoomWheelTrigger"
+          [fDblClickTrigger]="dblClickZoomTrigger"
           (fCanvasChange)="onCanvasChange($any($event))">
 
           <!-- CONEXIONES UML SEGÚN RELACIÓN -->

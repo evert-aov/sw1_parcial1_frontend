@@ -247,6 +247,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     return primaryButtonEventTrigger(event) && isOnFlowBackground(event);
   };
 
+  // Control de zoom del lienzo: la rueda del ratón solo hace zoom cuando se presiona Ctrl (o Cmd)
+  zoomWheelTrigger = (event: FTriggerEvent): boolean => {
+    return (event instanceof WheelEvent || 'ctrlKey' in event) && (event.ctrlKey || event.metaKey);
+  };
+
+  // Desactivar zoom por doble clic en el lienzo para que el zoom solo ocurra con Ctrl+scroll o botones
+  dblClickZoomTrigger = (_event: FTriggerEvent): boolean => false;
+
   private canvasMouseDownPos = { x: 0, y: 0 };
 
   // Historial de cambios (Deshacer Ctrl+Z / Rehacer Ctrl+Y)
