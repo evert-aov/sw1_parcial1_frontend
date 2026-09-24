@@ -311,9 +311,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   nodes = signal<UmlClassNode[]>([]);
   connections = signal<UmlConnection[]>([]);
 
-  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 1500x1000, expande con nodos)
+  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 2200x1400, expande con nodos)
   readonly boardWidth = computed(() => {
-    let max = 1500;
+    let max = 2200;
     for (const node of this.nodes()) {
       if (node.position && node.position.x + 350 > max) {
         max = node.position.x + 350;
@@ -323,7 +323,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   });
 
   readonly boardHeight = computed(() => {
-    let max = 1000;
+    let max = 1400;
     for (const node of this.nodes()) {
       if (node.position && node.position.y + 350 > max) {
         max = node.position.y + 350;
@@ -2302,6 +2302,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   zoomOut(): void {
     this.diagramCanvas?.zoomOut();
+  }
+
+  onViewportScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (!el) return;
+    const diagramId = this.currentDiagramId();
+    if (diagramId) {
+      sessionStorage.setItem(
+        `diagram_scroll_${diagramId}`,
+        JSON.stringify({ left: el.scrollLeft, top: el.scrollTop }),
+      );
+    }
   }
 
   restoreViewportScroll(diagramId: string | null): void {

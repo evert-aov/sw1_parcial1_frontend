@@ -37,6 +37,9 @@ import {
   selector: 'app-diagram-canvas',
   standalone: true,
   imports: [CommonModule, FFlowModule, NgIconComponent],
+  host: {
+    class: 'flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden',
+  },
   providers: [
     provideIcons({
       heroLockClosed,
@@ -88,9 +91,9 @@ export class DiagramCanvasComponent {
 
   readonly zoomLevel = signal<number>(100);
 
-  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 1500x1000)
+  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 2200x1400 para garantizar scroll bidireccional fluido en pantallas 1080p y superiores)
   readonly boardWidth = computed(() => {
-    let max = 1500;
+    let max = 2200;
     for (const node of this.nodes()) {
       if (node.position && node.position.x + 350 > max) {
         max = node.position.x + 350;
@@ -100,7 +103,7 @@ export class DiagramCanvasComponent {
   });
 
   readonly boardHeight = computed(() => {
-    let max = 1000;
+    let max = 1400;
     for (const node of this.nodes()) {
       if (node.position && node.position.y + 350 > max) {
         max = node.position.y + 350;
@@ -120,6 +123,9 @@ export class DiagramCanvasComponent {
   onFlowLoaded(): void {
     this.flowLoaded.emit();
     this.syncZoomFromCanvas();
+    requestAnimationFrame(() => {
+      this.restoreViewportScroll(this.diagramId());
+    });
   }
 
   onConnectionCreated(event: FCreateConnectionEvent): void {
