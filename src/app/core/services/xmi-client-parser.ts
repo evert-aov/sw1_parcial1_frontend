@@ -553,7 +553,7 @@ export class XmiClientParser {
         : [ext['elements']['element']];
       for (const e of rawElemList) {
         const eId = e['@_xmi:idref'] || e['@_id'];
-        const assocConnId = e['extendedProperties']?.['@_associationclass'];
+        const assocConnId = e['extendedProperties']?.['@_conID'] || e['extendedProperties']?.['@_associationclass'];
         if (eId && assocConnId && nodeMap.has(eId)) {
           pairings.push({ assocNodeId: eId, mainConnId: assocConnId });
         }

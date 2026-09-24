@@ -189,7 +189,7 @@
                 }
 
                 <!-- Etiquetas de Multiplicidad y Nombre -->
-                @if (conn.sourceMultiplicity && conn.type !== 'generalization' && conn.type !== 'realization') {
+                @if (conn.sourceMultiplicity && conn.type !== 'generalization' && conn.type !== 'realization' && !conn.assocAnchorNodeId && conn.type !== 'association_class') {
                   <div
                     fConnectionContent
                     [position]="0.15"
@@ -201,7 +201,7 @@
                   </div>
                 }
 
-                @if (conn.name) {
+                @if (conn.name && conn.type !== 'association_class' && !conn.assocAnchorNodeId) {
                   <div
                     fConnectionContent
                     [position]="0.5"
@@ -213,7 +213,7 @@
                   </div>
                 }
 
-                @if (conn.targetMultiplicity && conn.type !== 'generalization' && conn.type !== 'realization') {
+                @if (conn.targetMultiplicity && conn.type !== 'generalization' && conn.type !== 'realization' && !conn.assocAnchorNodeId && conn.type !== 'association_class') {
                   <div
                     fConnectionContent
                     [position]="0.85"

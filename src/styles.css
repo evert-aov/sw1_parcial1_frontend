@@ -228,11 +228,17 @@ f-flow f-connection-for-create.uml-relation-realization path[f-connection-path],
 f-flow .uml-relation-realization path[f-connection-path],
 f-flow f-connection.uml-relation-dependency path[f-connection-path],
 f-flow f-connection-for-create.uml-relation-dependency path[f-connection-path],
-f-flow .uml-relation-dependency path[f-connection-path],
-f-flow f-connection.uml-relation-association_class path[f-connection-path],
-f-flow f-connection-for-create.uml-relation-association_class path[f-connection-path],
-f-flow .uml-relation-association_class path[f-connection-path] {
+f-flow .uml-relation-dependency path[f-connection-path] {
   stroke-dasharray: 6 4 !important;
+}
+
+/* Línea punteada fina para enlace a tabla intermedia (AssociationClass) */
+f-flow f-connection.uml-relation-association_class path[f-connection-path],
+f-flow f-connection.uml-relation-association_class path,
+f-flow f-connection-for-create.uml-relation-association_class path[f-connection-path],
+f-flow .uml-relation-association_class path[f-connection-path],
+f-flow .uml-relation-association_class path {
+  stroke-dasharray: 4 4 !important;
 }
 
 f-flow f-connection.uml-relation-association path[f-connection-path],
