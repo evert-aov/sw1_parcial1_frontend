@@ -18,10 +18,13 @@ import {
   FCreateConnectionEvent,
   FReassignConnectionEvent,
   FMoveNodesEvent,
+  FSelectionChangeEvent,
   FCanvasComponent,
   FZoomDirective,
   FCanvasChangeEvent,
   FTriggerEvent,
+  primaryButtonEventTrigger,
+  isOnFlowBackground,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
@@ -237,6 +240,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // Control de movimiento del lienzo: el lienzo/pizarra es estático, solo se pueden mover las clases
   canvasMoveTrigger = (): boolean => false;
+
+  // Control de selección de área rectangular (arrastrar con clic izquierdo sobre fondo vacío)
+  selectionAreaTrigger = (event: MouseEvent | TouchEvent): boolean => {
+    if (this.selectedRelationType() !== null || this.isReadOnly()) return false;
+    return primaryButtonEventTrigger(event) && isOnFlowBackground(event);
+  };
+
+  private canvasMouseDownPos = { x: 0, y: 0 };
 
   // Historial de cambios (Deshacer Ctrl+Z / Rehacer Ctrl+Y)
   private historyUndoStack: DiagramHistorySnapshot[] = [];
@@ -1048,11 +1059,44 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
   }
 
-  onCanvasBackgroundClick(): void {
+  onCanvasMouseDown(event: MouseEvent): void {
+    this.canvasMouseDownPos = { x: event.clientX, y: event.clientY };
+  }
+
+  onCanvasBackgroundClick(event?: MouseEvent): void {
+    if (event) {
+      const dist = Math.hypot(
+        event.clientX - this.canvasMouseDownPos.x,
+        event.clientY - this.canvasMouseDownPos.y,
+      );
+      // Si el cursor se movió más de 5 píxeles, fue un arrastre de selección o nodo y no un clic de deselección
+      if (dist > 5) {
+        return;
+      }
+    }
     this.selectedSourceNodeId.set(null);
     this.selectedNodeId.set(null);
     this.selectedNodeIds.set(new Set());
     this.fFlow?.clearSelection();
+  }
+
+  onSelectionChange(event: FSelectionChangeEvent): void {
+    if (this.selectedRelationType() !== null) return;
+
+    const classNodeIds = (event.nodeIds || []).filter((id) => {
+      const node = this.nodes().find((n) => n.id === id);
+      return node && !node.isAnchor;
+    });
+
+    if (classNodeIds.length > 0) {
+      this.selectedNodeIds.set(new Set(classNodeIds));
+      if (!this.selectedNodeId() || !classNodeIds.includes(this.selectedNodeId()!)) {
+        this.selectedNodeId.set(classNodeIds[0]);
+      }
+    } else {
+      this.selectedNodeIds.set(new Set());
+      this.selectedNodeId.set(null);
+    }
   }
 
   isNodeSelected(nodeId: string): boolean {

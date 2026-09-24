@@ -77,8 +77,9 @@
       <!-- CANVAS INTERACTIVO FOBLEX FLOW -->
       <div
         #flowContainer
+        (mousedown)="onCanvasMouseDown($event)"
         (mousemove)="onCanvasMouseMove($event)"
-        (click)="onCanvasBackgroundClick()"
+        (click)="onCanvasBackgroundClick($event)"
         class="flex-1 relative w-full h-full uml-canvas-container cursor-default overflow-hidden">
 
       <!-- Botón Flotante para reabrir Toolbox cuando está oculto -->
@@ -147,6 +148,7 @@
         (fCreateConnection)="onConnectionCreated($event)"
         (fReassignConnection)="onConnectionReassigned($event)"
         (fMoveNodes)="onMoveNodes($event)"
+        (fSelectionChange)="onSelectionChange($event)"
         class="w-full h-full block">
 
         <f-canvas
@@ -452,6 +454,8 @@
           </ng-container>
 
         </f-canvas>
+
+        <f-selection-area [fTrigger]="selectionAreaTrigger"></f-selection-area>
       </f-flow>
 
     </div>
