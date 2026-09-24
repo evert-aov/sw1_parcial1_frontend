@@ -246,11 +246,11 @@ export class CollaborationService {
     const user = this.getCurrentUser();
     const roomCode = this.activeRoomCode();
     const diagramId = this.currentDiagramId();
-    if (this.socket && user) {
+    if (this.socket && this.socket.connected) {
       this.socket.emit('leave_room', {
         roomCode,
         diagramId,
-        userId: user.id,
+        userId: user?.id,
       });
     }
     this.activeRoomCode.set(null);

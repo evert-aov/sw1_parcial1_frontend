@@ -446,11 +446,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     return !!lock && lock.userId !== currentUserId;
   }
 
+  @HostListener('window:pagehide')
+  onPageHide(): void {
+    this.collaborationService.leaveRoom();
+  }
+
   @HostListener('window:beforeunload', ['$event'])
   onBeforeUnload(event: BeforeUnloadEvent): void {
     if (this.hasUnsavedChanges()) {
       event.preventDefault();
       event.returnValue = '';
+    } else {
+      this.collaborationService.leaveRoom();
     }
   }
 
