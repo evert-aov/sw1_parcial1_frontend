@@ -1,31 +1,30 @@
 .uml-viewport {
   overflow: auto !important;
-  background-color: #DDE1E8 !important;
+  background-color: #FFFFFF !important;
 }
 
 :host-context(.dark) .uml-viewport,
 .dark .uml-viewport {
-  background-color: #080B16 !important;
+  background-color: #0D1124 !important;
 }
 
-/* Scrollbars personalizados para el viewport del diagrama */
+/* Scrollbars clásicos y precisos para el viewport del diagrama estilo EA */
 .uml-viewport::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
 
 .uml-viewport::-webkit-scrollbar-track {
-  background: #E5E7EB;
+  background: #F1F3F5;
 }
 
 .uml-viewport::-webkit-scrollbar-thumb {
-  background: #A0AEC0;
-  border-radius: 4px;
-  border: 2px solid #E5E7EB;
+  background: #C1C7D0;
+  border: 2px solid #F1F3F5;
 }
 
 .uml-viewport::-webkit-scrollbar-thumb:hover {
-  background: #718096;
+  background: #8993A4;
 }
 
 :host-context(.dark) .uml-viewport::-webkit-scrollbar-track,
@@ -51,7 +50,7 @@
 
 :host-context(.dark) ::ng-deep f-flow,
 .dark ::ng-deep f-flow {
-  background-color: #12162A !important;
+  background-color: #0D1124 !important;
   background-image: none !important;
 }
 

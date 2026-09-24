@@ -316,9 +316,29 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // Modal Spring Boot
   showSpringBootModal = signal<boolean>(false);
 
-  // Nodos y Conexiones del Diagrama
   nodes = signal<UmlClassNode[]>([]);
   connections = signal<UmlConnection[]>([]);
+
+  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 1500x1000, expande con nodos)
+  readonly boardWidth = computed(() => {
+    let max = 1500;
+    for (const node of this.nodes()) {
+      if (node.position && node.position.x + 350 > max) {
+        max = node.position.x + 350;
+      }
+    }
+    return max;
+  });
+
+  readonly boardHeight = computed(() => {
+    let max = 1000;
+    for (const node of this.nodes()) {
+      if (node.position && node.position.y + 350 > max) {
+        max = node.position.y + 350;
+      }
+    }
+    return max;
+  });
 
   private animationTimers: any[] = [];
 
@@ -1614,8 +1634,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.pushSnapshot();
     const scrollLeft = this.flowContainerRef?.nativeElement?.scrollLeft || 0;
     const scrollTop = this.flowContainerRef?.nativeElement?.scrollTop || 0;
-    const posX = Math.min(1250, Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60)));
-    const posY = Math.min(800, Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60)));
+    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => !n.isAnchor).length + 1;
     const newNode: UmlClassNode = {
@@ -2344,17 +2364,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   centerViewportOnBoard(): void {
     const el = this.flowContainerRef?.nativeElement;
     if (!el) return;
-    // Hoja 1500 x 1000 con padding de 32px
-    const contentW = 1564;
-    const contentH = 1064;
-    const viewportW = el.clientWidth;
-    const viewportH = el.clientHeight;
-    if (contentW > viewportW) {
-      el.scrollLeft = Math.round((contentW - viewportW) / 2);
-    }
-    if (contentH > viewportH) {
-      el.scrollTop = Math.round((contentH - viewportH) / 2);
-    }
+    // En Enterprise Architect, el origen del lienzo inicia en la esquina superior izquierda (0, 0)
+    el.scrollLeft = 0;
+    el.scrollTop = 0;
   }
 
   resetView(): void {
@@ -2369,7 +2381,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.fZoom.reset();
     }
     this.zoomLevel.set(100);
-    this.centerViewportOnBoard();
+    if (this.flowContainerRef?.nativeElement) {
+      this.flowContainerRef.nativeElement.scrollLeft = 0;
+      this.flowContainerRef.nativeElement.scrollTop = 0;
+    }
     requestAnimationFrame(() => {
       this.syncZoomFromCanvas();
     });

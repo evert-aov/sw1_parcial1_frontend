@@ -114,22 +114,21 @@
         </div>
       }
 
-      <!-- VIEWPORT PRINCIPAL CON SCROLL EN AMBOS SENTIDOS -->
+      <!-- VIEWPORT PRINCIPAL CON SCROLL EN AMBOS SENTIDOS (ESTILO ENTERPRISE ARCHITECT) -->
       <div
         #flowContainer
         (scroll)="onViewportScroll($event)"
         (mousedown)="onCanvasMouseDown($event)"
         (mousemove)="onCanvasMouseMove($event)"
         (click)="onCanvasBackgroundClick($event)"
-        class="flex-1 relative w-full h-full overflow-auto cursor-default bg-[#E2E5EB] dark:bg-[#090D1A] uml-viewport select-none">
+        class="flex-1 relative w-full h-full overflow-auto cursor-default bg-white dark:bg-[#0D1124] uml-viewport select-none">
 
-        <!-- CONTENEDOR CON PADDING ALREDEDOR DE LA HOJA -->
-        <div class="p-8 inline-block min-w-max min-h-max">
-
-          <!-- HOJA / PIZARRA DEL LIENZO CON TAMAÑO POR DEFECTO FIJO: 1500px ANCHO x 1000px ALTO -->
-          <div
-            #boardElement
-            class="relative w-[1500px] h-[1000px] bg-white dark:bg-[#14182E] shadow-2xl border border-slate-300 dark:border-[#2D3762] rounded-[2px] overflow-hidden">
+        <!-- TABLERO / LIENZO A PANTALLA COMPLETA (OCUPA TODO EL ESPACIO, MÍNIMO 1500px x 1000px) -->
+        <div
+          #boardElement
+          [style.min-width.px]="boardWidth()"
+          [style.min-height.px]="boardHeight()"
+          class="relative w-full h-full bg-white dark:bg-[#0D1124]">
 
             <!-- Cursores Remotos Colaborativos en Vivo (posicionados sobre la hoja 1500x1000) -->
             @for (cursor of collaborationService.remoteCursors(); track cursor.userId) {
@@ -469,7 +468,6 @@
         <f-selection-area [fTrigger]="selectionAreaTrigger"></f-selection-area>
       </f-flow>
 
-          </div>
         </div>
 
       </div>
