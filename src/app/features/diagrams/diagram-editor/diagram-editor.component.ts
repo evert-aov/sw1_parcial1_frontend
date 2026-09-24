@@ -183,6 +183,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
   @ViewChild(FZoomDirective) fZoom?: FZoomDirective;
   @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
+  @ViewChild('boardElement') boardElementRef?: ElementRef<HTMLElement>;
 
   // Contexto del diagrama y proyecto
   currentDiagramId = signal<string | null>(null);
@@ -555,6 +556,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           this.fFlow?.reset();
           this.fFlow?.redraw();
           this.canvas?.redraw();
+          this.restoreViewportScroll(diagramId);
         });
       });
     });
@@ -852,10 +854,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onCanvasMouseMove(event: MouseEvent): void {
-    const container = this.flowContainerRef?.nativeElement;
-    if (!container) return;
+    const flowEl = this.boardElementRef?.nativeElement || this.fFlow?.hostElement || this.flowContainerRef?.nativeElement;
+    if (!flowEl) return;
 
-    const rect = container.getBoundingClientRect();
+    const rect = flowEl.getBoundingClientRect();
     const rawX = event.clientX - rect.left;
     const rawY = event.clientY - rect.top;
 
@@ -867,10 +869,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const canvasY = (rawY - posY) / scale;
 
     this.collaborationService.sendCursorPosition(canvasX, canvasY);
-
-    if (this.selectedSourceNodeId()) {
-      this.mouseCanvasPos.set({ x: canvasX, y: canvasY });
-    }
+    this.mouseCanvasPos.set({ x: Math.round(canvasX), y: Math.round(canvasY) });
   }
 
   getNodeHeight(node: UmlClassNode): number {
@@ -1613,14 +1612,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   addClass(): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const posX = Math.round(- (this.canvas?.transform?.position?.x || 0) + 150 + Math.random() * 80);
-    const posY = Math.round(- (this.canvas?.transform?.position?.y || 0) + 150 + Math.random() * 80);
+    const scrollLeft = this.flowContainerRef?.nativeElement?.scrollLeft || 0;
+    const scrollTop = this.flowContainerRef?.nativeElement?.scrollTop || 0;
+    const posX = Math.min(1250, Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60)));
+    const posY = Math.min(800, Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60)));
 
     const count = this.nodes().filter((n) => !n.isAnchor).length + 1;
     const newNode: UmlClassNode = {
       id: `class_${Date.now()}`,
       name: `Tabla_${count}`,
-      position: { x: Math.max(50, posX), y: Math.max(50, posY) },
+      position: { x: posX, y: posY },
       width: 220,
       attributes: [],
       methods: [],
@@ -2041,7 +2042,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
-    const containerEl = this.flowContainerRef?.nativeElement;
+    const containerEl = this.boardElementRef?.nativeElement || this.flowContainerRef?.nativeElement;
     if (containerEl) {
       await this.bmpExportService.exportElementToBmp(
         containerEl,
@@ -2314,22 +2315,67 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
+  onViewportScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    if (!el) return;
+    const diagramId = this.currentDiagramId();
+    if (diagramId) {
+      sessionStorage.setItem(
+        `diagram_scroll_${diagramId}`,
+        JSON.stringify({ left: el.scrollLeft, top: el.scrollTop }),
+      );
+    }
+  }
+
+  restoreViewportScroll(diagramId: string | null): void {
+    if (!diagramId) return;
+    const saved = sessionStorage.getItem(`diagram_scroll_${diagramId}`);
+    if (saved && this.flowContainerRef?.nativeElement) {
+      try {
+        const { left, top } = JSON.parse(saved);
+        this.flowContainerRef.nativeElement.scrollLeft = left;
+        this.flowContainerRef.nativeElement.scrollTop = top;
+        return;
+      } catch (_) {}
+    }
+    this.centerViewportOnBoard();
+  }
+
+  centerViewportOnBoard(): void {
+    const el = this.flowContainerRef?.nativeElement;
+    if (!el) return;
+    // Hoja 1500 x 1000 con padding de 32px
+    const contentW = 1564;
+    const contentH = 1064;
+    const viewportW = el.clientWidth;
+    const viewportH = el.clientHeight;
+    if (contentW > viewportW) {
+      el.scrollLeft = Math.round((contentW - viewportW) / 2);
+    }
+    if (contentH > viewportH) {
+      el.scrollTop = Math.round((contentH - viewportH) / 2);
+    }
+  }
+
   resetView(): void {
     if (this.canvas) {
-      this.canvas.resetScaleAndCenter();
+      this.canvas.resetScale();
+      if (this.canvas.transform) {
+        this.canvas.transform.position = { x: 0, y: 0 };
+        this.canvas.transform.scaledPosition = { x: 0, y: 0 };
+        this.canvas.redraw();
+      }
     } else if (this.fZoom) {
       this.fZoom.reset();
     }
     this.zoomLevel.set(100);
+    this.centerViewportOnBoard();
     requestAnimationFrame(() => {
       this.syncZoomFromCanvas();
     });
   }
 
   fitView(): void {
-    this.canvas?.fitToScreen();
-    requestAnimationFrame(() => {
-      this.syncZoomFromCanvas();
-    });
+    this.resetView();
   }
 }

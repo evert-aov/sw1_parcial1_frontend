@@ -1,14 +1,57 @@
-.uml-canvas-container,
+.uml-viewport {
+  overflow: auto !important;
+  background-color: #DDE1E8 !important;
+}
+
+:host-context(.dark) .uml-viewport,
+.dark .uml-viewport {
+  background-color: #080B16 !important;
+}
+
+/* Scrollbars personalizados para el viewport del diagrama */
+.uml-viewport::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.uml-viewport::-webkit-scrollbar-track {
+  background: #E5E7EB;
+}
+
+.uml-viewport::-webkit-scrollbar-thumb {
+  background: #A0AEC0;
+  border-radius: 4px;
+  border: 2px solid #E5E7EB;
+}
+
+.uml-viewport::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+:host-context(.dark) .uml-viewport::-webkit-scrollbar-track,
+.dark .uml-viewport::-webkit-scrollbar-track {
+  background: #0D1124;
+}
+
+:host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb,
+.dark .uml-viewport::-webkit-scrollbar-thumb {
+  background: #2D3762;
+  border: 2px solid #0D1124;
+}
+
+:host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb:hover,
+.dark .uml-viewport::-webkit-scrollbar-thumb:hover {
+  background: #4A5588;
+}
+
 ::ng-deep f-flow {
   background-color: #FFFFFF !important;
   background-image: none !important;
 }
 
-:host-context(.dark) .uml-canvas-container,
 :host-context(.dark) ::ng-deep f-flow,
-.dark .uml-canvas-container,
 .dark ::ng-deep f-flow {
-  background-color: #0D1124 !important;
+  background-color: #12162A !important;
   background-image: none !important;
 }
 
