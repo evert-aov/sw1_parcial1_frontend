@@ -881,6 +881,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.mouseCanvasPos.set({ x: Math.round(canvasX), y: Math.round(canvasY) });
   }
 
+  getNodeWidth(node: UmlClassNode): number {
+    if (node.isAnchor) return 0;
+    const CHAR_W = 7.2;
+    let maxLen = (node.name || '').length + 3;
+    for (const attr of node.attributes || []) {
+      const len = 2 + (attr.name || '').length + 2 + (attr.type || '').length;
+      if (len > maxLen) maxLen = len;
+    }
+    for (const m of node.methods || []) {
+      const len = 2 + (m.name || '').length + 1 + (m.parameters || '').length + 3 + (m.returnType || 'void').length;
+      if (len > maxLen) maxLen = len;
+    }
+    const computed = Math.round(maxLen * CHAR_W + 28);
+    return Math.max(130, computed);
+  }
+
   getNodeHeight(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
     if (node.height && node.height > 0) return node.height;
@@ -888,7 +904,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const attrCount = (node.attributes || []).length;
     const methodCount = (node.methods || []).length;
     const attrH = attrCount > 0 ? attrCount * 22 + 12 : 28;
-    const methodH = methodCount > 0 ? methodCount * 22 + 12 : 28;
+    const methodH = methodCount > 0 ? methodCount * 22 + 12 : 0;
     return headerH + attrH + methodH;
   }
 
@@ -900,9 +916,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       };
     }
 
-    const sWidth = sourceNode.isAnchor ? 0 : sourceNode.width || 220;
+    const sWidth = sourceNode.isAnchor ? 0 : this.getNodeWidth(sourceNode);
     const sHeight = sourceNode.isAnchor ? 0 : this.getNodeHeight(sourceNode);
-    const tWidth = targetNode.isAnchor ? 0 : targetNode.width || 220;
+    const tWidth = targetNode.isAnchor ? 0 : this.getNodeWidth(targetNode);
     const tHeight = targetNode.isAnchor ? 0 : this.getNodeHeight(targetNode);
 
     const sCenter = { x: sourceNode.position.x + sWidth / 2, y: sourceNode.position.y + sHeight / 2 };

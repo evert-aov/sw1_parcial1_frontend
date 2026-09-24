@@ -173,8 +173,8 @@
               (fNodePositionChange)="onNodePositionChange(node, $event)"
               (click)="onNodeClick(node.id, $event)"
               (dblclick)="onNodeDblClick(node, $event)"
-              [style.width.px]="node.isAnchor ? 0 : (node.width || 220)"
-              [style.minWidth.px]="node.isAnchor ? 0 : (node.width || 220)"
+              [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
+              [style.minWidth.px]="node.isAnchor ? 0 : getNodeWidth(node)"
               [style.minHeight.px]="node.isAnchor ? 0 : (node.height || null)"
               [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
               [class.f-selected]="isNodeSelected(node.id)"
@@ -313,10 +313,10 @@
                 <div class="px-2.5 py-1.5 space-y-0.5 bg-[#FFFDF9] dark:bg-[#101428]/40 min-h-[28px]">
                   @if (node.attributes && node.attributes.length > 0) {
                     @for (attr of node.attributes; track attr.name) {
-                      <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200">
+                      <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200 whitespace-nowrap">
                         <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537] dark:text-slate-400">-</span>
-                        <span class="truncate font-medium">{{ attr.name }}</span>
-                        <span class="text-[#5A4537] dark:text-[#A5B4FC] ml-0.5 font-normal">: {{ attr.type }}</span>
+                        <span class="font-medium whitespace-nowrap">{{ attr.name }}</span>
+                        <span class="text-[#5A4537] dark:text-[#A5B4FC] ml-0.5 font-normal whitespace-nowrap">: {{ attr.type }}</span>
                       </div>
                     }
                   }
@@ -326,10 +326,10 @@
                 @if (node.methods && node.methods.length > 0) {
                   <div class="px-2.5 py-1.5 space-y-0.5 border-t border-[#796354] dark:border-[#3B487A] bg-[#FFFDF9] dark:bg-[#101428]/40">
                     @for (m of node.methods; track m.name) {
-                      <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200">
+                      <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200 whitespace-nowrap">
                         <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537] dark:text-slate-400">+</span>
-                        <span class="truncate font-medium">{{ m.name }}({{ m.parameters || '' }})</span>
-                        <span class="text-[#5A4537] dark:text-[#A5B4FC] ml-0.5 font-normal">: {{ m.returnType || 'void' }}</span>
+                        <span class="font-medium whitespace-nowrap">{{ m.name }}({{ m.parameters || '' }})</span>
+                        <span class="text-[#5A4537] dark:text-[#A5B4FC] ml-0.5 font-normal whitespace-nowrap">: {{ m.returnType || 'void' }}</span>
                       </div>
                     }
                   </div>

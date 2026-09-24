@@ -289,6 +289,23 @@ export class DiagramCanvasComponent {
     return this.boardElementRef?.nativeElement || this.flowContainerRef?.nativeElement;
   }
 
+  // Ancho dinámico adaptativo para clases UML según su contenido (nombre, atributos, operaciones)
+  getNodeWidth(node: UmlClassNode): number {
+    if (node.isAnchor) return 0;
+    const CHAR_W = 7.2;
+    let maxLen = (node.name || '').length + 3;
+    for (const attr of node.attributes || []) {
+      const len = 2 + (attr.name || '').length + 2 + (attr.type || '').length;
+      if (len > maxLen) maxLen = len;
+    }
+    for (const m of node.methods || []) {
+      const len = 2 + (m.name || '').length + 1 + (m.parameters || '').length + 3 + (m.returnType || 'void').length;
+      if (len > maxLen) maxLen = len;
+    }
+    const computed = Math.round(maxLen * CHAR_W + 28);
+    return Math.max(130, computed);
+  }
+
   // Helpers de estado visual
   isNodeSelected(nodeId: string): boolean {
     return this.selectedNodeIds().includes(nodeId);
