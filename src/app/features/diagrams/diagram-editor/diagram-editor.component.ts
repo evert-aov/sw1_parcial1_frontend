@@ -98,6 +98,12 @@ export interface UmlDiagramProject {
   connections: UmlConnection[];
 }
 
+export interface DiagramHistorySnapshot {
+  nodes: UmlClassNode[];
+  connections: UmlConnection[];
+  defaultLineStyle: UmlLineStyle;
+}
+
 @Component({
   standalone: true,
   selector: 'app-diagram-editor',
@@ -224,19 +230,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   selectedRelationType = signal<UmlRelationshipType | null>(null);
   selectedSourceNodeId = signal<string | null>(null);
   selectedNodeId = signal<string | null>(null);
+  selectedNodeIds = signal<Set<string>>(new Set());
   defaultLineStyle = signal<UmlLineStyle>('segment');
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Control de movimiento del lienzo (deshabilita el paneo con clic primario al crear relaciones)
-  canvasMoveTrigger = (event: FTriggerEvent): boolean => {
-    if (this.selectedRelationType() !== null) {
-      if (event instanceof MouseEvent && (event.buttons === 4 || event.button === 1)) {
-        return true;
-      }
-      return false;
-    }
-    return true;
-  };
+  // Control de movimiento del lienzo: el lienzo/pizarra es estático, solo se pueden mover las clases
+  canvasMoveTrigger = (): boolean => false;
+
+  // Historial de cambios (Deshacer Ctrl+Z / Rehacer Ctrl+Y)
+  private historyUndoStack: DiagramHistorySnapshot[] = [];
+  private historyRedoStack: DiagramHistorySnapshot[] = [];
+  private readonly maxHistoryLength = 50;
+  private isApplyingHistory = false;
+  private isDraggingNode = false;
+  private lastNodeDragPos = new Map<string, { x: number; y: number }>();
+
+  historyUndoCount = signal<number>(0);
+  historyRedoCount = signal<number>(0);
+  readonly canUndo = computed(() => this.historyUndoCount() > 0 && !this.isReadOnly());
+  readonly canRedo = computed(() => this.historyRedoCount() > 0 && !this.isReadOnly());
 
   // Paneles laterales
   isToolboxOpen = signal<boolean>(true);
@@ -342,6 +354,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     // Sincronización y persistencia al terminar arrastre de nodos
     this.nodeDragEnd$.pipe(debounceTime(600)).subscribe(() => {
+      this.isDraggingNode = false;
+      this.lastNodeDragPos.clear();
       if (!this.isReadOnly() && this.currentDiagramId()) {
         this.collaborationService.sendDiagramSync(
           this.nodes(),
@@ -593,16 +607,44 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } catch (_) {}
   }
 
+  @HostListener('window:mouseup')
+  onWindowMouseUp(): void {
+    this.isDraggingNode = false;
+    this.lastNodeDragPos.clear();
+  }
+
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent): void {
+    const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+    const isInputActive = activeTag === 'input' || activeTag === 'textarea';
+
     if (event.key === 'Escape') {
       this.selectedNodeId.set(null);
+      this.selectedNodeIds.set(new Set());
       this.setPointerMode();
       this.closeEditNodeModal();
       this.closeEditConnModal();
       this.showJsonModal.set(false);
       this.showSpringBootModal.set(false);
       this.isExportDropdownOpen.set(false);
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+      if (!isInputActive) {
+        event.preventDefault();
+        this.selectAllClasses();
+      }
+    } else if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+      if (!isInputActive) {
+        event.preventDefault();
+        this.undo();
+      }
+    } else if (
+      (event.ctrlKey || event.metaKey) &&
+      (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))
+    ) {
+      if (!isInputActive) {
+        event.preventDefault();
+        this.redo();
+      }
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
       if (!this.isReadOnly()) {
@@ -614,11 +656,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'i') {
       event.preventDefault();
       this.isAiPanelOpen.set(!this.isAiPanelOpen());
-    } else if (event.key === 'Delete' && this.selectedNodeId() && !this.isReadOnly()) {
-      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
-      if (activeTag !== 'input' && activeTag !== 'textarea') {
+    } else if (event.key === 'Delete' && !this.isReadOnly()) {
+      if (!isInputActive) {
         event.preventDefault();
-        this.removeClass(this.selectedNodeId()!);
+        this.deleteSelected();
       }
     }
   }
@@ -708,11 +749,43 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   setDefaultLineStyle(style: UmlLineStyle): void {
-    this.defaultLineStyle.set(style);
+    if (this.defaultLineStyle() !== style) {
+      this.pushSnapshot();
+      this.defaultLineStyle.set(style);
+      this.markAsUnsaved();
+    }
   }
 
   onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+
+    if (!this.isDraggingNode) {
+      this.isDraggingNode = true;
+      this.pushSnapshot();
+    }
+
+    if (!this.selectedNodeIds().has(node.id) && this.selectedNodeId() !== node.id) {
+      this.selectedNodeIds.set(new Set([node.id]));
+      this.selectedNodeId.set(node.id);
+    }
+
+    const last = this.lastNodeDragPos.get(node.id);
+    if (last) {
+      const dx = newPosition.x - last.x;
+      const dy = newPosition.y - last.y;
+
+      if ((dx !== 0 || dy !== 0) && this.selectedNodeIds().size > 1 && this.selectedNodeIds().has(node.id)) {
+        for (const other of this.nodes()) {
+          if (other.id !== node.id && this.selectedNodeIds().has(other.id) && !other.isAnchor) {
+            other.position = { x: Math.round(other.position.x + dx), y: Math.round(other.position.y + dy) };
+            this.collaborationService.sendNodeDrag(other.id, other.position);
+          }
+        }
+        this.fFlow?.redraw();
+      }
+    }
+    this.lastNodeDragPos.set(node.id, { x: newPosition.x, y: newPosition.y });
+
     node.position = newPosition;
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
@@ -939,12 +1012,163 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onCanvasBackgroundClick(): void {
     this.selectedSourceNodeId.set(null);
     this.selectedNodeId.set(null);
+    this.selectedNodeIds.set(new Set());
+  }
+
+  isNodeSelected(nodeId: string): boolean {
+    return this.selectedNodeIds().has(nodeId) || this.selectedNodeId() === nodeId;
+  }
+
+  hasMultipleSelected(): boolean {
+    return this.selectedNodeIds().size > 1;
+  }
+
+  selectAllClasses(): void {
+    if (this.selectedRelationType() !== null) return;
+    const nonAnchorNodes = this.nodes().filter((n) => !n.isAnchor);
+    if (nonAnchorNodes.length === 0) return;
+    const allIds = new Set(nonAnchorNodes.map((n) => n.id));
+    this.selectedNodeIds.set(allIds);
+    this.selectedNodeId.set(nonAnchorNodes[0]?.id || null);
+  }
+
+  deleteSelected(): void {
+    if (this.isReadOnly()) return;
+    const idsToDelete = new Set(this.selectedNodeIds());
+    if (this.selectedNodeId()) {
+      idsToDelete.add(this.selectedNodeId()!);
+    }
+    if (idsToDelete.size === 0) return;
+
+    this.pushSnapshot();
+    for (const id of idsToDelete) {
+      this.removeClass(id, undefined, false);
+    }
+    this.selectedNodeIds.set(new Set());
+    this.selectedNodeId.set(null);
   }
 
   onNodeSelect(nodeId: string, event: MouseEvent): void {
     if (this.selectedRelationType() !== null) return;
     event.stopPropagation();
-    this.selectedNodeId.update((curr) => (curr === nodeId ? null : nodeId));
+
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      const current = new Set(this.selectedNodeIds());
+      if (this.selectedNodeId() && !current.has(this.selectedNodeId()!)) {
+        current.add(this.selectedNodeId()!);
+      }
+      if (current.has(nodeId)) {
+        current.delete(nodeId);
+        const remaining = Array.from(current);
+        this.selectedNodeId.set(remaining.length > 0 ? remaining[remaining.length - 1] : null);
+      } else {
+        current.add(nodeId);
+        this.selectedNodeId.set(nodeId);
+      }
+      this.selectedNodeIds.set(current);
+    } else {
+      this.selectedNodeIds.set(new Set([nodeId]));
+      this.selectedNodeId.update((curr) => (curr === nodeId ? null : nodeId));
+      if (!this.selectedNodeId()) {
+        this.selectedNodeIds.set(new Set());
+      }
+    }
+  }
+
+  private cloneSnapshot(): DiagramHistorySnapshot {
+    return {
+      nodes: JSON.parse(JSON.stringify(this.nodes())),
+      connections: JSON.parse(JSON.stringify(this.connections())),
+      defaultLineStyle: this.defaultLineStyle(),
+    };
+  }
+
+  pushSnapshot(): void {
+    if (this.isApplyingHistory) return;
+    const snapshot = this.cloneSnapshot();
+    this.historyUndoStack.push(snapshot);
+    if (this.historyUndoStack.length > this.maxHistoryLength) {
+      this.historyUndoStack.shift();
+    }
+    this.historyRedoStack = [];
+    this.historyUndoCount.set(this.historyUndoStack.length);
+    this.historyRedoCount.set(0);
+  }
+
+  undo(): void {
+    if (this.isReadOnly() || this.historyUndoStack.length === 0) return;
+
+    const currentSnapshot = this.cloneSnapshot();
+    this.historyRedoStack.push(currentSnapshot);
+
+    const prevSnapshot = this.historyUndoStack.pop()!;
+    this.isApplyingHistory = true;
+
+    this.nodes.set(prevSnapshot.nodes);
+    this.connections.set(prevSnapshot.connections);
+    this.defaultLineStyle.set(prevSnapshot.defaultLineStyle);
+
+    this.historyUndoCount.set(this.historyUndoStack.length);
+    this.historyRedoCount.set(this.historyRedoStack.length);
+
+    this.selectedNodeId.set(null);
+    this.selectedNodeIds.set(new Set());
+
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    requestAnimationFrame(() => {
+      this.updateConnectionEndpoints();
+      this.fFlow?.reset();
+      this.fFlow?.redraw();
+      this.canvas?.redraw();
+      this.isApplyingHistory = false;
+    });
+
+    this.collaborationService.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      'undo',
+      this.defaultLineStyle(),
+    );
+    this.autoSave$.next();
+  }
+
+  redo(): void {
+    if (this.isReadOnly() || this.historyRedoStack.length === 0) return;
+
+    const currentSnapshot = this.cloneSnapshot();
+    this.historyUndoStack.push(currentSnapshot);
+
+    const nextSnapshot = this.historyRedoStack.pop()!;
+    this.isApplyingHistory = true;
+
+    this.nodes.set(nextSnapshot.nodes);
+    this.connections.set(nextSnapshot.connections);
+    this.defaultLineStyle.set(nextSnapshot.defaultLineStyle);
+
+    this.historyUndoCount.set(this.historyUndoStack.length);
+    this.historyRedoCount.set(this.historyRedoStack.length);
+
+    this.selectedNodeId.set(null);
+    this.selectedNodeIds.set(new Set());
+
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    requestAnimationFrame(() => {
+      this.updateConnectionEndpoints();
+      this.fFlow?.reset();
+      this.fFlow?.redraw();
+      this.canvas?.redraw();
+      this.isApplyingHistory = false;
+    });
+
+    this.collaborationService.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      'redo',
+      this.defaultLineStyle(),
+    );
+    this.autoSave$.next();
   }
 
   isConnectionSelected(connId: string): boolean {
@@ -958,6 +1182,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   isConnectionDimmed(connId: string): boolean {
+    if (this.hasMultipleSelected()) return false;
     const selId = this.selectedNodeId();
     if (!selId) return false;
     const conn = this.connections().find((c) => c.id === connId);
@@ -997,6 +1222,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   isNeighborNode(nodeId: string): boolean {
+    if (this.hasMultipleSelected()) return false;
     const selId = this.selectedNodeId();
     if (!selId || nodeId === selId) return false;
     return this.connections().some((c) => {
@@ -1060,6 +1286,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         targetMultiplicity: isInheritance ? '' : '0..*',
       };
 
+      this.pushSnapshot();
       this.connections.update((list) => [...list, newConn]);
       this.markAsUnsaved();
       this.setPointerMode();
@@ -1140,6 +1367,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       targetMultiplicity: isInheritance ? '' : '0..*',
     };
 
+    this.pushSnapshot();
     this.connections.update((list) => [...list, newConnection]);
     this.markAsUnsaved();
     this.setPointerMode();
@@ -1150,6 +1378,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onConnectionReassigned(event: FReassignConnectionEvent): void {
     if (this.isReadOnly()) return;
+    this.pushSnapshot();
     this.connections.update((list) =>
       list.map((c) => {
         if (c.id === event.connectionId) {
@@ -1168,6 +1397,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   createAssociationClassBetween(sourceNode: UmlClassNode, targetNode: UmlClassNode): void {
+    this.pushSnapshot();
     const timestamp = Date.now();
     const anchorId = `anchor_${timestamp}`;
     const assocNodeId = `node_${timestamp}_assoc`;
@@ -1275,6 +1505,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   addClass(): void {
     if (this.isReadOnly()) return;
+    this.pushSnapshot();
     const posX = Math.round(- (this.canvas?.transform?.position?.x || 0) + 150 + Math.random() * 80);
     const posY = Math.round(- (this.canvas?.transform?.position?.y || 0) + 150 + Math.random() * 80);
 
@@ -1293,9 +1524,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
   }
 
-  removeClass(nodeId: string, event?: MouseEvent): void {
+  removeClass(nodeId: string, event?: MouseEvent, recordHistory = true): void {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
+
+    if (recordHistory) {
+      this.pushSnapshot();
+    }
 
     const nodesToDelete = new Set<string>([nodeId]);
     const connsToDelete = new Set<string>();
@@ -1408,6 +1643,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const edited = this.editingNode();
     if (!edited) return;
 
+    this.pushSnapshot();
     this.nodes.update((list) => list.map((n) => (n.id === edited.id ? edited : n)));
     this.markAsUnsaved();
     this.closeEditNodeModal();
@@ -1463,6 +1699,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       edited.targetMultiplicity = '';
     }
 
+    this.pushSnapshot();
     this.connections.update((list) => list.map((c) => (c.id === edited.id ? edited : c)));
     this.markAsUnsaved();
     this.closeEditConnModal();
@@ -1474,6 +1711,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
 
+    this.pushSnapshot();
     const conn = this.connections().find((c) => c.id === connId);
     const connsToDelete = new Set<string>([connId]);
     const nodesToDelete = new Set<string>();

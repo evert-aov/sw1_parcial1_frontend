@@ -163,6 +163,9 @@ export const es = {
     aiAssistant: 'Asistente IA',
     aiTooltip: 'Generación y sugerencias con Inteligencia Artificial',
     profileTooltip: 'Ver perfil de usuario',
+    undo: 'Deshacer',
+    redo: 'Rehacer',
+    selectAll: 'Seleccionar Todo',
     logout: 'Salir',
     logoutTooltip: 'Cerrar Sesión',
   },
@@ -176,6 +179,7 @@ export const es = {
     },
     sections: {
       project: 'Proyecto',
+      editHistory: 'Edición',
       diagramImage: 'Diagram Image',
       modelExchange: 'Model Exchange',
       modelReports: 'Model Reports',

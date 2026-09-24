@@ -31,6 +31,24 @@
       <span class="text-[9px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 font-mono font-semibold">
         EA UML 2.5
       </span>
+
+      <!-- Quick Access Undo / Redo -->
+      <div class="flex items-center gap-0.5 ml-1 border-l border-slate-300 dark:border-slate-700 pl-1.5">
+        <button
+          (click)="undo.emit()"
+          [disabled]="!canUndo() || isReadOnly()"
+          [title]="('appbar.undo' | translate) + ' (Ctrl+Z)'"
+          class="p-1 rounded text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white/80 dark:hover:bg-[#1A2246] transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+          <ng-icon name="heroArrowUturnLeft" class="text-xs"></ng-icon>
+        </button>
+        <button
+          (click)="redo.emit()"
+          [disabled]="!canRedo() || isReadOnly()"
+          [title]="('appbar.redo' | translate) + ' (Ctrl+Y)'"
+          class="p-1 rounded text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white/80 dark:hover:bg-[#1A2246] transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+          <ng-icon name="heroArrowUturnRight" class="text-xs"></ng-icon>
+        </button>
+      </div>
     </div>
 
     <!-- Centro: Sala colaborativa compacta si está activa -->
@@ -457,6 +475,51 @@
         </div>
         <div class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase">
           {{ 'ribbon.sections.umlElements' | translate }}
+        </div>
+      </div>
+
+      <!-- SECCIÓN: Edit & History -->
+      <div class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-[72px]">
+        <div class="flex items-center gap-1.5 flex-1 justify-center">
+          <button
+            (click)="undo.emit()"
+            [disabled]="!canUndo() || isReadOnly()"
+            [title]="('appbar.undo' | translate) + ' (Ctrl+Z)'"
+            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[50px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762] disabled:opacity-40 disabled:cursor-not-allowed">
+            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <ng-icon name="heroArrowUturnLeft" class="text-xl text-slate-700 dark:text-slate-300"></ng-icon>
+            </div>
+            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">
+              {{ 'appbar.undo' | translate }}
+            </span>
+          </button>
+          <button
+            (click)="redo.emit()"
+            [disabled]="!canRedo() || isReadOnly()"
+            [title]="('appbar.redo' | translate) + ' (Ctrl+Y)'"
+            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[50px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762] disabled:opacity-40 disabled:cursor-not-allowed">
+            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <ng-icon name="heroArrowUturnRight" class="text-xl text-slate-700 dark:text-slate-300"></ng-icon>
+            </div>
+            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">
+              {{ 'appbar.redo' | translate }}
+            </span>
+          </button>
+          <button
+            (click)="selectAll.emit()"
+            [disabled]="isReadOnly()"
+            [title]="('appbar.selectAll' | translate) + ' (Ctrl+A)'"
+            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[54px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]">
+            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <ng-icon name="heroSquares2x2" class="text-xl text-slate-700 dark:text-slate-300"></ng-icon>
+            </div>
+            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap">
+              {{ 'appbar.selectAll' | translate }}
+            </span>
+          </button>
+        </div>
+        <div class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase">
+          {{ 'ribbon.sections.editHistory' | translate }}
         </div>
       </div>
 

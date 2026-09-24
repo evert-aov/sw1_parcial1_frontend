@@ -34,6 +34,8 @@ import {
   heroCursorArrowRays,
   heroBars3,
   heroPrinter,
+  heroArrowUturnLeft,
+  heroArrowUturnRight,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
@@ -80,6 +82,8 @@ export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'star
       heroCursorArrowRays,
       heroBars3,
       heroPrinter,
+      heroArrowUturnLeft,
+      heroArrowUturnRight,
     }),
   ],
   templateUrl: './diagram-appbar.component.html',
@@ -129,6 +133,8 @@ export class DiagramAppbarComponent {
   readonly isReadOnly = input<boolean>(false);
   readonly isMultiUserEditing = input<boolean | undefined>(undefined);
   readonly isToolboxOpen = input<boolean>(true);
+  readonly canUndo = input<boolean>(false);
+  readonly canRedo = input<boolean>(false);
 
   // Indica si hay 2 o más usuarios editando simultáneamente
   readonly multiUserBlocked = computed(() => {
@@ -140,6 +146,9 @@ export class DiagramAppbarComponent {
 
   // Outputs
   readonly saveDiagram = output<void>();
+  readonly undo = output<void>();
+  readonly redo = output<void>();
+  readonly selectAll = output<void>();
   readonly exportBmp = output<void>();
   readonly exportXmi = output<void>();
   readonly exportJson = output<void>();

@@ -163,6 +163,9 @@ export const en = {
     aiAssistant: 'AI Assistant',
     aiTooltip: 'AI-assisted generation and suggestions',
     profileTooltip: 'View user profile',
+    undo: 'Undo',
+    redo: 'Redo',
+    selectAll: 'Select All',
     logout: 'Log Out',
     logoutTooltip: 'Sign Out of Session',
   },
@@ -176,6 +179,7 @@ export const en = {
     },
     sections: {
       project: 'Project',
+      editHistory: 'Edit History',
       diagramImage: 'Diagram Image',
       modelExchange: 'Model Exchange',
       modelReports: 'Model Reports',
