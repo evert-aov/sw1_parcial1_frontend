@@ -1325,6 +1325,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     // 2. Si el propio nodo a eliminar es una tabla intermedia (tiene assocMainConnId)
     const targetNode = this.nodes().find((n) => n.id === nodeId);
     if (targetNode?.assocMainConnId) {
+      connsToDelete.add(targetNode.assocMainConnId);
       const mainConn = this.connections().find((c) => c.id === targetNode.assocMainConnId);
       if (mainConn?.assocAnchorNodeId) {
         nodesToDelete.add(mainConn.assocAnchorNodeId);
@@ -1345,7 +1346,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
     });
 
-    // 4. Eliminar todas las conexiones que toquen a cualquiera de los nodos marcados para eliminación
+    // 4. Si cualquier nodo ancla o tabla intermedia está marcado, marcar la conexión principal
+    this.connections().forEach((c) => {
+      if (c.assocAnchorNodeId && nodesToDelete.has(c.assocAnchorNodeId)) {
+        connsToDelete.add(c.id);
+      }
+    });
+    this.nodes().forEach((n) => {
+      if (n.assocMainConnId && nodesToDelete.has(n.id)) {
+        connsToDelete.add(n.assocMainConnId);
+      }
+    });
+
+    // 5. Eliminar todas las conexiones que toquen a cualquiera de los nodos marcados para eliminación
     this.connections().forEach((c) => {
       const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
       const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
@@ -1354,7 +1367,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
     });
 
-    // 5. Aplicar la eliminación en cascada a los signals
+    // 6. Aplicar la eliminación en cascada a los signals
     this.nodes.update((list) => list.filter((n) => !nodesToDelete.has(n.id)));
     this.connections.update((list) => list.filter((c) => !connsToDelete.has(c.id)));
 
@@ -1481,8 +1494,32 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const targetNode = this.nodes().find((n) => n.id === targetBase);
         if (sourceNode?.isAnchor) nodesToDelete.add(sourceNode.id);
         if (targetNode?.isAnchor) nodesToDelete.add(targetNode.id);
+        if (sourceNode && !sourceNode.isAnchor) nodesToDelete.add(sourceNode.id);
+        if (targetNode && !targetNode.isAnchor) nodesToDelete.add(targetNode.id);
       }
     }
+
+    // Propagar relaciones association_class en cascada
+    this.connections().forEach((c) => {
+      if (c.type === 'association_class') {
+        const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
+        const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
+        if (nodesToDelete.has(sourceBase)) nodesToDelete.add(targetBase);
+        if (nodesToDelete.has(targetBase)) nodesToDelete.add(sourceBase);
+      }
+    });
+
+    // Si cualquier nodo ancla o tabla intermedia está marcado, marcar la conexión principal
+    this.connections().forEach((c) => {
+      if (c.assocAnchorNodeId && nodesToDelete.has(c.assocAnchorNodeId)) {
+        connsToDelete.add(c.id);
+      }
+    });
+    this.nodes().forEach((n) => {
+      if (n.assocMainConnId && nodesToDelete.has(n.id)) {
+        connsToDelete.add(n.assocMainConnId);
+      }
+    });
 
     this.connections().forEach((c) => {
       const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');

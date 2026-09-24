@@ -96,7 +96,7 @@ export class XmiClientParser {
       const type = elem['@_xmi:type'] || elem['@_type'];
       const id = elem['@_xmi:id'] || elem['@_id'];
 
-      if (type === 'uml:Association' || type === 'Association' || type === 'uml:AssociationClass') {
+      if (type === 'uml:Association' || type === 'Association') {
         const conn = this.parseAssociation(elem, nodeMap, connectorLabelsMap, connLineStyleMap);
         if (conn && !connSet.has(conn.id)) {
           connSet.add(conn.id);
@@ -123,6 +123,9 @@ export class XmiClientParser {
         connections.push(ec);
       }
     }
+
+    // 5. Reconstruir tablas intermedias / Association Classes (ancla y enlace discontinuo)
+    this.resolveAssociationClasses(xmiRoot, rawElements, nodeMap, connections, connSet);
 
     return {
       name: diagramName,
@@ -517,5 +520,149 @@ export class XmiClientParser {
     if (lower === 'localdatetime' || lower === 'timestamp') return 'LocalDateTime';
     if (lower === 'void') return 'void';
     return type || 'String';
+  }
+
+  private static resolveAssociationClasses(
+    xmiRoot: any,
+    rawPackagedElements: any[],
+    nodeMap: Map<string, UmlClassNode>,
+    connections: UmlConnection[],
+    connectionSet: Set<string>,
+  ): void {
+    const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
+    const pairings: Array<{ assocNodeId: string; mainConnId?: string; sourceId?: string; targetId?: string }> = [];
+
+    // 1. Desde conectores de EA Extension
+    if (ext && ext['connectors'] && ext['connectors']['connector']) {
+      const rawConnList = Array.isArray(ext['connectors']['connector'])
+        ? ext['connectors']['connector']
+        : [ext['connectors']['connector']];
+      for (const c of rawConnList) {
+        const cId = c['@_xmi:idref'] || c['@_id'];
+        const assocId = c['extendedProperties']?.['@_associationclass'];
+        if (cId && assocId && nodeMap.has(assocId)) {
+          pairings.push({ assocNodeId: assocId, mainConnId: cId });
+        }
+      }
+    }
+
+    // 2. Desde elementos de EA Extension
+    if (ext && ext['elements'] && ext['elements']['element']) {
+      const rawElemList = Array.isArray(ext['elements']['element'])
+        ? ext['elements']['element']
+        : [ext['elements']['element']];
+      for (const e of rawElemList) {
+        const eId = e['@_xmi:idref'] || e['@_id'];
+        const assocConnId = e['extendedProperties']?.['@_associationclass'];
+        if (eId && assocConnId && nodeMap.has(eId)) {
+          pairings.push({ assocNodeId: eId, mainConnId: assocConnId });
+        }
+      }
+    }
+
+    // 3. Desde elementos packagedElement tipo uml:AssociationClass
+    for (const elem of rawPackagedElements) {
+      const type = elem['@_xmi:type'] || elem['@_type'];
+      const id = elem['@_xmi:id'] || elem['@_id'];
+      if (type === 'uml:AssociationClass' && id && nodeMap.has(id)) {
+        const ends = elem['ownedEnd'] || elem['memberEnd'];
+        if (ends) {
+          const rawEnds = Array.isArray(ends) ? ends : [ends];
+          const typeIds: string[] = [];
+          for (const end of rawEnds) {
+            const tId = end?.type?.['@_xmi:idref'] || end?.type?.['@_type'] || end?.['@_type'];
+            if (tId && nodeMap.has(tId)) {
+              typeIds.push(tId);
+            }
+          }
+          if (typeIds.length >= 2) {
+            pairings.push({ assocNodeId: id, sourceId: typeIds[0], targetId: typeIds[1] });
+          }
+        }
+      }
+    }
+
+    const seenAssocNodes = new Set<string>();
+    for (const pair of pairings) {
+      if (seenAssocNodes.has(pair.assocNodeId)) continue;
+      const assocNode = nodeMap.get(pair.assocNodeId);
+      if (!assocNode || assocNode.isAnchor) continue;
+
+      let mainConn: UmlConnection | undefined;
+      if (pair.mainConnId) {
+        mainConn = connections.find(c => c.id === pair.mainConnId);
+      }
+      if (!mainConn && pair.sourceId && pair.targetId) {
+        mainConn = connections.find(c =>
+          (c.sourceNodeId === pair.sourceId && c.targetNodeId === pair.targetId) ||
+          (c.sourceNodeId === pair.targetId && c.targetNodeId === pair.sourceId),
+        );
+        if (!mainConn) {
+          const newConnId = `conn_${pair.sourceId}_${pair.targetId}_${Date.now()}`;
+          mainConn = {
+            id: newConnId,
+            sourceNodeId: pair.sourceId,
+            targetNodeId: pair.targetId,
+            sourceId: `${pair.sourceId}_right`,
+            targetId: `${pair.targetId}_left`,
+            type: 'association',
+            sourceMultiplicity: '*',
+            targetMultiplicity: '*',
+            lineStyle: 'straight',
+          };
+          connectionSet.add(newConnId);
+          connections.push(mainConn);
+        }
+      }
+      if (!mainConn) continue;
+
+      if (mainConn.assocAnchorNodeId && nodeMap.has(mainConn.assocAnchorNodeId)) continue;
+      seenAssocNodes.add(pair.assocNodeId);
+
+      const sId = mainConn.sourceNodeId || mainConn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+      const tId = mainConn.targetNodeId || mainConn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+      if (!sId || !tId) continue;
+
+      const sourceNode = nodeMap.get(sId);
+      const targetNode = nodeMap.get(tId);
+      const sX = sourceNode?.position?.x || 100;
+      const sY = sourceNode?.position?.y || 100;
+      const tX = targetNode?.position?.x || 400;
+      const tY = targetNode?.position?.y || 100;
+
+      const midX = Math.round((sX + tX + 220) / 2);
+      const midY = Math.round((sY + tY + 120) / 2);
+
+      const anchorId = `anchor_${mainConn.id}`;
+      const anchorNode: UmlClassNode = {
+        id: anchorId,
+        name: '',
+        position: { x: midX, y: midY },
+        width: 14,
+        height: 14,
+        attributes: [],
+        methods: [],
+        isAnchor: true,
+      };
+      nodeMap.set(anchorId, anchorNode);
+
+      mainConn.assocAnchorNodeId = anchorId;
+      assocNode.assocMainConnId = mainConn.id;
+
+      const dashedConnId = `conn_${assocNode.id}_assoc_dashed`;
+      if (!connectionSet.has(dashedConnId)) {
+        connectionSet.add(dashedConnId);
+        connections.push({
+          id: dashedConnId,
+          sourceNodeId: anchorId,
+          targetNodeId: assocNode.id,
+          sourceId: anchorId,
+          targetId: `${assocNode.id}_top`,
+          type: 'association_class',
+          lineStyle: 'straight',
+          name: '«link»',
+        });
+      }
+    }
   }
 }
