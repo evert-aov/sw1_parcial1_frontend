@@ -59,6 +59,35 @@
   background: transparent !important;
 }
 
+::ng-deep f-flow .f-node {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background-color: #FFFDF9 !important;
+  border: 1px solid #796354 !important;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15) !important;
+  box-sizing: border-box !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow .f-node,
+.dark ::ng-deep f-flow .f-node {
+  background-color: #151A30 !important;
+  border: 1px solid #3B487A !important;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.45) !important;
+}
+
+::ng-deep f-flow .f-node.opacity-0,
+::ng-deep f-flow .f-node.w-0 {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+::ng-deep f-flow .f-node.f-selected {
+  outline: 2px solid #2563eb !important;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
+  z-index: 30 !important;
+}
+
 /* Área de Selección Rectangular (Marquee) */
 ::ng-deep f-selection-area,
 ::ng-deep .f-selection-area {

@@ -136,6 +136,7 @@
         (connectionReassigned)="onConnectionReassigned($event)"
         (moveNodes)="onMoveNodes($event)"
         (selectionChange)="onSelectionChange($event)"
+        (nodePositionChange)="onNodePositionChange($event.node, $event.newPosition)"
         (nodeClick)="onNodeSelect($event.nodeId, $event.event)"
         (nodeDblClick)="openEditNodeModal($event.node, $event.event)"
         (connectionDblClick)="openEditConnModal($event.conn, $event.event)"

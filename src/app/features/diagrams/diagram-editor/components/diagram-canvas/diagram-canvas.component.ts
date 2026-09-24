@@ -24,8 +24,7 @@ import {
   isOnFlowBackground,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroLockClosed } from '@ng-icons/heroicons/outline';
-import { TranslatePipe } from '../../../../../core/i18n';
+import { heroLockClosed, heroTrash } from '@ng-icons/heroicons/outline';
 import {
   UmlClassNode,
   UmlConnection,
@@ -37,10 +36,11 @@ import {
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
-  imports: [CommonModule, FFlowModule, NgIconComponent, TranslatePipe],
+  imports: [CommonModule, FFlowModule, NgIconComponent],
   providers: [
     provideIcons({
       heroLockClosed,
+      heroTrash,
     }),
   ],
   templateUrl: './diagram-canvas.component.html',
@@ -74,6 +74,7 @@ export class DiagramCanvasComponent {
   readonly connectionReassigned = output<FReassignConnectionEvent>();
   readonly moveNodes = output<FMoveNodesEvent>();
   readonly selectionChange = output<FSelectionChangeEvent>();
+  readonly nodePositionChange = output<{ node: UmlClassNode; newPosition: { x: number; y: number } }>();
   readonly nodeClick = output<{ nodeId: string; event: MouseEvent }>();
   readonly nodeDblClick = output<{ node: UmlClassNode; event: MouseEvent }>();
   readonly connectionDblClick = output<{ conn: UmlConnection; event: MouseEvent }>();
@@ -135,6 +136,10 @@ export class DiagramCanvasComponent {
 
   onSelectionChange(event: FSelectionChangeEvent): void {
     this.selectionChange.emit(event);
+  }
+
+  onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
+    this.nodePositionChange.emit({ node, newPosition });
   }
 
   onNodeClick(nodeId: string, event: MouseEvent): void {
@@ -283,6 +288,10 @@ export class DiagramCanvasComponent {
     return this.selectedNodeIds().includes(nodeId);
   }
 
+  hasMultipleSelected(): boolean {
+    return this.selectedNodeIds().length > 1;
+  }
+
   isConnectionSelected(connId: string): boolean {
     return this.selectedConnIds().includes(connId);
   }
@@ -307,15 +316,18 @@ export class DiagramCanvasComponent {
     });
   }
 
+  getNodeLock(nodeId: string): any {
+    const locks = this.nodeLocks();
+    if (locks instanceof Map) {
+      return locks.get(nodeId);
+    } else if (locks && typeof locks === 'object') {
+      return locks[nodeId];
+    }
+    return null;
+  }
 
   isNodeLockedByOther(nodeId: string): boolean {
-    const locks = this.nodeLocks();
-    let lock: any;
-    if (locks instanceof Map) {
-      lock = locks.get(nodeId);
-    } else if (locks && typeof locks === 'object') {
-      lock = locks[nodeId];
-    }
+    const lock = this.getNodeLock(nodeId);
     const myId = this.currentUserId();
     return !!lock && lock.userId !== myId;
   }
