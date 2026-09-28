@@ -173,6 +173,7 @@ export class DiagramAppbarComponent {
   readonly selectAll = output<void>();
   readonly changeNodeColor = output<string | null>();
   readonly exportBmp = output<void>();
+  readonly exportPng = output<void>();
   readonly exportXmi = output<void>();
   readonly exportJson = output<void>();
   readonly viewJson = output<void>();
@@ -198,6 +199,14 @@ export class DiagramAppbarComponent {
       return;
     }
     this.exportBmp.emit();
+  }
+
+  handleExportPng(): void {
+    if (this.multiUserBlocked()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
+    this.exportPng.emit();
   }
 
   handleExportXmi(): void {

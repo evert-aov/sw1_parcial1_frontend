@@ -7,108 +7,27 @@ import { UmlClassNode, UmlConnection } from '../models/diagram.model';
 })
 export class BmpExportService {
   /**
-   * Exporta una captura visual exacta del DOM del editor de diagramas a formato BMP (Windows Bitmap).
-   * @param element Elemento HTML del contenedor del lienzo (FlowContainer).
-   * @param diagramName Nombre del archivo generado.
+   * Exporta una captura visual exacta del DOM del editor de diagramas a formato BMP (Windows Bitmap),
+   * detectando automáticamente el bounding box de los elementos e integrando el marco UML 2.5 estilo Enterprise Architect.
    */
   async exportElementToBmp(
     element: HTMLElement,
     diagramName = 'diagrama-uml',
+    diagramType?: string,
   ): Promise<void> {
-    if (!element) {
-      alert('No se encontró el contenedor del lienzo para capturar.');
-      return;
-    }
-
     try {
-      // 1. Sanitizar elementos SVG del DOM para garantizar trazo limpio (sin relleno negro por defecto de SVG)
-      const allCircles = element.querySelectorAll<SVGCircleElement>('circle');
-      allCircles.forEach((circle) => {
-        circle.setAttribute('display', 'none');
-        circle.style.display = 'none';
-        circle.setAttribute('fill', 'none');
-        circle.style.fill = 'none';
-      });
-
-      const allPaths = element.querySelectorAll<SVGPathElement>('path');
-      allPaths.forEach((path) => {
-        path.setAttribute('fill', 'none');
-        path.style.fill = 'none';
-        if (!path.getAttribute('stroke') || path.getAttribute('stroke') === 'none') {
-          path.setAttribute('stroke', '#2A201B');
-        }
-      });
-
-      const allPolygons = element.querySelectorAll<SVGPolygonElement>('polygon');
-      allPolygons.forEach((poly) => {
-        const isFilled = poly.getAttribute('fill') === '#2A201B' || poly.classList.contains('fill-[#2A201B]');
-        if (isFilled) {
-          poly.setAttribute('fill', '#2A201B');
-          poly.style.fill = '#2A201B';
-        } else {
-          poly.setAttribute('fill', '#FFFFFF');
-          poly.style.fill = '#FFFFFF';
-        }
-        poly.setAttribute('stroke', '#2A201B');
-      });
-
-      const allPolylines = element.querySelectorAll<SVGPolylineElement>('polyline');
-      allPolylines.forEach((pline) => {
-        pline.setAttribute('fill', 'none');
-        pline.style.fill = 'none';
-        pline.setAttribute('stroke', '#2A201B');
-      });
-
-      // 2. Renderizar el DOM exacto a un Canvas HTML5 a 2x de resolución
-      const canvas = await toCanvas(element, {
-        backgroundColor: '#F9F7F5',
-        pixelRatio: 2,
-        cacheBust: true,
-        filter: (domNode: HTMLElement) => {
-          // Filtrar círculos de conexión (drag handles temporales de Foblex)
-          const tag = domNode.tagName?.toLowerCase();
-          if (
-            tag === 'circle' ||
-            domNode.classList?.contains('f-connection-drag-handle') ||
-            domNode.hasAttribute?.('f-connection-drag-handle-start') ||
-            domNode.hasAttribute?.('f-connection-drag-handle-end')
-          ) {
-            return false;
-          }
-
-          // Filtrar controles flotantes de UI (botones flotantes, cursores remotos temporales)
-          if (domNode.classList && (
-            domNode.classList.contains('pointer-events-none') ||
-            (domNode.classList.contains('z-40') && domNode.tagName === 'BUTTON')
-          )) {
-            return false;
-          }
-          return true;
-        },
-      });
-
-      // 2. Extraer ImageData del Canvas
-      const ctx = canvas.getContext('2d');
+      const finalCanvas = await this.generateFramedCanvas(element, diagramName, diagramType);
+      const ctx = finalCanvas.getContext('2d');
       if (!ctx) {
         throw new Error('No se pudo obtener el contexto 2d del canvas.');
       }
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      // 3. Codificar a binario BMP de 24 bits
+      const imageData = ctx.getImageData(0, 0, finalCanvas.width, finalCanvas.height);
       const bmpBuffer = this.convertImageDataToBmp(imageData);
 
-      // 4. Descargar el archivo .bmp
       const blob = new Blob([bmpBuffer], { type: 'image/bmp' });
       const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `${cleanFileName || 'diagrama'}.bmp`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
+      this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.bmp`);
     } catch (err) {
       console.error('Error al capturar imagen BMP del editor:', err);
       alert('Error al generar la captura BMP del diagrama.');
@@ -116,25 +35,316 @@ export class BmpExportService {
   }
 
   /**
-   * Exporta el diagrama UML a una imagen en formato Windows Bitmap (.bmp) mediante renderizado de fallback.
-   * @param nodes Lista de nodos de clases UML.
-   * @param connections Lista de conexiones UML.
-   * @param diagramName Nombre del diagrama para el archivo de salida.
+   * Exporta una captura visual exacta del DOM a formato PNG de alta resolución con marco UML 2.5.
+   */
+  async exportElementToPng(
+    element: HTMLElement,
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+  ): Promise<void> {
+    try {
+      const finalCanvas = await this.generateFramedCanvas(element, diagramName, diagramType);
+      finalCanvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Error al generar la imagen PNG.');
+          return;
+        }
+        const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+        this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.png`);
+      }, 'image/png');
+    } catch (err) {
+      console.error('Error al capturar imagen PNG del editor:', err);
+      alert('Error al generar la captura PNG del diagrama.');
+    }
+  }
+
+  /**
+   * Genera un HTMLCanvasElement con el encuadre exacto Enterprise Architect (UML 2.5 Frame).
+   * 1. Detecta automáticamente el bounding box que cubre los elementos del diagrama (sin exportar el lienzo vacío).
+   * 2. Agrega el marco UML 2.5 con la pestaña superior izquierda (estilo pentagonal con chaflán a 45°).
+   * 3. Incluye el tipo de diagrama (uc, class, sd, comm, pkg) y el nombre del diagrama.
+   * 4. Añade un margen exterior limpio de 24px igual a Enterprise Architect.
+   */
+  async generateFramedCanvas(
+    element: HTMLElement,
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+  ): Promise<HTMLCanvasElement> {
+    if (!element) {
+      throw new Error('No se encontró el contenedor del lienzo para capturar.');
+    }
+
+    // 1. Renderizar el DOM del lienzo a un Canvas HTML5 a 2x de resolución con fondo blanco puro
+    const rawCanvas = await toCanvas(element, {
+      backgroundColor: '#FFFFFF',
+      pixelRatio: 2,
+      cacheBust: true,
+      filter: (domNode: HTMLElement) => {
+        const classList = domNode.classList;
+        // Filtrar drag handles interactivos temporales de Foblex y puntos conectores
+        if (
+          classList?.contains('f-connection-drag-handle') ||
+          domNode.hasAttribute?.('f-connection-drag-handle-start') ||
+          domNode.hasAttribute?.('f-connection-drag-handle-end') ||
+          classList?.contains('uml-connector-point')
+        ) {
+          return false;
+        }
+
+        // Filtrar controles flotantes de UI (cursores remotos, botones de acción flotantes)
+        if (
+          classList &&
+          (classList.contains('pointer-events-none') ||
+            (classList.contains('z-40') && domNode.tagName === 'BUTTON'))
+        ) {
+          return false;
+        }
+        return true;
+      },
+    });
+
+    // 2. Detectar el bounding box exacto del contenido diagramado (excluyendo el espacio vacío)
+    const bbox = this.findContentBoundingBox(rawCanvas);
+    const contentW = bbox.maxX - bbox.minX + 1;
+    const contentH = bbox.maxY - bbox.minY + 1;
+
+    // 3. Parámetros del marco UML 2.5 idéntico a Enterprise Architect (en escala 2x)
+    const outerMargin = 24;      // Margen exterior de 24px exacto de EA
+    const innerPadLeft = 48;     // Espacio interior izquierdo entre marco y elementos
+    const innerPadRight = 48;    // Espacio interior derecho
+    const innerPadBottom = 36;   // Espacio interior inferior
+    const innerPadTop = 84;      // Espacio interior superior (deja respiro suficiente bajo la pestaña)
+    const tabHeight = 54;        // Altura de la pestaña de título UML
+    const chamfer = 20;          // Chaflán diagonal a 45° en esquina inferior derecha de la pestaña
+
+    // 4. Formatear título con prefijo UML estándar
+    const prefix = this.getDiagramPrefix(diagramType);
+    let cleanName = diagramName.trim().replace(new RegExp(`^${prefix}\\s*[:\\-]?\\s*`, 'i'), '');
+    cleanName = cleanName.replace(/^(uc|class|sd|comm|pkg)\s*[:\-]?\s*/i, '');
+    const fullTitle = `${prefix} ${cleanName || diagramName.trim() || 'Diagram'}`;
+
+    // Calcular ancho necesario para la pestaña
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    let textWidth = 200;
+    if (tempCtx) {
+      tempCtx.font = 'bold 20px system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+      textWidth = tempCtx.measureText(fullTitle).width;
+    }
+    const tabWidth = Math.max(220, Math.ceil(textWidth + 36 + chamfer));
+
+    // Dimensiones totales del marco y del canvas final
+    const frameW = Math.max(contentW + innerPadLeft + innerPadRight, tabWidth + 60);
+    const frameH = contentH + innerPadTop + innerPadBottom;
+
+    const totalW = frameW + outerMargin * 2;
+    const totalH = frameH + outerMargin * 2;
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = totalW;
+    finalCanvas.height = totalH;
+
+    const ctx = finalCanvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('No se pudo inicializar el contexto 2d del canvas final.');
+    }
+
+    // 5. Rellenar fondo blanco puro
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, totalW, totalH);
+
+    // 6. Dibujar rectángulo del marco exterior UML 2.5
+    const frameX = outerMargin;
+    const frameY = outerMargin;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(frameX, frameY, frameW, frameH);
+
+    // 7. Dibujar pestaña UML 2.5 con esquina recortada a 45° (chamfer)
+    ctx.beginPath();
+    ctx.moveTo(frameX, frameY);
+    ctx.lineTo(frameX + tabWidth, frameY);
+    ctx.lineTo(frameX + tabWidth, frameY + tabHeight - chamfer);
+    ctx.lineTo(frameX + tabWidth - chamfer, frameY + tabHeight);
+    ctx.lineTo(frameX, frameY + tabHeight);
+    ctx.closePath();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 8. Dibujar texto del título del diagrama en la pestaña
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 20px system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fullTitle, frameX + 16, frameY + tabHeight / 2 - 1);
+
+    // 9. Dibujar el contenido diagramado recortado exactamente a su bounding box
+    const destX = frameX + innerPadLeft;
+    const destY = frameX + innerPadTop;
+    ctx.drawImage(
+      rawCanvas,
+      bbox.minX,
+      bbox.minY,
+      contentW,
+      contentH,
+      destX,
+      destY,
+      contentW,
+      contentH,
+    );
+
+    return finalCanvas;
+  }
+
+  /**
+   * Detecta el Bounding Box exacto del contenido (elementos dibujados) en el canvas renderizado.
+   */
+  private findContentBoundingBox(canvas: HTMLCanvasElement): {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  } {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return { minX: 0, minY: 0, maxX: canvas.width - 1, maxY: canvas.height - 1 };
+    }
+    const width = canvas.width;
+    const height = canvas.height;
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < height; y++) {
+      const rowOffset = y * width * 4;
+      for (let x = 0; x < width; x++) {
+        const idx = rowOffset + x * 4;
+        const a = data[idx + 3];
+        if (a > 20) {
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          // Píxel no blanco
+          if (r < 250 || g < 250 || b < 250) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+    }
+
+    if (maxX < minX || maxY < minY) {
+      return { minX: 0, minY: 0, maxX: Math.min(600, width - 1), maxY: Math.min(400, height - 1) };
+    }
+
+    const pad = 16;
+    minX = Math.max(0, minX - pad);
+    minY = Math.max(0, minY - pad);
+    maxX = Math.min(width - 1, maxX + pad);
+    maxY = Math.min(height - 1, maxY + pad);
+
+    return { minX, minY, maxX, maxY };
+  }
+
+  /**
+   * Mapea el tipo de diagrama a su prefijo canónico UML 2.5 estilo Enterprise Architect.
+   */
+  private getDiagramPrefix(diagramType?: string): string {
+    const type = (diagramType || '').toLowerCase();
+    if (type.includes('use_case') || type === 'use-case' || type === 'uc') {
+      return 'uc';
+    }
+    if (type.includes('sequence') || type === 'sd') {
+      return 'sd';
+    }
+    if (type.includes('communication') || type === 'comm') {
+      return 'comm';
+    }
+    if (type.includes('package') || type === 'pkg') {
+      return 'pkg';
+    }
+    return 'class';
+  }
+
+  private triggerDownload(blob: Blob, filename: string): void {
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(downloadUrl);
+  }
+
+  /**
+   * Exporta el diagrama UML a formato Windows Bitmap (.bmp) mediante renderizado de fallback canvas 2D.
    */
   exportToBmp(
     nodes: UmlClassNode[],
     connections: UmlConnection[],
     diagramName = 'diagrama-uml',
+    diagramType?: string,
   ): void {
+    const canvas = this.drawFallbackCanvas(nodes, connections, diagramName, diagramType);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rawImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const bmpBuffer = this.convertImageDataToBmp(rawImageData);
+
+    const blob = new Blob([bmpBuffer], { type: 'image/bmp' });
+    const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+    this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.bmp`);
+  }
+
+  /**
+   * Exporta el diagrama UML a formato PNG mediante renderizado de fallback canvas 2D.
+   */
+  exportToPng(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+  ): void {
+    const canvas = this.drawFallbackCanvas(nodes, connections, diagramName, diagramType);
+    if (!canvas) return;
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+      this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.png`);
+    }, 'image/png');
+  }
+
+  /**
+   * Dibuja los nodos y conexiones con marco UML 2.5 en un Canvas 2D como fallback.
+   */
+  private drawFallbackCanvas(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    diagramName: string,
+    diagramType?: string,
+  ): HTMLCanvasElement | null {
     const validNodes = nodes.filter((n) => !n.isAnchor);
 
     if (validNodes.length === 0) {
-      alert('No hay clases en el diagrama para exportar.');
-      return;
+      alert('No hay elementos en el diagrama para exportar.');
+      return null;
     }
 
-    // 1. Calcular el Bounding Box de todos los elementos
-    const padding = 60;
+    // 1. Calcular Bounding Box del contenido
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -149,52 +359,88 @@ export class BmpExportService {
       maxY = Math.max(maxY, node.position.y + h);
     }
 
-    const canvasWidth = Math.max(800, Math.ceil(maxX - minX + padding * 2));
-    const canvasHeight = Math.max(600, Math.ceil(maxY - minY + padding * 2));
-    const offsetX = padding - minX;
-    const offsetY = padding - minY;
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
 
-    // 2. Crear Canvas HTML5 con escala de alta definición (2x)
+    // 2. Parámetros del marco UML 2.5 (en unidades lógicas 1x)
+    const outerMargin = 24;
+    const innerPadLeft = 48;
+    const innerPadRight = 48;
+    const innerPadBottom = 36;
+    const innerPadTop = 84;
+    const tabHeight = 54;
+    const chamfer = 20;
+
+    const prefix = this.getDiagramPrefix(diagramType);
+    let cleanName = diagramName.trim().replace(new RegExp(`^${prefix}\\s*[:\\-]?\\s*`, 'i'), '');
+    cleanName = cleanName.replace(/^(uc|class|sd|comm|pkg)\s*[:\-]?\s*/i, '');
+    const fullTitle = `${prefix} ${cleanName || diagramName.trim() || 'Diagram'}`;
+
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    let textWidth = 200;
+    if (tempCtx) {
+      tempCtx.font = 'bold 20px system-ui, -apple-system, sans-serif';
+      textWidth = tempCtx.measureText(fullTitle).width;
+    }
+    const tabWidth = Math.max(220, Math.ceil(textWidth + 36 + chamfer));
+
+    const frameW = Math.max(contentW + innerPadLeft + innerPadRight, tabWidth + 60);
+    const frameH = contentH + innerPadTop + innerPadBottom;
+
+    const totalW = frameW + outerMargin * 2;
+    const totalH = frameH + outerMargin * 2;
+
     const scale = 2;
     const canvas = document.createElement('canvas');
-    canvas.width = canvasWidth * scale;
-    canvas.height = canvasHeight * scale;
+    canvas.width = totalW * scale;
+    canvas.height = totalH * scale;
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
       alert('No se pudo inicializar el contexto de dibujo Canvas.');
-      return;
+      return null;
     }
 
     ctx.scale(scale, scale);
 
-    // Fondo blanco limpio estilo Enterprise Architect
+    // Fondo blanco puro
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillRect(0, 0, totalW, totalH);
 
-    // Patrón de cuadrícula tenue
-    ctx.strokeStyle = '#F0EDE9';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvasWidth; x += 20) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvasHeight);
-      ctx.stroke();
-    }
-    for (let y = 0; y < canvasHeight; y += 20) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvasWidth, y);
-      ctx.stroke();
-    }
+    // Marco exterior UML 2.5
+    const frameX = outerMargin;
+    const frameY = outerMargin;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(frameX, frameY, frameW, frameH);
 
-    // Marca de agua sutil de Enterprise Architect / UML Studio en esquina superior
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillStyle = '#94A3B8';
-    ctx.textAlign = 'right';
-    ctx.fillText(`${diagramName} • Enterprise Architect UML 2.5 Export`, canvasWidth - 20, 25);
+    // Pestaña con chaflán
+    ctx.beginPath();
+    ctx.moveTo(frameX, frameY);
+    ctx.lineTo(frameX + tabWidth, frameY);
+    ctx.lineTo(frameX + tabWidth, frameY + tabHeight - chamfer);
+    ctx.lineTo(frameX + tabWidth - chamfer, frameY + tabHeight);
+    ctx.lineTo(frameX, frameY + tabHeight);
+    ctx.closePath();
 
-    // Mapa de posiciones de nodos para trazar conexiones
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Texto de la pestaña
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 20px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fullTitle, frameX + 16, frameY + tabHeight / 2 - 1);
+
+    // Offset para el contenido dentro del marco
+    const offsetX = frameX + innerPadLeft - minX;
+    const offsetY = frameY + innerPadTop - minY;
+
+    // Mapa de posiciones de nodos
     const nodeMap = new Map<string, { x: number; y: number; w: number; h: number; name: string }>();
     for (const node of validNodes) {
       const w = node.width || 220;
@@ -208,7 +454,7 @@ export class BmpExportService {
       });
     }
 
-    // 3. Dibujar Conexiones y Relaciones UML
+    // Dibujar conexiones
     for (const conn of connections) {
       const source = this.resolveConnectionNode(conn.sourceNodeId || conn.sourceId, nodeMap);
       const target = this.resolveConnectionNode(conn.targetNodeId || conn.targetId, nodeMap);
@@ -218,7 +464,7 @@ export class BmpExportService {
       }
     }
 
-    // 4. Dibujar Nodos de Clases UML
+    // Dibujar nodos
     for (const node of validNodes) {
       const nInfo = nodeMap.get(node.id);
       if (nInfo) {
@@ -226,21 +472,7 @@ export class BmpExportService {
       }
     }
 
-    // 5. Extraer ImageData y Convertir a Archivo Binario BMP (24-bit RGB)
-    const rawImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const bmpBuffer = this.convertImageDataToBmp(rawImageData);
-
-    // 6. Descargar el archivo .bmp
-    const blob = new Blob([bmpBuffer], { type: 'image/bmp' });
-    const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${cleanFileName || 'diagrama'}.bmp`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(downloadUrl);
+    return canvas;
   }
 
   private calculateNodeHeight(node: UmlClassNode): number {
@@ -576,8 +808,8 @@ export class BmpExportService {
     view.setUint16(28, 24, true); // Bits por píxel (24 bits = RGB)
     view.setUint32(30, 0, true); // Compresión (0 = BI_RGB sin comprimir)
     view.setUint32(34, pixelArraySize, true); // Tamaño del arreglo de píxeles
-    view.setInt32(38, 2835, true); // Resolución horizontal (~72 DPI)
-    view.setInt32(42, 2835, true); // Resolución vertical (~72 DPI)
+    view.setInt32(38, 3780, true); // Resolución horizontal (~96 DPI, estándar Enterprise Architect)
+    view.setInt32(42, 3780, true); // Resolución vertical (~96 DPI, estándar Enterprise Architect)
     view.setUint32(46, 0, true); // Colores en la paleta (0 = 2^24)
     view.setUint32(50, 0, true); // Colores importantes
 
@@ -596,10 +828,10 @@ export class BmpExportService {
         const b = data[srcIdx + 2];
         const a = data[srcIdx + 3] / 255;
 
-        // Mezcla con fondo claro en caso de transparencia
-        const blendedR = Math.round(r * a + 249 * (1 - a));
-        const blendedG = Math.round(g * a + 247 * (1 - a));
-        const blendedB = Math.round(b * a + 245 * (1 - a));
+        // Mezcla con fondo blanco puro en caso de transparencia
+        const blendedR = Math.round(r * a + 255 * (1 - a));
+        const blendedG = Math.round(g * a + 255 * (1 - a));
+        const blendedB = Math.round(b * a + 255 * (1 - a));
 
         const destIdx = destRowOffset + x * 3;
         uint8View[destIdx] = blendedB; // B

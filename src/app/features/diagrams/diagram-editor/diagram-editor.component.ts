@@ -2711,18 +2711,77 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
-    const containerEl = this.diagramCanvas?.getExportElement();
-    if (containerEl) {
-      await this.bmpExportService.exportElementToBmp(
-        containerEl,
-        this.currentDiagramName(),
-      );
-    } else {
-      this.bmpExportService.exportToBmp(
-        this.nodes(),
-        this.connections(),
-        this.currentDiagramName(),
-      );
+    await this.exportDiagramImage('bmp');
+  }
+
+  async downloadPngFile(): Promise<void> {
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
+    await this.exportDiagramImage('png');
+  }
+
+  private async exportDiagramImage(format: 'bmp' | 'png'): Promise<void> {
+    const canvasComp = this.diagramCanvas?.canvas;
+    const prevScale = canvasComp?.transform?.scale ?? 1;
+    const prevPos = canvasComp?.transform?.position ? { ...canvasComp.transform.position } : { x: 0, y: 0 };
+    const prevScaledPos = canvasComp?.transform?.scaledPosition ? { ...canvasComp.transform.scaledPosition } : { x: 0, y: 0 };
+
+    // Limpiar selección para que no salgan recuadros azules de foco en la imagen
+    this.diagramCanvas?.clearSelection();
+
+    try {
+      // Normalizar escala a 1:1 y origen para captura pura de elementos
+      if (canvasComp?.transform) {
+        canvasComp.resetScale();
+        canvasComp.transform.position = { x: 0, y: 0 };
+        canvasComp.transform.scaledPosition = { x: 0, y: 0 };
+        canvasComp.redraw();
+      }
+      // Breve espera para que el DOM de Foblex sincronice transformaciones
+      await new Promise((resolve) => setTimeout(resolve, 60));
+
+      const containerEl = this.diagramCanvas?.getExportElement();
+      if (containerEl) {
+        if (format === 'bmp') {
+          await this.bmpExportService.exportElementToBmp(
+            containerEl,
+            this.currentDiagramName(),
+            this.activeDiagramType(),
+          );
+        } else {
+          await this.bmpExportService.exportElementToPng(
+            containerEl,
+            this.currentDiagramName(),
+            this.activeDiagramType(),
+          );
+        }
+      } else {
+        if (format === 'bmp') {
+          this.bmpExportService.exportToBmp(
+            this.nodes(),
+            this.connections(),
+            this.currentDiagramName(),
+            this.activeDiagramType(),
+          );
+        } else {
+          this.bmpExportService.exportToPng(
+            this.nodes(),
+            this.connections(),
+            this.currentDiagramName(),
+            this.activeDiagramType(),
+          );
+        }
+      }
+    } finally {
+      // Restaurar el zoom y posición de pantalla que tenía el usuario
+      if (canvasComp?.transform) {
+        canvasComp.transform.scale = prevScale;
+        canvasComp.transform.position = prevPos;
+        canvasComp.transform.scaledPosition = prevScaledPos;
+        canvasComp.redraw();
+      }
     }
   }
 
