@@ -295,7 +295,13 @@ f-flow f-connection-for-create.uml-relation-realization path[f-connection-path],
 f-flow .uml-relation-realization path[f-connection-path],
 f-flow f-connection.uml-relation-dependency path[f-connection-path],
 f-flow f-connection-for-create.uml-relation-dependency path[f-connection-path],
-f-flow .uml-relation-dependency path[f-connection-path] {
+f-flow .uml-relation-dependency path[f-connection-path],
+f-flow f-connection.uml-relation-include path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-include path[f-connection-path],
+f-flow .uml-relation-include path[f-connection-path],
+f-flow f-connection.uml-relation-extend path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-extend path[f-connection-path],
+f-flow .uml-relation-extend path[f-connection-path] {
   stroke-dasharray: 6 4 !important;
 }
 

@@ -150,6 +150,78 @@ export class BmpExportService {
       });
     });
 
+    // Ocultar rutas de selección invisible fConnectionSelection para que no superpongan trazos
+    const selectionPaths = element.querySelectorAll<SVGPathElement>(
+      'path[fConnectionSelection], path.f-connection-selection'
+    );
+    selectionPaths.forEach((path) => {
+      const origDisp = path.style.display;
+      path.style.display = 'none';
+      path.setAttribute('display', 'none');
+      cleanupFns.push(() => {
+        path.style.display = origDisp;
+        path.removeAttribute('display');
+      });
+    });
+
+    // Asegurar que las relaciones con líneas discontinuas (dependency, include, extend, realization, association_class)
+    // tengan stroke-dasharray explícito en sus elementos SVG para que html-to-image las preserve
+    const dashedConfigs = [
+      { classKey: 'uml-relation-dependency', dash: '6, 4' },
+      { classKey: 'uml-relation-include', dash: '6, 4' },
+      { classKey: 'uml-relation-extend', dash: '6, 4' },
+      { classKey: 'uml-relation-realization', dash: '6, 4' },
+      { classKey: 'uml-relation-association_class', dash: '4, 4' },
+    ];
+
+    dashedConfigs.forEach(({ classKey, dash }) => {
+      const connEls = element.querySelectorAll<HTMLElement>(`.${classKey}`);
+      connEls.forEach((conn) => {
+        const paths = conn.querySelectorAll<SVGPathElement>('path');
+        paths.forEach((path) => {
+          if (
+            path.hasAttribute('fConnectionSelection') ||
+            path.classList.contains('f-connection-selection') ||
+            path.closest('marker') ||
+            path.closest('svg[fMarker]')
+          ) {
+            return;
+          }
+
+          const origDash = path.getAttribute('stroke-dasharray');
+          const origStyleDash = path.style.strokeDasharray;
+          const origFill = path.getAttribute('fill');
+          const origStroke = path.getAttribute('stroke');
+          const origWidth = path.getAttribute('stroke-width');
+
+          path.setAttribute('stroke-dasharray', dash);
+          path.style.setProperty('stroke-dasharray', dash, 'important');
+          path.setAttribute('fill', 'none');
+          path.style.setProperty('fill', 'none', 'important');
+          if (!origStroke || origStroke === 'none') {
+            path.setAttribute('stroke', '#2D3748');
+            path.style.setProperty('stroke', '#2D3748', 'important');
+          }
+          if (!origWidth) {
+            path.setAttribute('stroke-width', '1.5');
+            path.style.setProperty('stroke-width', '1.5px', 'important');
+          }
+
+          cleanupFns.push(() => {
+            if (origDash !== null) path.setAttribute('stroke-dasharray', origDash);
+            else path.removeAttribute('stroke-dasharray');
+            path.style.strokeDasharray = origStyleDash;
+            if (origFill !== null) path.setAttribute('fill', origFill);
+            else path.removeAttribute('fill');
+            if (origStroke !== null) path.setAttribute('stroke', origStroke);
+            else path.removeAttribute('stroke');
+            if (origWidth !== null) path.setAttribute('stroke-width', origWidth);
+            else path.removeAttribute('stroke-width');
+          });
+        });
+      });
+    });
+
     // 2. Renderizar el DOM del lienzo a un Canvas HTML5 a 2x de resolución con fondo blanco puro
     let rawCanvas: HTMLCanvasElement;
     try {
@@ -591,8 +663,14 @@ export class BmpExportService {
     ctx.strokeStyle = '#2A201B';
     ctx.lineWidth = 1.6;
 
-    if (conn.type === 'dependency' || conn.type === 'realization') {
-      ctx.setLineDash([6, 4]);
+    if (
+      conn.type === 'dependency' ||
+      conn.type === 'realization' ||
+      conn.type === 'include' ||
+      conn.type === 'extend' ||
+      conn.type === 'association_class'
+    ) {
+      ctx.setLineDash(conn.type === 'association_class' ? [4, 4] : [6, 4]);
     } else {
       ctx.setLineDash([]);
     }
@@ -668,7 +746,7 @@ export class BmpExportService {
       ctx.fillStyle = type === 'composition' ? '#2A201B' : '#FFFFFF';
       ctx.fill();
       ctx.stroke();
-    } else if (type === 'dependency') {
+    } else if (type === 'dependency' || type === 'include' || type === 'extend') {
       const arrowLength = 10;
       const arrowAngle = Math.PI / 6;
 
