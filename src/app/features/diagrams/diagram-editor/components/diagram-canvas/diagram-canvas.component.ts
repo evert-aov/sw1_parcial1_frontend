@@ -7,6 +7,8 @@ import {
   ViewChild,
   ElementRef,
   HostListener,
+  ChangeDetectorRef,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -55,6 +57,8 @@ export class DiagramCanvasComponent {
   @ViewChild(FZoomDirective) fZoom?: FZoomDirective;
   @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
   @ViewChild('boardElement') boardElementRef?: ElementRef<HTMLElement>;
+
+  private readonly cdr = inject(ChangeDetectorRef);
 
   // Inputs
   readonly nodes = input.required<UmlClassNode[]>();
@@ -332,7 +336,7 @@ export class DiagramCanvasComponent {
     }
     if (node.nodeType === 'use_case') {
       const nameLen = (node.name || '').length;
-      return Math.max(160, Math.round(nameLen * 7.5 + 50));
+      return Math.max(140, Math.round(nameLen * 7.5 + 40));
     }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
@@ -348,10 +352,25 @@ export class DiagramCanvasComponent {
     return Math.max(130, computed);
   }
 
-  // Ancho efectivo del nodo: la función principal y base es el cálculo dinámico según atributos;
-  // adicionalmente respeta la redimensión manual si el usuario la amplió.
+  // Ancho efectivo del nodo:
+  // - Para clases UML: la función principal y base es el cálculo dinámico según atributos (no se achica por debajo de atributos).
+  // - Para casos de uso y actores: permite redimensionar a dimensiones más reducidas adaptando el contenido.
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
+    if (node.nodeType === 'use_case') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+      if (manualW > 0) {
+        return Math.max(80, manualW);
+      }
+      return this.getDynamicNodeWidth(node);
+    }
+    if (node.nodeType === 'actor') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+      if (manualW > 0) {
+        return Math.max(60, manualW);
+      }
+      return this.getDynamicNodeWidth(node);
+    }
     const dynamicW = this.getDynamicNodeWidth(node);
     const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
     return Math.max(dynamicW, manualW);
@@ -370,7 +389,13 @@ export class DiagramCanvasComponent {
       return node.height || 110;
     }
     if (node.nodeType === 'use_case') {
-      return node.height || 75;
+      // Cálculo adaptativo de alto para casos de uso según el ancho y las líneas que el texto ocupa
+      const w = this.getNodeWidth(node);
+      const nameLen = (node.name || '').length;
+      const usableWidth = Math.max(50, w - 24);
+      const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
+      const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
+      return Math.max(75, 45 + (lines - 1) * 18);
     }
     // Para clases UML sin redimensión manual: el alto es 100% dinámico según el contenido
     return null;
@@ -389,9 +414,17 @@ export class DiagramCanvasComponent {
   onNodeSizeChange(node: UmlClassNode, rect: any): void {
     if (node.isAnchor || this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
     if (!rect) return;
-    const dynamicW = this.getDynamicNodeWidth(node);
-    const minW = Math.max(dynamicW, node.nodeType === 'actor' ? 60 : (node.nodeType === 'use_case' ? 100 : 120));
-    const minH = node.nodeType === 'actor' ? 80 : (node.nodeType === 'use_case' ? 50 : 60);
+    let minW = 120;
+    let minH = 60;
+    if (node.nodeType === 'actor') {
+      minW = 60;
+      minH = 80;
+    } else if (node.nodeType === 'use_case') {
+      minW = 80;
+      minH = 45;
+    } else {
+      minW = Math.max(120, this.getDynamicNodeWidth(node));
+    }
     const width = Math.max(minW, Math.round(rect.width));
     const height = Math.max(minH, Math.round(rect.height));
     const position = {
@@ -405,6 +438,125 @@ export class DiagramCanvasComponent {
     node.height = height;
     node.position = position;
     this.nodeSizeChange.emit({ node, width, height, position });
+  }
+
+  // Redimensión manual suave en tiempo real (60 FPS) mediante puntero en manejadores
+  onResizeHandlePointerDown(node: UmlClassNode, handleType: string, event: PointerEvent): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const targetEl = event.currentTarget as HTMLElement | null;
+    if (targetEl && targetEl.setPointerCapture) {
+      try {
+        targetEl.setPointerCapture(event.pointerId);
+      } catch (_) {}
+    }
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
+
+    const initialW = this.getNodeWidth(node);
+    const initialH = this.getNodeHeight(node) || (node.nodeType === 'use_case' ? 75 : (node.nodeType === 'actor' ? 110 : 80));
+    const initialPosX = node.position ? node.position.x : 0;
+    const initialPosY = node.position ? node.position.y : 0;
+
+    let minW = 120;
+    let minH = 60;
+    if (node.nodeType === 'actor') {
+      minW = 60;
+      minH = 80;
+    } else if (node.nodeType === 'use_case') {
+      minW = 80;
+      minH = 45;
+    } else {
+      minW = Math.max(120, this.getDynamicNodeWidth(node));
+    }
+
+    let animationFrameId: number | null = null;
+    let latestE: PointerEvent | null = null;
+
+    const applyResize = () => {
+      if (!latestE) return;
+      const dx = (latestE.clientX - startX) / scale;
+      const dy = (latestE.clientY - startY) / scale;
+
+      let nextW = initialW;
+      let nextH = initialH;
+      let nextX = initialPosX;
+      let nextY = initialPosY;
+
+      if (handleType.includes('right')) {
+        nextW = initialW + dx;
+      } else if (handleType.includes('left')) {
+        nextW = initialW - dx;
+      }
+
+      if (handleType.includes('bottom')) {
+        nextH = initialH + dy;
+      } else if (handleType.includes('top')) {
+        nextH = initialH - dy;
+      }
+
+      const clampedW = Math.max(minW, Math.round(nextW));
+      const clampedH = Math.max(minH, Math.round(nextH));
+
+      if (handleType.includes('left')) {
+        nextX = Math.round(initialPosX + (initialW - clampedW));
+      }
+      if (handleType.includes('top')) {
+        nextY = Math.round(initialPosY + (initialH - clampedH));
+      }
+
+      node.customWidth = clampedW;
+      node.customHeight = clampedH;
+      node.isCustomSize = true;
+      node.width = clampedW;
+      node.height = clampedH;
+      node.position = { x: nextX, y: nextY };
+
+      this.cdr.detectChanges();
+      this.fFlow?.redraw();
+      animationFrameId = null;
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      latestE = e;
+      if (!animationFrameId) {
+        animationFrameId = requestAnimationFrame(applyResize);
+      }
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (targetEl && targetEl.releasePointerCapture) {
+        try {
+          targetEl.releasePointerCapture(event.pointerId);
+        } catch (_) {}
+      }
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+
+      if (latestE) {
+        applyResize();
+      }
+
+      this.nodeSizeChange.emit({
+        node,
+        width: node.customWidth || node.width || initialW,
+        height: node.customHeight || node.height || initialH,
+        position: node.position,
+      });
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   }
 
   // Helpers de estado visual

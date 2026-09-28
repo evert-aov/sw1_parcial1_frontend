@@ -1047,7 +1047,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (node.nodeType === 'actor') return 90;
     if (node.nodeType === 'use_case') {
       const nameLen = (node.name || '').length;
-      return Math.max(160, Math.round(nameLen * 7.5 + 50));
+      return Math.max(140, Math.round(nameLen * 7.5 + 40));
     }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
@@ -1065,6 +1065,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
+    if (node.nodeType === 'use_case') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+      if (manualW > 0) {
+        return Math.max(80, manualW);
+      }
+      return this.getDynamicNodeWidth(node);
+    }
+    if (node.nodeType === 'actor') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+      if (manualW > 0) {
+        return Math.max(60, manualW);
+      }
+      return this.getDynamicNodeWidth(node);
+    }
     const dynamicW = this.getDynamicNodeWidth(node);
     const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
     return Math.max(dynamicW, manualW);
@@ -1075,7 +1089,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (node.customHeight && node.customHeight > 0) return node.customHeight;
     if (node.isCustomSize && node.height && node.height > 0) return node.height;
     if (node.nodeType === 'actor') return node.height || 110;
-    if (node.nodeType === 'use_case') return node.height || 75;
+    if (node.nodeType === 'use_case') {
+      const w = this.getNodeWidth(node);
+      const nameLen = (node.name || '').length;
+      const usableWidth = Math.max(50, w - 24);
+      const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
+      const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
+      return Math.max(75, 45 + (lines - 1) * 18);
+    }
     const headerH = 34;
     const attrCount = (node.attributes || []).length;
     const methodCount = (node.methods || []).length;

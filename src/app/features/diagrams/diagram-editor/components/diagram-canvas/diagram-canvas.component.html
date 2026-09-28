@@ -170,7 +170,6 @@
               fDragHandle
               [fNodeDraggingDisabled]="node.isAnchor || selectedRelationType() !== null || isNodeLockedByOther(node.id)"
               [(fNodePosition)]="node.position"
-              [fNodeSize]="getNodeSize(node)"
               (fNodeSizeChange)="onNodeSizeChange(node, $event)"
               (fNodePositionChange)="onNodePositionChange(node, $event)"
               (click)="onNodeClick(node.id, $event)"
@@ -178,8 +177,8 @@
               (mouseenter)="hoveredNodeId.set(node.id)"
               (mouseleave)="onNodeMouseLeave(node.id)"
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
-              [style.minWidth.px]="node.isAnchor ? 0 : getNodeWidth(node)"
-              [style.minHeight.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'use_case' ? 75 : (node.nodeType === 'actor' ? 110 : null)))"
+              [style.minWidth.px]="node.isAnchor ? 0 : (node.nodeType === 'use_case' ? 80 : (node.nodeType === 'actor' ? 60 : getNodeWidth(node)))"
+              [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 80 : null))"
               [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'use_case' ? 75 : (node.nodeType === 'actor' ? 110 : null)))"
               [style.--node-bg]="node.color || null"
               [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
@@ -298,14 +297,14 @@
 
                 <!-- 8 MANEJADORES MANUALES DE CAMBIO DE TAMAÑO (RESIZE HANDLES) -->
                 @if (!node.isAnchor && isNodeSelected(node.id) && selectedRelationType() === null && !isReadOnly() && !isNodeLockedByOther(node.id)) {
-                  <div fResizeHandle [fResizeHandleType]="'left-top'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
-                  <div fResizeHandle [fResizeHandleType]="'top'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
-                  <div fResizeHandle [fResizeHandleType]="'right-top'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
-                  <div fResizeHandle [fResizeHandleType]="'right'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
-                  <div fResizeHandle [fResizeHandleType]="'right-bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
-                  <div fResizeHandle [fResizeHandleType]="'bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
-                  <div fResizeHandle [fResizeHandleType]="'left-bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
-                  <div fResizeHandle [fResizeHandleType]="'left'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                  <div fResizeHandle [fResizeHandleType]="'left-top'" class="uml-resize-handle" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'left-top', $event)"></div>
+                  <div fResizeHandle [fResizeHandleType]="'top'" class="uml-resize-handle" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'top', $event)"></div>
+                  <div fResizeHandle [fResizeHandleType]="'right-top'" class="uml-resize-handle" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'right-top', $event)"></div>
+                  <div fResizeHandle [fResizeHandleType]="'right'" class="uml-resize-handle" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'right', $event)"></div>
+                  <div fResizeHandle [fResizeHandleType]="'right-bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'right-bottom', $event)"></div>
+                  <div fResizeHandle [fResizeHandleType]="'bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'bottom', $event)"></div>
+                  <div fResizeHandle [fResizeHandleType]="'left-bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'left-bottom', $event)"></div>
+                  <div fResizeHandle [fResizeHandleType]="'left'" class="uml-resize-handle" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'left', $event)"></div>
                 }
 
                 <!-- CONTENIDO SEGÚN TIPO DE ELEMENTO UML -->
@@ -317,7 +316,7 @@
                       'ring-2 ring-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.35)]': isNodeSelected(node.id),
                       'hover:bg-slate-100/40': !isNodeSelected(node.id)
                     }"
-                    class="w-full h-full flex flex-col items-center justify-between p-1.5 relative select-none transition-all cursor-pointer rounded-xl">
+                    class="w-full h-full flex flex-col items-center justify-between p-1.5 relative select-none cursor-pointer rounded-xl">
                     
                     <button
                       (click)="onDeleteNode(node.id, $event)"
@@ -382,7 +381,7 @@
                       'shadow-[3px_3px_0px_rgba(0,0,0,0.15)]': !isNodeSelected(node.id)
                     }"
                     [style.backgroundColor]="node.color || '#FFFDDD'"
-                    class="w-full h-full flex items-center justify-center p-3 relative rounded-[50%] border-2 border-[#796354] select-none transition-all cursor-pointer">
+                    class="w-full h-full flex items-center justify-center p-3 relative rounded-[50%] border-2 border-[#796354] select-none cursor-pointer">
                     
                     <button
                       (click)="onDeleteNode(node.id, $event)"
@@ -393,7 +392,7 @@
                     </button>
 
                     <!-- Nombre del Caso de Uso Centrado -->
-                    <div class="text-center px-2 w-full">
+                    <div class="text-center px-2 w-full flex items-center justify-center">
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameUcInput
@@ -408,7 +407,7 @@
                           autofocus
                         />
                       } @else {
-                        <span class="font-bold text-[11.5px] font-sans leading-tight text-[#241C18] block break-words" [title]="node.name">
+                        <span class="font-bold text-[11.5px] font-sans leading-snug text-[#241C18] block text-center break-words select-none max-w-full px-1" [title]="node.name">
                           {{ node.name }}
                         </span>
                       }
