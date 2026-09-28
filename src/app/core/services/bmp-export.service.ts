@@ -74,34 +74,116 @@ export class BmpExportService {
       throw new Error('No se encontró el contenedor del lienzo para capturar.');
     }
 
-    // 1. Renderizar el DOM del lienzo a un Canvas HTML5 a 2x de resolución con fondo blanco puro
-    const rawCanvas = await toCanvas(element, {
-      backgroundColor: '#FFFFFF',
-      pixelRatio: 2,
-      cacheBust: true,
-      filter: (domNode: HTMLElement) => {
-        const classList = domNode.classList;
-        // Filtrar drag handles interactivos temporales de Foblex y puntos conectores
-        if (
-          classList?.contains('f-connection-drag-handle') ||
-          domNode.hasAttribute?.('f-connection-drag-handle-start') ||
-          domNode.hasAttribute?.('f-connection-drag-handle-end') ||
-          classList?.contains('uml-connector-point')
-        ) {
-          return false;
-        }
+    // 1. Sanitizar elementos SVG del DOM antes de capturar:
+    // Ocultar círculos de arrastre temporales de Foblex (f-connection-drag-handle-end / start)
+    // para evitar que se rendericen como puntos negros en el destino de las relaciones.
+    const cleanupFns: Array<() => void> = [];
 
-        // Filtrar controles flotantes de UI (cursores remotos, botones de acción flotantes)
-        if (
-          classList &&
-          (classList.contains('pointer-events-none') ||
-            (classList.contains('z-40') && domNode.tagName === 'BUTTON'))
-        ) {
-          return false;
-        }
-        return true;
-      },
+    const handleCircles = element.querySelectorAll<SVGCircleElement>(
+      'f-connection circle, f-connection-for-create circle, [f-connection-drag-handle-end], [f-connection-drag-handle-start], .f-connection-drag-handle'
+    );
+    handleCircles.forEach((circle) => {
+      const origDisplay = circle.style.display;
+      const origVisibility = circle.style.visibility;
+      const origR = circle.getAttribute('r');
+      const origFill = circle.getAttribute('fill');
+
+      circle.style.display = 'none';
+      circle.style.visibility = 'hidden';
+      circle.setAttribute('display', 'none');
+      circle.setAttribute('visibility', 'hidden');
+      circle.setAttribute('r', '0');
+      circle.setAttribute('fill', 'none');
+
+      cleanupFns.push(() => {
+        circle.style.display = origDisplay;
+        circle.style.visibility = origVisibility;
+        if (origR !== null) circle.setAttribute('r', origR);
+        else circle.removeAttribute('r');
+        if (origFill !== null) circle.setAttribute('fill', origFill);
+        else circle.removeAttribute('fill');
+        circle.removeAttribute('display');
+        circle.removeAttribute('visibility');
+      });
     });
+
+    // Asegurar atributos inline explícitos en marcadores UML para que no adopten relleno negro por defecto de SVG
+    const hollowMarkers = element.querySelectorAll<SVGPolygonElement>('.uml-marker-hollow');
+    hollowMarkers.forEach((poly) => {
+      const origFill = poly.getAttribute('fill');
+      const origStroke = poly.getAttribute('stroke');
+      poly.setAttribute('fill', '#FFFFFF');
+      poly.setAttribute('stroke', '#1A202C');
+      cleanupFns.push(() => {
+        if (origFill !== null) poly.setAttribute('fill', origFill);
+        else poly.removeAttribute('fill');
+        if (origStroke !== null) poly.setAttribute('stroke', origStroke);
+        else poly.removeAttribute('stroke');
+      });
+    });
+
+    const openMarkers = element.querySelectorAll<SVGPolylineElement>('.uml-marker-open');
+    openMarkers.forEach((pline) => {
+      const origFill = pline.getAttribute('fill');
+      const origStroke = pline.getAttribute('stroke');
+      pline.setAttribute('fill', 'none');
+      pline.setAttribute('stroke', '#1A202C');
+      cleanupFns.push(() => {
+        if (origFill !== null) pline.setAttribute('fill', origFill);
+        else pline.removeAttribute('fill');
+        if (origStroke !== null) pline.setAttribute('stroke', origStroke);
+        else pline.removeAttribute('stroke');
+      });
+    });
+
+    const filledMarkers = element.querySelectorAll<SVGPolygonElement>('.uml-marker-filled');
+    filledMarkers.forEach((poly) => {
+      const origFill = poly.getAttribute('fill');
+      const origStroke = poly.getAttribute('stroke');
+      poly.setAttribute('fill', '#1A202C');
+      poly.setAttribute('stroke', '#1A202C');
+      cleanupFns.push(() => {
+        if (origFill !== null) poly.setAttribute('fill', origFill);
+        else poly.removeAttribute('fill');
+        if (origStroke !== null) poly.setAttribute('stroke', origStroke);
+        else poly.removeAttribute('stroke');
+      });
+    });
+
+    // 2. Renderizar el DOM del lienzo a un Canvas HTML5 a 2x de resolución con fondo blanco puro
+    let rawCanvas: HTMLCanvasElement;
+    try {
+      rawCanvas = await toCanvas(element, {
+        backgroundColor: '#FFFFFF',
+        pixelRatio: 2,
+        cacheBust: true,
+        filter: (domNode: HTMLElement) => {
+          const classList = domNode.classList;
+          // Filtrar drag handles interactivos temporales de Foblex y puntos conectores
+          if (
+            classList?.contains('f-connection-drag-handle') ||
+            domNode.hasAttribute?.('f-connection-drag-handle-start') ||
+            domNode.hasAttribute?.('f-connection-drag-handle-end') ||
+            classList?.contains('uml-connector-point')
+          ) {
+            return false;
+          }
+
+          // Filtrar controles flotantes de UI (cursores remotos, botones de acción flotantes)
+          if (
+            classList &&
+            (classList.contains('pointer-events-none') ||
+              (classList.contains('z-40') && domNode.tagName === 'BUTTON'))
+          ) {
+            return false;
+          }
+          return true;
+        },
+      });
+    } finally {
+      // Restaurar el DOM original de manera limpia
+      cleanupFns.forEach((fn) => fn());
+    }
 
     // 2. Detectar el bounding box exacto del contenido diagramado (excluyendo el espacio vacío)
     const bbox = this.findContentBoundingBox(rawCanvas);
