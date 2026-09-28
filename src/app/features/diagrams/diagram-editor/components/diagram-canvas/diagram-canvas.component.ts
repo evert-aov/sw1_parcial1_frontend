@@ -69,7 +69,8 @@ export class DiagramCanvasComponent {
   readonly nodeLocks = input<any>({});
   readonly currentUserId = input<string | null>(null);
   readonly diagramId = input<string | null>(null);
-  readonly activeDiagramType = input<DiagramType>('class');
+  readonly activeDiagramType = input<DiagramType>(DiagramType.CLASS);
+  readonly smartGuidesEnabled = input<boolean>(true);
 
   // Outputs hacia el contenedor principal
   readonly flowLoaded = output<void>();
@@ -88,6 +89,10 @@ export class DiagramCanvasComponent {
   readonly canvasMouseMove = output<MouseEvent>();
   readonly zoomChange = output<number>();
   readonly viewportScroll = output<Event>();
+  readonly alignNodes = output<'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'>();
+  readonly distributeNodes = output<'horizontal' | 'vertical'>();
+  readonly snapToGrid = output<void>();
+  readonly toggleSmartGuides = output<void>();
 
   readonly zoomLevel = signal<number>(100);
 

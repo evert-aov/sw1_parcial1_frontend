@@ -17,6 +17,7 @@ import {
   heroArrowsUpDown,
   heroChatBubbleLeftRight,
   heroFolderOpen,
+  heroFolder,
 } from '@ng-icons/heroicons/outline';
 import {
   DiagramType,
@@ -52,14 +53,17 @@ import { TranslatePipe } from '../../../../../core/i18n';
       heroArrowsUpDown,
       heroChatBubbleLeftRight,
       heroFolderOpen,
+      heroFolder,
     }),
   ],
   templateUrl: './diagram-sidebar.component.html',
 })
 export class DiagramSidebarComponent {
+  readonly DiagramType = DiagramType;
+
   // Inputs
-  readonly isOpen = input<boolean>(true);
-  readonly activeDiagramType = input<DiagramType>('class');
+  readonly isOpen = input<boolean>(false);
+  readonly activeDiagramType = input<DiagramType>(DiagramType.CLASS);
   readonly selectedRelationType = input<UmlRelationshipType | null>(null);
   readonly defaultLineStyle = input<UmlLineStyle>('segment');
   readonly isReadOnly = input<boolean>(false);

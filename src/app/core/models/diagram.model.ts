@@ -1,4 +1,10 @@
-export type DiagramType = 'class' | 'use_case' | 'communication' | 'sequence' | 'package';
+export enum DiagramType {
+  CLASS = 'class',
+  USE_CASE = 'use_case',
+  SEQUENCE = 'sequence',
+  COMMUNICATION = 'communication',
+  PACKAGE = 'package',
+}
 
 export interface DiagramTypeItem {
   id: DiagramType;
@@ -10,11 +16,11 @@ export interface DiagramTypeItem {
 }
 
 export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
-  { id: 'class', label: 'Diagrama de Clases', shortLabel: 'Clases', icon: 'heroSquare3Stack3d', description: 'Estructura estática, atributos, métodos y relaciones UML 2.5', supported: true },
-  { id: 'use_case', label: 'Casos de Uso', shortLabel: 'Casos Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: false },
-  { id: 'sequence', label: 'Secuencia', shortLabel: 'Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: false },
-  { id: 'communication', label: 'Comunicación', shortLabel: 'Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: false },
-  { id: 'package', label: 'Paquetes', shortLabel: 'Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: false },
+  { id: DiagramType.CLASS, label: 'Diagrama de Clases', shortLabel: 'Clases', icon: 'heroSquare3Stack3d', description: 'Estructura estática, atributos, métodos y relaciones UML 2.5', supported: true },
+  { id: DiagramType.USE_CASE, label: 'Casos de Uso', shortLabel: 'Casos Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: false },
+  { id: DiagramType.SEQUENCE, label: 'Secuencia', shortLabel: 'Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: false },
+  { id: DiagramType.COMMUNICATION, label: 'Comunicación', shortLabel: 'Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: false },
+  { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: false },
 ];
 
 export type UmlRelationshipType =
@@ -42,13 +48,14 @@ export interface UmlLineStyleItem {
 }
 
 export const UML_RELATION_TYPES: UmlRelationTypeItem[] = [
-  { id: 'association', label: 'Association', icon: '───', description: 'Relación estructural simple entre dos clases' },
-  { id: 'generalization', label: 'Generalization', icon: '─▷', description: 'Herencia: la subclase hereda de la superclase' },
-  { id: 'composition', label: 'Composition', icon: '◆──', description: 'Pertenencia fuerte del todo a las partes' },
-  { id: 'aggregation', label: 'Aggregation', icon: '◇──', description: 'Pertenencia débil o contenedor independiente' },
-  { id: 'dependency', label: 'Dependency', icon: '┈>', description: 'Uso temporal o dependencia débil' },
-  { id: 'association_class', label: 'Association Class', icon: '─*─┄[C]', description: 'Relación muchos a muchos con clase intermedia' },
+  { id: 'association', label: 'Asociación', icon: '───', description: 'Relación estructural simple entre clases.' },
+  { id: 'generalization', label: 'Generalización', icon: '─▷', description: 'Herencia: la subclase hereda de la clase.' },
+  { id: 'composition', label: 'Composición', icon: '◆──', description: 'Pertenencia fuerte del todo a las partes.' },
+  { id: 'aggregation', label: 'Agregación', icon: '◇──', description: 'Pertenencia débil o contenedor.' },
+  { id: 'dependency', label: 'Dependencia', icon: '┈>', description: 'Uso temporal o dependencia débil.' },
+  { id: 'association_class', label: 'Asociación de Clases', icon: '─*─┄[C]', description: 'Relación muchos a muchos con clases.' },
 ];
+
 
 export const UML_LINE_STYLES: UmlLineStyleItem[] = [
   { id: 'segment', label: 'Custom Line (EA Default / Segmentos)', shortcut: 'Ctrl+Shift+C' },
@@ -73,6 +80,11 @@ export interface UmlAttribute {
   name: string;
   type: string;
   orderIndex?: number;
+  nullable?: boolean;
+  unique?: boolean;
+  length?: number | null;
+  defaultValue?: string | null;
+  default?: string | null;
 }
 
 export interface UmlMethod {
@@ -88,6 +100,7 @@ export interface UmlClassNode {
   position: { x: number; y: number };
   width: number;
   height?: number;
+  color?: string | null;
   attributes: UmlAttribute[];
   methods: UmlMethod[];
   isAnchor?: boolean;
@@ -114,6 +127,7 @@ export interface DiagramDto {
   id: string;
   projectId: string | null;
   name: string;
+  type?: DiagramType;
   version: string;
   defaultLineStyle: UmlLineStyle;
   nodes: {
@@ -123,6 +137,7 @@ export interface DiagramDto {
     positionY: number;
     width?: number;
     height?: number | null;
+    color?: string | null;
     isAnchor?: boolean;
     assocMainConnId?: string | null;
     attributes?: UmlAttribute[];
@@ -146,6 +161,7 @@ export interface DiagramDto {
 }
 
 export interface SaveDiagramAstRequest {
+  type?: DiagramType;
   defaultLineStyle?: UmlLineStyle;
   nodes: {
     id: string;
@@ -154,6 +170,7 @@ export interface SaveDiagramAstRequest {
     positionY: number;
     width?: number;
     height?: number | null;
+    color?: string | null;
     isAnchor?: boolean;
     assocMainConnId?: string | null;
     attributes?: UmlAttribute[];

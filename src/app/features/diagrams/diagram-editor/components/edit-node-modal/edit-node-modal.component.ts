@@ -31,7 +31,18 @@ export class EditNodeModalComponent {
       () => {
         const n = this.node();
         if (n && this.isOpen()) {
-          this.editingNode.set(JSON.parse(JSON.stringify(n)));
+          const cloned: UmlClassNode = JSON.parse(JSON.stringify(n));
+          if (cloned.attributes) {
+            cloned.attributes = cloned.attributes.map((a) => ({
+              ...a,
+              nullable: a.nullable !== undefined ? a.nullable : true,
+              unique: a.unique !== undefined ? a.unique : false,
+              length: a.length !== undefined && a.length !== null ? Number(a.length) : 255,
+              defaultValue: a.defaultValue ?? a.default ?? null,
+              default: a.default ?? a.defaultValue ?? null,
+            }));
+          }
+          this.editingNode.set(cloned);
         } else if (!this.isOpen()) {
           this.editingNode.set(null);
         }
@@ -43,7 +54,18 @@ export class EditNodeModalComponent {
   addAttribute(): void {
     const curr = this.editingNode();
     if (!curr) return;
-    const attrs = [...curr.attributes, { name: 'nuevoAtributo', type: 'String' }];
+    const attrs = [
+      ...curr.attributes,
+      {
+        name: 'nuevoAtributo',
+        type: 'String',
+        nullable: true,
+        unique: false,
+        length: 255,
+        defaultValue: null,
+        default: null,
+      },
+    ];
     this.editingNode.set({ ...curr, attributes: attrs });
   }
 
@@ -74,6 +96,16 @@ export class EditNodeModalComponent {
   onSave(): void {
     const curr = this.editingNode();
     if (!curr) return;
+    if (curr.attributes) {
+      curr.attributes = curr.attributes.map((a) => ({
+        ...a,
+        nullable: a.nullable !== undefined ? a.nullable : true,
+        unique: a.unique !== undefined ? a.unique : false,
+        length: a.length !== undefined && a.length !== null && (a.length as any) !== '' ? Number(a.length) : null,
+        defaultValue: a.defaultValue && String(a.defaultValue).trim() ? String(a.defaultValue).trim() : null,
+        default: a.defaultValue && String(a.defaultValue).trim() ? String(a.defaultValue).trim() : null,
+      }));
+    }
     this.save.emit(curr);
     this.close.emit();
   }

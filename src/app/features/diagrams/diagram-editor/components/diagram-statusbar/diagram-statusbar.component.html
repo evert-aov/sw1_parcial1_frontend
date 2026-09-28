@@ -1,57 +1,69 @@
-<footer class="bg-gradient-to-r from-slate-800 to-slate-900 text-slate-300 border-t border-slate-950 px-3 py-1 text-[11px] font-mono flex items-center justify-between z-30 shrink-0">
-  <div class="flex items-center gap-3">
+<footer class="bg-white dark:bg-[#0D1124] text-slate-500 dark:text-slate-400 border-t border-slate-200/80 dark:border-slate-800 px-4 py-1.5 text-xs font-sans flex items-center justify-between z-30 shrink-0 select-none transition-colors">
+  <div class="flex items-center gap-2.5">
     <!-- Estado WebSockets Yjs -->
     <div class="flex items-center gap-1.5">
       <span
         class="w-2 h-2 rounded-full"
-        [ngClass]="isConnected() ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'"></span>
-      <span [ngClass]="isConnected() ? 'text-emerald-300' : 'text-red-400'">
+        [ngClass]="isConnected() ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'"></span>
+      <span class="font-medium" [ngClass]="isConnected() ? 'text-slate-700 dark:text-slate-200' : 'text-red-500'">
         {{ isConnected() ? ('editor.statusbar.connected' | translate) : ('editor.statusbar.disconnected' | translate) }}
       </span>
     </div>
 
-    <div class="h-3 w-px bg-slate-700"></div>
+    <span class="text-slate-300 dark:text-slate-700">|</span>
 
     <!-- Resumen Nodos / Conexiones -->
-    <span class="text-slate-400">
-      {{ 'editor.statusbar.classes' | translate }}: <strong class="text-slate-200">{{ classCount() }}</strong> |
-      {{ 'editor.statusbar.relations' | translate }}: <strong class="text-slate-200">{{ relationCount() }}</strong>
+    <span class="text-slate-500 dark:text-slate-400">
+      {{ 'editor.statusbar.classes' | translate }}: <strong class="text-slate-700 dark:text-slate-200 font-semibold">{{ classCount() }}</strong>
+    </span>
+
+    <span class="text-slate-300 dark:text-slate-700">|</span>
+
+    <span class="text-slate-500 dark:text-slate-400">
+      {{ 'editor.statusbar.relations' | translate }}: <strong class="text-slate-700 dark:text-slate-200 font-semibold">{{ relationCount() }}</strong>
     </span>
   </div>
 
-  <div class="flex items-center gap-3">
+  <div class="flex items-center gap-3 text-xs">
     <!-- Estilo de Línea Activo -->
-    <span class="text-slate-400">
-      Routing: <strong class="text-amber-300">{{ lineStyle() }}</strong>
+    <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+      Routing:
+      <span class="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-mono text-[11px] font-semibold border border-blue-100 dark:border-blue-900/40">
+        {{ lineStyle() }}
+      </span>
     </span>
 
-    <div class="h-3 w-px bg-slate-700"></div>
+    <span class="text-slate-300 dark:text-slate-700">|</span>
 
     <!-- Nivel de Zoom Sincronizado e Interactivo -->
-    <span class="text-slate-400 flex items-center gap-1.5">
-      Zoom:
+    <div class="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+      <span>Zoom:</span>
       <button
         (click)="zoomOut.emit()"
         title="Alejar (-)"
-        class="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs leading-none cursor-pointer">
+        class="w-4 h-4 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs leading-none cursor-pointer">
         -
       </button>
       <button
         (click)="resetView.emit()"
-        title="Clic para restablecer al 100%"
-        class="hover:text-sky-300 transition-colors cursor-pointer">
-        <strong class="text-slate-200">{{ zoomLevel() }}%</strong>
+        title="Restablecer al 100%"
+        class="font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
+        {{ zoomLevel() }}% ▾
       </button>
       <button
         (click)="zoomIn.emit()"
         title="Acercar (+)"
-        class="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs leading-none cursor-pointer">
+        class="w-4 h-4 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs leading-none cursor-pointer">
         +
       </button>
-    </span>
+    </div>
 
-    <div class="h-3 w-px bg-slate-700"></div>
+    <span class="text-slate-300 dark:text-slate-700">|</span>
 
-    <span class="text-slate-500">UTF-8 • XMI 2.1 / JSON AST</span>
+    <span class="text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700">UTF-8 ▾</span>
+
+    <span class="text-slate-300 dark:text-slate-700">|</span>
+
+    <span class="text-slate-400 dark:text-slate-500 font-mono text-[11px]">XML 2.1 / JSON AST</span>
   </div>
 </footer>

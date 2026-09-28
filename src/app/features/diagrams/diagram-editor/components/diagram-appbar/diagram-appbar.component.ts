@@ -16,6 +16,7 @@ import {
   heroSparkles,
   heroChevronDown,
   heroChevronUp,
+  heroChevronLeft,
   heroArrowRightOnRectangle,
   heroUserCircle,
   heroClipboardDocument,
@@ -36,6 +37,8 @@ import {
   heroPrinter,
   heroArrowUturnLeft,
   heroArrowUturnRight,
+  heroPaintBrush,
+  heroSwatch,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
@@ -64,6 +67,7 @@ export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'star
       heroSparkles,
       heroChevronDown,
       heroChevronUp,
+      heroChevronLeft,
       heroArrowRightOnRectangle,
       heroUserCircle,
       heroClipboardDocument,
@@ -84,6 +88,8 @@ export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'star
       heroPrinter,
       heroArrowUturnLeft,
       heroArrowUturnRight,
+      heroPaintBrush,
+      heroSwatch,
     }),
   ],
   templateUrl: './diagram-appbar.component.html',
@@ -95,7 +101,7 @@ export class DiagramAppbarComponent {
   readonly translationService = inject(TranslationService);
 
   // Tab activo en el Ribbon al estilo Enterprise Architect
-  readonly activeTab = signal<RibbonTab>('publish');
+  readonly activeTab = signal<RibbonTab>('design');
 
   // Estado de minimización / colapso del Ribbon (doble clic)
   readonly isCollapsed = signal<boolean>(false);
@@ -132,9 +138,25 @@ export class DiagramAppbarComponent {
   readonly hasUnsavedChanges = input<boolean>(false);
   readonly isReadOnly = input<boolean>(false);
   readonly isMultiUserEditing = input<boolean | undefined>(undefined);
-  readonly isToolboxOpen = input<boolean>(true);
+  readonly isToolboxOpen = input<boolean>(false);
   readonly canUndo = input<boolean>(false);
   readonly canRedo = input<boolean>(false);
+  readonly selectedNodeId = input<string | null>(null);
+  readonly selectedNodeColor = input<string | null>(null);
+  readonly selectedNodesCount = input<number>(0);
+  readonly smartGuidesEnabled = input<boolean>(true);
+
+  // Colores predefinidos modernos
+  readonly presetColors = [
+    { name: 'Amarillo suave (Por defecto)', color: '#FFFDDD' },
+    { name: 'Cyan suave', color: '#BAE6FD' },
+    { name: 'Azul suave', color: '#BFDBFE' },
+    { name: 'Rosa suave', color: '#FBCFE8' },
+    { name: 'Fucsia suave', color: '#F5D0FE' },
+    { name: 'Púrpura suave', color: '#E9D5FF' },
+    { name: 'Gris suave', color: '#E2E8F0' },
+    { name: 'Blanco puro', color: '#FFFFFF' },
+  ];
 
   // Indica si hay 2 o más usuarios editando simultáneamente
   readonly multiUserBlocked = computed(() => {
@@ -149,6 +171,7 @@ export class DiagramAppbarComponent {
   readonly undo = output<void>();
   readonly redo = output<void>();
   readonly selectAll = output<void>();
+  readonly changeNodeColor = output<string | null>();
   readonly exportBmp = output<void>();
   readonly exportXmi = output<void>();
   readonly exportJson = output<void>();
@@ -164,6 +187,10 @@ export class DiagramAppbarComponent {
   readonly resetView = output<void>();
   readonly addClass = output<void>();
   readonly setPointerMode = output<void>();
+  readonly alignNodes = output<'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'>();
+  readonly distributeNodes = output<'horizontal' | 'vertical'>();
+  readonly snapToGrid = output<void>();
+  readonly toggleSmartGuides = output<void>();
 
   handleExportBmp(): void {
     if (this.multiUserBlocked()) {
@@ -219,6 +246,13 @@ export class DiagramAppbarComponent {
       navigator.clipboard.writeText(code).then(() => {
         alert(`Código de sala "${code}" copiado al portapapeles.`);
       });
+    }
+  }
+
+  onCustomColorInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    if (target?.value) {
+      this.changeNodeColor.emit(target.value);
     }
   }
 }

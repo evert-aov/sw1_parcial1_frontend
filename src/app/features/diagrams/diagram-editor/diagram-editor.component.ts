@@ -193,7 +193,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   zoomLevel = signal<number>(100);
 
   // Tipos de Diagrama & Paneles (Arquitectura Extensible para Casos de Uso, Secuencia, etc.)
-  readonly activeDiagramType = signal<DiagramType>('class');
+  readonly activeDiagramType = signal<DiagramType>(DiagramType.CLASS);
 
   // Pipelines reactivos para auto-guardado en tiempo real (Google Docs style)
   private readonly autoSave$ = new Subject<void>();
@@ -244,8 +244,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (single) result.add(single);
     return Array.from(result);
   });
+  readonly selectedNodeColor = computed(() => {
+    const single = this.selectedNodeId();
+    if (!single) return null;
+    const node = this.nodes().find((n) => n.id === single);
+    return node?.color || '#FFFDDD';
+  });
   defaultLineStyle = signal<UmlLineStyle>('segment');
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  smartGuidesEnabled = signal<boolean>(true);
 
   private canvasMouseDownPos = { x: 0, y: 0 };
 
@@ -263,10 +270,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly canUndo = computed(() => this.historyUndoCount() > 0 && !this.isReadOnly());
   readonly canRedo = computed(() => this.historyRedoCount() > 0 && !this.isReadOnly());
 
-  // Paneles laterales (Toolbox / Sidebar y Copilot IA)
-  readonly isSidebarOpen = signal<boolean>(true);
+  // Paneles laterales (Toolbox / Sidebar y Copilot IA) - Ocultos por defecto
+  readonly isSidebarOpen = signal<boolean>(false);
   readonly isToolboxOpen = this.isSidebarOpen;
-  isAiPanelOpen = signal<boolean>(true);
+  isAiPanelOpen = signal<boolean>(false);
   isExportDropdownOpen = signal<boolean>(false);
   isImportDropdownOpen = signal<boolean>(false);
 
@@ -482,6 +489,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   loadDiagramFromBackend(diagramId: string): void {
     this.diagramService.loadDiagram(diagramId).subscribe((diagram) => {
       this.currentDiagramName.set(diagram.name);
+      if (diagram.type) {
+        this.activeDiagramType.set(diagram.type as DiagramType);
+      }
       if (diagram.defaultLineStyle) {
         this.defaultLineStyle.set(diagram.defaultLineStyle as UmlLineStyle);
       }
@@ -514,11 +524,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             position: { x: n.positionX, y: n.positionY },
             width: n.width || 220,
             height: n.height || undefined,
+            color: n.color || '#FFFDDD',
             isAnchor: n.isAnchor,
             assocMainConnId: n.assocMainConnId || undefined,
             attributes: (n.attributes || []).map((a) => ({
               name: a.name,
               type: this.normalizeDataType(a.type),
+              orderIndex: a.orderIndex,
+              nullable: a.nullable !== undefined ? a.nullable : true,
+              unique: a.unique !== undefined ? a.unique : false,
+              length: a.length !== undefined ? a.length : 255,
+              defaultValue: a.defaultValue ?? a.default ?? null,
+              default: a.default ?? a.defaultValue ?? null,
             })),
             methods: (n.methods || []).map((m) => ({
               name: m.name,
@@ -706,6 +723,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   buildSaveAstPayload(): SaveDiagramAstRequest {
     return {
+      type: this.activeDiagramType(),
       defaultLineStyle: this.defaultLineStyle(),
       nodes: this.nodes().map((n) => ({
         id: n.id,
@@ -714,6 +732,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         positionY: n.position.y,
         width: n.width,
         height: n.height,
+        color: n.color || null,
         isAnchor: n.isAnchor,
         assocMainConnId: n.assocMainConnId,
         attributes: n.attributes,
@@ -906,6 +925,142 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const attrH = attrCount > 0 ? attrCount * 22 + 12 : 28;
     const methodH = methodCount > 0 ? methodCount * 22 + 12 : 0;
     return headerH + attrH + methodH;
+  }
+
+  toggleSmartGuides(): void {
+    this.smartGuidesEnabled.update((val) => !val);
+  }
+
+  alignNodes(direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'): void {
+    if (this.isReadOnly()) return;
+    const selected = this.nodes().filter((n) => this.selectedNodeIds().has(n.id) && !n.isAnchor);
+    if (selected.length < 2) return;
+
+    this.pushSnapshot();
+
+    if (direction === 'left') {
+      const minX = Math.min(...selected.map((n) => n.position.x));
+      for (const n of selected) {
+        n.position = { x: minX, y: n.position.y };
+        this.collaborationService.sendNodeDrag(n.id, n.position);
+      }
+    } else if (direction === 'center') {
+      const centers = selected.map((n) => n.position.x + this.getNodeWidth(n) / 2);
+      const avgCenter = Math.round(centers.reduce((a, b) => a + b, 0) / centers.length);
+      for (const n of selected) {
+        n.position = { x: Math.round(avgCenter - this.getNodeWidth(n) / 2), y: n.position.y };
+        this.collaborationService.sendNodeDrag(n.id, n.position);
+      }
+    } else if (direction === 'right') {
+      const maxRight = Math.max(...selected.map((n) => n.position.x + this.getNodeWidth(n)));
+      for (const n of selected) {
+        n.position = { x: Math.round(maxRight - this.getNodeWidth(n)), y: n.position.y };
+        this.collaborationService.sendNodeDrag(n.id, n.position);
+      }
+    } else if (direction === 'top') {
+      const minY = Math.min(...selected.map((n) => n.position.y));
+      for (const n of selected) {
+        n.position = { x: n.position.x, y: minY };
+        this.collaborationService.sendNodeDrag(n.id, n.position);
+      }
+    } else if (direction === 'middle') {
+      const middles = selected.map((n) => n.position.y + this.getNodeHeight(n) / 2);
+      const avgMiddle = Math.round(middles.reduce((a, b) => a + b, 0) / middles.length);
+      for (const n of selected) {
+        n.position = { x: n.position.x, y: Math.round(avgMiddle - this.getNodeHeight(n) / 2) };
+        this.collaborationService.sendNodeDrag(n.id, n.position);
+      }
+    } else if (direction === 'bottom') {
+      const maxBottom = Math.max(...selected.map((n) => n.position.y + this.getNodeHeight(n)));
+      for (const n of selected) {
+        n.position = { x: n.position.x, y: Math.round(maxBottom - this.getNodeHeight(n)) };
+        this.collaborationService.sendNodeDrag(n.id, n.position);
+      }
+    }
+
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.diagramCanvas?.redraw();
+    this.collaborationService.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      'align_nodes',
+      this.defaultLineStyle(),
+    );
+  }
+
+  distributeNodes(direction: 'horizontal' | 'vertical'): void {
+    if (this.isReadOnly()) return;
+    const selected = this.nodes().filter((n) => this.selectedNodeIds().has(n.id) && !n.isAnchor);
+    if (selected.length < 3) return;
+
+    this.pushSnapshot();
+
+    if (direction === 'horizontal') {
+      selected.sort((a, b) => a.position.x - b.position.x);
+      const first = selected[0];
+      const last = selected[selected.length - 1];
+      const totalWidth = selected.slice(1, -1).reduce((sum, n) => sum + this.getNodeWidth(n), 0);
+      const span = last.position.x - (first.position.x + this.getNodeWidth(first));
+      const spacing = Math.max(20, Math.round((span - totalWidth) / (selected.length - 1)));
+
+      let currentX = first.position.x + this.getNodeWidth(first) + spacing;
+      for (let i = 1; i < selected.length - 1; i++) {
+        selected[i].position = { x: currentX, y: selected[i].position.y };
+        this.collaborationService.sendNodeDrag(selected[i].id, selected[i].position);
+        currentX += this.getNodeWidth(selected[i]) + spacing;
+      }
+    } else {
+      selected.sort((a, b) => a.position.y - b.position.y);
+      const first = selected[0];
+      const last = selected[selected.length - 1];
+      const totalHeight = selected.slice(1, -1).reduce((sum, n) => sum + this.getNodeHeight(n), 0);
+      const span = last.position.y - (first.position.y + this.getNodeHeight(first));
+      const spacing = Math.max(20, Math.round((span - totalHeight) / (selected.length - 1)));
+
+      let currentY = first.position.y + this.getNodeHeight(first) + spacing;
+      for (let i = 1; i < selected.length - 1; i++) {
+        selected[i].position = { x: selected[i].position.x, y: currentY };
+        this.collaborationService.sendNodeDrag(selected[i].id, selected[i].position);
+        currentY += this.getNodeHeight(selected[i]) + spacing;
+      }
+    }
+
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.diagramCanvas?.redraw();
+    this.collaborationService.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      'distribute_nodes',
+      this.defaultLineStyle(),
+    );
+  }
+
+  snapSelectedToGrid(gridSize = 20): void {
+    if (this.isReadOnly()) return;
+    const targets = this.selectedNodeIds().size > 0
+      ? this.nodes().filter((n) => this.selectedNodeIds().has(n.id) && !n.isAnchor)
+      : this.nodes().filter((n) => !n.isAnchor);
+    if (targets.length === 0) return;
+
+    this.pushSnapshot();
+    for (const n of targets) {
+      n.position = {
+        x: Math.round(n.position.x / gridSize) * gridSize,
+        y: Math.round(n.position.y / gridSize) * gridSize,
+      };
+      this.collaborationService.sendNodeDrag(n.id, n.position);
+    }
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.diagramCanvas?.redraw();
+    this.collaborationService.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      'snap_grid',
+      this.defaultLineStyle(),
+    );
   }
 
   getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
@@ -1643,6 +1798,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       name: `Tabla_${count}`,
       position: { x: posX, y: posY },
       width: 220,
+      color: '#FFFDDD',
       attributes: [],
       methods: [],
     };
@@ -1783,7 +1939,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const n = this.editingNode();
     if (!n) return;
     n.attributes = n.attributes || [];
-    n.attributes.push({ name: 'nuevoCampo', type: 'String' });
+    n.attributes.push({
+      name: 'nuevoCampo',
+      type: 'String',
+      nullable: true,
+      unique: false,
+      length: 255,
+      defaultValue: null,
+      default: null,
+    });
   }
 
   removeAttributeFromEditingNode(index: number): void {
@@ -1974,8 +2138,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       isAnchor: !!n.isAnchor,
       assocMainConnId: n.assocMainConnId,
       attributes: (n.attributes || []).map((a: any) => ({
+        ...a,
         name: a.name,
         type: this.normalizeDataType(a.type),
+        nullable: a.nullable !== undefined ? a.nullable : true,
+        unique: a.unique !== undefined ? a.unique : false,
+        length: a.length !== undefined ? a.length : 255,
+        defaultValue: a.defaultValue ?? a.default ?? null,
       })),
       methods: (n.methods || []).map((m: any) => ({
         name: m.name,
@@ -2165,8 +2334,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             ...n,
             width: n.width || 220,
             attributes: (n.attributes || []).map((a) => ({
+              ...a,
               name: a.name,
               type: this.normalizeDataType(a.type),
+              nullable: a.nullable !== undefined ? a.nullable : true,
+              unique: a.unique !== undefined ? a.unique : false,
+              length: a.length !== undefined ? a.length : 255,
+              defaultValue: a.defaultValue ?? a.default ?? null,
             })),
             methods: (n.methods || []).map((m) => ({
               name: m.name,
@@ -2225,8 +2399,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                   ...n,
                   width: n.width || 220,
                   attributes: (n.attributes || []).map((a: any) => ({
+                    ...a,
                     name: a.name,
                     type: this.normalizeDataType(a.type),
+                    nullable: a.nullable !== undefined ? a.nullable : true,
+                    unique: a.unique !== undefined ? a.unique : false,
+                    length: a.length !== undefined ? a.length : 255,
+                    defaultValue: a.defaultValue ?? a.default ?? null,
                   })),
                   methods: (n.methods || []).map((m: any) => ({
                     name: m.name,
@@ -2262,8 +2441,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                 ...n,
                 width: n.width || 220,
                 attributes: (n.attributes || []).map((a) => ({
+                  ...a,
                   name: a.name,
                   type: this.normalizeDataType(a.type),
+                  nullable: a.nullable !== undefined ? a.nullable : true,
+                  unique: a.unique !== undefined ? a.unique : false,
+                  length: a.length !== undefined ? a.length : 255,
+                  defaultValue: a.defaultValue ?? a.default ?? null,
                 })),
                 methods: (n.methods || []).map((m) => ({
                   name: m.name,
@@ -2374,5 +2558,30 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onApplyImportedJson(json: string): void {
     this.jsonContent.set(json);
     this.applyImportedJson();
+  }
+
+  onSetSelectedNodeColor(color: string | null): void {
+    if (this.isReadOnly()) return;
+    const targetIds = this.selectedNodeIds().size > 0
+      ? Array.from(this.selectedNodeIds())
+      : (this.selectedNodeId() ? [this.selectedNodeId()!] : []);
+    if (targetIds.length === 0) return;
+
+    this.pushSnapshot();
+    this.nodes.update((nodes) =>
+      nodes.map((node) => {
+        if (targetIds.includes(node.id) && !node.isAnchor) {
+          return { ...node, color: color || '#FFFDDD' };
+        }
+        return node;
+      }),
+    );
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      'update_class',
+      this.defaultLineStyle(),
+    );
   }
 }

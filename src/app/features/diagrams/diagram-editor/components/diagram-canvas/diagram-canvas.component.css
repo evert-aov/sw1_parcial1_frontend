@@ -13,11 +13,15 @@
 .uml-viewport {
   overflow: auto !important;
   background-color: #FFFFFF !important;
+  background-image: radial-gradient(#CBD5E1 1.2px, transparent 1.2px) !important;
+  background-size: 20px 20px !important;
 }
 
 :host-context(.dark) .uml-viewport,
 .dark .uml-viewport {
   background-color: #0D1124 !important;
+  background-image: radial-gradient(#283256 1.2px, transparent 1.2px) !important;
+  background-size: 20px 20px !important;
 }
 
 /* Scrollbars clásicos y precisos para el viewport del diagrama estilo EA */
@@ -74,7 +78,7 @@
 ::ng-deep f-flow .f-node {
   padding: 0 !important;
   border-radius: 0 !important;
-  background-color: #FFFDF9 !important;
+  background-color: var(--node-bg, #FFFDDD) !important;
   border: 1px solid #796354 !important;
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15) !important;
   box-sizing: border-box !important;
@@ -82,9 +86,9 @@
 
 :host-context(.dark) ::ng-deep f-flow .f-node,
 .dark ::ng-deep f-flow .f-node {
-  background-color: #151A30 !important;
-  border: 1px solid #3B487A !important;
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.45) !important;
+  background-color: var(--node-bg, #FFFDDD) !important;
+  border: 1px solid #796354 !important;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.35) !important;
 }
 
 ::ng-deep f-flow .f-node.opacity-0,
@@ -251,3 +255,73 @@
   background-color: #475569;
   border-color: #1E293B;
 }
+
+/* =========================================================================
+   GUÍAS MAGNÉTICAS DINÁMICAS (ESTILO ENTERPRISE ARCHITECT)
+   ========================================================================= */
+::ng-deep f-flow .f-magnetic-lines {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 50 !important;
+  pointer-events: none !important;
+}
+
+::ng-deep f-flow .f-magnetic-lines .f-line {
+  background: transparent !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+}
+
+/* Guía vertical Enterprise Architect (línea azul punteada) */
+::ng-deep f-flow .f-magnetic-lines .f-line[style*="width: 1px"],
+::ng-deep f-flow .f-magnetic-lines .f-line[style*="width:1px"] {
+  border-left: 1.5px dashed #2563EB !important;
+  width: 0 !important;
+  filter: drop-shadow(0 0 1.5px rgba(37, 99, 235, 0.45));
+}
+
+/* Guía horizontal Enterprise Architect (línea azul punteada) */
+::ng-deep f-flow .f-magnetic-lines .f-line[style*="height: 1px"],
+::ng-deep f-flow .f-magnetic-lines .f-line[style*="height:1px"] {
+  border-top: 1.5px dashed #2563EB !important;
+  height: 0 !important;
+  filter: drop-shadow(0 0 1.5px rgba(37, 99, 235, 0.45));
+}
+
+:host-context(.dark) ::ng-deep f-flow .f-magnetic-lines .f-line[style*="width: 1px"],
+:host-context(.dark) ::ng-deep f-flow .f-magnetic-lines .f-line[style*="width:1px"],
+.dark ::ng-deep f-flow .f-magnetic-lines .f-line[style*="width: 1px"],
+.dark ::ng-deep f-flow .f-magnetic-lines .f-line[style*="width:1px"] {
+  border-left: 1.5px dashed #60A5FA !important;
+  filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.6));
+}
+
+:host-context(.dark) ::ng-deep f-flow .f-magnetic-lines .f-line[style*="height: 1px"],
+:host-context(.dark) ::ng-deep f-flow .f-magnetic-lines .f-line[style*="height:1px"],
+.dark ::ng-deep f-flow .f-magnetic-lines .f-line[style*="height: 1px"],
+.dark ::ng-deep f-flow .f-magnetic-lines .f-line[style*="height:1px"] {
+  border-top: 1.5px dashed #60A5FA !important;
+  filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.6));
+}
+
+/* Rectángulos y calibres magnéticos de espaciado uniforme EA */
+::ng-deep f-flow .f-magnetic-rects {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 48 !important;
+  pointer-events: none !important;
+}
+
+::ng-deep f-flow .f-magnetic-rects .f-rect {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+  border: 1px dashed rgba(37, 99, 235, 0.5) !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow .f-magnetic-rects .f-rect,
+.dark ::ng-deep f-flow .f-magnetic-rects .f-rect {
+  background-color: rgba(96, 165, 250, 0.12) !important;
+  border: 1px dashed rgba(96, 165, 250, 0.6) !important;
+}
+

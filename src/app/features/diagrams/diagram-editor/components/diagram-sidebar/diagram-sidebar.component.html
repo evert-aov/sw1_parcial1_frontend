@@ -1,53 +1,51 @@
 @if (isOpen()) {
-  <aside class="w-60 bg-[#EAEAEA] dark:bg-[#121629] border-r border-[#B8B8B8] dark:border-[#283256] flex flex-col shrink-0 select-none text-xs text-slate-800 dark:text-slate-200 shadow-sm overflow-y-auto z-20 animate-in slide-in-from-left duration-150 transition-colors">
+  <aside class="w-64 bg-white dark:bg-[#0D1124] border-r border-slate-200/80 dark:border-slate-800 flex flex-col shrink-0 select-none text-xs text-slate-800 dark:text-slate-200 shadow-xs overflow-y-auto z-20 animate-in slide-in-from-left duration-150 transition-colors">
 
-    <!-- Cabecera del Sidebar con botón de colapso -->
-    <div class="px-2.5 py-1.5 bg-[#DFDFDF] dark:bg-[#181D35] border-b border-[#C0C0C0] dark:border-[#283256] flex items-center justify-between font-mono font-bold text-[10.5px] text-slate-700 dark:text-slate-300">
-      <div class="flex items-center gap-1.5">
-        <ng-icon name="heroBars3" class="text-xs text-slate-600 dark:text-slate-400"></ng-icon>
-        <span>TOOLBOX & EXPLORER</span>
-      </div>
-      <button
-        (click)="closeSidebar.emit()"
-        [title]="'toolbar.hideToolbox' | translate"
-        class="text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-[#252E56] rounded px-1.5 py-0.5 cursor-pointer text-xs flex items-center gap-0.5 transition-colors">
-        <ng-icon name="heroChevronLeft" class="text-xs"></ng-icon>
+    <!-- Header Tabs: TOOLBOX & EXPLORADOR -->
+    <div class="flex items-center border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold bg-white dark:bg-[#0D1124] shrink-0">
+      <button class="flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-white dark:bg-[#0D1124] cursor-pointer">
+        <ng-icon name="heroBars3" class="text-sm"></ng-icon>
+        <span class="tracking-wide text-[11px] font-bold">TOOLBOX</span>
+      </button>
+      <button class="flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 bg-slate-50/60 dark:bg-[#0F142A] border-b-2 border-transparent cursor-pointer transition-colors">
+        <ng-icon name="heroFolder" class="text-sm"></ng-icon>
+        <span class="tracking-wide text-[11px] font-semibold">EXPLORADOR</span>
       </button>
     </div>
 
-    <!-- Sección 0: Selector de Tipos de Diagrama UML (Arquitectura Extensible) -->
-    <div class="border-b border-[#C8C8C8] dark:border-[#283256]">
+    <!-- Sección 0: Selector de Tipos de Diagrama UML -->
+    <div class="border-b border-slate-100 dark:border-slate-800/80 shrink-0">
       <div
         (click)="isDiagramTypesOpen.set(!isDiagramTypesOpen())"
-        class="bg-gradient-to-b from-[#EFEFEF] to-[#DCDCDC] dark:from-[#1E2442] dark:to-[#161B33] px-2.5 py-1.5 font-bold text-[#1E293B] dark:text-slate-200 flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] dark:border-[#283256] hover:from-[#F5F5F5] hover:to-[#E2E2E2] dark:hover:from-[#252E56] dark:hover:to-[#1D2240]">
-        <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-slate-100">
-          <ng-icon [name]="isDiagramTypesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-600 dark:text-slate-400"></ng-icon>
+        class="px-3.5 py-2.5 font-bold flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
+        <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+          <ng-icon [name]="isDiagramTypesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
           Diagramas UML
         </span>
-        <span class="text-[9.5px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-mono font-medium">
-          5 tipos
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold border border-blue-100 dark:border-blue-900/40">
+          5 tipos ▾
         </span>
       </div>
 
       @if (isDiagramTypesOpen()) {
-        <div class="p-1.5 space-y-1 bg-[#F5F5F5] dark:bg-[#0E1222]">
+        <div class="p-2 space-y-1 bg-slate-50 dark:bg-[#0B0E1E] border-t border-slate-100 dark:border-slate-800">
           @for (dt of diagramTypes(); track dt.id) {
             <button
               (click)="onSelectDiagramType(dt.id)"
               [ngClass]="{
-                'bg-blue-600 text-white border-blue-700 font-bold shadow-xs': activeDiagramType() === dt.id,
-                'hover:bg-[#E8EEF5] dark:hover:bg-[#1C2242] text-slate-700 dark:text-slate-300 border-transparent': activeDiagramType() !== dt.id,
+                'bg-blue-600 text-white font-bold shadow-xs': activeDiagramType() === dt.id,
+                'hover:bg-slate-100 dark:hover:bg-[#161C38] text-slate-700 dark:text-slate-300': activeDiagramType() !== dt.id,
                 'opacity-60': !dt.supported && activeDiagramType() !== dt.id
               }"
-              class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer">
+              class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center justify-between transition-colors cursor-pointer">
               <div class="flex items-center gap-2 min-w-0">
                 <ng-icon [name]="dt.icon" class="text-xs shrink-0"></ng-icon>
                 <div class="truncate text-[11px]">{{ dt.label }}</div>
               </div>
               @if (dt.supported) {
-                <span class="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono font-semibold">Listo</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold">Listo</span>
               } @else {
-                <span class="text-[9px] px-1 py-0.2 rounded bg-slate-300 dark:bg-slate-800 text-slate-500 font-mono">Próx.</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500">Próx.</span>
               }
             </button>
           }
@@ -56,56 +54,80 @@
     </div>
 
     <!-- Sección 1: Relaciones y Elementos para Diagrama de Clases -->
-    @if (activeDiagramType() === 'class') {
-      <div class="border-b border-[#C8C8C8] dark:border-[#283256]">
+    @if (activeDiagramType() === DiagramType.CLASS) {
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
         <div
           (click)="isRelationshipsOpen.set(!isRelationshipsOpen())"
-          class="bg-gradient-to-b from-[#EFEFEF] to-[#DCDCDC] dark:from-[#1E2442] dark:to-[#161B33] px-2.5 py-1.5 font-bold text-[#1E293B] dark:text-slate-200 flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] dark:border-[#283256] hover:from-[#F5F5F5] hover:to-[#E2E2E2] dark:hover:from-[#252E56] dark:hover:to-[#1D2240]">
-          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-slate-100">
-            <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-600 dark:text-slate-400"></ng-icon>
-            {{ 'toolbar.relationships.title' | translate }}
+          class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
+            <span>Relaciones <span class="font-normal text-slate-500">de Clases</span></span>
           </span>
           @if (selectedRelationType()) {
-            <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-slate-700 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 font-normal cursor-pointer">
+            <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-blue-600 hover:text-red-600 dark:text-blue-400 dark:hover:text-red-400 font-normal cursor-pointer">
               {{ 'toolbar.relationships.deselect' | translate }}
             </span>
           }
         </div>
 
         @if (isRelationshipsOpen()) {
-          <div class="p-1.5 space-y-1 bg-[#F5F5F5] dark:bg-[#0E1222]">
-
-            <!-- Herramienta Puntero / Mover -->
-            <button
-              (click)="onSelectPointer()"
-              [ngClass]="{'bg-white dark:bg-[#151A30] border-slate-400 dark:border-[#2D3762] font-semibold shadow-xs text-slate-900 dark:text-slate-100': selectedRelationType() === null, 'hover:bg-[#E8EEF5] dark:hover:bg-[#1C2242] text-slate-600 dark:text-slate-400 border-transparent': selectedRelationType() !== null}"
-              class="w-full text-left px-2 py-1.5 rounded flex items-center gap-2 border transition-colors mb-1 cursor-pointer">
-              <ng-icon name="heroCursorArrowRays" class="text-sm text-slate-700 dark:text-slate-300 shrink-0"></ng-icon>
-              <div>
-                <div class="text-xs font-medium text-slate-800 dark:text-slate-200">{{ 'toolbar.pointer' | translate }}</div>
-                <div class="text-[9.5px] text-slate-500 dark:text-slate-400">{{ 'toolbar.pointerDesc' | translate }}</div>
-              </div>
-            </button>
-
-            <div class="border-t border-slate-200 dark:border-[#283256] my-1"></div>
-
+          <div class="p-2 space-y-1">
             <!-- Lista de relaciones UML 2.5 -->
             @for (rel of relationTypes(); track rel.id) {
               <button
                 (click)="onSelectRelation(rel.id)"
                 [ngClass]="{
-                  'bg-blue-100 dark:bg-indigo-950/80 border-blue-500 dark:border-indigo-400 font-semibold shadow-xs text-blue-900 dark:text-indigo-200': selectedRelationType() === rel.id,
-                  'hover:bg-[#E8EEF5] dark:hover:bg-[#1C2242] text-slate-700 dark:text-slate-300 border-transparent': selectedRelationType() !== rel.id
+                  'bg-blue-50 dark:bg-blue-950/70 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-2xs': selectedRelationType() === rel.id,
+                  'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
                 }"
-                class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer group">
-                <div class="flex items-center gap-2 min-w-0">
-                  <span class="font-mono font-bold text-xs shrink-0 text-slate-800 dark:text-slate-200 w-11 text-center bg-white/80 dark:bg-[#151A30] py-0.5 border border-slate-300 dark:border-[#2D3762] rounded-[2px]">
-                    {{ rel.icon }}
-                  </span>
-                  <div class="truncate">
-                    <div class="text-[11.5px] leading-tight font-medium">{{ rel.label }}</div>
-                    <div class="text-[9.5px] text-slate-500 dark:text-slate-400 truncate" [title]="rel.description">{{ rel.description }}</div>
-                  </div>
+                class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
+                <!-- Icono representativo estilizado -->
+                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
+                  @switch (rel.id) {
+                    @case ('association') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                      </svg>
+                    }
+                    @case ('generalization') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="18" y2="7" stroke="currentColor" stroke-width="1.8"/>
+                        <polygon points="18,2 26,7 18,12" fill="white" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                      </svg>
+                    }
+                    @case ('composition') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <polygon points="2,7 8,3 14,7 8,11" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+                        <line x1="14" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8"/>
+                      </svg>
+                    }
+                    @case ('aggregation') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <polygon points="2,7 8,3 14,7 8,11" fill="white" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        <line x1="14" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8"/>
+                      </svg>
+                    }
+                    @case ('dependency') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
+                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    }
+                    @case ('association_class') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="15" y2="7" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="8" y1="7" x2="8" y2="2" stroke="currentColor" stroke-width="1" stroke-dasharray="2,2"/>
+                        <rect x="15" y="2" width="10" height="10" rx="1" fill="white" stroke="currentColor" stroke-width="1.2"/>
+                      </svg>
+                    }
+                    @default {
+                      <span class="font-mono text-xs">{{ rel.icon }}</span>
+                    }
+                  }
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
+                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="rel.description">{{ rel.description }}</div>
                 </div>
               </button>
             }
@@ -114,37 +136,49 @@
       </div>
 
       <!-- Sección 2: Enrutamiento de Líneas -->
-      <div class="border-b border-[#C8C8C8] dark:border-[#283256]">
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
         <div
           (click)="isLineStylesOpen.set(!isLineStylesOpen())"
-          class="bg-gradient-to-b from-[#EFEFEF] to-[#DCDCDC] dark:from-[#1E2442] dark:to-[#161B33] px-2.5 py-1.5 font-bold text-[#1E293B] dark:text-slate-200 flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] dark:border-[#283256] hover:from-[#F5F5F5] hover:to-[#E2E2E2] dark:hover:from-[#252E56] dark:hover:to-[#1D2240]">
-          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-slate-100">
-            <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-600 dark:text-slate-400"></ng-icon>
-            {{ 'toolbar.lineStylesTitle' | translate }}
+          class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
+            <span>Line Style (Routing)</span>
           </span>
+          <ng-icon name="heroArrowsPointingOut" class="text-xs text-slate-400"></ng-icon>
         </div>
 
         @if (isLineStylesOpen()) {
-          <div class="p-1.5 space-y-1 bg-[#F5F5F5] dark:bg-[#0E1222]">
-            @for (style of lineStyles(); track style.id) {
-              <button
-                (click)="onSetLineStyle(style.id)"
-                [ngClass]="{
-                  'bg-white dark:bg-[#151A30] border-slate-400 dark:border-[#2D3762] font-semibold shadow-xs text-slate-900 dark:text-slate-100': defaultLineStyle() === style.id,
-                  'hover:bg-[#E8EEF5] dark:hover:bg-[#1C2242] text-slate-600 dark:text-slate-400 border-transparent': defaultLineStyle() !== style.id
-                }"
-                class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer">
-                <span class="text-xs">{{ style.label }}</span>
-                @if (defaultLineStyle() === style.id) {
-                  <ng-icon name="heroCheck" class="text-xs text-blue-600 dark:text-indigo-400 font-bold"></ng-icon>
-                }
+          <div class="p-3 space-y-2.5">
+            <select
+              [value]="defaultLineStyle()"
+              (change)="onSetLineStyle($any($event.target).value)"
+              class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
+              <option value="segment">Línea Personalizada (EA Default / Segmentos)</option>
+              <option value="straight">Direct (Directa / Recta)</option>
+              <option value="bezier">Bezier (Curva Suave)</option>
+              <option value="adaptive-curve">Orthogonal - Rounded (Curva Adaptativa)</option>
+            </select>
+
+            <!-- Quick Zoom Buttons: [ 🔍- ] [ 🔍+ ] [ 1:1 ] [ ⛶ ] -->
+            <div class="grid grid-cols-4 gap-1.5 pt-0.5">
+              <button (click)="zoomOut.emit()" title="Alejar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
               </button>
-            }
+              <button (click)="zoomIn.emit()" title="Acercar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
+              </button>
+              <button (click)="resetView.emit()" title="1:1" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
+                1:1
+              </button>
+              <button (click)="fitView.emit()" title="Ajustar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
+              </button>
+            </div>
           </div>
         }
       </div>
     } @else {
-      <!-- Placeholder para los otros diagramas (Casos de Uso, Secuencia, Comunicación, Paquetes) -->
+      <!-- Placeholder para los otros diagramas -->
       <div class="p-4 text-center text-slate-500 dark:text-slate-400 space-y-2">
         <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">
           Paleta de {{ activeDiagramType() }}
@@ -153,40 +187,22 @@
           Los elementos de este diagrama se activarán en el lienzo al seleccionarlo.
         </p>
         <button
-          (click)="onSelectDiagramType('class')"
-          class="px-2.5 py-1 text-[11px] bg-blue-600 hover:bg-blue-700 text-white rounded font-medium cursor-pointer">
+          (click)="onSelectDiagramType(DiagramType.CLASS)"
+          class="px-2.5 py-1 text-[11px] bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium cursor-pointer">
           Volver a Diagrama de Clases
         </button>
       </div>
     }
 
-    <!-- Sección 3: Zoom y Vistas Rápidas -->
-    <div class="p-2 border-b border-[#C8C8C8] dark:border-[#283256] bg-[#F5F5F5] dark:bg-[#0E1222]">
-      <div class="flex items-center justify-between gap-1">
-        <button (click)="zoomIn.emit()" [title]="'toolbar.canvas.zoomIn' | translate" class="p-1 bg-white dark:bg-[#151A30] hover:bg-slate-200 dark:hover:bg-[#20274A] border border-slate-300 dark:border-[#2D3762] text-slate-700 dark:text-slate-200 rounded flex-1 flex items-center justify-center cursor-pointer">
-          <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-        </button>
-        <button (click)="zoomOut.emit()" [title]="'toolbar.canvas.zoomOut' | translate" class="p-1 bg-white dark:bg-[#151A30] hover:bg-slate-200 dark:hover:bg-[#20274A] border border-slate-300 dark:border-[#2D3762] text-slate-700 dark:text-slate-200 rounded flex-1 flex items-center justify-center cursor-pointer">
-          <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-        </button>
-        <button (click)="resetView.emit()" title="1:1" class="p-1 bg-white dark:bg-[#151A30] hover:bg-slate-200 dark:hover:bg-[#20274A] border border-slate-300 dark:border-[#2D3762] text-slate-700 dark:text-slate-200 rounded flex-1 text-[10px] font-mono leading-none cursor-pointer">
-          1:1
-        </button>
-        <button (click)="fitView.emit()" [title]="'toolbar.canvas.fitView' | translate" class="p-1 bg-white dark:bg-[#151A30] hover:bg-slate-200 dark:hover:bg-[#20274A] border border-slate-300 dark:border-[#2D3762] text-slate-700 dark:text-slate-200 rounded flex-1 flex items-center justify-center cursor-pointer">
-          <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-        </button>
-      </div>
-    </div>
-
     <!-- Botón Agregar Nuevo Elemento (Nueva Clase UML) -->
-    <div class="p-3 mt-auto bg-[#DFDFDF] dark:bg-[#181D35] border-t border-[#C0C0C0] dark:border-[#283256]">
+    <div class="p-3 mt-auto bg-white dark:bg-[#0D1124] border-t border-slate-100 dark:border-slate-800">
       <button
         (click)="addClass.emit()"
         [disabled]="isReadOnly()"
         [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('toolbar.addClassTooltip' | translate)"
-        class="w-full py-2 bg-[#6B5A52] hover:bg-[#52443E] dark:bg-indigo-600 dark:hover:bg-indigo-500 active:translate-y-0.5 text-white font-mono text-xs font-bold tracking-wider uppercase border border-[#2A201B] dark:border-indigo-700 shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+        class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
         <ng-icon name="heroPlus" class="text-xs"></ng-icon>
-        <span>{{ 'toolbar.newClassBtn' | translate }}</span>
+        <span>+ NUEVA CLASE UML</span>
       </button>
     </div>
 

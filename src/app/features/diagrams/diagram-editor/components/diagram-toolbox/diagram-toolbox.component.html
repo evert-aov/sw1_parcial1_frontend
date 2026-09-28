@@ -122,12 +122,12 @@
     </div>
 
     <!-- Botón Agregar Nueva Clase UML -->
-    <div class="p-3 mt-auto bg-[#DFDFDF] dark:bg-[#181D35] border-t border-[#C0C0C0] dark:border-[#283256]">
+    <div class="p-3 mt-auto bg-slate-50 dark:bg-[#0D1124] border-t border-slate-200/80 dark:border-slate-800">
       <button
         (click)="addClass.emit()"
         [disabled]="isReadOnly()"
         [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('toolbar.addClassTooltip' | translate)"
-        class="w-full py-2 bg-[#6B5A52] hover:bg-[#52443E] dark:bg-indigo-600 dark:hover:bg-indigo-500 active:translate-y-0.5 text-white font-mono text-xs font-bold tracking-wider uppercase border border-[#2A201B] dark:border-indigo-700 shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+        class="w-full py-2 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
         <ng-icon name="heroPlus" class="text-xs"></ng-icon>
         <span>{{ 'toolbar.newClassBtn' | translate }}</span>
       </button>

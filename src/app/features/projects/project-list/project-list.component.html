@@ -1,94 +1,98 @@
-<div class="min-h-screen flex flex-col bg-[#F9F7F5] dark:bg-[#0D1124] select-none font-sans text-slate-900 dark:text-slate-100 relative transition-colors duration-200">
+<div class="min-h-screen flex flex-col bg-slate-50/50 dark:bg-[#0A0D1A] select-none font-sans text-slate-900 dark:text-slate-100 relative transition-colors duration-200">
 
-  <!-- Barra Superior EA (Header) -->
-  <header class="bg-gradient-to-r from-[#1B4E8C] via-[#245D9E] to-[#2B6CB0] dark:from-[#151B38] dark:via-[#1A2246] dark:to-[#121730] text-white border-b border-[#1A3E6B] dark:border-[#283256] shadow-md px-4 py-2 flex items-center justify-between z-30">
+  <!-- Barra Superior (Header SaaS Moderno) -->
+  <header class="bg-white dark:bg-[#0D1124] border-b border-slate-200/80 dark:border-slate-800 shadow-xs px-4 sm:px-6 py-2.5 flex items-center justify-between z-30 transition-colors duration-150">
     <div class="flex items-center gap-3">
-      <div class="bg-[#133763] dark:bg-[#101426] border border-[#3870AA] dark:border-[#283256] p-1.5 rounded shadow-inner flex items-center justify-center">
-        <ng-icon name="heroCube" class="text-lg text-sky-200 dark:text-slate-100"></ng-icon>
+      <!-- Gradient Logo Icon -->
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-500 text-white flex items-center justify-center shadow-xs">
+        <ng-icon name="heroCube" class="text-base text-white"></ng-icon>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="font-bold text-sm tracking-tight leading-none text-white">UML ARCHITECT</h1>
-          <span class="text-[9.5px] font-mono bg-sky-500/30 text-sky-100 px-1.5 py-0.5 rounded border border-sky-300/30">v2.5 EA</span>
+          <h1 class="font-bold text-sm tracking-tight leading-none text-slate-800 dark:text-slate-100">UML Studio</h1>
+          <span class="text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-900/50">v2.5 EA</span>
         </div>
-        <p class="text-[10px] font-mono text-sky-200 dark:text-slate-400">Enterprise Architect Suite & Spring Boot Generator</p>
+        <p class="text-[10.5px] text-slate-400 dark:text-slate-500 mt-0.5">Enterprise Architect Suite & Spring Boot Generator</p>
       </div>
     </div>
 
     <!-- Acciones Usuario y Sistema -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 sm:gap-3">
       <!-- Selector de Idioma -->
-      <app-language-selector></app-language-selector>
+      <app-language-selector [theme]="'light'"></app-language-selector>
 
       <!-- Botón Switch Tema Claro / Oscuro -->
-      <app-theme-toggle></app-theme-toggle>
+      <app-theme-toggle [variant]="'light'"></app-theme-toggle>
 
       <!-- Botón Manual Interactivo / Guía -->
       <button
         (click)="openGuide()"
         [title]="'guide.openTooltip' | translate"
-        class="flex items-center gap-1.5 bg-[#163D6C] hover:bg-[#123158] dark:bg-[#101426]/60 dark:hover:bg-[#101426] px-2.5 py-1 rounded border border-[#366FA8] dark:border-[#283256] text-xs text-amber-300 hover:text-amber-200 transition-all cursor-pointer shadow-xs">
-        <ng-icon name="heroAcademicCap" class="text-sm"></ng-icon>
-        <span class="font-medium hidden md:inline">{{ 'guide.interactiveManual' | translate }}</span>
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#14182E] hover:bg-slate-100 dark:hover:bg-[#1C2242] text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs">
+        <ng-icon name="heroAcademicCap" class="text-sm text-indigo-500 dark:text-indigo-400"></ng-icon>
+        <span class="hidden md:inline">{{ 'guide.interactiveManual' | translate }}</span>
       </button>
 
-      <!-- Perfil de Usuario -->
+      <!-- Perfil de Usuario y Logout -->
       @if (authService.currentUser()) {
-        <button
-          (click)="openProfileModal()"
-          title="Ver y editar perfil de usuario"
-          class="flex items-center gap-1.5 bg-[#163D6C] hover:bg-[#123158] dark:bg-[#101426]/60 dark:hover:bg-[#101426] px-2.5 py-1 rounded border border-[#366FA8] dark:border-[#283256] text-xs text-white dark:text-slate-200 transition-all cursor-pointer">
-          <div class="w-5 h-5 rounded-full bg-purple-700 text-white font-bold text-[10px] flex items-center justify-center">
-            {{ (authService.currentUser()?.fullName || 'U').charAt(0).toUpperCase() }}
-          </div>
-          <span class="font-medium truncate max-w-[150px] text-sky-100 dark:text-slate-200" [title]="authService.currentUser()?.fullName">
-            {{ authService.currentUser()?.fullName }}
-          </span>
-        </button>
+        <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+          <button
+            (click)="openProfileModal()"
+            title="Ver y editar perfil de usuario"
+            class="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-slate-100 dark:hover:bg-[#14182E] transition-colors cursor-pointer">
+            <div class="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+              {{ (authService.currentUser()?.fullName || 'U').charAt(0).toUpperCase() }}
+            </div>
+            <span class="font-medium text-xs text-slate-700 dark:text-slate-200 truncate max-w-[130px] hidden sm:inline" [title]="authService.currentUser()?.fullName">
+              {{ authService.currentUser()?.fullName }}
+            </span>
+          </button>
 
-        <!-- Botón Salir -->
-        <button
-          (click)="logout()"
-          title="Cerrar sesión"
-          class="bg-[#1A477C] hover:bg-red-900/80 dark:bg-[#1C2242] text-sky-100 hover:text-white dark:text-slate-300 text-xs px-2.5 py-1 rounded flex items-center gap-1 border border-[#366FA8] dark:border-[#283256] transition-colors cursor-pointer">
-          <ng-icon name="heroArrowRightOnRectangle" class="text-xs"></ng-icon>
-          <span class="hidden sm:inline">{{ 'auth.logout' | translate }}</span>
-        </button>
+          <!-- Botón Salir -->
+          <button
+            (click)="logout()"
+            title="Cerrar sesión"
+            class="text-xs text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer">
+            <ng-icon name="heroArrowRightOnRectangle" class="text-sm"></ng-icon>
+          </button>
+        </div>
       }
     </div>
   </header>
 
   <!-- Contenido Central: Proyectos del Usuario -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 z-10">
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 sm:py-8 z-10">
     
     <!-- Encabezado de Sección y Barra de Filtros -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#6B5A52]/30 dark:border-[#283256]">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-5 border-b border-slate-200/80 dark:border-slate-800">
       <div>
-        <h2 class="text-base font-bold text-[#2A201B] dark:text-slate-100 uppercase tracking-wider font-mono flex items-center gap-2">
-          <ng-icon name="heroFolder" class="text-lg text-[#6B5A52] dark:text-amber-400"></ng-icon>
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <ng-icon name="heroFolder" class="text-base"></ng-icon>
+          </div>
           <span>{{ 'projects.headerTitle' | translate }}</span>
         </h2>
-        <p class="text-xs text-[#6B5A52] dark:text-slate-400 mt-0.5">{{ 'projects.headerSubtitle' | translate }}</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ 'projects.headerSubtitle' | translate }}</p>
       </div>
 
       <!-- Buscador y Botón Nuevo Proyecto -->
       <div class="flex items-center gap-3">
         <!-- Input de Búsqueda -->
-        <div class="relative w-full sm:w-64">
+        <div class="relative w-full sm:w-72">
           <input
             type="text"
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event)"
             [placeholder]="'projects.searchPlaceholder' | translate"
-            class="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs text-[#2A201B] dark:text-slate-100 placeholder-[#6B5A52]/50 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500"
+            class="w-full pl-9 pr-3.5 py-2 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs transition-all"
           />
-          <ng-icon name="heroMagnifyingGlass" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#6B5A52] dark:text-slate-400"></ng-icon>
+          <ng-icon name="heroMagnifyingGlass" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400"></ng-icon>
         </div>
 
         <!-- Botón Crear Nuevo Proyecto -->
         <button
           (click)="openCreateModal()"
-          class="bg-[#6B5A52] hover:bg-[#52443E] dark:bg-[#4F46E5] dark:hover:bg-[#4338CA] active:translate-y-0.5 text-white font-mono text-xs font-bold py-1.5 px-3 border border-[#2A201B] dark:border-[#3730A3] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer flex items-center gap-1.5 shrink-0">
+          class="bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0">
           <ng-icon name="heroPlus" class="text-xs"></ng-icon>
           <span>{{ 'projects.newProjectBtn' | translate }}</span>
         </button>
@@ -97,43 +101,43 @@
 
     <!-- Estado de Carga -->
     @if (projectService.isLoading() && projects().length === 0) {
-      <div class="p-12 text-center">
-        <span class="inline-block w-8 h-8 border-3 border-[#6B5A52] dark:border-slate-500 border-t-transparent rounded-full animate-spin"></span>
-        <p class="text-xs font-mono text-[#6B5A52] dark:text-slate-400 mt-3">{{ 'projects.loading' | translate }}</p>
+      <div class="p-16 text-center">
+        <span class="inline-block w-8 h-8 border-3 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+        <p class="text-xs font-mono text-slate-500 dark:text-slate-400 mt-3">{{ 'projects.loading' | translate }}</p>
       </div>
     } @else if (filteredProjects().length === 0) {
       <!-- Estado Vacío -->
-      <div class="bg-[#F2EBE6] dark:bg-[#14182E] border-[1.5px] border-[#6B5A52] dark:border-[#2D3762] p-12 text-center shadow-[4px_4px_0px_rgba(0,0,0,0.1)] dark:shadow-[4px_4px_0px_rgba(0,0,0,0.5)] max-w-md mx-auto transition-colors">
-        <div class="w-12 h-12 bg-[#6B5A52]/10 dark:bg-[#1A203B] border border-[#6B5A52] dark:border-[#2D3762] text-[#6B5A52] dark:text-slate-300 flex items-center justify-center mx-auto mb-3">
+      <div class="bg-white dark:bg-[#0F142A] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center shadow-xs max-w-md mx-auto transition-colors">
+        <div class="w-14 h-14 bg-blue-50 dark:bg-blue-950/50 rounded-2xl border border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-4 shadow-2xs">
           <ng-icon name="heroFolderPlus" class="text-2xl"></ng-icon>
         </div>
-        <h3 class="text-sm font-bold text-[#2A201B] dark:text-slate-100">{{ 'projects.emptyTitle' | translate }}</h3>
-        <p class="text-xs text-[#6B5A52] dark:text-slate-400 mt-1 mb-4">{{ 'projects.emptySubtitle' | translate }}</p>
+        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ 'projects.emptyTitle' | translate }}</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-5 leading-relaxed">{{ 'projects.emptySubtitle' | translate }}</p>
         <button
           (click)="openCreateModal()"
-          class="bg-[#6B5A52] hover:bg-[#52443E] dark:bg-[#4F46E5] dark:hover:bg-[#4338CA] text-white font-mono text-xs font-bold py-1.5 px-4 border border-[#2A201B] dark:border-[#3730A3] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all cursor-pointer inline-flex items-center gap-1.5">
+          class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5">
           <ng-icon name="heroPlus" class="text-xs"></ng-icon>
           <span>{{ 'projects.newProjectBtn' | translate }}</span>
         </button>
       </div>
     } @else {
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @for (project of filteredProjects(); track project.id) {
           <div
             (click)="openDiagram(project)"
-            class="bg-[#F2EBE6] dark:bg-[#14182E] border-[1.5px] border-[#6B5A52] dark:border-[#2D3762] shadow-[4px_4px_0px_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0px_rgba(10,13,26,0.6)] hover:shadow-[6px_6px_0px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 transition-all cursor-pointer flex flex-col justify-between group">
+            class="bg-white dark:bg-[#0F142A] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700/50 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden group">
             
             <!-- Encabezado de la Tarjeta del Proyecto -->
-            <div class="p-4 border-b border-[#6B5A52]/40 dark:border-[#283256] bg-white/40 dark:bg-[#101428]/30">
+            <div class="p-5 border-b border-slate-100 dark:border-slate-800/80">
               <div class="flex items-start justify-between gap-2">
                 <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-1.5 mb-1">
-                    <span class="px-1.5 py-0.2 text-[9.5px] font-mono font-bold uppercase border border-[#6B5A52] dark:border-[#2D3762] bg-[#F2EBE6] dark:bg-[#1A203B] text-[#2A201B] dark:text-slate-200">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="px-2 py-0.5 text-[10px] font-semibold uppercase rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50">
                       {{ project.userRole || 'COLLABORATOR' }}
                     </span>
-                    <span class="text-[10px] font-mono text-[#6B5A52] dark:text-slate-400">Java {{ project.javaVersion }} • Spring {{ project.springBootVersion }}</span>
+                    <span class="text-[10.5px] font-mono text-slate-400 dark:text-slate-500">Java {{ project.javaVersion }} • Spring {{ project.springBootVersion }}</span>
                   </div>
-                  <h3 class="text-sm font-bold text-[#2A201B] dark:text-slate-100 truncate group-hover:text-[#6B5A52] dark:group-hover:text-amber-400 transition-colors" [title]="project.name">
+                  <h3 class="text-[15px] font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" [title]="project.name">
                     {{ project.name }}
                   </h3>
                 </div>
@@ -145,7 +149,7 @@
                     <button
                       (click)="openEditModal(project, $event)"
                       [title]="'projects.editModal.title' | translate"
-                      class="text-slate-500 hover:text-[#2A201B] dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/10 p-1 rounded transition-colors cursor-pointer">
+                      class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 p-1.5 rounded-lg transition-colors cursor-pointer">
                       <ng-icon name="heroPencilSquare" class="text-sm"></ng-icon>
                     </button>
                   }
@@ -155,46 +159,46 @@
                     <button
                       (click)="onDeleteProject(project, $event)"
                       [title]="'projects.deleteTooltip' | translate"
-                      class="text-slate-400 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 p-1 rounded transition-colors cursor-pointer">
+                      class="text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 p-1.5 rounded-lg transition-colors cursor-pointer">
                       <ng-icon name="heroTrash" class="text-sm"></ng-icon>
                     </button>
                   }
                 </div>
               </div>
 
-              <p class="text-xs text-[#6B5A52] dark:text-slate-400 mt-2 line-clamp-2 min-h-[32px]">
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-2.5 line-clamp-2 min-h-[34px] leading-relaxed">
                 {{ project.description || ('projects.noDescription' | translate) }}
               </p>
             </div>
 
             <!-- Metadatos y Paquete -->
-            <div class="p-4 space-y-2 text-xs">
-              <div class="flex items-center justify-between text-[11px] font-mono text-[#6B5A52] dark:text-slate-400">
-                <span>{{ 'projects.package' | translate }}:</span>
-                <span class="text-[#2A201B] dark:text-slate-200 font-semibold truncate max-w-[170px]" [title]="project.basePackage">
+            <div class="p-5 space-y-2.5 text-xs bg-slate-50/40 dark:bg-[#12162B]/30">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <span class="font-medium">{{ 'projects.package' | translate }}:</span>
+                <span class="font-mono text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[170px]" [title]="project.basePackage">
                   {{ project.basePackage }}
                 </span>
               </div>
-              <div class="flex items-center justify-between text-[11px] font-mono text-[#6B5A52] dark:text-slate-400">
-                <span>{{ 'projects.createdBy' | translate }}:</span>
-                <span class="text-[#2A201B] dark:text-slate-200 truncate max-w-[170px]" [title]="project.creatorName">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                <span class="font-medium">{{ 'projects.createdBy' | translate }}:</span>
+                <span class="text-slate-700 dark:text-slate-300 truncate max-w-[170px]" [title]="project.creatorName">
                   {{ project.creatorName }}
                 </span>
               </div>
             </div>
 
             <!-- Pie de la Tarjeta con Botones -->
-            <div class="px-4 py-2.5 bg-black/[0.03] dark:bg-[#101428]/30 border-t border-[#6B5A52]/40 dark:border-[#283256] flex items-center justify-between text-xs">
+            <div class="px-5 py-3 bg-white dark:bg-[#0F142A] border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
               <!-- Botón Miembros -->
               <button
                 (click)="openMembersModal(project, $event)"
-                class="flex items-center gap-1 text-[11px] font-mono text-[#6B5A52] dark:text-slate-400 hover:text-[#2A201B] dark:hover:text-slate-200 font-medium hover:underline cursor-pointer">
+                class="flex items-center gap-1.5 text-[11.5px] text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium cursor-pointer transition-colors">
                 <ng-icon name="heroUserGroup" class="text-xs"></ng-icon>
                 <span>{{ 'projects.membersCount' | translate:{ count: project.memberCount } }}</span>
               </button>
 
               <!-- Botón Abrir Canvas -->
-              <div class="flex items-center gap-1 font-mono text-[11px] font-bold text-[#6B5A52] dark:text-slate-400 group-hover:text-[#2A201B] dark:group-hover:text-amber-400">
+              <div class="flex items-center gap-1 text-[11.5px] font-semibold text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition-all">
                 <span>{{ 'projects.openCanvas' | translate }}</span>
                 <ng-icon name="heroArrowTopRightOnSquare" class="text-xs"></ng-icon>
               </div>
@@ -209,56 +213,60 @@
 
   <!-- MODAL: CREAR NUEVO PROYECTO -->
   @if (isCreateModalOpen()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-[#F2EBE6] dark:bg-[#14182E] border-[1.5px] border-[#6B5A52] dark:border-[#2D3762] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] dark:shadow-[6px_6px_0px_rgba(10,13,26,0.6)] max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 transition-colors">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150 transition-colors">
         
         <!-- Header Modal -->
-        <div class="border-b-[1.5px] border-[#6B5A52] dark:border-[#2D3762] bg-white/40 dark:bg-[#101428]/30 px-5 py-3 flex items-center justify-between">
-          <h3 class="text-sm font-bold text-[#2A201B] dark:text-slate-100 tracking-tight uppercase flex items-center gap-2">
-            <ng-icon name="heroFolderPlus" class="text-base text-[#6B5A52] dark:text-amber-400"></ng-icon>
-            {{ 'projects.createModal.title' | translate }}
-          </h3>
-          <button (click)="closeCreateModal()" class="text-[#6B5A52] dark:text-slate-400 hover:text-[#2A201B] dark:hover:text-white font-bold text-base cursor-pointer">&times;</button>
+        <div class="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <ng-icon name="heroFolderPlus" class="text-base"></ng-icon>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">
+              {{ 'projects.createModal.title' | translate }}
+            </h3>
+          </div>
+          <button (click)="closeCreateModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
         </div>
 
         <!-- Formulario -->
         <form [formGroup]="createForm" (ngSubmit)="onCreateSubmit()" class="p-6 space-y-4 text-xs">
           
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">{{ 'projects.createModal.nameLabel' | translate }} *</label>
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">{{ 'projects.createModal.nameLabel' | translate }} *</label>
             <input
               type="text"
               formControlName="name"
               placeholder="e.g. Sistema de Facturación"
-              class="w-full px-3 py-2 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner"
+              class="w-full px-3.5 py-2.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs transition-all"
             />
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">{{ 'projects.createModal.descLabel' | translate }}</label>
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">{{ 'projects.createModal.descLabel' | translate }}</label>
             <textarea
               formControlName="description"
               rows="2"
               [placeholder]="'projects.createModal.descPlaceholder' | translate"
-              class="w-full px-3 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner"></textarea>
+              class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs transition-all resize-none"></textarea>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div class="sm:col-span-2">
-              <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">{{ 'projects.createModal.basePackageLabel' | translate }}</label>
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">{{ 'projects.createModal.basePackageLabel' | translate }}</label>
               <input
                 type="text"
                 formControlName="basePackage"
                 placeholder="com.example.app"
-                class="w-full px-3 py-2 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 font-mono text-xs placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner"
+                class="w-full px-3.5 py-2.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 font-mono text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">Java Version</label>
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Java Version</label>
               <select
                 formControlName="javaVersion"
-                class="w-full px-2 py-2 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner cursor-pointer">
+                class="w-full px-3 py-2.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer">
                 <option [value]="21">Java 21 (LTS)</option>
                 <option [value]="17">Java 17 (LTS)</option>
               </select>
@@ -266,26 +274,26 @@
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">Spring Boot Version</label>
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Spring Boot Version</label>
             <select
               formControlName="springBootVersion"
-              class="w-full px-2 py-2 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner cursor-pointer">
+              class="w-full px-3 py-2.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer">
               <option value="3.4.0">Spring Boot 3.4.0</option>
             </select>
           </div>
 
           <!-- Botones Acción -->
-          <div class="pt-4 border-t border-[#6B5A52]/30 dark:border-[#283256] flex items-center justify-end gap-2">
+          <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
             <button
               type="button"
               (click)="closeCreateModal()"
-              class="px-3 py-2 bg-white dark:bg-[#1C2242] hover:bg-slate-100 dark:hover:bg-[#252E56] text-[#2A201B] dark:text-slate-200 font-mono text-xs font-medium border border-[#6B5A52] dark:border-[#2D3762] cursor-pointer">
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E2548] dark:hover:bg-[#28325E] text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
               {{ 'common.cancel' | translate }}
             </button>
             <button
               type="submit"
               [disabled]="projectService.isLoading()"
-              class="px-4 py-2 bg-[#6B5A52] hover:bg-[#52443E] dark:bg-[#4F46E5] dark:hover:bg-[#4338CA] text-white font-mono text-xs font-bold uppercase border border-[#2A201B] dark:border-[#3730A3] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] dark:shadow-[2px_2px_0px_rgba(10,13,26,0.5)] cursor-pointer disabled:opacity-50">
+              class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-all">
               {{ 'projects.createModal.submit' | translate }}
             </button>
           </div>
@@ -298,56 +306,60 @@
 
   <!-- MODAL: EDITAR PROYECTO EXISTENTE -->
   @if (isEditModalOpen() && selectedProjectForEdit()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-[#F2EBE6] dark:bg-[#14182E] border-[1.5px] border-[#6B5A52] dark:border-[#2D3762] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] dark:shadow-[6px_6px_0px_rgba(10,13,26,0.6)] max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 transition-colors">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150 transition-colors">
         
         <!-- Header Modal -->
-        <div class="border-b-[1.5px] border-[#6B5A52] dark:border-[#2D3762] bg-white/40 dark:bg-[#101428]/30 px-5 py-3 flex items-center justify-between">
-          <h3 class="text-sm font-bold text-[#2A201B] dark:text-slate-100 tracking-tight uppercase flex items-center gap-2">
-            <ng-icon name="heroPencilSquare" class="text-base text-[#6B5A52] dark:text-amber-400"></ng-icon>
-            {{ 'projects.editModal.title' | translate }} {{ selectedProjectForEdit()?.name }}
-          </h3>
-          <button (click)="closeEditModal()" class="text-[#6B5A52] dark:text-slate-400 hover:text-[#2A201B] dark:hover:text-white font-bold text-base cursor-pointer">&times;</button>
+        <div class="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <ng-icon name="heroPencilSquare" class="text-base"></ng-icon>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate max-w-xs">
+              {{ 'projects.editModal.title' | translate }} {{ selectedProjectForEdit()?.name }}
+            </h3>
+          </div>
+          <button (click)="closeEditModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
         </div>
 
         <!-- Formulario de Edición -->
         <form [formGroup]="editForm" (ngSubmit)="onEditSubmit()" class="p-6 space-y-4 text-xs">
           
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">{{ 'projects.editModal.nameLabel' | translate }}</label>
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">{{ 'projects.editModal.nameLabel' | translate }}</label>
             <input
               type="text"
               formControlName="name"
               placeholder="e.g. Sistema de Facturación"
-              class="w-full px-3 py-2 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner font-medium text-xs"
+              class="w-full px-3.5 py-2.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs transition-all font-medium"
             />
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">{{ 'projects.editModal.descLabel' | translate }}</label>
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">{{ 'projects.editModal.descLabel' | translate }}</label>
             <textarea
               formControlName="description"
               rows="2"
               [placeholder]="'projects.createModal.descPlaceholder' | translate"
-              class="w-full px-3 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner"></textarea>
+              class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs transition-all resize-none"></textarea>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div class="sm:col-span-2">
-              <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">{{ 'projects.editModal.basePackageLabel' | translate }}</label>
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">{{ 'projects.editModal.basePackageLabel' | translate }}</label>
               <input
                 type="text"
                 formControlName="basePackage"
                 placeholder="com.example.app"
-                class="w-full px-3 py-2 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 font-mono text-xs placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner"
+                class="w-full px-3.5 py-2.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 font-mono text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">Java Version</label>
+              <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Java Version</label>
               <select
                 formControlName="javaVersion"
-                class="w-full px-2 py-2 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner cursor-pointer">
+                class="w-full px-3 py-2.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer">
                 <option [value]="21">Java 21 (LTS)</option>
                 <option [value]="17">Java 17 (LTS)</option>
               </select>
@@ -355,26 +367,26 @@
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase tracking-wider mb-1">Spring Boot Version</label>
+            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Spring Boot Version</label>
             <select
               formControlName="springBootVersion"
-              class="w-full px-2 py-2 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500 shadow-inner cursor-pointer">
+              class="w-full px-3 py-2.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer">
               <option value="3.4.0">Spring Boot 3.4.0</option>
             </select>
           </div>
 
           <!-- Botones Acción -->
-          <div class="pt-4 border-t border-[#6B5A52]/30 dark:border-[#283256] flex items-center justify-end gap-2">
+          <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
             <button
               type="button"
               (click)="closeEditModal()"
-              class="px-3.5 py-2 bg-white dark:bg-[#1C2242] hover:bg-slate-100 dark:hover:bg-[#252E56] text-[#2A201B] dark:text-slate-200 font-mono text-xs font-medium border border-[#6B5A52] dark:border-[#2D3762] cursor-pointer">
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E2548] dark:hover:bg-[#28325E] text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
               {{ 'common.cancel' | translate }}
             </button>
             <button
               type="submit"
               [disabled]="projectService.isLoading()"
-              class="px-4 py-2 bg-[#6B5A52] hover:bg-[#52443E] dark:bg-[#4F46E5] dark:hover:bg-[#4338CA] text-white font-mono text-xs font-bold uppercase border border-[#2A201B] dark:border-[#3730A3] shadow-[2px_2px_0px_rgba(0,0,0,0.2)] dark:shadow-[2px_2px_0px_rgba(10,13,26,0.5)] cursor-pointer disabled:opacity-50">
+              class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50 transition-all">
               {{ 'projects.editModal.submit' | translate }}
             </button>
           </div>
@@ -387,43 +399,47 @@
 
   <!-- MODAL: GESTIÓN DE MIEMBROS COLABORADORES -->
   @if (isMembersModalOpen() && selectedProjectForMembers()) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="bg-[#F2EBE6] dark:bg-[#14182E] border-[1.5px] border-[#6B5A52] dark:border-[#2D3762] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] dark:shadow-[6px_6px_0px_rgba(10,13,26,0.6)] max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 transition-colors">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150 transition-colors">
         
         <!-- Header Modal -->
-        <div class="border-b-[1.5px] border-[#6B5A52] dark:border-[#2D3762] bg-white/40 dark:bg-[#101428]/30 px-5 py-3 flex items-center justify-between">
-          <div>
-            <h3 class="text-sm font-bold text-[#2A201B] dark:text-slate-100 tracking-tight uppercase flex items-center gap-2">
-              <ng-icon name="heroUserGroup" class="text-base text-[#6B5A52] dark:text-amber-400"></ng-icon>
-              {{ 'projects.membersModal.title' | translate }}
-            </h3>
-            <p class="text-[10.5px] font-mono text-[#6B5A52] dark:text-slate-400 truncate max-w-sm">{{ selectedProjectForMembers()?.name }}</p>
+        <div class="border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <ng-icon name="heroUserGroup" class="text-base"></ng-icon>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">
+                {{ 'projects.membersModal.title' | translate }}
+              </h3>
+              <p class="text-[11px] text-slate-400 truncate max-w-sm">{{ selectedProjectForMembers()?.name }}</p>
+            </div>
           </div>
-          <button (click)="closeMembersModal()" class="text-[#6B5A52] dark:text-slate-400 hover:text-[#2A201B] dark:hover:text-white font-bold text-base cursor-pointer">&times;</button>
+          <button (click)="closeMembersModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
         </div>
 
-        <div class="p-5 space-y-5 text-xs">
+        <div class="p-6 space-y-5 text-xs">
           
           <!-- Formulario Agregar Miembro (Solo si es OWNER) -->
           @if (selectedProjectForMembers()?.userRole === 'OWNER') {
-            <form [formGroup]="addMemberForm" (ngSubmit)="onAddMemberSubmit()" class="p-3 bg-white dark:bg-[#12162A] border border-[#6B5A52] dark:border-[#2D3762] space-y-3">
-              <h4 class="font-bold text-[#2A201B] dark:text-slate-100 text-xs">{{ 'projects.membersModal.inviteTitle' | translate }}</h4>
+            <form [formGroup]="addMemberForm" (ngSubmit)="onAddMemberSubmit()" class="p-4 bg-slate-50 dark:bg-[#12162A] border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+              <h4 class="font-semibold text-slate-800 dark:text-slate-100 text-xs">{{ 'projects.membersModal.inviteTitle' | translate }}</h4>
               <div class="flex items-center gap-2">
                 <input
                   type="email"
                   formControlName="email"
                   placeholder="correo@uagrm.edu.bo"
-                  class="flex-1 px-3 py-1.5 bg-[#F9F7F5] dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 text-xs focus:outline-none focus:ring-2 focus:ring-[#6B5A52] dark:focus:ring-indigo-500"
+                  class="flex-1 px-3 py-2 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-slate-800 dark:text-slate-100 placeholder:text-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
                 <select
                   formControlName="role"
-                  class="px-2 py-1.5 bg-[#F9F7F5] dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 text-xs font-mono cursor-pointer">
+                  class="px-2.5 py-2 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-slate-800 dark:text-slate-100 text-xs font-mono cursor-pointer">
                   <option value="EDITOR">EDITOR</option>
                   <option value="VIEWER">VIEWER</option>
                 </select>
                 <button
                   type="submit"
-                  class="px-3 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] dark:bg-[#4F46E5] dark:hover:bg-[#4338CA] text-white font-mono font-bold text-xs border border-[#2A201B] dark:border-[#3730A3] cursor-pointer">
+                  class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-lg shadow-xs cursor-pointer transition-all">
                   {{ 'projects.membersModal.inviteBtn' | translate }}
                 </button>
               </div>
@@ -432,17 +448,17 @@
 
           <!-- Lista de Miembros Actuales -->
           <div>
-            <h4 class="font-bold font-mono text-[#2A201B] dark:text-slate-100 uppercase tracking-wider text-[11px] mb-2">{{ 'projects.membersModal.activeMembers' | translate }} ({{ selectedProjectForMembers()?.members?.length || 0 }})</h4>
-            <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+            <h4 class="font-semibold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider mb-2.5">{{ 'projects.membersModal.activeMembers' | translate }} ({{ selectedProjectForMembers()?.members?.length || 0 }})</h4>
+            <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
               @for (member of selectedProjectForMembers()?.members; track member.userId) {
-                <div class="flex items-center justify-between p-2 bg-white/70 dark:bg-[#12162A]/80 border border-[#6B5A52]/40 dark:border-[#283256] text-xs">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <div class="w-6 h-6 rounded-full bg-[#6B5A52] dark:bg-[#252E56] text-white flex items-center justify-center font-bold text-[10px]">
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-[#12162A] border border-slate-200/80 dark:border-slate-800 rounded-xl text-xs">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
                       {{ member.fullName.charAt(0).toUpperCase() }}
                     </div>
                     <div class="min-w-0">
-                      <p class="font-bold text-[#2A201B] dark:text-slate-100 truncate">{{ member.fullName }}</p>
-                      <p class="text-[10px] font-mono text-[#6B5A52] dark:text-slate-400 truncate">{{ member.email }}</p>
+                      <p class="font-semibold text-slate-800 dark:text-slate-100 truncate">{{ member.fullName }}</p>
+                      <p class="text-[10px] font-mono text-slate-400 truncate">{{ member.email }}</p>
                     </div>
                   </div>
 
@@ -452,7 +468,7 @@
                       <select
                         [ngModel]="member.role"
                         (ngModelChange)="onRoleChange(member.userId, $event)"
-                        class="px-1.5 py-0.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-100 text-[10px] font-mono cursor-pointer">
+                        class="px-2 py-1 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-slate-800 dark:text-slate-100 text-[10.5px] font-mono cursor-pointer">
                         <option value="OWNER">OWNER</option>
                         <option value="EDITOR">EDITOR</option>
                         <option value="VIEWER">VIEWER</option>
@@ -461,11 +477,11 @@
                       <button
                         (click)="onRemoveMember(member.userId)"
                         [title]="'projects.membersModal.removeTooltip' | translate"
-                        class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 cursor-pointer">
+                        class="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer">
                         <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                       </button>
                     } @else {
-                      <span class="px-2 py-0.5 font-mono text-[10px] font-bold border border-[#6B5A52] dark:border-[#2D3762] bg-[#F2EBE6] dark:bg-[#1A203B] text-[#2A201B] dark:text-slate-200">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50">
                         {{ member.role }}
                       </span>
                     }
@@ -476,10 +492,10 @@
           </div>
 
           <!-- Cerrar -->
-          <div class="pt-3 border-t border-[#6B5A52]/30 dark:border-[#283256] flex justify-end">
+          <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               (click)="closeMembersModal()"
-              class="px-4 py-1.5 bg-[#6B5A52] hover:bg-[#52443E] dark:bg-[#1C2242] dark:hover:bg-[#252E56] text-white font-mono text-xs font-bold border border-[#2A201B] dark:border-[#2D3762] cursor-pointer">
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E2548] dark:hover:bg-[#28325E] text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
               {{ 'common.close' | translate }}
             </button>
           </div>

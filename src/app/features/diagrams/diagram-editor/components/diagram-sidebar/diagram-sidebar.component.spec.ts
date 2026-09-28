@@ -2,6 +2,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createEnvironmentInjector, EnvironmentInjector, runInInjectionContext } from '@angular/core';
 import { DiagramSidebarComponent } from './diagram-sidebar.component';
+import { DiagramType } from '../../../../../core/models/diagram.model';
 
 describe('DiagramSidebarComponent', () => {
   let component: DiagramSidebarComponent;
@@ -56,8 +57,8 @@ describe('DiagramSidebarComponent', () => {
       chosen = val;
     });
 
-    component.onSelectDiagramType('use_case');
-    expect(chosen).toBe('use_case');
+    component.onSelectDiagramType(DiagramType.USE_CASE);
+    expect(chosen).toBe(DiagramType.USE_CASE);
   });
 
   it('should emit closeSidebar when closeSidebar is triggered', () => {

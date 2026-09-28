@@ -11,65 +11,33 @@ import { TranslatePipe } from '../../i18n';
   imports: [CommonModule, NgIconComponent, TranslatePipe],
   viewProviders: [provideIcons({ heroSun, heroMoon })],
   template: `
-    @if (variant() === 'dark') {
-      <!-- Variante para barras oscuras (ej. Topbar) -->
-      <div class="inline-flex items-center rounded border border-slate-600/80 bg-slate-900/90 p-0.5 text-[11px] font-mono shadow-inner select-none">
-        <button
-          type="button"
-          (click)="setTheme('light')"
-          [attr.aria-pressed]="!isDarkMode()"
-          [title]="'theme.light' | translate"
-          [class.bg-slate-700]="!isDarkMode()"
-          [class.text-amber-300]="!isDarkMode()"
-          [class.shadow-xs]="!isDarkMode()"
-          [class.text-slate-400]="isDarkMode()"
-          class="px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer hover:text-white font-semibold">
-          <ng-icon name="heroSun" class="text-xs"></ng-icon>
-        </button>
-        <button
-          type="button"
-          (click)="setTheme('dark')"
-          [attr.aria-pressed]="isDarkMode()"
-          [title]="'theme.dark' | translate"
-          [class.bg-slate-700]="isDarkMode()"
-          [class.text-indigo-300]="isDarkMode()"
-          [class.shadow-xs]="isDarkMode()"
-          [class.text-slate-400]="!isDarkMode()"
-          class="px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer hover:text-white font-semibold">
-          <ng-icon name="heroMoon" class="text-xs"></ng-icon>
-        </button>
-      </div>
-    } @else {
-      <!-- Variante que se adapta dinámicamente según light / dark en páginas y modales -->
-      <div class="inline-flex items-center rounded border border-[#6B5A52]/40 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-0.5 text-[11px] font-mono shadow-xs select-none">
-        <button
-          type="button"
-          (click)="setTheme('light')"
-          [attr.aria-pressed]="!isDarkMode()"
-          [title]="'theme.light' | translate"
-          [class.bg-[#6B5A52]]="!isDarkMode()"
-          [class.text-white]="!isDarkMode()"
-          [class.shadow-xs]="!isDarkMode()"
-          [class.text-[#6B5A52]]="isDarkMode()"
-          [class.dark:text-slate-400]="isDarkMode()"
-          class="px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer hover:bg-[#6B5A52]/10 dark:hover:bg-slate-700 font-semibold">
-          <ng-icon name="heroSun" class="text-xs"></ng-icon>
-        </button>
-        <button
-          type="button"
-          (click)="setTheme('dark')"
-          [attr.aria-pressed]="isDarkMode()"
-          [title]="'theme.dark' | translate"
-          [class.bg-slate-900]="isDarkMode()"
-          [class.dark:bg-slate-700]="isDarkMode()"
-          [class.text-indigo-300]="isDarkMode()"
-          [class.shadow-xs]="isDarkMode()"
-          [class.text-[#6B5A52]]="!isDarkMode()"
-          class="px-2 py-0.5 rounded transition-all flex items-center gap-1 cursor-pointer hover:bg-[#6B5A52]/10 dark:hover:bg-slate-700 font-semibold">
-          <ng-icon name="heroMoon" class="text-xs"></ng-icon>
-        </button>
-      </div>
-    }
+    <!-- Toggle de Tema Estilo Píldora Moderno (SaaS / Figma) -->
+    <div class="inline-flex items-center rounded-full bg-slate-100 dark:bg-[#161B32] p-0.5 border border-slate-200/80 dark:border-slate-700/60 select-none shadow-2xs">
+      <button
+        type="button"
+        (click)="setTheme('light')"
+        [attr.aria-pressed]="!isDarkMode()"
+        [title]="'theme.light' | translate"
+        [class.bg-white]="!isDarkMode()"
+        [class.text-amber-500]="!isDarkMode()"
+        [class.shadow-xs]="!isDarkMode()"
+        [class.text-slate-400]="isDarkMode()"
+        class="w-6 h-6 rounded-full flex items-center justify-center transition-all cursor-pointer hover:text-amber-500">
+        <ng-icon name="heroSun" class="text-xs"></ng-icon>
+      </button>
+      <button
+        type="button"
+        (click)="setTheme('dark')"
+        [attr.aria-pressed]="isDarkMode()"
+        [title]="'theme.dark' | translate"
+        [class.bg-[#0D1124]]="isDarkMode()"
+        [class.text-indigo-400]="isDarkMode()"
+        [class.shadow-xs]="isDarkMode()"
+        [class.text-slate-400]="!isDarkMode()"
+        class="w-6 h-6 rounded-full flex items-center justify-center transition-all cursor-pointer hover:text-indigo-400">
+        <ng-icon name="heroMoon" class="text-xs"></ng-icon>
+      </button>
+    </div>
   `,
 })
 export class ThemeToggleComponent {

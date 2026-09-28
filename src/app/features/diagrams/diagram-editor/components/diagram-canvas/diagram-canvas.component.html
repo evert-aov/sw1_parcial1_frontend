@@ -57,8 +57,8 @@
               [fInputId]="conn.targetId"
               [fType]="conn.lineStyle || defaultLineStyle()"
               [fBehavior]="isRecursiveConn(conn) ? 'fixed' : 'floating'"
-              [fOutputSide]="isRecursiveConn(conn) ? getConnSide(conn.sourceId, 'top') : undefined"
-              [fInputSide]="isRecursiveConn(conn) ? getConnSide(conn.targetId, 'right') : undefined"
+              [fOutputSide]="isRecursiveConn(conn) ? getConnSide(conn.sourceId, 'top') : 'default'"
+              [fInputSide]="isRecursiveConn(conn) ? getConnSide(conn.targetId, 'right') : 'default'"
               (dblclick)="onConnectionDblClick(conn, $event)"
               [class]="'uml-relation-' + (conn.type || 'association')"
               [class.ring-2]="isConnectionSelected(conn.id)"
@@ -176,14 +176,15 @@
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
               [style.minWidth.px]="node.isAnchor ? 0 : getNodeWidth(node)"
               [style.minHeight.px]="node.isAnchor ? 0 : (node.height || null)"
+              [style.--node-bg]="node.color || null"
               [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
               [class.f-selected]="isNodeSelected(node.id)"
               [ngClass]="{
                 'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
-                'font-sans text-[#241C18] dark:text-slate-100 select-none relative group/node transition-shadow rounded-none overflow-hidden': !node.isAnchor,
+                'font-sans text-[#241C18] select-none relative group/node transition-shadow rounded-none overflow-hidden': !node.isAnchor,
                 'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)] z-30': !node.isAnchor && isNodeSelected(node.id),
                 'ring-2 ring-indigo-400 z-20': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id),
-                'ring-2 ring-[#796354] dark:ring-[#94A3B8] shadow-md': !node.isAnchor && selectedSourceNodeId() === node.id && !isNodeSelected(node.id),
+                'ring-2 ring-[#796354] shadow-md': !node.isAnchor && selectedSourceNodeId() === node.id && !isNodeSelected(node.id),
                 'opacity-80': !node.isAnchor && !hasMultipleSelected() && selectedNodeIds().length <= 1 && !isNodeSelected(node.id) && !isNeighborNode(node.id),
                 'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                 'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
@@ -291,8 +292,10 @@
                   [ngClass]="{
                     'bg-blue-600 text-white border-b border-blue-700': isNodeSelected(node.id),
                     'bg-indigo-100 text-indigo-950 border-b border-indigo-300': !isNodeSelected(node.id) && isNeighborNode(node.id),
-                    'bg-[#FFFDF9] dark:bg-[#1A203E] border-b border-[#796354] dark:border-[#3B487A] text-[#241C18] dark:text-slate-100': !isNodeSelected(node.id) && !isNeighborNode(node.id)
+                    'border-b border-[#796354] text-[#241C18]': !isNodeSelected(node.id) && !isNeighborNode(node.id),
+                    'bg-[#FFFDDD]': !isNodeSelected(node.id) && !isNeighborNode(node.id) && !node.color
                   }"
+                  [style.backgroundColor]="(!isNodeSelected(node.id) && !isNeighborNode(node.id)) ? (node.color || '#FFFDDD') : null"
                   class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors">
                   <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">
                     @if (isNodeLockedByOther(node.id)) {
@@ -304,19 +307,21 @@
                     (click)="onDeleteNode(node.id, $event)"
                     [disabled]="isNodeLockedByOther(node.id)"
                     title="Eliminar clase"
-                    class="opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity disabled:opacity-0">
+                    class="opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-500 p-0.5 cursor-pointer transition-opacity disabled:opacity-0">
                     <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                   </button>
                 </div>
 
                 <!-- 2. CUERPO: ATRIBUTOS TIPADOS ESTILO EA -->
-                <div class="px-2.5 py-1.5 space-y-0.5 bg-[#FFFDF9] dark:bg-[#101428]/40 min-h-[28px]">
+                <div
+                  [style.backgroundColor]="node.color || '#FFFDDD'"
+                  class="px-2.5 py-1.5 space-y-0.5 min-h-[28px]">
                   @if (node.attributes && node.attributes.length > 0) {
                     @for (attr of node.attributes; track attr.name) {
-                      <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200 whitespace-nowrap">
-                        <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537] dark:text-slate-400">-</span>
+                      <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] whitespace-nowrap">
+                        <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537]">-</span>
                         <span class="font-medium whitespace-nowrap">{{ attr.name }}</span>
-                        <span class="text-[#5A4537] dark:text-[#A5B4FC] ml-0.5 font-normal whitespace-nowrap">: {{ attr.type }}</span>
+                        <span class="text-[#5A4537] ml-0.5 font-normal whitespace-nowrap">: {{ attr.type }}</span>
                       </div>
                     }
                   }
@@ -324,12 +329,14 @@
 
                 <!-- 3. CUERPO: MÉTODOS / OPERACIONES CON RETORNO ESTILO EA (SOLO SI TIENE MÉTODOS) -->
                 @if (node.methods && node.methods.length > 0) {
-                  <div class="px-2.5 py-1.5 space-y-0.5 border-t border-[#796354] dark:border-[#3B487A] bg-[#FFFDF9] dark:bg-[#101428]/40">
+                  <div
+                    [style.backgroundColor]="node.color || '#FFFDDD'"
+                    class="px-2.5 py-1.5 space-y-0.5 border-t border-[#796354]">
                     @for (m of node.methods; track m.name) {
-                      <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] dark:text-slate-200 whitespace-nowrap">
-                        <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537] dark:text-slate-400">+</span>
+                      <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] whitespace-nowrap">
+                        <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537]">+</span>
                         <span class="font-medium whitespace-nowrap">{{ m.name }}({{ m.parameters || '' }})</span>
-                        <span class="text-[#5A4537] dark:text-[#A5B4FC] ml-0.5 font-normal whitespace-nowrap">: {{ m.returnType || 'void' }}</span>
+                        <span class="text-[#5A4537] ml-0.5 font-normal whitespace-nowrap">: {{ m.returnType || 'void' }}</span>
                       </div>
                     }
                   </div>
@@ -342,7 +349,152 @@
       </f-canvas>
 
       <f-selection-area [fTrigger]="selectionAreaTrigger"></f-selection-area>
+
+      <!-- GUÍAS MAGNÉTICAS DINÁMICAS (ESTILO ENTERPRISE ARCHITECT) -->
+      @if (smartGuidesEnabled()) {
+        <f-magnetic-lines [threshold]="12"></f-magnetic-lines>
+        <f-magnetic-rects [alignThreshold]="16" [spacingThreshold]="16"></f-magnetic-rects>
+      }
     </f-flow>
+
+    <!-- BARRA FLOTANTE DE ALINEACIÓN INTELIGENTE (ESTILO ENTERPRISE ARCHITECT) -->
+    @if (selectedNodeIds().length >= 2 && !isReadOnly()) {
+      <div class="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-white/95 dark:bg-[#14182E]/95 backdrop-blur-md border border-slate-200 dark:border-[#2D3762] shadow-xl rounded-xl px-3 py-1.5 flex items-center gap-1.5 text-xs animate-in fade-in slide-in-from-top-3 select-none">
+        <!-- Badge de clases seleccionadas -->
+        <div class="flex items-center gap-1.5 pr-2 mr-1 border-r border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+          <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+          <span class="font-bold text-slate-700 dark:text-slate-200">{{ selectedNodeIds().length }}</span>
+          <span>clases</span>
+        </div>
+
+        <!-- Alineación Horizontal -->
+        <div class="flex items-center gap-0.5">
+          <button
+            type="button"
+            (click)="alignNodes.emit('left')"
+            title="Alinear a la izquierda"
+            class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="2" height="14" rx="0.5"/>
+              <rect x="5" y="3" width="9" height="3" rx="0.5" opacity="0.8"/>
+              <rect x="5" y="9" width="6" height="3" rx="0.5" opacity="0.8"/>
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            (click)="alignNodes.emit('center')"
+            title="Alinear al centro horizontal"
+            class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="7" y="1" width="2" height="14" rx="0.5"/>
+              <rect x="2" y="3" width="12" height="3" rx="0.5" opacity="0.8"/>
+              <rect x="4" y="9" width="8" height="3" rx="0.5" opacity="0.8"/>
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            (click)="alignNodes.emit('right')"
+            title="Alinear a la derecha"
+            class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="13" y="1" width="2" height="14" rx="0.5"/>
+              <rect x="2" y="3" width="9" height="3" rx="0.5" opacity="0.8"/>
+              <rect x="5" y="9" width="6" height="3" rx="0.5" opacity="0.8"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Divisor vertical -->
+        <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+
+        <!-- Alineación Vertical -->
+        <div class="flex items-center gap-0.5">
+          <button
+            type="button"
+            (click)="alignNodes.emit('top')"
+            title="Alinear arriba"
+            class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="1" width="14" height="2" rx="0.5"/>
+              <rect x="3" y="5" width="3" height="9" rx="0.5" opacity="0.8"/>
+              <rect x="9" y="5" width="3" height="6" rx="0.5" opacity="0.8"/>
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            (click)="alignNodes.emit('middle')"
+            title="Alinear al medio vertical"
+            class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="7" width="14" height="2" rx="0.5"/>
+              <rect x="3" y="2" width="3" height="12" rx="0.5" opacity="0.8"/>
+              <rect x="9" y="4" width="3" height="8" rx="0.5" opacity="0.8"/>
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            (click)="alignNodes.emit('bottom')"
+            title="Alinear abajo"
+            class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="1" y="13" width="14" height="2" rx="0.5"/>
+              <rect x="3" y="2" width="3" height="9" rx="0.5" opacity="0.8"/>
+              <rect x="9" y="5" width="3" height="6" rx="0.5" opacity="0.8"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Divisor vertical -->
+        <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+
+        <!-- Distribución (cuando >= 3 clases seleccionadas) -->
+        @if (selectedNodeIds().length >= 3) {
+          <div class="flex items-center gap-0.5">
+            <button
+              type="button"
+              (click)="distributeNodes.emit('horizontal')"
+              title="Distribuir horizontalmente con espaciado uniforme"
+              class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="2" width="2" height="12" rx="0.5"/>
+                <rect x="13" y="2" width="2" height="12" rx="0.5"/>
+                <rect x="6.5" y="4" width="3" height="8" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              (click)="distributeNodes.emit('vertical')"
+              title="Distribuir verticalmente con espaciado uniforme"
+              class="w-7 h-7 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="2" y="1" width="12" height="2" rx="0.5"/>
+                <rect x="2" y="13" width="12" height="2" rx="0.5"/>
+                <rect x="4" y="6.5" width="8" height="3" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+        }
+
+        <!-- Ajustar a Cuadrícula -->
+        <button
+          type="button"
+          (click)="snapToGrid.emit()"
+          title="Ajustar a cuadrícula de 20px"
+          class="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-[#1E2548] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 cursor-pointer transition-colors text-[11px] font-medium font-sans">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M1 5.33h14M1 10.67h14M5.33 1v14M10.67 1v14"/>
+          </svg>
+          <span>Cuadrícula</span>
+        </button>
+      </div>
+    }
 
   </div>
 </div>

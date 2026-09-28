@@ -1,22 +1,21 @@
-<!-- 4. [PANEL IA] COPILOT CONTEXTUAL TIPO CHAT (VERTEX AI GEMINI 2.5 FLASH) -->
 @if (isOpen()) {
-  <aside class="w-[430px] bg-[#EFEFEF] dark:bg-[#121629] border-l border-[#B8B8B8] dark:border-[#283256] flex flex-col shrink-0 text-xs text-slate-800 dark:text-slate-200 shadow-2xl z-20 animate-in slide-in-from-right duration-150 h-full">
+  <aside class="w-[420px] bg-white dark:bg-[#0D1124] border-l border-slate-200/80 dark:border-slate-800 flex flex-col shrink-0 text-xs text-slate-800 dark:text-slate-200 shadow-xs z-20 animate-in slide-in-from-right duration-150 h-full">
     
     <!-- Header Panel IA con Modelo Gemini -->
-    <div class="bg-gradient-to-b from-[#EAEAEA] to-[#DCDCDC] dark:from-[#1E2442] dark:to-[#161B33] border-b border-[#C0C0C0] dark:border-[#283256] shrink-0 shadow-xs">
-      <div class="px-3.5 py-2 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-6 h-6 rounded-full border bg-purple-100 dark:bg-purple-900/40 border-purple-300 dark:border-purple-600 text-purple-600 dark:text-purple-300 flex items-center justify-center shadow-xs transition-colors">
+    <div class="bg-white dark:bg-[#0D1124] border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+      <div class="px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300 flex items-center justify-center shadow-xs">
             <ng-icon name="heroSparkles" class="text-sm"></ng-icon>
           </div>
           <div>
-            <div class="font-bold text-slate-900 dark:text-slate-100 leading-tight flex items-center gap-1.5">
-              <span>{{ 'ai.title' | translate }}</span>
-              <span class="px-1.5 py-0.2 rounded-full text-[9px] text-white font-mono font-medium bg-purple-700 dark:bg-purple-600 transition-colors">
+            <div class="font-bold text-slate-900 dark:text-slate-100 leading-tight flex items-center gap-2">
+              <span class="text-xs">AI Copilot (UML)</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] text-purple-700 dark:text-purple-300 font-semibold bg-purple-50 dark:bg-purple-950/60 border border-purple-200/60 dark:border-purple-800/60">
                 Google Gemini
               </span>
             </div>
-            <span class="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[200px] block">
+            <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-0.5">
               Gemini 2.5 Flash • Multimodal
             </span>
           </div>
@@ -24,21 +23,21 @@
         <button
           (click)="closePanel.emit()"
           [title]="'ai.hideTooltip' | translate"
-          class="text-slate-500 hover:text-slate-900 hover:bg-slate-300 dark:text-slate-400 dark:hover:text-white dark:hover:bg-[#252E56] font-bold cursor-pointer text-xs p-1.5 rounded transition-colors flex items-center gap-0.5">
-          <ng-icon name="heroChevronRight" class="text-sm"></ng-icon>
+          class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer p-1 rounded-md transition-colors">
+          <ng-icon name="heroChevronRight" class="text-base"></ng-icon>
         </button>
       </div>
     </div>
 
     <!-- Barra Informativa del Motor IA Gemini -->
-    <div class="px-3.5 py-2 bg-white/70 dark:bg-[#151A30] border-b border-[#C0C0C0] dark:border-[#283256] flex items-center justify-between shrink-0">
+    <div class="px-4 py-2 bg-slate-50/70 dark:bg-[#111528] border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-1.5">
         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-        <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300 font-mono">
+        <span class="text-[10.5px] font-semibold text-slate-700 dark:text-slate-300">
           Google Vertex AI (Gemini 2.5 Flash)
         </span>
       </div>
-      <div class="flex items-center gap-1 text-[9px] font-mono text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-800 font-semibold">
+      <div class="flex items-center gap-1 text-[9.5px] font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded-full border border-purple-200/60 dark:border-purple-800/60">
         <ng-icon name="heroSparkles" class="text-[10px]"></ng-icon>
         <span>Texto • Visión • Audio</span>
       </div>
@@ -53,7 +52,7 @@
       class="hidden" />
 
     <!-- 1. FEED CONVERSACIONAL DE CHAT (SCROLLABLE) -->
-    <div #chatScrollContainer class="flex-1 p-3.5 overflow-y-auto space-y-3 min-h-0 bg-[#F4F4F6] dark:bg-[#0D1124]">
+    <div #chatScrollContainer class="flex-1 p-4 overflow-y-auto space-y-3 min-h-0 bg-slate-50/40 dark:bg-[#0A0D1E]">
         @for (msg of aiChatMessages(); track msg.id) {
           
           <!-- Mensaje del Usuario -->
@@ -76,14 +75,14 @@
                     </div>
                   </div>
                 }
-                <div class="p-2.5 bg-gradient-to-r from-purple-700 to-indigo-800 dark:from-purple-800 dark:to-indigo-900 text-white rounded-2xl rounded-tr-xs text-[11.5px] shadow-sm leading-relaxed">
+                <div class="p-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl rounded-tr-xs text-[11.5px] shadow-xs leading-relaxed">
                   <p class="whitespace-pre-wrap">{{ msg.text }}</p>
                 </div>
                 <div class="text-[9px] font-mono text-slate-400 dark:text-slate-500 text-right pr-1">
                   {{ msg.timestamp | date:'HH:mm:ss' }}
                 </div>
               </div>
-              <div class="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+              <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-xs mt-0.5">
                 {{ (authService.currentUser()?.fullName || 'U').charAt(0).toUpperCase() }}
               </div>
             </div>
@@ -98,11 +97,11 @@
               <div class="max-w-[85%] space-y-1.5">
                 <div
                   [ngClass]="{
-                    'bg-white dark:bg-[#151A30] border-slate-300 dark:border-[#2D3762] text-slate-800 dark:text-slate-200': msg.status === 'success' || !msg.status,
+                    'bg-white dark:bg-[#131830] border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200': msg.status === 'success' || !msg.status,
                     'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200': msg.status === 'clarification',
                     'bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-700 text-red-900 dark:text-red-200': msg.status === 'error'
                   }"
-                  class="p-2.5 border rounded-2xl rounded-tl-xs text-[11.5px] shadow-xs leading-relaxed space-y-1.5">
+                  class="p-3 border rounded-2xl rounded-tl-xs text-[11.5px] shadow-2xs leading-relaxed space-y-1.5">
                   
                   @if (msg.status === 'clarification') {
                     <div class="flex items-center gap-1 font-bold text-amber-800 dark:text-amber-300 text-[10.5px]">
@@ -143,7 +142,7 @@
             <div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
               <ng-icon name="heroSparkles" class="text-xs"></ng-icon>
             </div>
-            <div class="p-2.5 bg-white dark:bg-[#151A30] border border-slate-300 dark:border-[#2D3762] rounded-2xl rounded-tl-xs shadow-xs flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-mono">
+            <div class="p-2.5 bg-white dark:bg-[#151A30] border border-slate-200 dark:border-slate-800 rounded-2xl rounded-tl-xs shadow-xs flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-mono">
               <span class="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></span>
               <span>Copilot está razonando y generando el diagrama...</span>
             </div>
@@ -152,30 +151,30 @@
       </div>
 
     <!-- 2. BANDEJA DE ENTRADA INFERIOR (AMPLIA, TIPO CHAT) -->
-    <div class="p-3 bg-white dark:bg-[#121629] border-t border-[#C0C0C0] dark:border-[#283256] shrink-0 space-y-2">
+    <div class="p-3 bg-white dark:bg-[#0D1124] border-t border-slate-200/80 dark:border-slate-800 shrink-0 space-y-2.5">
       
       <!-- Chips de Comandos Sugeridos -->
       <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[10px]">
         <button
           (click)="setAiSuggestion('Crea una tabla Producto con atributos id UUID, nombre String, precio Double y relacionala con Usuarios con multiplicidad *')"
-          class="px-2 py-0.5 bg-slate-100 dark:bg-[#1A203E] hover:bg-purple-100 dark:hover:bg-[#252E56] text-slate-700 dark:text-slate-300 hover:text-purple-900 dark:hover:text-purple-200 border border-slate-300 dark:border-[#2D3762] rounded-full shrink-0 transition-colors cursor-pointer">
+          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
           ✨ Crear Producto y relación
         </button>
         <button
           (click)="setAiSuggestion('Agrega la clase FacturaDetalle con cantidad Integer, precio_unitario Double y subtotal Double')"
-          class="px-2 py-0.5 bg-slate-100 dark:bg-[#1A203E] hover:bg-purple-100 dark:hover:bg-[#252E56] text-slate-700 dark:text-slate-300 hover:text-purple-900 dark:hover:text-purple-200 border border-slate-300 dark:border-[#2D3762] rounded-full shrink-0 transition-colors cursor-pointer">
+          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
           ✨ Agregar FacturaDetalle
         </button>
         <button
           (click)="setAiSuggestion('Crear relación de Composición entre Pedido y DetallePedido con multiplicidad 1 a 1..*')"
-          class="px-2 py-0.5 bg-slate-100 dark:bg-[#1A203E] hover:bg-purple-100 dark:hover:bg-[#252E56] text-slate-700 dark:text-slate-300 hover:text-purple-900 dark:hover:text-purple-200 border border-slate-300 dark:border-[#2D3762] rounded-full shrink-0 transition-colors cursor-pointer">
-          ✨ Composición 1 a 1..*
+          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
+          ✨ Composición 1 a n
         </button>
       </div>
 
       <!-- Preview de Imagen Adjunta (si hay una cargada) -->
       @if (attachedImageBase64()) {
-        <div class="p-1.5 bg-purple-50 dark:bg-[#1A203E] border border-purple-300 dark:border-[#3B487A] rounded flex items-center justify-between gap-2">
+        <div class="p-1.5 bg-purple-50 dark:bg-[#1A203E] border border-purple-300 dark:border-[#3B487A] rounded-lg flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 truncate">
             <img [src]="attachedImageBase64()" class="w-9 h-9 object-cover rounded border border-purple-200 dark:border-purple-800" alt="Vista previa" />
             <div class="truncate">
@@ -196,7 +195,7 @@
 
       <!-- Preview de Audio Adjunto (Grabación de voz lista para Gemini) -->
       @if (attachedAudioBase64()) {
-        <div class="p-1.5 bg-indigo-50 dark:bg-[#1A203E] border border-indigo-300 dark:border-[#3B487A] rounded flex items-center justify-between gap-2">
+        <div class="p-1.5 bg-indigo-50 dark:bg-[#1A203E] border border-indigo-300 dark:border-[#3B487A] rounded-lg flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 truncate">
             <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
               <ng-icon name="heroMicrophone" class="text-sm"></ng-icon>
@@ -221,7 +220,7 @@
 
       <!-- Indicador de Grabación de Audio Activa -->
       @if (isRecordingAudio()) {
-        <div class="px-2.5 py-1.5 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700 rounded text-[11px] font-mono text-red-700 dark:text-red-300 flex items-center justify-between animate-pulse">
+        <div class="px-2.5 py-1.5 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700 rounded-lg text-[11px] font-mono text-red-700 dark:text-red-300 flex items-center justify-between animate-pulse">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-red-600"></span>
             <span class="font-semibold">Grabando audio... ({{ recordingSeconds() }}s) Habla ahora</span>
@@ -240,7 +239,7 @@
         (paste)="onPasteImage($event)"
         (dragover)="$event.preventDefault()"
         (drop)="onDropImage($event)"
-        class="relative border border-[#6B5A52] dark:border-[#2D3762] rounded bg-white dark:bg-[#0E1225] shadow-inner focus-within:ring-2 focus-within:ring-purple-600 focus-within:border-transparent transition-all">
+        class="relative border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-[#111528] shadow-xs focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500/50 transition-all p-2">
         <textarea
           [ngModel]="aiPrompt()"
           (ngModelChange)="aiPrompt.set($event)"
@@ -248,10 +247,10 @@
           (paste)="onPasteImage($event)"
           rows="4"
           [placeholder]="attachedAudioBase64() ? 'Instrucción o comentario opcional para acompañar el audio (o presiona Enter para enviar)...' : attachedImageBase64() ? 'Instrucción opcional para la imagen (o presiona Enter para digitalizar todo)...' : 'Escribe tu instrucción, graba un comando por voz, pega una captura (Ctrl+V) o arrastra una imagen aquí...'"
-          class="w-full p-2.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent focus:outline-none resize-none min-h-[95px] pr-28"></textarea>
+          class="w-full p-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent focus:outline-none resize-none min-h-[85px] pr-28"></textarea>
 
         <!-- Botones de Acción Multimedia e interactivos en la esquina inferior derecha -->
-        <div class="absolute bottom-2 right-2 flex items-center gap-1">
+        <div class="absolute bottom-2.5 right-2.5 flex items-center gap-1.5">
           <!-- Botón Micrófono / Grabación de Audio -->
           <button
             (click)="toggleAudioRecording()"
@@ -259,9 +258,9 @@
             [title]="isRecordingAudio() ? 'Detener grabación de audio' : 'Grabar comando de voz para Gemini'"
             [ngClass]="{
               'bg-red-600 text-white animate-pulse ring-2 ring-red-400': isRecordingAudio(),
-              'bg-slate-100 dark:bg-[#1E2442] text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-[#2E3766] hover:text-purple-800 dark:hover:text-purple-200 border border-slate-300 dark:border-[#3B487A]': !isRecordingAudio()
+              'text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-[#1E2548] dark:hover:text-slate-200': !isRecordingAudio()
             }"
-            class="p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs">
+            class="p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center">
             <ng-icon [name]="isRecordingAudio() ? 'heroStop' : 'heroMicrophone'" class="text-xs"></ng-icon>
           </button>
 
@@ -270,7 +269,7 @@
             (click)="pasteFromClipboard()"
             type="button"
             title="Pegar captura desde el portapapeles (o presiona Ctrl+V)"
-            class="p-1.5 bg-slate-100 dark:bg-[#1E2442] text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-[#2E3766] hover:text-purple-800 dark:hover:text-purple-200 border border-slate-300 dark:border-[#3B487A] rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs">
+            class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-[#1E2548] dark:hover:text-slate-200 rounded-full transition-all cursor-pointer flex items-center justify-center">
             <ng-icon name="heroClipboard" class="text-xs"></ng-icon>
           </button>
 
@@ -279,7 +278,7 @@
             (click)="openWebcamModal()"
             type="button"
             title="Tomar foto con la cámara (pizarra o cuaderno)"
-            class="p-1.5 bg-slate-100 dark:bg-[#1E2442] text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-[#2E3766] hover:text-purple-800 dark:hover:text-purple-200 border border-slate-300 dark:border-[#3B487A] rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs">
+            class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-[#1E2548] dark:hover:text-slate-200 rounded-full transition-all cursor-pointer flex items-center justify-center">
             <ng-icon name="heroCamera" class="text-xs"></ng-icon>
           </button>
 
@@ -288,7 +287,7 @@
             (click)="triggerImageInput()"
             type="button"
             title="Subir archivo de imagen desde disco"
-            class="p-1.5 bg-slate-100 dark:bg-[#1E2442] text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-[#2E3766] hover:text-purple-800 dark:hover:text-purple-200 border border-slate-300 dark:border-[#3B487A] rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs">
+            class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-[#1E2548] dark:hover:text-slate-200 rounded-full transition-all cursor-pointer flex items-center justify-center">
             <ng-icon name="heroPhoto" class="text-xs"></ng-icon>
           </button>
 
@@ -297,7 +296,7 @@
             (click)="applyAiPrompt()"
             [disabled]="isAiProcessing() || (!aiPrompt().trim() && !attachedImageBase64() && !attachedAudioBase64())"
             title="Enviar mensaje (Enter)"
-            class="p-1.5 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs disabled:opacity-30 disabled:cursor-not-allowed">
+            class="w-7 h-7 bg-purple-600 hover:bg-purple-500 text-white rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs disabled:opacity-30 disabled:cursor-not-allowed">
             <ng-icon name="heroPaperAirplane" class="text-xs"></ng-icon>
           </button>
         </div>
@@ -305,8 +304,8 @@
 
       <!-- Pie de ayuda -->
       <div class="flex items-center justify-between text-[9.5px] font-mono text-slate-400 dark:text-slate-500 px-0.5">
-        <span>Enter para enviar • Shift+Enter para salto de línea</span>
-        <span class="text-emerald-700 dark:text-emerald-400 font-bold">● Sincronizado en vivo</span>
+        <span>Enter para enviar • Shift+Enter para nueva línea</span>
+        <span class="text-emerald-600 dark:text-emerald-400 font-medium">● Sincronizado en vivo</span>
       </div>
 
     </div>
@@ -316,37 +315,39 @@
 
 <!-- MODAL DE CAPTURA CON CÁMARA WEB PARA COPILOT IA -->
 @if (showWebcamModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-    <div class="bg-[#F2EBE6] dark:bg-[#151A30] border-[1.5px] border-[#6B5A52] dark:border-[#3B487A] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-lg w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+    <div class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden text-xs animate-in zoom-in-95 duration-150">
       
       <!-- Header -->
-      <div class="px-4 py-3 bg-[#6B5A52] dark:bg-[#1E2442] text-white flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <ng-icon name="heroCamera" class="text-base text-amber-300"></ng-icon>
-          <h3 class="font-bold uppercase tracking-wider font-mono text-[11px]">Capturar Diagrama con Cámara Web</h3>
+      <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <ng-icon name="heroCamera" class="text-base"></ng-icon>
+          </div>
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">Capturar Diagrama con Cámara Web</h3>
         </div>
-        <button (click)="closeWebcamModal()" class="text-white hover:text-red-200 text-lg font-bold cursor-pointer leading-none">&times;</button>
+        <button (click)="closeWebcamModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
       </div>
 
       <!-- Video en Vivo -->
-      <div class="p-4 bg-slate-900 flex flex-col items-center justify-center min-h-[260px] relative">
-        <video #webcamVideo autoplay playsinline class="w-full max-h-[300px] object-contain rounded border border-slate-700 bg-black"></video>
-        <div class="absolute bottom-6 text-[10px] font-mono text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-800">
+      <div class="p-4 bg-slate-950 flex flex-col items-center justify-center min-h-[260px] relative">
+        <video #webcamVideo autoplay playsinline class="w-full max-h-[300px] object-contain rounded-xl border border-slate-800 bg-black"></video>
+        <div class="absolute bottom-6 text-[10.5px] font-mono text-slate-300 bg-slate-900/90 px-3 py-1 rounded-full border border-slate-700/80 shadow-md">
           Apunta la cámara a tu libreta, pizarra o boceto en papel
         </div>
       </div>
 
       <!-- Footer Acciones -->
-      <div class="p-3 border-t border-[#6B5A52]/30 dark:border-[#3B487A] flex justify-between items-center bg-white/30 dark:bg-[#121629]">
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-[#0D1124]">
         <button
           (click)="closeWebcamModal()"
-          class="px-3.5 py-1.5 bg-white dark:bg-[#1E2442] hover:bg-slate-100 dark:hover:bg-[#252E56] border border-[#6B5A52] dark:border-[#3B487A] text-[#2A201B] dark:text-slate-200 font-mono cursor-pointer">
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E2548] dark:hover:bg-[#28325E] text-slate-700 dark:text-slate-200 rounded-xl font-semibold transition-colors cursor-pointer">
           Cancelar
         </button>
         <button
           (click)="captureWebcamPhoto()"
-          class="px-4 py-1.5 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white font-mono font-bold uppercase border border-purple-950 shadow-xs cursor-pointer flex items-center gap-1.5">
-          <ng-icon name="heroCamera" class="text-xs text-amber-300"></ng-icon>
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98]">
+          <ng-icon name="heroCamera" class="text-sm"></ng-icon>
           Tomar Foto y Digitalizar
         </button>
       </div>

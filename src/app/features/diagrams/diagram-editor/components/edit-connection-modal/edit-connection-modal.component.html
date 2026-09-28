@@ -1,19 +1,20 @@
 @if (isOpen() && editingConnection()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-    <div class="bg-[#F2EBE6] dark:bg-[#14182E] border-[1.5px] border-[#6B5A52] dark:border-[#2D3762] shadow-[6px_6px_0px_rgba(0,0,0,0.25)] max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
+    <div class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
       
-      <div class="border-b-[1.5px] border-[#6B5A52] dark:border-[#2D3762] bg-white/40 dark:bg-[#101428]/40 px-4 py-2.5 flex items-center justify-between">
-        <h3 class="font-bold text-[#2A201B] dark:text-slate-100 uppercase tracking-wide">{{ 'editor.connModal.title' | translate }}</h3>
-        <button (click)="onClose()" class="text-[#6B5A52] dark:text-slate-400 hover:text-[#2A201B] dark:hover:text-slate-200 font-bold text-base cursor-pointer">&times;</button>
+      <!-- Header -->
+      <div class="border-b border-slate-100 dark:border-slate-800 px-5 py-3.5 flex items-center justify-between">
+        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">{{ 'editor.connModal.title' | translate }}</h3>
+        <button (click)="onClose()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
       </div>
 
-      <div class="p-4 space-y-3.5">
+      <div class="p-5 space-y-4">
 
         <div>
-          <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.connModal.type' | translate }}</label>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">{{ 'editor.connModal.type' | translate }}</label>
           <select
             [(ngModel)]="editingConnection()!.type"
-            class="w-full px-2 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-mono text-[#2A201B] dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500">
+            class="w-full px-3 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-800 dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
             @for (rel of relationTypes(); track rel.id) {
               <option [value]="rel.id">{{ rel.label }} ({{ rel.icon }})</option>
             }
@@ -21,10 +22,10 @@
         </div>
 
         <div>
-          <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.connModal.lineStyle' | translate }}</label>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">{{ 'editor.connModal.lineStyle' | translate }}</label>
           <select
             [(ngModel)]="editingConnection()!.lineStyle"
-            class="w-full px-2 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-mono text-[#2A201B] dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500">
+            class="w-full px-3 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-800 dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
             @for (style of lineStyles(); track style.id) {
               <option [value]="style.id">{{ style.label }}</option>
             }
@@ -32,73 +33,75 @@
         </div>
 
         @if (editingConnection()!.type !== 'generalization' && editingConnection()!.type !== 'realization') {
-          <div class="flex items-center justify-between mb-1">
-            <span class="font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px]">Multiplicidades</span>
-            <button
-              type="button"
-              (click)="onSwapDirection()"
-              title="Invertir dirección (Origen ⇄ Destino)"
-              class="flex items-center gap-1 text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
-              <ng-icon name="heroArrowsRightLeft" class="text-xs"></ng-icon>
-              <span>Invertir dirección</span>
-            </button>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-medium font-mono text-[#43352B] dark:text-slate-300 uppercase text-[10px] mb-1">{{ 'editor.connModal.sourceMult' | translate }}</label>
-              <input
-                type="text"
-                [(ngModel)]="editingConnection()!.sourceMultiplicity"
-                list="conn-multiplicity-options"
-                placeholder="1, 0..1, *"
-                class="w-full px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-mono text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500"
-              />
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]">Multiplicidades</span>
+              <button
+                type="button"
+                (click)="onSwapDirection()"
+                title="Invertir dirección (Origen ⇄ Destino)"
+                class="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                <ng-icon name="heroArrowsRightLeft" class="text-xs"></ng-icon>
+                <span>Invertir dirección</span>
+              </button>
             </div>
-            <div>
-              <label class="block font-medium font-mono text-[#43352B] dark:text-slate-300 uppercase text-[10px] mb-1">{{ 'editor.connModal.targetMult' | translate }}</label>
-              <input
-                type="text"
-                [(ngModel)]="editingConnection()!.targetMultiplicity"
-                list="conn-multiplicity-options"
-                placeholder="0..*, 1..*, *"
-                class="w-full px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs font-mono text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500"
-              />
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-medium text-slate-500 dark:text-slate-400 text-[10.5px] mb-1">{{ 'editor.connModal.sourceMult' | translate }}</label>
+                <input
+                  type="text"
+                  [(ngModel)]="editingConnection()!.sourceMultiplicity"
+                  list="conn-multiplicity-options"
+                  placeholder="1, 0..1, *"
+                  class="w-full px-3 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs font-mono text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label class="block font-medium text-slate-500 dark:text-slate-400 text-[10.5px] mb-1">{{ 'editor.connModal.targetMult' | translate }}</label>
+                <input
+                  type="text"
+                  [(ngModel)]="editingConnection()!.targetMultiplicity"
+                  list="conn-multiplicity-options"
+                  placeholder="0..*, 1..*, *"
+                  class="w-full px-3 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs font-mono text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
             </div>
           </div>
         } @else {
-          <div class="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded text-[11px] text-[#6B5A52] dark:text-amber-300/90 font-mono">
+          <div class="p-3 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
             ℹ️ Las relaciones de herencia (Generalización) representan una taxonomía ("es-un") y en el estándar UML no llevan multiplicidad.
           </div>
         }
 
         <div>
-          <label class="block font-bold font-mono text-[#2A201B] dark:text-slate-200 uppercase text-[11px] mb-1">{{ 'editor.connModal.name' | translate }}</label>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">{{ 'editor.connModal.name' | translate }}</label>
           <input
             type="text"
             [(ngModel)]="editingConnection()!.name"
             placeholder="e.g. posee, genera, pertenece a"
-            class="w-full px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-[#6B5A52] dark:border-[#2D3762] text-xs text-[#2A201B] dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#6B5A52] dark:focus:ring-indigo-500"
+            class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
         </div>
 
       </div>
 
-      <div class="p-3 border-t border-[#6B5A52]/30 dark:border-[#2D3762] flex justify-between items-center bg-white/30 dark:bg-[#101428]/40">
+      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
         <button
           (click)="onDelete()"
-          class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-mono font-bold cursor-pointer flex items-center gap-1">
-          <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+          class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-semibold cursor-pointer flex items-center gap-1.5 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+          <ng-icon name="heroTrash" class="text-sm"></ng-icon>
           <span>{{ 'editor.connModal.delete' | translate }}</span>
         </button>
         <div class="flex gap-2">
           <button
             (click)="onClose()"
-            class="px-3 py-1.5 bg-white dark:bg-[#0E1225] hover:bg-slate-100 dark:hover:bg-[#1C2242] border border-[#6B5A52] dark:border-[#2D3762] text-[#2A201B] dark:text-slate-200 font-mono cursor-pointer">
+            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#1C2242] dark:hover:bg-[#252E56] text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
             {{ 'common.cancel' | translate }}
           </button>
           <button
             (click)="onSave()"
-            class="px-4 py-1.5 bg-[#6B5A52] dark:bg-[#4F46E5] hover:bg-[#52443E] dark:hover:bg-[#4338CA] text-white font-mono font-bold uppercase border border-[#2A201B] dark:border-[#3730A3] cursor-pointer">
+            class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-all">
             {{ 'common.save' | translate }}
           </button>
         </div>

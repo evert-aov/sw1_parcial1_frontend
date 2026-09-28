@@ -1,83 +1,72 @@
 <!-- =========================================================================
-     APPBAR CON RIBBON SECCIONADO ESTILO ENTERPRISE ARCHITECT
+     APPBAR CON RIBBON MODERNO (UML STUDIO)
      ========================================================================= -->
-<header class="bg-[#ECEEF2] dark:bg-[#101426] border-b border-[#D0D4DC] dark:border-[#283256] flex flex-col z-30 shrink-0 select-none shadow-xs transition-colors duration-150">
+<header class="bg-white dark:bg-[#0D1124] border-b border-slate-200/80 dark:border-slate-800 flex flex-col z-30 shrink-0 select-none shadow-xs transition-colors duration-150">
 
   <!-- =========================================================================
-       1. TOP TITLE BAR (ESTILO VENTANA ENTERPRISE ARCHITECT) ~28px
+       1. TOP TITLE BAR (MODERNO FIGMA/SaaS) ~42px
        ========================================================================= -->
-  <div class="h-7 px-3 bg-[#E4E7ED] dark:bg-[#0E1222] border-b border-[#D0D4DC] dark:border-[#202844] flex items-center justify-between text-xs">
-    <!-- Izquierda: Logo EA / UML Studio + Volver a Proyectos + Título del Diagrama -->
-    <div class="flex items-center gap-2">
-      <!-- Icono Estilo EA -->
-      <div class="w-4.5 h-4.5 rounded bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center shadow-xs">
-        <ng-icon name="heroCube" class="text-xs"></ng-icon>
+  <div class="h-11 px-4 bg-white dark:bg-[#0D1124] border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+    <!-- Izquierda: Logo UML Studio + Breadcrumbs -->
+    <div class="flex items-center gap-3">
+      <!-- Gradient Logo Icon -->
+      <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-500 text-white flex items-center justify-center shadow-xs">
+        <ng-icon name="heroCube" class="text-sm"></ng-icon>
       </div>
 
-      <a
-        routerLink="/projects"
-        [title]="'appbar.projects' | translate"
-        class="text-[11px] text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 font-sans flex items-center gap-1 transition-colors cursor-pointer">
-        <ng-icon name="heroFolder" class="text-xs text-slate-500 dark:text-slate-400"></ng-icon>
-        <span class="font-medium">{{ 'appbar.projects' | translate }}</span>
-      </a>
+      <span class="font-bold text-[14px] text-slate-800 dark:text-slate-100 tracking-tight">UML Studio</span>
 
-      <span class="text-slate-300 dark:text-slate-700">|</span>
+      <!-- Breadcrumbs: < Proyectos > P2 > [EA UML 2.5] -->
+      <div class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <a
+          routerLink="/projects"
+          [title]="'appbar.projects' | translate"
+          class="flex items-center gap-1 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 font-medium transition-colors cursor-pointer">
+          <ng-icon name="heroChevronLeft" class="text-xs"></ng-icon>
+          <span>{{ 'appbar.projects' | translate }}</span>
+        </a>
 
-      <span class="font-bold text-[11.5px] text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-        {{ diagramTitle() }}
-      </span>
+        <span class="text-slate-300 dark:text-slate-600">›</span>
 
-      <span class="text-[9px] px-1.5 py-0.2 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 font-mono font-semibold">
-        EA UML 2.5
-      </span>
+        <span class="font-semibold text-slate-700 dark:text-slate-200">
+          {{ diagramTitle() }}
+        </span>
 
-      <!-- Quick Access Undo / Redo -->
-      <div class="flex items-center gap-0.5 ml-1 border-l border-slate-300 dark:border-slate-700 pl-1.5">
-        <button
-          (click)="undo.emit()"
-          [disabled]="!canUndo() || isReadOnly()"
-          [title]="('appbar.undo' | translate) + ' (Ctrl+Z)'"
-          class="p-1 rounded text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white/80 dark:hover:bg-[#1A2246] transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
-          <ng-icon name="heroArrowUturnLeft" class="text-xs"></ng-icon>
-        </button>
-        <button
-          (click)="redo.emit()"
-          [disabled]="!canRedo() || isReadOnly()"
-          [title]="('appbar.redo' | translate) + ' (Ctrl+Y)'"
-          class="p-1 rounded text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white/80 dark:hover:bg-[#1A2246] transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
-          <ng-icon name="heroArrowUturnRight" class="text-xs"></ng-icon>
-        </button>
+        <span class="text-slate-300 dark:text-slate-600">›</span>
+
+        <span class="text-[10.5px] px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold border border-blue-100 dark:border-blue-900/50">
+          EA UML 2.5
+        </span>
       </div>
     </div>
 
-    <!-- Centro: Sala colaborativa compacta si está activa -->
+    <!-- Centro: Sala colaborativa tipo píldora moderna -->
     <div class="flex items-center gap-2">
-      @if (collaborationService.activeRoomCode()) {
-        <button
-          (click)="copyRoomCode()"
-          [title]="'appbar.clickToCopy' | translate"
-          class="flex items-center gap-1.5 bg-white/90 dark:bg-[#161C36] border border-slate-300 dark:border-[#283256] px-2 py-0.5 rounded-full text-[10.5px] font-mono text-slate-700 dark:text-slate-300 hover:border-blue-400 shadow-xs cursor-pointer">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>{{ 'appbar.room' | translate }}: <strong class="text-blue-600 dark:text-sky-300">{{ collaborationService.activeRoomCode() }}</strong></span>
-          <div class="flex items-center -space-x-1 ml-1">
+      <button
+        (click)="copyRoomCode()"
+        [title]="'appbar.clickToCopy' | translate"
+        class="flex items-center gap-2 bg-slate-50 dark:bg-[#151A30] border border-slate-200/80 dark:border-slate-700/60 px-3 py-1 rounded-full text-xs font-mono text-slate-700 dark:text-slate-300 hover:border-blue-400 transition-colors cursor-pointer shadow-2xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>Room: <strong class="text-slate-800 dark:text-slate-100">{{ collaborationService.activeRoomCode() || 'ROOM-TVYI9E' }}</strong></span>
+        @if (collaborationService.collaborators().length > 0) {
+          <div class="flex items-center -space-x-1 ml-1.5">
             @for (collab of collaborationService.collaborators(); track collab.userId) {
               <div
-                class="w-4 h-4 rounded-full border border-white dark:border-[#101426] text-white text-[8px] font-bold flex items-center justify-center shadow-xs"
+                class="w-4.5 h-4.5 rounded-full border-2 border-white dark:border-[#101426] text-white text-[8px] font-bold flex items-center justify-center shadow-xs"
                 [style.backgroundColor]="collab.color"
                 [title]="collab.userName">
                 {{ collab.userName.charAt(0).toUpperCase() }}
               </div>
             }
           </div>
-        </button>
-      }
+        }
+      </button>
     </div>
 
     <!-- Derecha: Selector de Tema, Idioma, Modo Espectador, Perfil y Logout -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
       @if (isReadOnly()) {
-        <div class="bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-1.5 py-0.2 rounded text-[10px] font-mono flex items-center gap-1">
+        <div class="bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full text-[11px] font-medium flex items-center gap-1">
           <ng-icon name="heroEye" class="text-xs"></ng-icon>
           <span>{{ 'appbar.spectatorMode' | translate }}</span>
         </div>
@@ -87,21 +76,22 @@
       <app-language-selector [theme]="'light'" />
 
       @if (authService.currentUser()) {
-        <div class="flex items-center gap-1 pl-1.5 border-l border-slate-300 dark:border-slate-700">
+        <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
           <button
             (click)="openProfile.emit()"
             [title]="'appbar.profileTooltip' | translate"
-            class="flex items-center gap-1 text-[11px] text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
-            <div class="w-4.5 h-4.5 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-700 text-white flex items-center justify-center font-bold text-[8.5px]">
-              {{ authService.currentUser()?.fullName?.charAt(0)?.toUpperCase() }}
+            class="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
+            <div class="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              {{ authService.currentUser()?.fullName?.slice(0, 2)?.toUpperCase() || 'EN' }}
             </div>
-            <span class="max-w-[85px] truncate font-medium">{{ authService.currentUser()?.fullName }}</span>
+            <span class="font-medium text-xs">{{ authService.currentUser()?.fullName || 'Evert' }}</span>
+            <ng-icon name="heroChevronDown" class="text-[10px] text-slate-400"></ng-icon>
           </button>
           <button
             (click)="authService.logout()"
             [title]="'appbar.logoutTooltip' | translate"
-            class="text-[10px] text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 px-1 py-0.5 rounded cursor-pointer">
-            <ng-icon name="heroArrowRightOnRectangle" class="text-xs"></ng-icon>
+            class="text-xs text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 p-1 rounded cursor-pointer transition-colors">
+            <ng-icon name="heroArrowRightOnRectangle" class="text-sm"></ng-icon>
           </button>
         </div>
       }
@@ -109,30 +99,28 @@
   </div>
 
   <!-- =========================================================================
-       2. RIBBON TABS STRIP (ESTILO EXACTO ENTERPRISE ARCHITECT) ~27px
-       Doble clic para minimizar/expandir el Ribbon
+       2. RIBBON TABS STRIP (ESTILO MODERNO) ~36px
        ========================================================================= -->
   <div
     (dblclick)="toggleCollapse()"
     [title]="isCollapsed() ? 'Doble clic para expandir el Ribbon' : 'Doble clic para minimizar el Ribbon'"
-    class="h-[27px] px-2 flex items-end justify-between bg-[#E4E7ED] dark:bg-[#0E1222] border-b border-[#D0D4DC] dark:border-[#202844] select-none text-[11px]">
+    class="h-9 px-4 flex items-end justify-between bg-white dark:bg-[#0D1124] border-b border-slate-200/80 dark:border-slate-800 select-none text-xs">
     
-    <div class="flex items-end gap-0.5 overflow-x-auto">
-      <!-- Tab Publish (Como en la captura de Enterprise Architect) -->
+    <div class="flex items-end gap-1 overflow-x-auto">
+      <!-- Tab Publish -->
       <button
         (click)="onTabClick('publish')"
         (dblclick)="onTabDblClick('publish', $event)"
         [class.border-b-2]="activeTab() === 'publish' && !isCollapsed()"
         [class.border-b-blue-600]="activeTab() === 'publish' && !isCollapsed()"
-        [class.text-blue-700]="activeTab() === 'publish'"
-        [class.dark:text-sky-300]="activeTab() === 'publish'"
-        [class.bg-[#F7F8FA]]="activeTab() === 'publish' && !isCollapsed()"
-        [class.dark:bg-[#141933]]="activeTab() === 'publish' && !isCollapsed()"
+        [class.text-blue-600]="activeTab() === 'publish'"
+        [class.dark:text-blue-400]="activeTab() === 'publish'"
         [class.font-semibold]="activeTab() === 'publish'"
         [class.text-slate-600]="activeTab() !== 'publish'"
         [class.dark:text-slate-400]="activeTab() !== 'publish'"
-        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-        {{ 'ribbon.tabs.publish' | translate }}
+        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs">
+        <ng-icon name="heroDocumentChartBar" class="text-xs"></ng-icon>
+        <span>{{ 'ribbon.tabs.publish' | translate }}</span>
       </button>
 
       <!-- Tab Design -->
@@ -141,15 +129,14 @@
         (dblclick)="onTabDblClick('design', $event)"
         [class.border-b-2]="activeTab() === 'design' && !isCollapsed()"
         [class.border-b-blue-600]="activeTab() === 'design' && !isCollapsed()"
-        [class.text-blue-700]="activeTab() === 'design'"
-        [class.dark:text-sky-300]="activeTab() === 'design'"
-        [class.bg-[#F7F8FA]]="activeTab() === 'design' && !isCollapsed()"
-        [class.dark:bg-[#141933]]="activeTab() === 'design' && !isCollapsed()"
+        [class.text-blue-600]="activeTab() === 'design'"
+        [class.dark:text-blue-400]="activeTab() === 'design'"
         [class.font-semibold]="activeTab() === 'design'"
         [class.text-slate-600]="activeTab() !== 'design'"
         [class.dark:text-slate-400]="activeTab() !== 'design'"
-        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-        {{ 'ribbon.tabs.design' | translate }}
+        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs">
+        <ng-icon name="heroPencilSquare" class="text-xs"></ng-icon>
+        <span>{{ 'ribbon.tabs.design' | translate }}</span>
       </button>
 
       <!-- Tab Develop -->
@@ -158,15 +145,14 @@
         (dblclick)="onTabDblClick('develop', $event)"
         [class.border-b-2]="activeTab() === 'develop' && !isCollapsed()"
         [class.border-b-blue-600]="activeTab() === 'develop' && !isCollapsed()"
-        [class.text-blue-700]="activeTab() === 'develop'"
-        [class.dark:text-sky-300]="activeTab() === 'develop'"
-        [class.bg-[#F7F8FA]]="activeTab() === 'develop' && !isCollapsed()"
-        [class.dark:bg-[#141933]]="activeTab() === 'develop' && !isCollapsed()"
+        [class.text-blue-600]="activeTab() === 'develop'"
+        [class.dark:text-blue-400]="activeTab() === 'develop'"
         [class.font-semibold]="activeTab() === 'develop'"
         [class.text-slate-600]="activeTab() !== 'develop'"
         [class.dark:text-slate-400]="activeTab() !== 'develop'"
-        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-        {{ 'ribbon.tabs.develop' | translate }}
+        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs">
+        <ng-icon name="heroBolt" class="text-xs"></ng-icon>
+        <span>{{ 'ribbon.tabs.develop' | translate }}</span>
       </button>
 
       <!-- Tab Collaborate -->
@@ -175,15 +161,14 @@
         (dblclick)="onTabDblClick('collaborate', $event)"
         [class.border-b-2]="activeTab() === 'collaborate' && !isCollapsed()"
         [class.border-b-blue-600]="activeTab() === 'collaborate' && !isCollapsed()"
-        [class.text-blue-700]="activeTab() === 'collaborate'"
-        [class.dark:text-sky-300]="activeTab() === 'collaborate'"
-        [class.bg-[#F7F8FA]]="activeTab() === 'collaborate' && !isCollapsed()"
-        [class.dark:bg-[#141933]]="activeTab() === 'collaborate' && !isCollapsed()"
+        [class.text-blue-600]="activeTab() === 'collaborate'"
+        [class.dark:text-blue-400]="activeTab() === 'collaborate'"
         [class.font-semibold]="activeTab() === 'collaborate'"
         [class.text-slate-600]="activeTab() !== 'collaborate'"
         [class.dark:text-slate-400]="activeTab() !== 'collaborate'"
-        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-        {{ 'ribbon.tabs.collaborate' | translate }}
+        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs">
+        <ng-icon name="heroUserGroup" class="text-xs"></ng-icon>
+        <span>{{ 'ribbon.tabs.collaborate' | translate }}</span>
       </button>
 
       <!-- Tab Start -->
@@ -192,15 +177,14 @@
         (dblclick)="onTabDblClick('start', $event)"
         [class.border-b-2]="activeTab() === 'start' && !isCollapsed()"
         [class.border-b-blue-600]="activeTab() === 'start' && !isCollapsed()"
-        [class.text-blue-700]="activeTab() === 'start'"
-        [class.dark:text-sky-300]="activeTab() === 'start'"
-        [class.bg-[#F7F8FA]]="activeTab() === 'start' && !isCollapsed()"
-        [class.dark:bg-[#141933]]="activeTab() === 'start' && !isCollapsed()"
+        [class.text-blue-600]="activeTab() === 'start'"
+        [class.dark:text-blue-400]="activeTab() === 'start'"
         [class.font-semibold]="activeTab() === 'start'"
         [class.text-slate-600]="activeTab() !== 'start'"
         [class.dark:text-slate-400]="activeTab() !== 'start'"
-        class="px-3.5 py-1 rounded-t border-t border-x border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer">
-        {{ 'ribbon.tabs.start' | translate }}
+        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs">
+        <ng-icon name="heroCube" class="text-xs"></ng-icon>
+        <span>{{ 'ribbon.tabs.start' | translate }}</span>
       </button>
     </div>
 
@@ -209,7 +193,7 @@
       <button
         (click)="toggleCollapse()"
         [title]="isCollapsed() ? 'Expandir Ribbon (Doble clic en pestañas)' : 'Minimizar Ribbon (Doble clic en pestañas)'"
-        class="w-5 h-5 flex items-center justify-center rounded hover:bg-slate-300/60 dark:hover:bg-[#1A2246] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer">
+        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer">
         <ng-icon [name]="isCollapsed() ? 'heroChevronDown' : 'heroChevronUp'" class="text-xs"></ng-icon>
       </button>
     </div>
@@ -220,7 +204,7 @@
        Ocultable con doble clic
        ========================================================================= -->
   @if (!isCollapsed()) {
-    <div class="bg-[#F7F8FA] dark:bg-[#141933] px-2 py-1 flex items-stretch overflow-x-auto min-h-[76px] transition-all duration-150 animate-in fade-in duration-100">
+    <div class="bg-white dark:bg-[#0D1124] px-4 py-2 flex items-center overflow-x-auto min-h-[64px] border-b border-slate-200/80 dark:border-slate-800 transition-all duration-150 select-none">
 
     <!-- TAB 1: PUBLISH (IDÉNTICO A LA CAPTURA DE EA DEL USUARIO) -->
     @if (activeTab() === 'publish') {
@@ -407,164 +391,370 @@
     <!-- TAB 2: DESIGN (DISEÑO Y ELEMENTOS UML) -->
     @if (activeTab() === 'design') {
 
-      <!-- SECCIÓN: Project & File -->
-      <div class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-[72px]">
-        <div class="flex items-center gap-1.5 flex-1 justify-center">
-          @if (diagramId() && !isReadOnly()) {
+      <!-- GRUPO 1: Project Actions (Guardar, Proyectos, Nuevo clase, Seleccionar / Mover) -->
+      <div class="flex items-center gap-1">
+        <!-- Guardar -->
+        @if (diagramId() && !isReadOnly()) {
+          <button
+            (click)="saveDiagram.emit()"
+            [disabled]="isSaving()"
+            [title]="'appbar.saveTooltip' | translate"
+            class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[56px] group border border-transparent disabled:opacity-50">
+            <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+              @if (isSaving()) {
+                <span class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
+              } @else if (!hasUnsavedChanges()) {
+                <ng-icon name="heroCheck" class="text-lg text-emerald-600 dark:text-emerald-400"></ng-icon>
+              } @else {
+                <ng-icon name="heroCloudArrowUp" class="text-lg text-blue-600 dark:text-blue-400"></ng-icon>
+              }
+            </div>
+            <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+              {{ 'appbar.save' | translate }}
+            </span>
+          </button>
+        }
+
+        <!-- Proyectos -->
+        <a
+          routerLink="/projects"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[56px] group border border-transparent">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroFolder" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+            {{ 'appbar.projects' | translate }}
+          </span>
+        </a>
+
+        <!-- Nuevo clase -->
+        <button
+          (click)="addClass.emit()"
+          [disabled]="isReadOnly()"
+          [title]="'toolbar.addClassTooltip' | translate"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[62px] group border border-transparent disabled:opacity-50">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroPlus" class="text-lg text-blue-600 dark:text-blue-400"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+            Nuevo clase
+          </span>
+        </button>
+
+        <!-- Seleccionar / Mover ▾ -->
+        <button
+          (click)="setPointerMode.emit()"
+          [title]="'toolbar.pointer' | translate"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[80px] group border border-transparent">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroCursorArrowRays" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight flex items-center gap-0.5">
+            <span>Seleccionar / Mover</span>
+            <ng-icon name="heroChevronDown" class="text-[9px] text-slate-400"></ng-icon>
+          </span>
+        </button>
+      </div>
+
+      <!-- Hairline divider -->
+      <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+
+      <!-- GRUPO 2: Color Palette -->
+      <div class="flex flex-col justify-center gap-1 px-1">
+        <!-- Swatches row -->
+        <div class="flex items-center gap-1.5">
+          @for (c of presetColors; track c.color) {
             <button
-              (click)="saveDiagram.emit()"
-              [disabled]="isSaving()"
-              [title]="'appbar.saveTooltip' | translate"
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[54px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]">
-              <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
-                @if (isSaving()) {
-                  <span class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-                } @else if (!hasUnsavedChanges()) {
-                  <ng-icon name="heroCheck" class="text-xl text-emerald-600 dark:text-emerald-400"></ng-icon>
-                } @else {
-                  <ng-icon name="heroCloudArrowUp" class="text-xl text-blue-600 dark:text-blue-400"></ng-icon>
-                }
-              </div>
-              <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">
-                {{ 'appbar.save' | translate }}
-              </span>
+              type="button"
+              (click)="changeNodeColor.emit(c.color)"
+              [disabled]="!selectedNodeId() || isReadOnly()"
+              [title]="c.name"
+              class="w-5 h-5 rounded-md border border-slate-300/80 dark:border-slate-700 transition-all hover:scale-110 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs relative flex items-center justify-center"
+              [style.backgroundColor]="c.color">
+              @if (selectedNodeColor() === c.color || (!selectedNodeColor() && c.color === '#FFFDDD')) {
+                <span class="text-[10px] font-bold text-slate-800 leading-none select-none">✓</span>
+              }
             </button>
           }
-          <a
-            routerLink="/projects"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[54px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]">
-            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ng-icon name="heroFolder" class="text-xl text-slate-600 dark:text-slate-300"></ng-icon>
-            </div>
-            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">
-              {{ 'appbar.projects' | translate }}
-            </span>
-          </a>
         </div>
-        <div class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase">
-          {{ 'ribbon.sections.project' | translate }}
+
+        <!-- Dropdown & Reset -->
+        <div class="flex items-center justify-between gap-2 text-xs">
+          <label
+            [title]="selectedNodeId() ? 'Elegir color personalizado' : 'Selecciona una clase primero'"
+            [class.opacity-40]="!selectedNodeId() || isReadOnly()"
+            class="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium cursor-pointer">
+            <input
+              type="color"
+              [disabled]="!selectedNodeId() || isReadOnly()"
+              [value]="selectedNodeColor() || '#FFFDDD'"
+              (input)="onCustomColorInput($event)"
+              class="w-3.5 h-3.5 p-0 border-0 rounded cursor-pointer disabled:cursor-not-allowed bg-transparent" />
+            <span>Elementos de clase</span>
+            <ng-icon name="heroChevronDown" class="text-[9px] text-slate-400"></ng-icon>
+          </label>
+
+          <button
+            type="button"
+            (click)="changeNodeColor.emit('#FFFDDD')"
+            [disabled]="!selectedNodeId() || selectedNodeColor() === '#FFFDDD' || isReadOnly()"
+            title="Restablecer al color por defecto (#FFFDDD)"
+            class="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
+            Restablecer
+          </button>
         </div>
       </div>
 
-      <!-- SECCIÓN: UML Elements -->
-      <div class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-[72px]">
-        <div class="flex items-center gap-1.5 flex-1 justify-center">
-          <button
-            (click)="addClass.emit()"
-            [disabled]="isReadOnly()"
-            [title]="'toolbar.addClassTooltip' | translate"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[54px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762] disabled:opacity-50">
-            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ng-icon name="heroPlus" class="text-xl text-blue-600 dark:text-blue-400"></ng-icon>
-            </div>
-            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">
-              {{ 'toolbar.addClass' | translate }}
-            </span>
-          </button>
-          <button
-            (click)="setPointerMode.emit()"
-            [title]="'toolbar.pointer' | translate"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[54px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]">
-            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ng-icon name="heroCursorArrowRays" class="text-xl text-slate-600 dark:text-slate-300"></ng-icon>
-            </div>
-            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">
-              {{ 'toolbar.pointer' | translate }}
-            </span>
-          </button>
-        </div>
-        <div class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase">
-          {{ 'ribbon.sections.umlElements' | translate }}
-        </div>
+      <!-- Hairline divider -->
+      <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+
+      <!-- GRUPO 3: History (Deshacer, Rehacer) -->
+      <div class="flex items-center gap-1">
+        <button
+          (click)="undo.emit()"
+          [disabled]="!canUndo() || isReadOnly()"
+          [title]="('appbar.undo' | translate) + ' (Ctrl+Z)'"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[56px] group border border-transparent disabled:opacity-40 disabled:cursor-not-allowed">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroArrowUturnLeft" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+            {{ 'appbar.undo' | translate }}
+          </span>
+        </button>
+
+        <button
+          (click)="redo.emit()"
+          [disabled]="!canRedo() || isReadOnly()"
+          [title]="('appbar.redo' | translate) + ' (Ctrl+Y)'"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[56px] group border border-transparent disabled:opacity-40 disabled:cursor-not-allowed">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroArrowUturnRight" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+            {{ 'appbar.redo' | translate }}
+          </span>
+        </button>
       </div>
 
-      <!-- SECCIÓN: Edit & History -->
-      <div class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-[72px]">
-        <div class="flex items-center gap-1.5 flex-1 justify-center">
-          <button
-            (click)="undo.emit()"
-            [disabled]="!canUndo() || isReadOnly()"
-            [title]="('appbar.undo' | translate) + ' (Ctrl+Z)'"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[50px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762] disabled:opacity-40 disabled:cursor-not-allowed">
-            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ng-icon name="heroArrowUturnLeft" class="text-xl text-slate-700 dark:text-slate-300"></ng-icon>
-            </div>
-            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">
-              {{ 'appbar.undo' | translate }}
-            </span>
-          </button>
-          <button
-            (click)="redo.emit()"
-            [disabled]="!canRedo() || isReadOnly()"
-            [title]="('appbar.redo' | translate) + ' (Ctrl+Y)'"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[50px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762] disabled:opacity-40 disabled:cursor-not-allowed">
-            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ng-icon name="heroArrowUturnRight" class="text-xl text-slate-700 dark:text-slate-300"></ng-icon>
-            </div>
-            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight">
-              {{ 'appbar.redo' | translate }}
-            </span>
-          </button>
-          <button
-            (click)="selectAll.emit()"
-            [disabled]="isReadOnly()"
-            [title]="('appbar.selectAll' | translate) + ' (Ctrl+A)'"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-[54px] group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]">
-            <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ng-icon name="heroSquares2x2" class="text-xl text-slate-700 dark:text-slate-300"></ng-icon>
-            </div>
-            <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap">
-              {{ 'appbar.selectAll' | translate }}
-            </span>
-          </button>
-        </div>
-        <div class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase">
-          {{ 'ribbon.sections.editHistory' | translate }}
-        </div>
+      <!-- Hairline divider -->
+      <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+
+      <!-- GRUPO 4: Canvas Selection & Zoom (Seleccionar todo, Acercar, Alejar, Ajustar, 100%) -->
+      <div class="flex items-center gap-1">
+        <button
+          (click)="selectAll.emit()"
+          [disabled]="isReadOnly()"
+          [title]="('appbar.selectAll' | translate) + ' (Ctrl+A)'"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[64px] group border border-transparent">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroSquares2x2" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+            Seleccionar todo
+          </span>
+        </button>
+
+        <button
+          (click)="zoomIn.emit()"
+          [title]="'toolbar.canvas.zoomIn' | translate"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[52px] group border border-transparent">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroMagnifyingGlassPlus" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+            Acercar
+          </span>
+        </button>
+
+        <button
+          (click)="zoomOut.emit()"
+          [title]="'toolbar.canvas.zoomOut' | translate"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[52px] group border border-transparent">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroMagnifyingGlassMinus" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+            Alejar
+          </span>
+        </button>
+
+        <button
+          (click)="fitView.emit()"
+          [title]="'toolbar.canvas.fitView' | translate"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[52px] group border border-transparent">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroArrowsPointingOut" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+            Ajustar
+          </span>
+        </button>
+
+        <button
+          (click)="resetView.emit()"
+          title="Restablecer al 100%"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[52px] group border border-transparent">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <ng-icon name="heroArrowPath" class="text-lg"></ng-icon>
+          </div>
+          <span class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight">
+            100%
+          </span>
+        </button>
       </div>
 
-      <!-- SECCIÓN: Diagram View -->
-      <div class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-[72px]">
-        <div class="flex items-center gap-1 flex-1 justify-center">
-          <button
-            (click)="toggleToolbox.emit()"
-            [title]="'toolbar.showToolbox' | translate"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-[48px]">
-            <ng-icon name="heroBars3" class="text-lg text-slate-600 dark:text-slate-300"></ng-icon>
-            <span class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5">Toolbox</span>
-          </button>
-          <button
-            (click)="zoomIn.emit()"
-            [title]="'Zoom In'"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-[44px]">
-            <ng-icon name="heroMagnifyingGlassPlus" class="text-lg text-slate-600 dark:text-slate-300"></ng-icon>
-            <span class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5">+Zoom</span>
-          </button>
-          <button
-            (click)="zoomOut.emit()"
-            [title]="'Zoom Out'"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-[44px]">
-            <ng-icon name="heroMagnifyingGlassMinus" class="text-lg text-slate-600 dark:text-slate-300"></ng-icon>
-            <span class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5">-Zoom</span>
-          </button>
-          <button
-            (click)="fitView.emit()"
-            [title]="'Ajustar al contenido'"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-[44px]">
-            <ng-icon name="heroArrowsPointingOut" class="text-lg text-slate-600 dark:text-slate-300"></ng-icon>
-            <span class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5">Fit</span>
-          </button>
-          <button
-            (click)="resetView.emit()"
-            [title]="'100%'"
-            class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-[44px]">
-            <ng-icon name="heroArrowPath" class="text-lg text-slate-600 dark:text-slate-300"></ng-icon>
-            <span class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5">100%</span>
-          </button>
+      <!-- Hairline divider -->
+      <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+
+      <!-- GRUPO 5: Alignment & Smart Guides (Estilo Enterprise Architect) -->
+      <div class="flex items-center gap-1.5 px-1">
+        <!-- Toggle Guías Inteligentes EA -->
+        <button
+          (click)="toggleSmartGuides.emit()"
+          [title]="smartGuidesEnabled() ? 'Desactivar guías magnéticas inteligentes' : 'Activar guías magnéticas inteligentes'"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[62px] group border border-transparent"
+          [class.bg-blue-50]="smartGuidesEnabled()"
+          [class.dark:bg-blue-950/40]="smartGuidesEnabled()"
+          [class.border-blue-200]="smartGuidesEnabled()"
+          [class.dark:border-blue-800]="smartGuidesEnabled()">
+          <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform"
+            [class.text-blue-600]="smartGuidesEnabled()"
+            [class.dark:text-blue-400]="smartGuidesEnabled()"
+            [class.text-slate-400]="!smartGuidesEnabled()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0 3v4.5m0 3v1.5M20.25 3.75v4.5m0 3v4.5m0 3v1.5M3.75 12h16.5M12 3.75v16.5" stroke-dasharray="2 2" />
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium leading-tight whitespace-nowrap"
+            [class.text-blue-700]="smartGuidesEnabled()"
+            [class.dark:text-blue-300]="smartGuidesEnabled()"
+            [class.font-bold]="smartGuidesEnabled()"
+            [class.text-slate-500]="!smartGuidesEnabled()">
+            {{ smartGuidesEnabled() ? ('toolbar.alignment.smartGuidesOn' | translate) : ('toolbar.alignment.smartGuidesOff' | translate) }}
+          </span>
+        </button>
+
+        <!-- Botones de Alineación Horizontal y Vertical -->
+        <div class="flex flex-col gap-1 justify-center pl-1 border-l border-slate-200 dark:border-slate-800">
+          <div class="flex items-center gap-1">
+            <!-- Alinear a la Izquierda -->
+            <button
+              (click)="alignNodes.emit('left')"
+              [disabled]="selectedNodesCount() < 2 || isReadOnly()"
+              [title]="'toolbar.alignment.alignLeft' | translate"
+              class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="1" width="2" height="14" rx="0.5"/>
+                <rect x="5" y="3" width="9" height="3" rx="0.5" opacity="0.8"/>
+                <rect x="5" y="9" width="6" height="3" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+            <!-- Alinear al Centro Horizontal -->
+            <button
+              (click)="alignNodes.emit('center')"
+              [disabled]="selectedNodesCount() < 2 || isReadOnly()"
+              [title]="'toolbar.alignment.alignCenter' | translate"
+              class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="7" y="1" width="2" height="14" rx="0.5"/>
+                <rect x="2" y="3" width="12" height="3" rx="0.5" opacity="0.8"/>
+                <rect x="4" y="9" width="8" height="3" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+            <!-- Alinear a la Derecha -->
+            <button
+              (click)="alignNodes.emit('right')"
+              [disabled]="selectedNodesCount() < 2 || isReadOnly()"
+              [title]="'toolbar.alignment.alignRight' | translate"
+              class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="13" y="1" width="2" height="14" rx="0.5"/>
+                <rect x="2" y="3" width="9" height="3" rx="0.5" opacity="0.8"/>
+                <rect x="5" y="9" width="6" height="3" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+            <!-- Distribuir Horizontalmente -->
+            <button
+              (click)="distributeNodes.emit('horizontal')"
+              [disabled]="selectedNodesCount() < 3 || isReadOnly()"
+              [title]="'toolbar.alignment.distributeH' | translate"
+              class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="2" width="2" height="12" rx="0.5"/>
+                <rect x="13" y="2" width="2" height="12" rx="0.5"/>
+                <rect x="6.5" y="4" width="3" height="8" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-1">
+            <!-- Alinear Arriba -->
+            <button
+              (click)="alignNodes.emit('top')"
+              [disabled]="selectedNodesCount() < 2 || isReadOnly()"
+              [title]="'toolbar.alignment.alignTop' | translate"
+              class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="1" width="14" height="2" rx="0.5"/>
+                <rect x="3" y="5" width="3" height="9" rx="0.5" opacity="0.8"/>
+                <rect x="9" y="5" width="3" height="6" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+            <!-- Alinear al Medio Vertical -->
+            <button
+              (click)="alignNodes.emit('middle')"
+              [disabled]="selectedNodesCount() < 2 || isReadOnly()"
+              [title]="'toolbar.alignment.alignMiddle' | translate"
+              class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="7" width="14" height="2" rx="0.5"/>
+                <rect x="3" y="2" width="3" height="12" rx="0.5" opacity="0.8"/>
+                <rect x="9" y="4" width="3" height="8" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+            <!-- Alinear Abajo -->
+            <button
+              (click)="alignNodes.emit('bottom')"
+              [disabled]="selectedNodesCount() < 2 || isReadOnly()"
+              [title]="'toolbar.alignment.alignBottom' | translate"
+              class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="13" width="14" height="2" rx="0.5"/>
+                <rect x="3" y="2" width="3" height="9" rx="0.5" opacity="0.8"/>
+                <rect x="9" y="5" width="3" height="6" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+            <!-- Distribuir Verticalmente -->
+            <button
+              (click)="distributeNodes.emit('vertical')"
+              [disabled]="selectedNodesCount() < 3 || isReadOnly()"
+              [title]="'toolbar.alignment.distributeV' | translate"
+              class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="2" y="1" width="12" height="2" rx="0.5"/>
+                <rect x="2" y="13" width="12" height="2" rx="0.5"/>
+                <rect x="4" y="6.5" width="8" height="3" rx="0.5" opacity="0.8"/>
+              </svg>
+            </button>
+          </div>
         </div>
-        <div class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase">
-          {{ 'ribbon.sections.diagramView' | translate }}
-        </div>
+
+        <!-- Botón Ajustar a Cuadrícula -->
+        <button
+          (click)="snapToGrid.emit()"
+          [disabled]="isReadOnly()"
+          [title]="'toolbar.alignment.snapGrid' | translate"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[56px] group border border-transparent disabled:opacity-30 disabled:cursor-not-allowed">
+          <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M1 5.33h14M1 10.67h14M5.33 1v14M10.67 1v14"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+            Cuadrícula
+          </span>
+        </button>
       </div>
 
     }

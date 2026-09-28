@@ -12,10 +12,19 @@
     [isToolboxOpen]="isSidebarOpen()"
     [canUndo]="canUndo()"
     [canRedo]="canRedo()"
+    [selectedNodeId]="selectedNodeId()"
+    [selectedNodeColor]="selectedNodeColor()"
+    [selectedNodesCount]="selectedNodeIdsList().length"
+    [smartGuidesEnabled]="smartGuidesEnabled()"
     (saveDiagram)="saveToBackend()"
     (undo)="undo()"
     (redo)="redo()"
     (selectAll)="selectAllClasses()"
+    (changeNodeColor)="onSetSelectedNodeColor($event)"
+    (alignNodes)="alignNodes($event)"
+    (distributeNodes)="distributeNodes($event)"
+    (snapToGrid)="snapSelectedToGrid()"
+    (toggleSmartGuides)="toggleSmartGuides()"
     (exportBmp)="downloadBmpFile()"
     (exportXmi)="downloadXmiFile()"
     (exportJson)="downloadJsonFile()"
@@ -58,21 +67,25 @@
     <!-- 2.2 [CONTENEDOR CENTRAL]: PESTAÑAS + PIZARRA (CANVAS) -->
     <div class="flex-1 flex flex-col overflow-hidden relative">
 
-      <!-- Barra de Pestañas y Breadcrumbs estilo Enterprise Architect -->
-      <div class="bg-[#ECEEF2] dark:bg-[#101426] border-b border-[#D0D4DC] dark:border-[#283256] px-3 py-1 flex items-center justify-between z-10 shrink-0 select-none">
-        <div class="flex items-center gap-1">
-          <div class="bg-white dark:bg-[#14182E] border-t-2 border-t-blue-600 border-x border-b-0 border-[#D0D4DC] dark:border-[#2D3762] px-3 py-1 text-[11px] font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 shadow-xs rounded-t-[2px]">
-            <ng-icon name="heroRectangleStack" class="text-xs text-blue-600 dark:text-blue-400"></ng-icon>
-            <span>{{ hasUnsavedChanges() ? '*' : '' }}{{ currentDiagramName() || 'Diagrama Principal' }}</span>
+      <!-- Barra de Pestañas y Breadcrumbs del Lienzo (Limpio y Moderno) -->
+      <div class="bg-white dark:bg-[#0D1124] border-b border-slate-200/80 dark:border-slate-800 px-4 py-1.5 flex items-center justify-between z-10 shrink-0 select-none">
+        <div class="flex items-center gap-2">
+          <div class="text-blue-600 dark:text-blue-400 font-semibold text-xs flex items-center gap-1.5">
+            <span>{{ hasUnsavedChanges() ? '*' : '' }}{{ currentDiagramName() || 'P2' }}</span>
           </div>
+          <button (click)="addClass()" title="Nuevo diagrama" class="w-5 h-5 rounded hover:bg-slate-100 dark:hover:bg-[#1A2038] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex items-center justify-center cursor-pointer transition-colors">
+            <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+          </button>
         </div>
 
-        <div class="hidden sm:flex items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400 font-sans">
-          <ng-icon name="heroHome" class="text-xs text-slate-400"></ng-icon>
+        <div class="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 font-mono">
           <span>/</span>
           <span>Model</span>
           <span>/</span>
-          <span class="font-medium text-slate-700 dark:text-slate-200">{{ currentDiagramName() }}</span>
+          <span class="font-medium text-slate-600 dark:text-slate-300">{{ currentDiagramName() || 'P2' }}</span>
+          <button (click)="fitView()" title="Pantalla completa" class="ml-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer transition-colors">
+            <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
+          </button>
         </div>
       </div>
 
@@ -81,9 +94,9 @@
         <button
           (click)="isSidebarOpen.set(true)"
           [title]="'toolbar.showToolbox' | translate"
-          class="absolute top-12 left-3.5 z-40 bg-white/95 hover:bg-white dark:bg-[#14182E]/95 dark:hover:bg-[#1C2242] text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-[#2D3762] shadow-md rounded-md px-2.5 py-1.5 flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105 backdrop-blur-xs">
-          <ng-icon name="heroBars3" class="text-sm text-[#6B5A52] dark:text-amber-400"></ng-icon>
-          <span class="text-[11px] text-[#2A201B] dark:text-slate-200">Toolbox</span>
+          class="absolute top-12 left-3.5 z-40 bg-white/95 hover:bg-white dark:bg-[#14182E]/95 dark:hover:bg-[#1C2242] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#2D3762] shadow-sm rounded-lg px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all hover:scale-102 backdrop-blur-xs">
+          <ng-icon name="heroBars3" class="text-xs text-blue-600 dark:text-blue-400"></ng-icon>
+          <span class="text-xs text-slate-700 dark:text-slate-200">Toolbox</span>
         </button>
       }
 
@@ -92,7 +105,7 @@
         <button
           (click)="isAiPanelOpen.set(true)"
           [title]="'toolbar.openAiTooltip' | translate"
-          class="absolute top-12 right-3.5 z-40 bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-600 hover:to-indigo-700 text-white shadow-lg rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer transition-all hover:scale-105">
+          class="absolute top-12 right-3.5 z-40 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-all hover:scale-105">
           <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
           <span>{{ 'toolbar.aiCopilot' | translate }}</span>
           <ng-icon name="heroBars3CenterLeft" class="text-xs opacity-80"></ng-icon>
@@ -132,6 +145,7 @@
         [currentUserId]="authService.currentUser()?.id || null"
         [diagramId]="currentDiagramId()"
         [activeDiagramType]="activeDiagramType()"
+        [smartGuidesEnabled]="smartGuidesEnabled()"
         (flowLoaded)="onFlowLoaded()"
         (connectionCreated)="onConnectionCreated($event)"
         (connectionReassigned)="onConnectionReassigned($event)"
@@ -147,7 +161,11 @@
         (canvasMouseDown)="onCanvasMouseDown($event)"
         (canvasMouseMove)="onCanvasMouseMove($event)"
         (zoomChange)="onZoomChanged($event)"
-        (viewportScroll)="onViewportScroll($event)">
+        (viewportScroll)="onViewportScroll($event)"
+        (alignNodes)="alignNodes($event)"
+        (distributeNodes)="distributeNodes($event)"
+        (snapToGrid)="snapSelectedToGrid()"
+        (toggleSmartGuides)="toggleSmartGuides()">
       </app-diagram-canvas>
 
     </div>
