@@ -79,6 +79,7 @@ export class DiagramCanvasComponent {
   readonly moveNodes = output<FMoveNodesEvent>();
   readonly selectionChange = output<FSelectionChangeEvent>();
   readonly nodePositionChange = output<{ node: UmlClassNode; newPosition: { x: number; y: number } }>();
+  readonly nodeSizeChange = output<{ node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }>();
   readonly nodeClick = output<{ nodeId: string; event: MouseEvent }>();
   readonly nodeDblClick = output<{ node: UmlClassNode; event: MouseEvent }>();
   readonly connectionClick = output<{ connId: string; event: MouseEvent }>();
@@ -326,12 +327,15 @@ export class DiagramCanvasComponent {
   // Ancho dinámico adaptativo para elementos UML según su tipo y contenido
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
+    if (node.width && node.width > 0) {
+      return node.width;
+    }
     if (node.nodeType === 'actor') {
-      return node.width || 90;
+      return 90;
     }
     if (node.nodeType === 'use_case') {
       const nameLen = (node.name || '').length;
-      return Math.max(node.width || 160, Math.round(nameLen * 7.5 + 50));
+      return Math.max(160, Math.round(nameLen * 7.5 + 50));
     }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
@@ -345,6 +349,52 @@ export class DiagramCanvasComponent {
     }
     const computed = Math.round(maxLen * CHAR_W + 28);
     return Math.max(130, computed);
+  }
+
+  // Alto dinámico adaptativo para elementos UML según su tipo y contenido
+  getNodeHeight(node: UmlClassNode): number {
+    if (node.isAnchor) return 0;
+    if (node.height && node.height > 0) {
+      return node.height;
+    }
+    if (node.nodeType === 'actor') {
+      return 110;
+    }
+    if (node.nodeType === 'use_case') {
+      return 75;
+    }
+    // Para clases UML: cabecera (~34px) + cuerpo de atributos + métodos
+    const headerH = 34;
+    const attrsCount = (node.attributes || []).length;
+    const methodsCount = (node.methods || []).length;
+    const attrsH = attrsCount > 0 ? attrsCount * 20 + 12 : 28;
+    const methodsH = methodsCount > 0 ? methodsCount * 20 + 12 : 0;
+    return headerH + attrsH + methodsH;
+  }
+
+  getNodeSize(node: UmlClassNode): { width: number; height: number } | undefined {
+    if (node.isAnchor) return undefined;
+    return {
+      width: this.getNodeWidth(node),
+      height: this.getNodeHeight(node),
+    };
+  }
+
+  onNodeSizeChange(node: UmlClassNode, rect: any): void {
+    if (node.isAnchor || this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    if (!rect) return;
+    const minW = node.nodeType === 'actor' ? 60 : (node.nodeType === 'use_case' ? 100 : 120);
+    const minH = node.nodeType === 'actor' ? 80 : (node.nodeType === 'use_case' ? 50 : 60);
+    const width = Math.max(minW, Math.round(rect.width));
+    const height = Math.max(minH, Math.round(rect.height));
+    const position = {
+      x: typeof rect.x === 'number' ? Math.round(rect.x) : node.position.x,
+      y: typeof rect.y === 'number' ? Math.round(rect.y) : node.position.y,
+    };
+    node.width = width;
+    node.height = height;
+    node.position = position;
+    this.nodeSizeChange.emit({ node, width, height, position });
   }
 
   // Helpers de estado visual

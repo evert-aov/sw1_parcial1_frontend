@@ -231,11 +231,14 @@ export class BmpExportService {
         cacheBust: true,
         filter: (domNode: HTMLElement) => {
           const classList = domNode.classList;
-          // Filtrar drag handles interactivos temporales de Foblex y puntos conectores
+          // Filtrar drag handles interactivos temporales de Foblex, manejadores de resize y puntos conectores
           if (
             classList?.contains('f-connection-drag-handle') ||
+            classList?.contains('f-resize-handle') ||
+            classList?.contains('uml-resize-handle') ||
             domNode.hasAttribute?.('f-connection-drag-handle-start') ||
             domNode.hasAttribute?.('f-connection-drag-handle-end') ||
+            domNode.hasAttribute?.('fResizeHandle') ||
             classList?.contains('uml-connector-point')
           ) {
             return false;

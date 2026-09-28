@@ -170,15 +170,17 @@
               fDragHandle
               [fNodeDraggingDisabled]="node.isAnchor || selectedRelationType() !== null || isNodeLockedByOther(node.id)"
               [(fNodePosition)]="node.position"
+              [fNodeSize]="getNodeSize(node)"
+              (fNodeSizeChange)="onNodeSizeChange(node, $event)"
               (fNodePositionChange)="onNodePositionChange(node, $event)"
               (click)="onNodeClick(node.id, $event)"
               (dblclick)="onNodeDblClick(node, $event)"
               (mouseenter)="hoveredNodeId.set(node.id)"
               (mouseleave)="onNodeMouseLeave(node.id)"
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
-              [style.minWidth.px]="node.isAnchor ? 0 : getNodeWidth(node)"
-              [style.minHeight.px]="node.isAnchor ? 0 : (node.height || (node.nodeType === 'use_case' ? 75 : (node.nodeType === 'actor' ? 110 : null)))"
-              [style.height.px]="node.isAnchor ? 0 : (node.height || (node.nodeType === 'use_case' ? 75 : (node.nodeType === 'actor' ? 110 : null)))"
+              [style.minWidth.px]="node.isAnchor ? 0 : (node.nodeType === 'actor' ? 60 : (node.nodeType === 'use_case' ? 100 : 120))"
+              [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'actor' ? 80 : (node.nodeType === 'use_case' ? 50 : 60))"
+              [style.height.px]="node.isAnchor ? 0 : getNodeHeight(node)"
               [style.--node-bg]="node.color || null"
               [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
               [class.f-selected]="isNodeSelected(node.id)"
@@ -187,9 +189,10 @@
               [class.f-node-class]="!node.nodeType || node.nodeType === 'class'"
               [ngClass]="{
                 'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
-                'font-sans text-[#241C18] select-none relative group/node transition-shadow': !node.isAnchor,
-                'rounded-none overflow-hidden': !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
-                'overflow-visible': !node.isAnchor && (node.nodeType === 'actor' || node.nodeType === 'use_case'),
+                'font-sans text-[#241C18] select-none relative group/node transition-shadow flex flex-col': !node.isAnchor,
+                'rounded-none': !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
+                'overflow-visible': isNodeSelected(node.id) || (!node.isAnchor && (node.nodeType === 'actor' || node.nodeType === 'use_case')),
+                'overflow-hidden': !isNodeSelected(node.id) && !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
                 'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)] z-30': !node.isAnchor && isNodeSelected(node.id) && (!node.nodeType || node.nodeType === 'class'),
                 'ring-2 ring-indigo-400 z-20': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id) && (!node.nodeType || node.nodeType === 'class'),
                 'ring-2 ring-[#796354] shadow-md': !node.isAnchor && selectedSourceNodeId() === node.id && !isNodeSelected(node.id),
@@ -292,6 +295,18 @@
                   }"
                   class="uml-connector-point absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                 </div>
+
+                <!-- 8 MANEJADORES MANUALES DE CAMBIO DE TAMAÑO (RESIZE HANDLES) -->
+                @if (!node.isAnchor && isNodeSelected(node.id) && selectedRelationType() === null && !isReadOnly() && !isNodeLockedByOther(node.id)) {
+                  <div fResizeHandle [fResizeHandleType]="'left-top'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                  <div fResizeHandle [fResizeHandleType]="'top'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                  <div fResizeHandle [fResizeHandleType]="'right-top'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                  <div fResizeHandle [fResizeHandleType]="'right'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                  <div fResizeHandle [fResizeHandleType]="'right-bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                  <div fResizeHandle [fResizeHandleType]="'bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                  <div fResizeHandle [fResizeHandleType]="'left-bottom'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                  <div fResizeHandle [fResizeHandleType]="'left'" class="uml-resize-handle" (click)="$event.stopPropagation()"></div>
+                }
 
                 <!-- CONTENIDO SEGÚN TIPO DE ELEMENTO UML -->
                 @if (node.nodeType === 'actor') {
@@ -410,7 +425,7 @@
                       'bg-[#FFFDDD]': !isNodeSelected(node.id) && !isNeighborNode(node.id) && !node.color
                     }"
                     [style.backgroundColor]="(!isNodeSelected(node.id) && !isNeighborNode(node.id)) ? (node.color || '#FFFDDD') : null"
-                    class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors">
+                    class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors shrink-0">
                     @if (renamingNodeId() === node.id) {
                       <input
                         #renameClassInput
@@ -444,7 +459,7 @@
                   <!-- 2. CUERPO: ATRIBUTOS TIPADOS ESTILO EA -->
                   <div
                     [style.backgroundColor]="node.color || '#FFFDDD'"
-                    class="px-2.5 py-1.5 space-y-0.5 min-h-[28px]">
+                    class="px-2.5 py-1.5 space-y-0.5 min-h-[28px] flex-1">
                     @if (node.attributes && node.attributes.length > 0) {
                       @for (attr of node.attributes; track attr.name) {
                         <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] whitespace-nowrap">
@@ -460,7 +475,7 @@
                   @if (node.methods && node.methods.length > 0) {
                     <div
                       [style.backgroundColor]="node.color || '#FFFDDD'"
-                      class="px-2.5 py-1.5 space-y-0.5 border-t border-[#796354]">
+                      class="px-2.5 py-1.5 space-y-0.5 border-t border-[#796354] shrink-0">
                       @for (m of node.methods; track m.name) {
                         <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] whitespace-nowrap">
                           <span class="shrink-0 font-medium select-none mr-1.5 text-[#5A4537]">+</span>

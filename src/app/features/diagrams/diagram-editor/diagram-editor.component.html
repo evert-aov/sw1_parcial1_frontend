@@ -215,6 +215,7 @@
         (moveNodes)="onMoveNodes($event)"
         (selectionChange)="onSelectionChange($event)"
         (nodePositionChange)="onNodePositionChange($event.node, $event.newPosition)"
+        (nodeSizeChange)="onNodeSizeChanged($event)"
         (nodeClick)="onNodeSelect($event.nodeId, $event.event)"
         (nodeDblClick)="openEditNodeModal($event.node, $event.event)"
         (connectionClick)="onConnectionSelect($event.connId, $event.event)"

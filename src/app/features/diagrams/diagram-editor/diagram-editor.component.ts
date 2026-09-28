@@ -1040,6 +1040,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
+    if (node.width && node.width > 0) return node.width;
+    if (node.nodeType === 'actor') return 90;
+    if (node.nodeType === 'use_case') {
+      const nameLen = (node.name || '').length;
+      return Math.max(160, Math.round(nameLen * 7.5 + 50));
+    }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
     for (const attr of node.attributes || []) {
@@ -1057,12 +1063,34 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   getNodeHeight(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
     if (node.height && node.height > 0) return node.height;
+    if (node.nodeType === 'actor') return 110;
+    if (node.nodeType === 'use_case') return 75;
     const headerH = 34;
     const attrCount = (node.attributes || []).length;
     const methodCount = (node.methods || []).length;
     const attrH = attrCount > 0 ? attrCount * 22 + 12 : 28;
     const methodH = methodCount > 0 ? methodCount * 22 + 12 : 0;
     return headerH + attrH + methodH;
+  }
+
+  onNodeSizeChanged(event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(event.node.id)) return;
+    this.pushSnapshot();
+    const targetNode = this.nodes().find((n) => n.id === event.node.id);
+    if (targetNode) {
+      targetNode.width = event.width;
+      targetNode.height = event.height;
+      targetNode.position = event.position;
+    }
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.collaborationService.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      'update',
+      this.defaultLineStyle()
+    );
+    this.diagramCanvas?.redraw();
   }
 
   toggleSmartGuides(): void {
