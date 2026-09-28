@@ -119,6 +119,9 @@ export interface UmlClassNode {
   position: { x: number; y: number };
   width: number;
   height?: number;
+  customWidth?: number;
+  customHeight?: number;
+  isCustomSize?: boolean;
   color?: string | null;
   attributes: UmlAttribute[];
   methods: UmlMethod[];

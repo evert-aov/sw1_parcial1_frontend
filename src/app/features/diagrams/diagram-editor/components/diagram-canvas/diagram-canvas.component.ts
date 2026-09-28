@@ -324,12 +324,9 @@ export class DiagramCanvasComponent {
     return this.boardElementRef?.nativeElement || this.flowContainerRef?.nativeElement;
   }
 
-  // Ancho dinámico adaptativo para elementos UML según su tipo y contenido
-  getNodeWidth(node: UmlClassNode): number {
+  // Ancho dinámico adaptativo para elementos UML según su contenido (atributos, métodos, nombre)
+  getDynamicNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
-    if (node.width && node.width > 0) {
-      return node.width;
-    }
     if (node.nodeType === 'actor') {
       return 90;
     }
@@ -351,39 +348,49 @@ export class DiagramCanvasComponent {
     return Math.max(130, computed);
   }
 
-  // Alto dinámico adaptativo para elementos UML según su tipo y contenido
-  getNodeHeight(node: UmlClassNode): number {
+  // Ancho efectivo del nodo: la función principal y base es el cálculo dinámico según atributos;
+  // adicionalmente respeta la redimensión manual si el usuario la amplió.
+  getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
-    if (node.height && node.height > 0) {
+    const dynamicW = this.getDynamicNodeWidth(node);
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+    return Math.max(dynamicW, manualW);
+  }
+
+  // Alto dinámico adaptativo para elementos UML según su tipo y contenido
+  getNodeHeight(node: UmlClassNode): number | null {
+    if (node.isAnchor) return 0;
+    if (node.customHeight && node.customHeight > 0) {
+      return node.customHeight;
+    }
+    if (node.isCustomSize && node.height && node.height > 0) {
       return node.height;
     }
     if (node.nodeType === 'actor') {
-      return 110;
+      return node.height || 110;
     }
     if (node.nodeType === 'use_case') {
-      return 75;
+      return node.height || 75;
     }
-    // Para clases UML: cabecera (~34px) + cuerpo de atributos + métodos
-    const headerH = 34;
-    const attrsCount = (node.attributes || []).length;
-    const methodsCount = (node.methods || []).length;
-    const attrsH = attrsCount > 0 ? attrsCount * 20 + 12 : 28;
-    const methodsH = methodsCount > 0 ? methodsCount * 20 + 12 : 0;
-    return headerH + attrsH + methodsH;
+    // Para clases UML sin redimensión manual: el alto es 100% dinámico según el contenido
+    return null;
   }
 
   getNodeSize(node: UmlClassNode): { width: number; height: number } | undefined {
     if (node.isAnchor) return undefined;
+    const h = this.getNodeHeight(node);
+    if (!h) return undefined;
     return {
       width: this.getNodeWidth(node),
-      height: this.getNodeHeight(node),
+      height: h,
     };
   }
 
   onNodeSizeChange(node: UmlClassNode, rect: any): void {
     if (node.isAnchor || this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
     if (!rect) return;
-    const minW = node.nodeType === 'actor' ? 60 : (node.nodeType === 'use_case' ? 100 : 120);
+    const dynamicW = this.getDynamicNodeWidth(node);
+    const minW = Math.max(dynamicW, node.nodeType === 'actor' ? 60 : (node.nodeType === 'use_case' ? 100 : 120));
     const minH = node.nodeType === 'actor' ? 80 : (node.nodeType === 'use_case' ? 50 : 60);
     const width = Math.max(minW, Math.round(rect.width));
     const height = Math.max(minH, Math.round(rect.height));
@@ -391,6 +398,9 @@ export class DiagramCanvasComponent {
       x: typeof rect.x === 'number' ? Math.round(rect.x) : node.position.x,
       y: typeof rect.y === 'number' ? Math.round(rect.y) : node.position.y,
     };
+    node.customWidth = width;
+    node.customHeight = height;
+    node.isCustomSize = true;
     node.width = width;
     node.height = height;
     node.position = position;

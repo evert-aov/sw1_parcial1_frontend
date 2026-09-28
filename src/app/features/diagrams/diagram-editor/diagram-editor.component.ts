@@ -584,12 +584,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             nodeType = 'use_case';
           }
         }
+        const isManuallyResized = !!(n.height && n.height > 0);
         return {
           id: n.id,
           name: n.name,
           position: { x: n.positionX, y: n.positionY },
           width: n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : 220)),
           height: n.height || undefined,
+          customWidth: isManuallyResized ? n.width : undefined,
+          customHeight: isManuallyResized ? n.height! : undefined,
+          isCustomSize: isManuallyResized,
           color: n.color || '#FFFDDD',
           isAnchor: n.isAnchor,
           nodeType,
@@ -857,11 +861,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       defaultLineStyle: this.defaultLineStyle(),
       nodes: this.nodes().map((n) => ({
         id: n.id,
-        name: n.isAnchor ? (n.name || 'Anchor') : n.name,
+        name: n.name || (n.isAnchor ? 'Anchor' : 'ClassName'),
         positionX: n.position.x,
         positionY: n.position.y,
-        width: n.width,
-        height: n.height,
+        width: this.getNodeWidth(n),
+        height: n.customHeight || (n.isCustomSize ? n.height : null) || null,
         color: n.color || null,
         isAnchor: n.isAnchor,
         assocMainConnId: n.assocMainConnId,
@@ -1038,9 +1042,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.mouseCanvasPos.set({ x: Math.round(canvasX), y: Math.round(canvasY) });
   }
 
-  getNodeWidth(node: UmlClassNode): number {
+  getDynamicNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
-    if (node.width && node.width > 0) return node.width;
     if (node.nodeType === 'actor') return 90;
     if (node.nodeType === 'use_case') {
       const nameLen = (node.name || '').length;
@@ -1060,11 +1063,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     return Math.max(130, computed);
   }
 
+  getNodeWidth(node: UmlClassNode): number {
+    if (node.isAnchor) return 0;
+    const dynamicW = this.getDynamicNodeWidth(node);
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+    return Math.max(dynamicW, manualW);
+  }
+
   getNodeHeight(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
-    if (node.height && node.height > 0) return node.height;
-    if (node.nodeType === 'actor') return 110;
-    if (node.nodeType === 'use_case') return 75;
+    if (node.customHeight && node.customHeight > 0) return node.customHeight;
+    if (node.isCustomSize && node.height && node.height > 0) return node.height;
+    if (node.nodeType === 'actor') return node.height || 110;
+    if (node.nodeType === 'use_case') return node.height || 75;
     const headerH = 34;
     const attrCount = (node.attributes || []).length;
     const methodCount = (node.methods || []).length;
@@ -1078,6 +1089,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.pushSnapshot();
     const targetNode = this.nodes().find((n) => n.id === event.node.id);
     if (targetNode) {
+      targetNode.customWidth = event.width;
+      targetNode.customHeight = event.height;
+      targetNode.isCustomSize = true;
       targetNode.width = event.width;
       targetNode.height = event.height;
       targetNode.position = event.position;
