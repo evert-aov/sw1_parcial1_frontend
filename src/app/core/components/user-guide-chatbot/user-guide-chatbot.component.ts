@@ -30,6 +30,8 @@ import {
   heroArrowLeft,
   heroCheck,
   heroPaperAirplane,
+  heroEye,
+  heroEyeSlash,
 } from '@ng-icons/heroicons/outline';
 
 export interface ChatMessage {
@@ -83,6 +85,8 @@ export interface TourStep {
       heroArrowLeft,
       heroCheck,
       heroPaperAirplane,
+      heroEye,
+      heroEyeSlash,
     }),
   ],
 })
@@ -94,6 +98,109 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
   translationService = inject(TranslationService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly initialTimestamp = new Date();
+
+  // Posición arrastrable (Draggable) del icono del manual
+  readonly launcherPosX = signal<number | null>(null);
+  readonly launcherPosY = signal<number | null>(null);
+  readonly isDragging = signal<boolean>(false);
+
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private initialPosX = 0;
+  private initialPosY = 0;
+  private hasMoved = false;
+
+  constructor() {
+    try {
+      const savedPos = localStorage.getItem('user_guide_launcher_pos');
+      if (savedPos) {
+        const parsed = JSON.parse(savedPos);
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          const clampedX = Math.max(10, Math.min(window.innerWidth - 65, parsed.x));
+          const clampedY = Math.max(10, Math.min(window.innerHeight - 65, parsed.y));
+          this.launcherPosX.set(clampedX);
+          this.launcherPosY.set(clampedY);
+        }
+      }
+    } catch {}
+  }
+
+  onLauncherMouseDown(event: MouseEvent): void {
+    if (event.button !== 0) return;
+    this.startDrag(event.clientX, event.clientY, event.currentTarget as HTMLElement);
+  }
+
+  onLauncherTouchStart(event: TouchEvent): void {
+    if (event.touches.length !== 1) return;
+    this.startDrag(event.touches[0].clientX, event.touches[0].clientY, event.currentTarget as HTMLElement);
+  }
+
+  private startDrag(clientX: number, clientY: number, target: HTMLElement): void {
+    this.dragStartX = clientX;
+    this.dragStartY = clientY;
+    const rect = target.getBoundingClientRect();
+    this.initialPosX = rect.left;
+    this.initialPosY = rect.top;
+    this.hasMoved = false;
+
+    const onMove = (moveEvent: MouseEvent | TouchEvent) => {
+      const currX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
+      const currY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
+      const deltaX = currX - this.dragStartX;
+      const deltaY = currY - this.dragStartY;
+      if (Math.hypot(deltaX, deltaY) > 5) {
+        this.hasMoved = true;
+        this.isDragging.set(true);
+      }
+      if (this.hasMoved) {
+        const newX = Math.max(10, Math.min(window.innerWidth - 65, this.initialPosX + deltaX));
+        const newY = Math.max(10, Math.min(window.innerHeight - 65, this.initialPosY + deltaY));
+        this.launcherPosX.set(newX);
+        this.launcherPosY.set(newY);
+      }
+    };
+
+    const onEnd = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+
+      if (this.hasMoved) {
+        try {
+          localStorage.setItem(
+            'user_guide_launcher_pos',
+            JSON.stringify({ x: this.launcherPosX(), y: this.launcherPosY() })
+          );
+        } catch {}
+      }
+
+      setTimeout(() => {
+        this.isDragging.set(false);
+        this.hasMoved = false;
+      }, 80);
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('touchend', onEnd);
+  }
+
+  onLauncherClick(): void {
+    if (this.hasMoved || this.isDragging()) return;
+    this.toggleOpen();
+  }
+
+  hideLauncher(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.guideService.hideLauncher();
+  }
+
+  showLauncher(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.guideService.showLauncher();
+  }
 
   scrollPills(offset: number): void {
     if (this.pillsContainer) {

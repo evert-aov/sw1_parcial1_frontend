@@ -1,7 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, map, catchError, throwError } from 'rxjs';
-import { DiagramDto, SaveDiagramAstRequest, UmlClassNode, UmlConnection } from '../models/diagram.model';
+import {
+  DiagramDto,
+  DiagramType,
+  SaveDiagramAstRequest,
+  UmlClassNode,
+  UmlConnection,
+} from '../models/diagram.model';
 import { ApiResponse } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 
@@ -14,6 +20,7 @@ export class DiagramService {
 
   // Signals para estado reactivo
   readonly currentDiagram = signal<DiagramDto | null>(null);
+  readonly projectDiagrams = signal<DiagramDto[]>([]);
   readonly isSaving = signal<boolean>(false);
   readonly lastSavedAt = signal<Date | null>(null);
   readonly isLoading = signal<boolean>(false);
@@ -42,7 +49,10 @@ export class DiagramService {
     this.isLoading.set(true);
     return this.http.get<ApiResponse<DiagramDto[]>>(`${this.apiUrl}/project/${projectId}`).pipe(
       map((res) => res.data),
-      tap(() => this.isLoading.set(false)),
+      tap((diagrams) => {
+        this.projectDiagrams.set(diagrams || []);
+        this.isLoading.set(false);
+      }),
       catchError((err) => {
         this.isLoading.set(false);
         return throwError(() => err);
@@ -50,12 +60,20 @@ export class DiagramService {
     );
   }
 
-  createDiagram(projectId: string, name: string): Observable<DiagramDto> {
+  createDiagram(
+    projectId: string,
+    name: string,
+    type: DiagramType = DiagramType.CLASS,
+  ): Observable<DiagramDto> {
     this.isLoading.set(true);
-    return this.http.post<ApiResponse<DiagramDto>>(this.apiUrl, { projectId, name }).pipe(
+    return this.http.post<ApiResponse<DiagramDto>>(this.apiUrl, { projectId, name, type }).pipe(
       map((res) => res.data),
       tap((diagram) => {
         this.currentDiagram.set(diagram);
+        const currentList = this.projectDiagrams();
+        if (!currentList.some((d) => d.id === diagram.id)) {
+          this.projectDiagrams.set([...currentList, diagram]);
+        }
         this.isLoading.set(false);
       }),
       catchError((err) => {
@@ -77,6 +95,29 @@ export class DiagramService {
       catchError((err) => {
         this.isSaving.set(false);
         return throwError(() => err);
+      }),
+    );
+  }
+
+  renameDiagram(diagramId: string, name: string): Observable<DiagramDto> {
+    return this.http.patch<ApiResponse<DiagramDto>>(`${this.apiUrl}/${diagramId}`, { name }).pipe(
+      map((res) => res.data),
+      tap((updated) => {
+        this.projectDiagrams.update((list) =>
+          list.map((d) => (d.id === diagramId ? { ...d, name: updated.name } : d)),
+        );
+        if (this.currentDiagram()?.id === diagramId) {
+          this.currentDiagram.update((cur) => (cur ? { ...cur, name: updated.name } : cur));
+        }
+      }),
+    );
+  }
+
+  deleteDiagram(diagramId: string): Observable<void> {
+    return this.http.delete<ApiResponse<any>>(`${this.apiUrl}/${diagramId}`).pipe(
+      map(() => void 0),
+      tap(() => {
+        this.projectDiagrams.update((list) => list.filter((d) => d.id !== diagramId));
       }),
     );
   }

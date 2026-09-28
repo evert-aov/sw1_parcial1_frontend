@@ -1,20 +1,34 @@
 @if (isOpen()) {
-  <aside class="w-64 bg-white dark:bg-[#0D1124] border-r border-slate-200/80 dark:border-slate-800 flex flex-col shrink-0 select-none text-xs text-slate-800 dark:text-slate-200 shadow-xs overflow-y-auto z-20 animate-in slide-in-from-left duration-150 transition-colors">
+  <aside
+    [style.width.px]="sidebarWidth()"
+    [class.transition-none]="isResizing()"
+    class="relative bg-white dark:bg-[#0D1124] border-r border-slate-200/80 dark:border-slate-800 flex flex-col shrink-0 select-none text-xs text-slate-800 dark:text-slate-200 shadow-xs h-full min-h-0 overflow-hidden z-20 animate-in slide-in-from-left duration-150 transition-colors">
 
     <!-- Header Tabs: TOOLBOX & EXPLORADOR -->
     <div class="flex items-center border-b border-slate-200/80 dark:border-slate-800 text-xs font-semibold bg-white dark:bg-[#0D1124] shrink-0">
-      <button class="flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-white dark:bg-[#0D1124] cursor-pointer">
+      <button
+        (click)="activeTab.set('toolbox')"
+        [ngClass]="activeTab() === 'toolbox' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-white dark:bg-[#0D1124]' : 'text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 bg-slate-50/60 dark:bg-[#0F142A] border-b-2 border-transparent'"
+        class="flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
         <ng-icon name="heroBars3" class="text-sm"></ng-icon>
         <span class="tracking-wide text-[11px] font-bold">TOOLBOX</span>
       </button>
-      <button class="flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 bg-slate-50/60 dark:bg-[#0F142A] border-b-2 border-transparent cursor-pointer transition-colors">
+      <button
+        (click)="activeTab.set('explorer')"
+        [ngClass]="activeTab() === 'explorer' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-white dark:bg-[#0D1124]' : 'text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 bg-slate-50/60 dark:bg-[#0F142A] border-b-2 border-transparent'"
+        class="flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
         <ng-icon name="heroFolder" class="text-sm"></ng-icon>
         <span class="tracking-wide text-[11px] font-semibold">EXPLORADOR</span>
       </button>
     </div>
 
+    @if (activeTab() === 'toolbox') {
+
+    <!-- Contenedor scrollable del Toolbox -->
+    <div class="flex-1 overflow-y-auto min-h-0 divide-y divide-slate-100 dark:divide-slate-800/80 custom-sidebar-scrollbar">
+
     <!-- Sección 0: Selector de Tipos de Diagrama UML -->
-    <div class="border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+    <div class="shrink-0">
       <div
         (click)="isDiagramTypesOpen.set(!isDiagramTypesOpen())"
         class="px-3.5 py-2.5 font-bold flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
@@ -53,8 +67,176 @@
       }
     </div>
 
-    <!-- Sección 1: Relaciones y Elementos para Diagrama de Clases -->
-    @if (activeDiagramType() === DiagramType.CLASS) {
+    <!-- Sección 1A: Elementos y Relaciones para DIAGRAMA DE CASOS DE USO -->
+    @if (activeDiagramType() === DiagramType.USE_CASE) {
+      
+      <!-- Elementos Básicos: Actor y Caso de Uso (Elipse) -->
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
+        <div class="px-3.5 py-2.5 flex items-center justify-between">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon name="heroUserGroup" class="text-xs text-blue-500"></ng-icon>
+            <span>Elementos <span class="font-normal text-slate-500">de Casos de Uso</span></span>
+          </span>
+        </div>
+
+        <div class="p-2 space-y-1.5">
+          <!-- Botón Actor -->
+          <button
+            (click)="addActor.emit()"
+            [disabled]="isReadOnly()"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
+            <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
+              <svg width="18" height="22" viewBox="0 0 48 66" fill="none" class="stroke-current">
+                <circle cx="24" cy="12" r="10" fill="currentColor" fill-opacity="0.18" stroke-width="2.5" />
+                <circle cx="20.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
+                <circle cx="27.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
+                <path d="M 20 14.5 Q 24 17.5 28 14.5" stroke-width="1.8" fill="none" stroke-linecap="round" />
+                <line x1="24" y1="22" x2="24" y2="43" stroke-width="2.5" />
+                <line x1="7" y1="31" x2="41" y2="31" stroke-width="2.5" stroke-linecap="round" />
+                <line x1="24" y1="43" x2="10" y2="63" stroke-width="2.5" stroke-linecap="round" />
+                <line x1="24" y1="43" x2="38" y2="63" stroke-width="2.5" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Usuario o sistema externo</div>
+            </div>
+            <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
+          </button>
+
+          <!-- Botón Caso de Uso (Elipse) -->
+          <button
+            (click)="addUseCase.emit()"
+            [disabled]="isReadOnly()"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-amber-300 dark:hover:border-amber-700">
+            <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
+              <ng-icon name="heroEllipsisHorizontalCircle" class="text-base"></ng-icon>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Caso de Uso</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Elipse de funcionalidad</div>
+            </div>
+            <span class="text-xs text-amber-600 dark:text-amber-400 font-bold px-1">+</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Relaciones de Casos de Uso (Asociación, Include, Extend, Generalización, Dependencia) -->
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
+        <div
+          (click)="isRelationshipsOpen.set(!isRelationshipsOpen())"
+          class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
+            <span>Relaciones <span class="font-normal text-slate-500">de Casos de Uso</span></span>
+          </span>
+          @if (selectedRelationType()) {
+            <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-blue-600 hover:text-red-600 dark:text-blue-400 dark:hover:text-red-400 font-normal cursor-pointer">
+              {{ 'toolbar.relationships.deselect' | translate }}
+            </span>
+          }
+        </div>
+
+        @if (isRelationshipsOpen()) {
+          <div class="p-2 space-y-1">
+            @for (rel of currentRelations(); track rel.id) {
+              <button
+                (click)="onSelectRelation(rel.id)"
+                [ngClass]="{
+                  'bg-blue-50 dark:bg-blue-950/70 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-2xs': selectedRelationType() === rel.id,
+                  'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
+                }"
+                class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
+                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
+                  @switch (rel.id) {
+                    @case ('association') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                      </svg>
+                    }
+                    @case ('include') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
+                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    }
+                    @case ('extend') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
+                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    }
+                    @case ('generalization') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="18" y2="7" stroke="currentColor" stroke-width="1.8"/>
+                        <polygon points="18,2 26,7 18,12" fill="white" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                      </svg>
+                    }
+                    @case ('dependency') {
+                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
+                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
+                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    }
+                    @default {
+                      <span class="font-mono text-xs">{{ rel.icon }}</span>
+                    }
+                  }
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
+                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="rel.description">{{ rel.description }}</div>
+                </div>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Enrutamiento de Líneas para Casos de Uso -->
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
+        <div
+          (click)="isLineStylesOpen.set(!isLineStylesOpen())"
+          class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
+            <span>Line Style (Routing)</span>
+          </span>
+          <ng-icon name="heroArrowsPointingOut" class="text-xs text-slate-400"></ng-icon>
+        </div>
+
+        @if (isLineStylesOpen()) {
+          <div class="p-3 space-y-2.5">
+            <select
+              [value]="defaultLineStyle()"
+              (change)="onSetLineStyle($any($event.target).value)"
+              class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
+              <option value="segment">Línea Personalizada (Segmentos)</option>
+              <option value="straight">Direct (Directa / Recta)</option>
+              <option value="bezier">Bezier (Curva Suave)</option>
+              <option value="adaptive-curve">Orthogonal - Rounded (Curva Adaptativa)</option>
+            </select>
+
+            <div class="grid grid-cols-4 gap-1.5 pt-0.5">
+              <button (click)="zoomOut.emit()" title="Alejar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
+              </button>
+              <button (click)="zoomIn.emit()" title="Acercar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
+              </button>
+              <button (click)="resetView.emit()" title="1:1" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
+                1:1
+              </button>
+              <button (click)="fitView.emit()" title="Ajustar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+    } @else if (activeDiagramType() === DiagramType.CLASS) {
+      <!-- Sección 1B: Relaciones y Elementos para Diagrama de Clases -->
       <div class="border-b border-slate-100 dark:border-slate-800/80">
         <div
           (click)="isRelationshipsOpen.set(!isRelationshipsOpen())"
@@ -72,8 +254,7 @@
 
         @if (isRelationshipsOpen()) {
           <div class="p-2 space-y-1">
-            <!-- Lista de relaciones UML 2.5 -->
-            @for (rel of relationTypes(); track rel.id) {
+            @for (rel of currentRelations(); track rel.id) {
               <button
                 (click)="onSelectRelation(rel.id)"
                 [ngClass]="{
@@ -81,7 +262,6 @@
                   'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
                 }"
                 class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
-                <!-- Icono representativo estilizado -->
                 <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
                   @switch (rel.id) {
                     @case ('association') {
@@ -193,17 +373,339 @@
         </button>
       </div>
     }
+    </div>
 
-    <!-- Botón Agregar Nuevo Elemento (Nueva Clase UML) -->
-    <div class="p-3 mt-auto bg-white dark:bg-[#0D1124] border-t border-slate-100 dark:border-slate-800">
-      <button
-        (click)="addClass.emit()"
-        [disabled]="isReadOnly()"
-        [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('toolbar.addClassTooltip' | translate)"
-        class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-        <ng-icon name="heroPlus" class="text-xs"></ng-icon>
-        <span>+ NUEVA CLASE UML</span>
-      </button>
+    <!-- Botones de Acción Rápida Inferiores según el Tipo de Diagrama -->
+    <div class="p-3 bg-white dark:bg-[#0D1124] border-t border-slate-100 dark:border-slate-800 shrink-0">
+      @if (activeDiagramType() === DiagramType.USE_CASE) {
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            (click)="addActor.emit()"
+            [disabled]="isReadOnly()"
+            class="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            <svg width="13" height="15" viewBox="0 0 48 66" fill="none" class="stroke-white">
+              <circle cx="24" cy="12" r="10" fill="white" fill-opacity="0.3" stroke-width="3" />
+              <line x1="24" y1="22" x2="24" y2="43" stroke-width="3" />
+              <line x1="7" y1="31" x2="41" y2="31" stroke-width="3" stroke-linecap="round" />
+              <line x1="24" y1="43" x2="10" y2="63" stroke-width="3" stroke-linecap="round" />
+              <line x1="24" y1="43" x2="38" y2="63" stroke-width="3" stroke-linecap="round" />
+            </svg>
+            <span>+ ACTOR</span>
+          </button>
+          <button
+            (click)="addUseCase.emit()"
+            [disabled]="isReadOnly()"
+            class="py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ng-icon name="heroEllipsisHorizontalCircle" class="text-xs"></ng-icon>
+            <span>+ CASO USO</span>
+          </button>
+        </div>
+      } @else {
+        <button
+          (click)="addClass.emit()"
+          [disabled]="isReadOnly()"
+          [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('toolbar.addClassTooltip' | translate)"
+          class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+          <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+          <span>+ NUEVA CLASE UML</span>
+        </button>
+      }
+    </div>
+    } @else {
+      <!-- VISTA EXPLORADOR DE PROYECTO (DIRECTORIOS POR TIPO DE DIAGRAMA) -->
+      <div class="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#0D1124]">
+        
+        <!-- Barra de Proyecto y Acción Rápida -->
+        <div class="px-3.5 py-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-[#111528] flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-6 h-6 rounded-md bg-blue-600/10 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <ng-icon name="heroFolder" class="text-xs"></ng-icon>
+            </div>
+            <div class="min-w-0">
+              <div class="font-bold text-xs text-slate-800 dark:text-slate-100 truncate" [title]="currentProjectName()">
+                {{ currentProjectName() || 'Proyecto Actual' }}
+              </div>
+              <div class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                {{ projectDiagrams().length }} {{ projectDiagrams().length === 1 ? 'diagrama' : 'diagramas' }}
+              </div>
+            </div>
+          </div>
+
+          <button
+            (click)="onCreateDiagramGeneral()"
+            [title]="'editor.explorer.newDiagram' | translate"
+            class="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold text-[10.5px] flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
+            <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+            <span>Nuevo</span>
+          </button>
+        </div>
+
+        <!-- Árbol de Directorios: 5 Carpetas por Tipo UML -->
+        <div class="flex-1 overflow-y-auto min-h-0 p-2 space-y-1.5 custom-sidebar-scrollbar">
+          @for (dt of diagramTypes(); track dt.id) {
+            <div class="rounded-xl border border-slate-200/70 dark:border-slate-800/80 overflow-hidden bg-white dark:bg-[#0E1225] transition-all">
+              
+              <!-- Cabecera de la Carpeta de Tipo -->
+              <div
+                (click)="toggleFolder(dt.id)"
+                class="px-2.5 py-2 flex items-center justify-between bg-slate-50/70 hover:bg-slate-100/70 dark:bg-[#131830] dark:hover:bg-[#181E3C] cursor-pointer transition-colors select-none group">
+                
+                <div class="flex items-center gap-2 min-w-0">
+                  <ng-icon
+                    [name]="isFolderExpanded(dt.id) ? 'heroChevronDown' : 'heroChevronRight'"
+                    class="text-xs text-slate-400 shrink-0 transition-transform duration-100">
+                  </ng-icon>
+                  <ng-icon
+                    [name]="isFolderExpanded(dt.id) ? 'heroFolderOpen' : 'heroFolder'"
+                    class="text-sm text-blue-500 dark:text-blue-400 shrink-0">
+                  </ng-icon>
+                  <span class="font-semibold text-[11px] text-slate-800 dark:text-slate-200 truncate">
+                    {{ dt.folderName }}
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <!-- Contador de diagramas en este directorio -->
+                  <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-semibold"
+                    [ngClass]="{
+                      'bg-blue-100/70 text-blue-700 dark:bg-blue-950 dark:text-blue-300': getDiagramsForType(dt.id).length > 0,
+                      'bg-slate-100 text-slate-400 dark:bg-slate-800/80 dark:text-slate-500': getDiagramsForType(dt.id).length === 0
+                    }">
+                    {{ getDiagramsForType(dt.id).length }}
+                  </span>
+
+                  <!-- Botón contextual "+" para crear directamente en este directorio -->
+                  <button
+                    (click)="onCreateInFolder(dt.id, $event)"
+                    [title]="('editor.explorer.createInFolder' | translate) + ': ' + dt.folderName"
+                    class="w-5 h-5 rounded-md hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-400 dark:text-slate-400 flex items-center justify-center transition-colors cursor-pointer opacity-70 group-hover:opacity-100">
+                    <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Contenido de la Carpeta: Diagramas pertenecientes estrictamente a este tipo -->
+              @if (isFolderExpanded(dt.id)) {
+                <div class="p-1 space-y-0.5 bg-white dark:bg-[#0B0E1E] border-t border-slate-100 dark:border-slate-800/70">
+                  @if (getDiagramsForType(dt.id).length === 0) {
+                    <div class="px-3 py-2 text-center text-[10.5px] text-slate-400 dark:text-slate-500 italic">
+                      {{ 'editor.explorer.emptyFolder' | translate }}
+                      <button
+                        (click)="onCreateInFolder(dt.id, $event)"
+                        class="block mx-auto mt-1 text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                        + {{ 'editor.explorer.createInFolder' | translate }}
+                      </button>
+                    </div>
+                  } @else {
+                    @for (diag of getDiagramsForType(dt.id); track diag.id; let diagIdx = $index; let totalDiags = $count) {
+                      <div class="rounded-lg border transition-all relative"
+                        [draggable]="!isReadOnly() && editingDiagramId() !== diag.id"
+                        (dragstart)="onDiagramDragStart(diag, $event)"
+                        (dragover)="onDiagramDragOver(diag, $event)"
+                        (dragleave)="onDiagramDragLeave(diag, $event)"
+                        (drop)="onDiagramDrop(diag, dt.id, $event)"
+                        (dragend)="onDiagramDragEnd()"
+                        [ngClass]="{
+                          'border-blue-200/80 dark:border-blue-800/60 bg-blue-50/20 dark:bg-blue-950/20': diag.id === currentDiagramId(),
+                          'border-transparent': diag.id !== currentDiagramId(),
+                          'border-t-2 !border-t-blue-500': dragOverDiagramId() === diag.id && dragOverPosition() === 'above',
+                          'border-b-2 !border-b-blue-500': dragOverDiagramId() === diag.id && dragOverPosition() === 'below',
+                          'opacity-50': draggedDiagramId() === diag.id
+                        }">
+                        <!-- Fila del Diagrama -->
+                        <div
+                          (mouseenter)="hoveredDiagramId.set(diag.id)"
+                          (mouseleave)="hoveredDiagramId() === diag.id ? hoveredDiagramId.set(null) : null"
+                          (click)="editingDiagramId() !== diag.id && onSelectDiagram(diag.id)"
+                          [ngClass]="{
+                            'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-100 font-semibold shadow-2xs': diag.id === currentDiagramId(),
+                            'hover:bg-slate-50 dark:hover:bg-[#141933] text-slate-700 dark:text-slate-300': diag.id !== currentDiagramId()
+                          }"
+                          class="px-2 py-1.5 rounded-lg flex items-center justify-between gap-1 cursor-pointer transition-all text-xs group/diag select-none">
+                          
+                          <div class="flex items-center gap-1 min-w-0 flex-1">
+                            <!-- Handle para arrastrar en orden (D&D) -->
+                            @if (!isReadOnly() && totalDiags > 1) {
+                              <span
+                                title="Arrastrar para reordenar"
+                                class="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 p-0.5 shrink-0">
+                                <ng-icon name="heroBars2" class="text-[10px]"></ng-icon>
+                              </span>
+                            }
+
+                            <!-- Botón Chevron para desplegar los nodos del diagrama -->
+                            <button
+                              type="button"
+                              (click)="toggleDiagramExpanded(diag.id, $event)"
+                              title="Ver nodos del diagrama"
+                              class="w-4 h-4 rounded hover:bg-slate-200/80 dark:hover:bg-slate-700/60 flex items-center justify-center text-slate-400 dark:text-slate-500 shrink-0 transition-colors">
+                              <ng-icon
+                                [name]="isDiagramExpanded(diag.id) ? 'heroChevronDown' : 'heroChevronRight'"
+                                class="text-[9.5px]">
+                              </ng-icon>
+                            </button>
+
+                            <ng-icon
+                              name="heroDocumentText"
+                              [ngClass]="diag.id === currentDiagramId() ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'"
+                              class="text-xs shrink-0">
+                            </ng-icon>
+                            
+                            @if (editingDiagramId() === diag.id) {
+                              <input
+                                #renameInput
+                                type="text"
+                                [(ngModel)]="editingDiagramName"
+                                (click)="$event.stopPropagation()"
+                                (keydown.enter)="saveRenameDiagram(diag.id)"
+                                (keydown.escape)="cancelRenameDiagram()"
+                                (blur)="saveRenameDiagram(diag.id)"
+                                class="w-full px-1.5 py-0.5 bg-white dark:bg-[#0A0D1B] border border-blue-500 rounded text-[11px] font-medium text-slate-800 dark:text-slate-100 focus:outline-none ring-1 ring-blue-500"
+                                autofocus
+                              />
+                            } @else {
+                              <span class="truncate text-[11px]" [title]="diag.name + ' (Presiona F2 para renombrar)'">{{ diag.name }}</span>
+                            }
+                          </div>
+
+                          <!-- Acciones en hover o estado activo -->
+                          @if (editingDiagramId() !== diag.id) {
+                            <div class="flex items-center gap-0.5 shrink-0">
+                              <!-- Botones Subir / Bajar posición -->
+                              @if (!isReadOnly() && totalDiags > 1) {
+                                <div class="flex items-center opacity-0 group-hover/diag:opacity-100 transition-opacity">
+                                  <button
+                                    type="button"
+                                    (click)="moveDiagram(diag.id, 'up', dt.id, $event)"
+                                    [disabled]="diagIdx === 0"
+                                    title="Mover arriba"
+                                    class="p-0.5 rounded hover:text-blue-600 dark:hover:text-blue-400 text-slate-400 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer">
+                                    <ng-icon name="heroChevronUp" class="text-[10px]"></ng-icon>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    (click)="moveDiagram(diag.id, 'down', dt.id, $event)"
+                                    [disabled]="diagIdx === totalDiags - 1"
+                                    title="Mover abajo"
+                                    class="p-0.5 rounded hover:text-blue-600 dark:hover:text-blue-400 text-slate-400 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer">
+                                    <ng-icon name="heroChevronDown" class="text-[10px]"></ng-icon>
+                                  </button>
+                                </div>
+                              }
+
+                              <!-- Botón Renombrar (F2) -->
+                              @if (!isReadOnly()) {
+                                <button
+                                  (click)="startRenameDiagram(diag, $event)"
+                                  title="Renombrar diagrama (F2)"
+                                  class="opacity-0 group-hover/diag:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 text-slate-400 p-0.5 rounded cursor-pointer transition-opacity">
+                                  <ng-icon name="heroPencilSquare" class="text-xs"></ng-icon>
+                                </button>
+                              }
+
+                              <!-- Botón Eliminar -->
+                              @if (!isReadOnly()) {
+                                <button
+                                  (click)="onDeleteDiagram(diag, $event)"
+                                  title="Eliminar diagrama"
+                                  class="opacity-0 group-hover/diag:opacity-100 hover:text-red-600 dark:hover:text-red-400 text-slate-400 p-0.5 rounded cursor-pointer transition-opacity">
+                                  <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                                </button>
+                              }
+
+                              @if (diag.id === currentDiagramId()) {
+                                <span class="text-[9px] px-1.5 py-0.2 rounded-full bg-blue-600 text-white font-semibold shrink-0">
+                                  {{ 'editor.explorer.active' | translate }}
+                                </span>
+                              }
+                            </div>
+                          }
+                        </div>
+
+                        <!-- Jerarquía de Nodos del Diagrama -->
+                        @if (isDiagramExpanded(diag.id)) {
+                          <div class="ml-3.5 pl-2.5 my-0.5 border-l border-slate-200 dark:border-slate-800 space-y-0.5">
+                            @if (getNodesForDiagram(diag).length === 0) {
+                              <div class="text-[10px] text-slate-400 dark:text-slate-500 italic py-1 px-1">
+                                (Sin nodos)
+                              </div>
+                            } @else {
+                              @for (node of getNodesForDiagram(diag); track node.id; let last = $last) {
+                                <div
+                                  (click)="onNodeItemClick(diag, node, $event)"
+                                  [title]="diag.id === currentDiagramId() ? 'Clic para seleccionar en el lienzo' : getCopyTooltip(diag, node)"
+                                  class="flex items-center justify-between px-1.5 py-1 rounded text-[11px] hover:bg-slate-100/80 dark:hover:bg-[#161B36] transition-colors group/nodeitem cursor-pointer">
+                                  
+                                  <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                                    <span class="text-slate-300 dark:text-slate-600 font-mono text-[10px] select-none shrink-0">
+                                      {{ last ? '└─' : '├─' }}
+                                    </span>
+                                    
+                                    <!-- Icono e Indicador de Tipo de Nodo -->
+                                    @if (node.nodeType === 'actor') {
+                                      <div class="w-4 h-4 rounded bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0" title="Actor">
+                                        <ng-icon name="heroUser" class="text-[10px]"></ng-icon>
+                                      </div>
+                                    } @else if (node.nodeType === 'use_case') {
+                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0" title="Caso de Uso">
+                                        <ng-icon name="heroEllipsisHorizontalCircle" class="text-[10px]"></ng-icon>
+                                      </div>
+                                    } @else {
+                                      <div class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0" title="Clase UML">
+                                        <ng-icon name="heroSquare3Stack3d" class="text-[10px]"></ng-icon>
+                                      </div>
+                                    }
+
+                                    <!-- Nombre del Nodo -->
+                                    <span class="truncate font-medium text-slate-700 dark:text-slate-300 text-[11px]" [title]="node.name">
+                                      {{ node.name }}
+                                    </span>
+
+                                    <!-- Tag sutil de Tipo -->
+                                    <span class="text-[8.5px] px-1 py-0.2 rounded font-mono text-slate-400 dark:text-slate-500 shrink-0">
+                                      {{ node.nodeType === 'actor' ? 'actor' : (node.nodeType === 'use_case' ? 'caso-uso' : 'clase') }}
+                                    </span>
+                                  </div>
+
+                                  <!-- Botón Copiar al Diagrama Actual -->
+                                  <div class="flex items-center gap-1 shrink-0">
+                                    @if (!isReadOnly()) {
+                                      <button
+                                        type="button"
+                                        (click)="onCopyNode(diag, node, $event)"
+                                        [title]="getCopyTooltip(diag, node)"
+                                        [disabled]="!isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type)"
+                                        class="opacity-0 group-hover/nodeitem:opacity-100 p-1 rounded hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/50 dark:hover:text-blue-300 text-slate-400 dark:text-slate-500 transition-all cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed">
+                                        <ng-icon name="heroDocumentDuplicate" class="text-[11px]"></ng-icon>
+                                      </button>
+                                    }
+                                  </div>
+
+                                </div>
+                              }
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  }
+                </div>
+              }
+
+            </div>
+          }
+        </div>
+
+      </div>
+    }
+
+    <!-- Tirador de Redimensionamiento a lo ancho (Resizer Handle) -->
+    <div
+      (mousedown)="onStartResize($event)"
+      (dblclick)="resetWidth($event)"
+      title="Arrastra para ajustar el ancho (Doble clic para restablecer)"
+      class="absolute top-0 right-0 w-2 h-full cursor-col-resize hover:bg-blue-500/25 active:bg-blue-600/40 z-30 transition-colors group flex items-center justify-center select-none">
+      <div class="w-0.5 h-7 rounded-full bg-slate-300/80 dark:bg-slate-700/80 group-hover:bg-blue-500 group-hover:h-12 group-hover:w-1 transition-all"></div>
     </div>
 
   </aside>

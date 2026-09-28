@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   FCreateConnectionEvent,
   FReassignConnectionEvent,
@@ -66,6 +66,7 @@ import { XmiClientParser } from '../../../core/services/xmi-client-parser';
 import { BmpExportService } from '../../../core/services/bmp-export.service';
 import {
   DiagramType,
+  UmlNodeType,
   UmlRelationshipType,
   UmlLineStyle,
   UmlAttribute,
@@ -75,6 +76,7 @@ import {
   SaveDiagramAstRequest,
   UML_RELATION_TYPES,
   UML_LINE_STYLES,
+  UML_DIAGRAM_TYPES,
 } from '../../../core/models/diagram.model';
 
 import { Subject, debounceTime } from 'rxjs';
@@ -89,6 +91,7 @@ import { SpringBootModalComponent } from './components/spring-boot-modal/spring-
 import { EditNodeModalComponent } from './components/edit-node-modal/edit-node-modal.component';
 import { EditConnectionModalComponent } from './components/edit-connection-modal/edit-connection-modal.component';
 import { JsonModalComponent } from './components/json-modal/json-modal.component';
+import { CreateDiagramModalComponent } from './components/create-diagram-modal/create-diagram-modal.component';
 import { TranslatePipe, TranslationService } from '../../../core/i18n';
 
 export interface UmlDiagramProject {
@@ -104,6 +107,12 @@ export interface DiagramHistorySnapshot {
   nodes: UmlClassNode[];
   connections: UmlConnection[];
   defaultLineStyle: UmlLineStyle;
+}
+
+export interface DiagramTab {
+  id: string;
+  name: string;
+  type: DiagramType;
 }
 
 @Component({
@@ -123,6 +132,7 @@ export interface DiagramHistorySnapshot {
     EditNodeModalComponent,
     EditConnectionModalComponent,
     JsonModalComponent,
+    CreateDiagramModalComponent,
     TranslatePipe,
   ],
   providers: [
@@ -175,6 +185,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly bmpExportService = inject(BmpExportService);
   readonly translationService = inject(TranslationService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  // Lista reactiva de diagramas del proyecto para el Explorador por tipo
+  readonly projectDiagrams = this.diagramService.projectDiagrams;
 
   // Indica si hay 2 o más usuarios editando concurrentemente en la sala
   readonly hasMultipleActiveUsers = computed(() => {
@@ -182,6 +196,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   });
 
   @ViewChild('diagramCanvas') diagramCanvas?: DiagramCanvasComponent;
+  @ViewChild(DiagramSidebarComponent) diagramSidebar?: DiagramSidebarComponent;
 
   // Contexto del diagrama y proyecto
   currentDiagramId = signal<string | null>(null);
@@ -192,8 +207,30 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   hasUnsavedChanges = signal<boolean>(false);
   zoomLevel = signal<number>(100);
 
+  // Notificaciones flotantes rápidas
+  readonly quickToast = signal<string | null>(null);
+
+  showQuickToast(msg: string): void {
+    this.quickToast.set(msg);
+    setTimeout(() => {
+      if (this.quickToast() === msg) {
+        this.quickToast.set(null);
+      }
+    }, 2500);
+  }
+
+  // Portapapeles de nodos para copiar/pegar entre diagramas del mismo tipo
+  private clipboardNodes: {
+    diagramType: DiagramType;
+    nodes: UmlClassNode[];
+    connections?: UmlConnection[];
+  } | null = null;
+
   // Tipos de Diagrama & Paneles (Arquitectura Extensible para Casos de Uso, Secuencia, etc.)
   readonly activeDiagramType = signal<DiagramType>(DiagramType.CLASS);
+
+  // Pestañas abiertas en el lienzo (Multi-diagram tabs)
+  readonly openTabs = signal<DiagramTab[]>([]);
 
   // Pipelines reactivos para auto-guardado en tiempo real (Google Docs style)
   private readonly autoSave$ = new Subject<void>();
@@ -244,6 +281,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (single) result.add(single);
     return Array.from(result);
   });
+  selectedConnId = signal<string | null>(null);
+  selectedConnIds = signal<Set<string>>(new Set());
+  readonly selectedConnIdsList = computed(() => {
+    const set = this.selectedConnIds();
+    const single = this.selectedConnId();
+    const result = new Set(set);
+    if (single) result.add(single);
+    return Array.from(result);
+  });
   readonly selectedNodeColor = computed(() => {
     const single = this.selectedNodeId();
     if (!single) return null;
@@ -270,8 +316,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly canUndo = computed(() => this.historyUndoCount() > 0 && !this.isReadOnly());
   readonly canRedo = computed(() => this.historyRedoCount() > 0 && !this.isReadOnly());
 
-  // Paneles laterales (Toolbox / Sidebar y Copilot IA) - Ocultos por defecto
-  readonly isSidebarOpen = signal<boolean>(false);
+  // Paneles laterales (Toolbox / Sidebar y Copilot IA) - Abierto por defecto con Explorador
+  readonly isSidebarOpen = signal<boolean>(true);
   readonly isToolboxOpen = this.isSidebarOpen;
   isAiPanelOpen = signal<boolean>(false);
   isExportDropdownOpen = signal<boolean>(false);
@@ -314,6 +360,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // Modal Spring Boot
   showSpringBootModal = signal<boolean>(false);
+
+  // Modal Crear Diagrama por Tipo
+  isCreateDiagramModalOpen = signal<boolean>(false);
+  createDiagramLockedType = signal<DiagramType | null>(null);
 
   nodes = signal<UmlClassNode[]>([]);
   connections = signal<UmlConnection[]>([]);
@@ -434,6 +484,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
       if (projectId) {
         this.currentProjectId.set(projectId);
+        this.diagramService.loadDiagramsByProject(projectId).subscribe();
         this.projectService.getProject(projectId).subscribe({
           next: (project) => {
             this.currentProject.set(project);
@@ -504,7 +555,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           const serverUpdated = diagram.updatedAt ? new Date(diagram.updatedAt).getTime() : 0;
           if (draft.timestamp && draft.timestamp > serverUpdated && draft.nodes?.length > 0) {
             console.log('Restaurando borrador local no guardado por desconexión previa...');
-            this.nodes.set(draft.nodes);
+            const sanitizedDraftNodes: UmlClassNode[] = (draft.nodes || []).map((n: any) => {
+              let nodeType: UmlNodeType = n.nodeType || 'class';
+              if (nodeType === 'class') {
+                if (n.id?.startsWith('actor_')) nodeType = 'actor';
+                else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
+              }
+              return { ...n, nodeType };
+            });
+            this.nodes.set(sanitizedDraftNodes);
             this.connections.set(draft.connections || []);
             if (draft.defaultLineStyle) {
               this.defaultLineStyle.set(draft.defaultLineStyle);
@@ -516,64 +575,100 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         } catch (_) {}
       }
 
-      if (diagram.nodes && diagram.nodes.length > 0) {
-        this.nodes.set(
-          diagram.nodes.map((n) => ({
-            id: n.id,
-            name: n.name,
-            position: { x: n.positionX, y: n.positionY },
-            width: n.width || 220,
-            height: n.height || undefined,
-            color: n.color || '#FFFDDD',
-            isAnchor: n.isAnchor,
-            assocMainConnId: n.assocMainConnId || undefined,
-            attributes: (n.attributes || []).map((a) => ({
-              name: a.name,
-              type: this.normalizeDataType(a.type),
-              orderIndex: a.orderIndex,
-              nullable: a.nullable !== undefined ? a.nullable : true,
-              unique: a.unique !== undefined ? a.unique : false,
-              length: a.length !== undefined ? a.length : 255,
-              defaultValue: a.defaultValue ?? a.default ?? null,
-              default: a.default ?? a.defaultValue ?? null,
-            })),
-            methods: (n.methods || []).map((m) => ({
-              name: m.name,
-              parameters: m.parameters,
-              returnType: this.normalizeReturnType(m.returnType),
-            })),
+      const mappedNodes: UmlClassNode[] = (diagram.nodes || []).map((n) => {
+        let nodeType: UmlNodeType = (n.nodeType as any) || 'class';
+        if (nodeType === 'class') {
+          if (n.id.startsWith('actor_')) {
+            nodeType = 'actor';
+          } else if (n.id.startsWith('use_case_')) {
+            nodeType = 'use_case';
+          }
+        }
+        return {
+          id: n.id,
+          name: n.name,
+          position: { x: n.positionX, y: n.positionY },
+          width: n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : 220)),
+          height: n.height || undefined,
+          color: n.color || '#FFFDDD',
+          isAnchor: n.isAnchor,
+          nodeType,
+          assocMainConnId: n.assocMainConnId || undefined,
+        attributes: (n.attributes || []).map((a) => ({
+          name: a.name,
+          type: this.normalizeDataType(a.type),
+          orderIndex: a.orderIndex,
+          nullable: a.nullable !== undefined ? a.nullable : true,
+          unique: a.unique !== undefined ? a.unique : false,
+          length: a.length !== undefined ? a.length : 255,
+          defaultValue: a.defaultValue ?? a.default ?? null,
+          default: a.default ?? a.defaultValue ?? null,
+        })),
+          methods: (n.methods || []).map((m) => ({
+            name: m.name,
+            parameters: m.parameters,
+            returnType: this.normalizeReturnType(m.returnType),
           })),
-        );
-      }
+        };
+      });
+      this.nodes.set(mappedNodes);
 
-      if (diagram.connections && diagram.connections.length > 0) {
-        this.connections.set(
-          diagram.connections.map((c) => ({
-            id: c.id,
-            sourceNodeId: c.sourceNodeId || undefined,
-            targetNodeId: c.targetNodeId || undefined,
-            sourceId: c.sourceId,
-            targetId: c.targetId,
-            type: c.type as UmlRelationshipType,
-            lineStyle: (c.lineStyle as UmlLineStyle) || 'segment',
-            name: c.name || undefined,
-            sourceMultiplicity: c.sourceMultiplicity || '',
-            targetMultiplicity: c.targetMultiplicity || '',
-            assocAnchorNodeId: c.assocAnchorNodeId || undefined,
-          })),
-        );
-      }
+      const mappedConnections: UmlConnection[] = (diagram.connections || []).map((c) => ({
+        id: c.id,
+        sourceNodeId: c.sourceNodeId || undefined,
+        targetNodeId: c.targetNodeId || undefined,
+        sourceId: c.sourceId,
+        targetId: c.targetId,
+        type: c.type as UmlRelationshipType,
+        lineStyle: (c.lineStyle as UmlLineStyle) || 'segment',
+        name: c.name || undefined,
+        sourceMultiplicity: c.sourceMultiplicity || '',
+        targetMultiplicity: c.targetMultiplicity || '',
+        assocAnchorNodeId: c.assocAnchorNodeId || undefined,
+      }));
+      this.connections.set(mappedConnections);
 
+      // Limpiar selecciones previas y pila de deshacer/rehacer al cambiar de diagrama
+      this.selectedNodeId.set(null);
+      this.selectedNodeIds.set(new Set());
+      this.selectedConnId.set(null);
+      this.selectedConnIds.set(new Set());
+      this.selectedSourceNodeId.set(null);
+      this.historyUndoStack = [];
+      this.historyRedoStack = [];
+      this.historyUndoCount.set(0);
+      this.historyRedoCount.set(0);
+
+      // Sincronizar pestaña activa en la barra de pestañas (tabs)
+      const diagType = (diagram.type as DiagramType) || DiagramType.CLASS;
+      this.openTabs.update((tabs) => {
+        const index = tabs.findIndex((t) => t.id === diagram.id);
+        if (index >= 0) {
+          const updated = [...tabs];
+          updated[index] = { ...updated[index], name: diagram.name, type: diagType };
+          return updated;
+        }
+        return [...tabs, { id: diagram.id, name: diagram.name, type: diagType }];
+      });
+
+      if (this.collaborationService.currentDiagramId() && this.collaborationService.currentDiagramId() !== diagramId) {
+        this.collaborationService.leaveRoom();
+      }
       this.collaborationService.joinRoom(diagramId);
 
-      if (diagram.projectId && !this.currentProject()) {
-        this.currentProjectId.set(diagram.projectId);
-        this.projectService.getProject(diagram.projectId).subscribe({
-          next: (proj) => {
-            this.currentProject.set(proj);
-          },
-          error: () => {},
-        });
+      if (diagram.projectId) {
+        if (!this.currentProject()) {
+          this.currentProjectId.set(diagram.projectId);
+          this.projectService.getProject(diagram.projectId).subscribe({
+            next: (proj) => {
+              this.currentProject.set(proj);
+            },
+            error: () => {},
+          });
+        }
+        if (this.diagramService.projectDiagrams().length === 0) {
+          this.diagramService.loadDiagramsByProject(diagram.projectId).subscribe();
+        }
       }
 
       this.hasUnsavedChanges.set(false);
@@ -581,6 +676,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         this.updateConnectionEndpoints();
         requestAnimationFrame(() => {
           this.updateConnectionEndpoints();
+          this.diagramCanvas?.clearSelection();
           this.diagramCanvas?.reset();
           this.restoreViewportScroll(diagramId);
         });
@@ -678,6 +774,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (event.key === 'Escape') {
       this.selectedNodeId.set(null);
       this.selectedNodeIds.set(new Set());
+      this.selectedConnId.set(null);
+      this.selectedConnIds.set(new Set());
       this.setPointerMode();
       this.closeEditNodeModal();
       this.closeEditConnModal();
@@ -713,10 +811,42 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'i') {
       event.preventDefault();
       this.isAiPanelOpen.set(!this.isAiPanelOpen());
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
+      if (!isInputActive) {
+        event.preventDefault();
+        this.copySelectedNodes();
+      }
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
+      if (!isInputActive) {
+        event.preventDefault();
+        this.pasteNodes();
+      }
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
+      if (!isInputActive) {
+        event.preventDefault();
+        this.copySelectedNodes();
+        this.pasteNodes();
+      }
     } else if (event.key === 'Delete' && !this.isReadOnly()) {
       if (!isInputActive) {
         event.preventDefault();
         this.deleteSelected();
+      }
+    } else if (event.key === 'F2') {
+      if (!isInputActive && !event.defaultPrevented) {
+        const isExplorerHovered =
+          this.isSidebarOpen() &&
+          this.diagramSidebar?.activeTab() === 'explorer' &&
+          !!this.diagramSidebar?.hoveredDiagramId();
+        if (!isExplorerHovered) {
+          const hoveredNode = this.diagramCanvas?.hoveredNodeId();
+          const selectedNode = this.selectedNodeId();
+          const targetNodeId = hoveredNode || selectedNode;
+          if (targetNodeId && !this.isReadOnly()) {
+            event.preventDefault();
+            this.diagramCanvas?.startRenameNode(targetNodeId);
+          }
+        }
       }
     }
   }
@@ -735,6 +865,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         color: n.color || null,
         isAnchor: n.isAnchor,
         assocMainConnId: n.assocMainConnId,
+        nodeType:
+          n.nodeType && n.nodeType !== 'class'
+            ? n.nodeType
+            : n.id.startsWith('actor_')
+            ? 'actor'
+            : n.id.startsWith('use_case_')
+            ? 'use_case'
+            : n.nodeType || 'class',
         attributes: n.attributes,
         methods: n.methods,
       })),
@@ -1264,6 +1402,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.selectedSourceNodeId.set(null);
     this.selectedNodeId.set(null);
     this.selectedNodeIds.set(new Set());
+    this.selectedConnId.set(null);
+    this.selectedConnIds.set(new Set());
     this.diagramCanvas?.clearSelection();
   }
 
@@ -1275,6 +1415,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return node && !node.isAnchor;
     });
 
+    const connIds = (event.connectionIds || []).filter((id) => {
+      return this.connections().some((c) => c.id === id);
+    });
+
     if (classNodeIds.length > 0) {
       this.selectedNodeIds.set(new Set(classNodeIds));
       if (!this.selectedNodeId() || !classNodeIds.includes(this.selectedNodeId()!)) {
@@ -1283,6 +1427,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else {
       this.selectedNodeIds.set(new Set());
       this.selectedNodeId.set(null);
+    }
+
+    if (connIds.length > 0) {
+      this.selectedConnIds.set(new Set(connIds));
+      if (!this.selectedConnId() || !connIds.includes(this.selectedConnId()!)) {
+        this.selectedConnId.set(connIds[0]);
+      }
+    } else {
+      this.selectedConnIds.set(new Set());
+      this.selectedConnId.set(null);
     }
   }
 
@@ -1306,19 +1460,53 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   deleteSelected(): void {
     if (this.isReadOnly()) return;
-    const idsToDelete = new Set(this.selectedNodeIds());
+    const nodeIdsToDelete = new Set(this.selectedNodeIds());
     if (this.selectedNodeId()) {
-      idsToDelete.add(this.selectedNodeId()!);
+      nodeIdsToDelete.add(this.selectedNodeId()!);
     }
-    if (idsToDelete.size === 0) return;
+    const connIdsToDelete = new Set(this.selectedConnIds());
+    if (this.selectedConnId()) {
+      connIdsToDelete.add(this.selectedConnId()!);
+    }
+
+    if (nodeIdsToDelete.size === 0 && connIdsToDelete.size === 0) return;
 
     this.pushSnapshot();
-    for (const id of idsToDelete) {
+    for (const id of nodeIdsToDelete) {
       this.removeClass(id, undefined, false);
+    }
+    for (const id of connIdsToDelete) {
+      this.removeConnection(id);
     }
     this.selectedNodeIds.set(new Set());
     this.selectedNodeId.set(null);
+    this.selectedConnIds.set(new Set());
+    this.selectedConnId.set(null);
     this.diagramCanvas?.clearSelection();
+  }
+
+  onConnectionSelect(connId: string, event: MouseEvent): void {
+    if (this.selectedRelationType() !== null) return;
+    event.stopPropagation();
+
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      const current = new Set(this.selectedConnIds());
+      if (current.has(connId)) {
+        current.delete(connId);
+      } else {
+        current.add(connId);
+      }
+      this.selectedConnIds.set(current);
+      const remaining = Array.from(current);
+      this.selectedConnId.set(remaining.length > 0 ? remaining[remaining.length - 1] : null);
+      this.diagramCanvas?.select(Array.from(this.selectedNodeIds()), remaining);
+    } else {
+      this.selectedNodeIds.set(new Set());
+      this.selectedNodeId.set(null);
+      this.selectedConnIds.set(new Set([connId]));
+      this.selectedConnId.set(connId);
+      this.diagramCanvas?.select([], [connId]);
+    }
   }
 
   onNodeSelect(nodeId: string, event: MouseEvent): void {
@@ -1557,6 +1745,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
 
       const isInheritance = activeRel === 'generalization' || activeRel === 'realization';
+      const isUseCaseRel =
+        activeRel === 'include' ||
+        activeRel === 'extend' ||
+        this.activeDiagramType() === DiagramType.USE_CASE ||
+        sourceNode.nodeType === 'actor' ||
+        sourceNode.nodeType === 'use_case' ||
+        targetNode.nodeType === 'actor' ||
+        targetNode.nodeType === 'use_case';
+      const relName = activeRel === 'include' ? '«include»' : activeRel === 'extend' ? '«extend»' : undefined;
       const newConn: UmlConnection = {
         id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         sourceNodeId: currentSource,
@@ -1565,8 +1762,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         targetId,
         type: activeRel,
         lineStyle: this.defaultLineStyle(),
-        sourceMultiplicity: isInheritance ? '' : '1',
-        targetMultiplicity: isInheritance ? '' : '0..*',
+        name: relName,
+        sourceMultiplicity: (isInheritance || isUseCaseRel) ? '' : '1',
+        targetMultiplicity: (isInheritance || isUseCaseRel) ? '' : '0..*',
       };
 
       this.pushSnapshot();
@@ -1637,6 +1835,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     const isInheritance = relType === 'generalization' || relType === 'realization';
+    const isUseCaseRel =
+      relType === 'include' ||
+      relType === 'extend' ||
+      this.activeDiagramType() === DiagramType.USE_CASE ||
+      (sourceNode && (sourceNode.nodeType === 'actor' || sourceNode.nodeType === 'use_case')) ||
+      (targetNode && (targetNode.nodeType === 'actor' || targetNode.nodeType === 'use_case'));
+    const relName = relType === 'include' ? '«include»' : relType === 'extend' ? '«extend»' : undefined;
     const newConnection: UmlConnection = {
       id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       sourceNodeId: baseSourceId,
@@ -1645,8 +1850,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       targetId,
       type: relType,
       lineStyle: this.defaultLineStyle(),
-      sourceMultiplicity: isInheritance ? '' : '1',
-      targetMultiplicity: isInheritance ? '' : '0..*',
+      name: relName,
+      sourceMultiplicity: (isInheritance || isUseCaseRel) ? '' : '1',
+      targetMultiplicity: (isInheritance || isUseCaseRel) ? '' : '0..*',
     };
 
     this.pushSnapshot();
@@ -1806,6 +2012,283 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+  }
+
+  addActor(): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    const count = this.nodes().filter((n) => n.nodeType === 'actor').length + 1;
+    const newNode: UmlClassNode = {
+      id: `actor_${Date.now()}`,
+      name: `Actor_${count}`,
+      nodeType: 'actor',
+      position: { x: posX, y: posY },
+      width: 90,
+      height: 100,
+      color: '#FFFDDD',
+      attributes: [],
+      methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+  }
+
+  addUseCase(): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    const count = this.nodes().filter((n) => n.nodeType === 'use_case').length + 1;
+    const newNode: UmlClassNode = {
+      id: `use_case_${Date.now()}`,
+      name: `CasoDeUso_${count}`,
+      nodeType: 'use_case',
+      position: { x: posX, y: posY },
+      width: 140,
+      height: 60,
+      color: '#FFFDDD',
+      attributes: [],
+      methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+  }
+
+  copySelectedNodes(): void {
+    const selIds = this.selectedNodeIds();
+    const selId = this.selectedNodeId();
+    const ids = Array.from(selIds);
+    if (selId && !ids.includes(selId)) ids.push(selId);
+
+    const nodesToCopy = this.nodes().filter((n) => ids.includes(n.id) && !n.isAnchor);
+    if (nodesToCopy.length === 0) return;
+
+    const copiedNodeIdSet = new Set(nodesToCopy.map((n) => n.id));
+
+    // Identificar y copiar relaciones que conectan a los nodos seleccionados
+    const connectionsToCopy = this.connections().filter((c) => {
+      const s = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+      const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
+      return s && t && copiedNodeIdSet.has(s) && copiedNodeIdSet.has(t);
+    });
+
+    this.clipboardNodes = {
+      diagramType: this.activeDiagramType(),
+      nodes: JSON.parse(JSON.stringify(nodesToCopy)),
+      connections: JSON.parse(JSON.stringify(connectionsToCopy)),
+    };
+    try {
+      sessionStorage.setItem('uml_clipboard_nodes', JSON.stringify(this.clipboardNodes));
+    } catch (_) {}
+
+    const count = nodesToCopy.length;
+    const connsCount = connectionsToCopy.length;
+    let toast = count === 1 ? `"${nodesToCopy[0].name}" copiado` : `${count} elementos copiados`;
+    if (connsCount > 0) {
+      toast += ` (${connsCount} ${connsCount === 1 ? 'relación' : 'relaciones'})`;
+    }
+    this.showQuickToast(toast);
+  }
+
+  pasteNodes(): void {
+    if (this.isReadOnly()) return;
+
+    let clip = this.clipboardNodes;
+    if (!clip) {
+      try {
+        const saved = sessionStorage.getItem('uml_clipboard_nodes');
+        if (saved) clip = JSON.parse(saved);
+      } catch (_) {}
+    }
+
+    if (!clip || !clip.nodes || clip.nodes.length === 0) {
+      return;
+    }
+
+    const currentType = this.activeDiagramType();
+    // Validar compatibilidad de tipo de diagrama
+    if (currentType === DiagramType.USE_CASE) {
+      const invalid = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'use_case');
+      if (invalid) {
+        alert('Solo se pueden pegar actores y casos de uso en diagramas de Casos de Uso.');
+        return;
+      }
+    } else if (currentType === DiagramType.CLASS) {
+      const invalid = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case');
+      if (invalid) {
+        alert('Solo se pueden pegar clases en diagramas de Clases.');
+        return;
+      }
+    }
+
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+
+    const newPastedIds: string[] = [];
+    const newNodes: UmlClassNode[] = [];
+    const oldToNewIdMap = new Map<string, string>();
+
+    for (let i = 0; i < clip.nodes.length; i++) {
+      const src = clip.nodes[i];
+      const newId = `${src.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000) + i}`;
+      newPastedIds.push(newId);
+      oldToNewIdMap.set(src.id, newId);
+
+      const isSameDiagram = clip.diagramType === currentType && this.nodes().some((n) => n.name === src.name);
+      const newName = isSameDiagram ? `${src.name}_Copia` : src.name;
+
+      const posX = src.position ? src.position.x + 35 : Math.max(60, scrollLeft + 150 + i * 30);
+      const posY = src.position ? src.position.y + 35 : Math.max(60, scrollTop + 100 + i * 30);
+
+      newNodes.push({
+        id: newId,
+        name: newName,
+        nodeType: src.nodeType,
+        position: { x: posX, y: posY },
+        width: src.width,
+        height: src.height,
+        color: src.color,
+        attributes: (src.attributes || []).map((a) => ({ ...a })),
+        methods: (src.methods || []).map((m) => ({ ...m })),
+      });
+    }
+
+    // Copiar y enlazar las relaciones entre los nodos duplicados/pegados
+    const newConnections: UmlConnection[] = [];
+    if (clip.connections && clip.connections.length > 0) {
+      for (const oldConn of clip.connections) {
+        const oldSourceNode = oldConn.sourceNodeId || oldConn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+        const oldTargetNode = oldConn.targetNodeId || oldConn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+
+        const newSourceNodeId = oldSourceNode ? oldToNewIdMap.get(oldSourceNode) : undefined;
+        const newTargetNodeId = oldTargetNode ? oldToNewIdMap.get(oldTargetNode) : undefined;
+
+        if (newSourceNodeId && newTargetNodeId) {
+          const sSideMatch = oldConn.sourceId?.match(/_(top|bottom|left|right)$/);
+          const tSideMatch = oldConn.targetId?.match(/_(top|bottom|left|right)$/);
+          const sSide = sSideMatch ? sSideMatch[1] : 'right';
+          const tSide = tSideMatch ? tSideMatch[1] : 'left';
+
+          const newConnId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+          newConnections.push({
+            ...oldConn,
+            id: newConnId,
+            sourceNodeId: newSourceNodeId,
+            targetNodeId: newTargetNodeId,
+            sourceId: `${newSourceNodeId}_${sSide}`,
+            targetId: `${newTargetNodeId}_${tSide}`,
+            from: newSourceNodeId,
+            to: newTargetNodeId,
+          });
+        }
+      }
+    }
+
+    this.nodes.update((list) => [...list, ...newNodes]);
+    if (newConnections.length > 0) {
+      this.connections.update((list) => [...list, ...newConnections]);
+    }
+    this.selectedNodeIds.set(new Set(newPastedIds));
+    this.selectedNodeId.set(newPastedIds[0]);
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+
+    let toast = newNodes.length === 1 ? `"${newNodes[0].name}" pegado en el lienzo` : `${newNodes.length} elementos pegados`;
+    if (newConnections.length > 0) {
+      toast += ` con ${newConnections.length} ${newConnections.length === 1 ? 'relación' : 'relaciones'}`;
+    }
+    this.showQuickToast(toast);
+  }
+
+  handleCopyNodeFromExplorer(event: { node: any; sourceDiagramId: string; sourceDiagramType?: DiagramType }): void {
+    if (this.isReadOnly()) return;
+    const node = event.node;
+    const isCurrentDiag = event.sourceDiagramId === this.currentDiagramId();
+
+    const currentType = this.activeDiagramType();
+    if (currentType === DiagramType.USE_CASE) {
+      if (node.nodeType !== 'actor' && node.nodeType !== 'use_case') {
+        alert('Solo se pueden copiar actores y casos de uso en diagramas de Casos de Uso.');
+        return;
+      }
+    } else if (currentType === DiagramType.CLASS) {
+      if (node.nodeType === 'actor' || node.nodeType === 'use_case') {
+        alert('Solo se pueden copiar clases en diagramas de Clases.');
+        return;
+      }
+    }
+
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+
+    const posX = isCurrentDiag && node.position?.x
+      ? node.position.x + 40
+      : Math.max(60, Math.round(scrollLeft + 150 + Math.random() * 50));
+    const posY = isCurrentDiag && node.position?.y
+      ? node.position.y + 40
+      : Math.max(60, Math.round(scrollTop + 100 + Math.random() * 50));
+
+    let newName = node.name;
+    if (isCurrentDiag) {
+      const sameNameCount = this.nodes().filter((n) => n.name.startsWith(node.name)).length;
+      newName = sameNameCount > 0 ? `${node.name}_Copia` : node.name;
+    }
+
+    const newNodeId = `${node.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    const newNode: UmlClassNode = {
+      id: newNodeId,
+      name: newName,
+      nodeType: node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : 'class'),
+      position: { x: posX, y: posY },
+      width: node.width || (node.nodeType === 'actor' ? 90 : (node.nodeType === 'use_case' ? 140 : 220)),
+      height: node.height || (node.nodeType === 'actor' ? 100 : (node.nodeType === 'use_case' ? 60 : null)),
+      color: node.color || '#FFFDDD',
+      attributes: (node.attributes || []).map((a: any) => ({ ...a })),
+      methods: (node.methods || []).map((m: any) => ({ ...m })),
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.selectedNodeId.set(newNode.id);
+    this.selectedNodeIds.set(new Set([newNode.id]));
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+
+    const typeLabel = newNode.nodeType === 'actor' ? 'Actor' : (newNode.nodeType === 'use_case' ? 'Caso de Uso' : 'Clase');
+    this.showQuickToast(`${typeLabel} "${newNode.name}" copiado al lienzo`);
+  }
+
+  handleSelectNodeFromExplorer(nodeId: string): void {
+    this.selectedNodeId.set(nodeId);
+    this.selectedNodeIds.set(new Set([nodeId]));
+    this.diagramCanvas?.select([nodeId], []);
+    const node = this.nodes().find((n) => n.id === nodeId);
+    if (node && node.position) {
+      const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+      if (scrollEl) {
+        scrollEl.scrollLeft = Math.max(0, node.position.x - 200);
+        scrollEl.scrollTop = Math.max(0, node.position.y - 150);
+      }
+    }
   }
 
   removeClass(nodeId: string, event?: MouseEvent, recordHistory = true): void {
@@ -2584,4 +3067,163 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.defaultLineStyle(),
     );
   }
+
+  // --- MÉTODOS DEL EXPLORADOR DE DIAGRAMAS POR TIPO ---
+
+  openCreateDiagramModal(lockedType: DiagramType | null = null): void {
+    this.createDiagramLockedType.set(lockedType);
+    this.isCreateDiagramModalOpen.set(true);
+  }
+
+  closeCreateDiagramModal(): void {
+    this.isCreateDiagramModalOpen.set(false);
+    this.createDiagramLockedType.set(null);
+  }
+
+  handleCreateDiagram(data: { name: string; type: DiagramType }): void {
+    const projectId = this.currentProjectId();
+    if (!projectId) {
+      console.error('Cannot create diagram without a valid project ID');
+      return;
+    }
+
+    if (this.hasUnsavedChanges() && !this.isReadOnly()) {
+      this.saveToBackend(true);
+    }
+
+    this.diagramService.createDiagram(projectId, data.name, data.type).subscribe({
+      next: (created) => {
+        this.closeCreateDiagramModal();
+        const diagramType = (created.type as DiagramType) || data.type;
+        // Agregamos la nueva pestaña sin cerrar la anterior
+        this.openTabs.update((tabs) => {
+          if (!tabs.some((t) => t.id === created.id)) {
+            return [...tabs, { id: created.id, name: created.name, type: diagramType }];
+          }
+          return tabs;
+        });
+        this.onSelectDiagram(created.id);
+      },
+      error: (err) => {
+        console.error('Error creating diagram:', err);
+      },
+    });
+  }
+
+  onSelectDiagram(diagramId: string): void {
+    if (this.currentDiagramId() === diagramId) return;
+
+    // Si hay cambios sin guardar en el diagrama actual, persistirlos antes de cambiar
+    if (this.hasUnsavedChanges() && !this.isReadOnly()) {
+      this.saveToBackend(true);
+    }
+
+    this.currentDiagramId.set(diagramId);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { diagramId },
+      queryParamsHandling: 'merge',
+    });
+    this.loadDiagramFromBackend(diagramId);
+  }
+
+  getTabTypeShort(type: DiagramType): string {
+    const found = UML_DIAGRAM_TYPES.find((d) => d.id === type);
+    return found ? found.shortLabel : 'UML';
+  }
+
+  closeTab(tabId: string, event: MouseEvent): void {
+    event.stopPropagation();
+    const currentTabs = this.openTabs();
+    if (currentTabs.length <= 1) return;
+
+    if (this.currentDiagramId() === tabId && this.hasUnsavedChanges() && !this.isReadOnly()) {
+      this.saveToBackend(true);
+    }
+
+    const index = currentTabs.findIndex((t) => t.id === tabId);
+    const newTabs = currentTabs.filter((t) => t.id !== tabId);
+    this.openTabs.set(newTabs);
+
+    if (this.currentDiagramId() === tabId) {
+      const nextIndex = Math.max(0, index - 1);
+      const nextTab = newTabs[nextIndex] || newTabs[0];
+      if (nextTab) {
+        this.onSelectDiagram(nextTab.id);
+      }
+    }
+  }
+
+  onRenameDiagram(event: { diagramId: string; name: string }): void {
+    if (this.isReadOnly()) return;
+    this.diagramService.renameDiagram(event.diagramId, event.name).subscribe({
+      next: (updated) => {
+        if (this.currentDiagramId() === event.diagramId) {
+          this.currentDiagramName.set(updated.name);
+        }
+        this.openTabs.update((tabs) =>
+          tabs.map((t) => (t.id === event.diagramId ? { ...t, name: updated.name } : t))
+        );
+      },
+      error: (err) => {
+        console.error('Error renaming diagram:', err);
+      },
+    });
+  }
+
+  onDeleteDiagram(diagramId: string): void {
+    if (this.isReadOnly()) return;
+    const diag = this.projectDiagrams().find((d) => d.id === diagramId);
+    const diagName = diag ? diag.name : 'este diagrama';
+    if (!confirm(`¿Estás seguro de que deseas eliminar el diagrama "${diagName}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    this.diagramService.deleteDiagram(diagramId).subscribe({
+      next: () => {
+        const currentTabs = this.openTabs();
+        const wasActive = this.currentDiagramId() === diagramId;
+        const newTabs = currentTabs.filter((t) => t.id !== diagramId);
+        this.openTabs.set(newTabs);
+
+        if (wasActive) {
+          if (newTabs.length > 0) {
+            this.onSelectDiagram(newTabs[0].id);
+          } else {
+            const remaining = this.projectDiagrams().filter((d) => d.id !== diagramId);
+            if (remaining.length > 0) {
+              this.onSelectDiagram(remaining[0].id);
+            } else {
+              this.currentDiagramId.set(null);
+              this.nodes.set([]);
+              this.connections.set([]);
+            }
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Error deleting diagram:', err);
+        alert('No se pudo eliminar el diagrama.');
+      },
+    });
+  }
+
+  onNodeRename(event: { nodeId: string; newName: string }): void {
+    if (this.isReadOnly()) return;
+    const node = this.nodes().find((n) => n.id === event.nodeId);
+    if (!node || node.name === event.newName) return;
+
+    this.pushSnapshot();
+    this.nodes.update((list) =>
+      list.map((n) => (n.id === event.nodeId ? { ...n, name: event.newName } : n))
+    );
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      'edit_node',
+      this.defaultLineStyle()
+    );
+  }
 }
+

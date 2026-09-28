@@ -81,6 +81,7 @@ export class DiagramCanvasComponent {
   readonly nodePositionChange = output<{ node: UmlClassNode; newPosition: { x: number; y: number } }>();
   readonly nodeClick = output<{ nodeId: string; event: MouseEvent }>();
   readonly nodeDblClick = output<{ node: UmlClassNode; event: MouseEvent }>();
+  readonly connectionClick = output<{ connId: string; event: MouseEvent }>();
   readonly connectionDblClick = output<{ conn: UmlConnection; event: MouseEvent }>();
   readonly deleteNode = output<{ nodeId: string; event: MouseEvent }>();
   readonly tableClick = output<{ nodeId: string; event: MouseEvent }>();
@@ -89,12 +90,36 @@ export class DiagramCanvasComponent {
   readonly canvasMouseMove = output<MouseEvent>();
   readonly zoomChange = output<number>();
   readonly viewportScroll = output<Event>();
-  readonly alignNodes = output<'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'>();
-  readonly distributeNodes = output<'horizontal' | 'vertical'>();
-  readonly snapToGrid = output<void>();
-  readonly toggleSmartGuides = output<void>();
+  readonly nodeRename = output<{ nodeId: string; newName: string }>();
 
   readonly zoomLevel = signal<number>(100);
+  readonly hoveredNodeId = signal<string | null>(null);
+  readonly renamingNodeId = signal<string | null>(null);
+
+  startRenameNode(nodeId: string): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(nodeId)) return;
+    this.renamingNodeId.set(nodeId);
+  }
+
+  commitNodeRename(nodeId: string, newName: string): void {
+    if (this.renamingNodeId() !== nodeId) return;
+    this.renamingNodeId.set(null);
+    const trimmed = (newName || '').trim();
+    const node = this.nodes().find((n) => n.id === nodeId);
+    if (node && trimmed && trimmed !== node.name) {
+      this.nodeRename.emit({ nodeId, newName: trimmed });
+    }
+  }
+
+  cancelNodeRename(): void {
+    this.renamingNodeId.set(null);
+  }
+
+  onNodeMouseLeave(nodeId: string): void {
+    if (this.hoveredNodeId() === nodeId) {
+      this.hoveredNodeId.set(null);
+    }
+  }
 
   // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 2200x1400 para garantizar scroll bidireccional fluido en pantallas 1080p y superiores)
   readonly boardWidth = computed(() => {
@@ -159,6 +184,10 @@ export class DiagramCanvasComponent {
 
   onNodeDblClick(node: UmlClassNode, event: MouseEvent): void {
     this.nodeDblClick.emit({ node, event });
+  }
+
+  onConnectionClick(connId: string, event: MouseEvent): void {
+    this.connectionClick.emit({ connId, event });
   }
 
   onConnectionDblClick(conn: UmlConnection, event: MouseEvent): void {
@@ -294,9 +323,16 @@ export class DiagramCanvasComponent {
     return this.boardElementRef?.nativeElement || this.flowContainerRef?.nativeElement;
   }
 
-  // Ancho dinámico adaptativo para clases UML según su contenido (nombre, atributos, operaciones)
+  // Ancho dinámico adaptativo para elementos UML según su tipo y contenido
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
+    if (node.nodeType === 'actor') {
+      return node.width || 90;
+    }
+    if (node.nodeType === 'use_case') {
+      const nameLen = (node.name || '').length;
+      return Math.max(node.width || 160, Math.round(nameLen * 7.5 + 50));
+    }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
     for (const attr of node.attributes || []) {
@@ -312,6 +348,28 @@ export class DiagramCanvasComponent {
   }
 
   // Helpers de estado visual
+  shouldShowMultiplicity(conn: UmlConnection): boolean {
+    if (this.activeDiagramType() === DiagramType.USE_CASE) return false;
+    if (
+      conn.type === 'generalization' ||
+      conn.type === 'realization' ||
+      conn.type === 'include' ||
+      conn.type === 'extend' ||
+      conn.type === 'association_class' ||
+      !!conn.assocAnchorNodeId
+    ) {
+      return false;
+    }
+    const sourceBase = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
+    const targetBase = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
+    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
+    const sNode = nodeMap.get(sourceBase);
+    const tNode = nodeMap.get(targetBase);
+    if (sNode && (sNode.nodeType === 'actor' || sNode.nodeType === 'use_case')) return false;
+    if (tNode && (tNode.nodeType === 'actor' || tNode.nodeType === 'use_case')) return false;
+    return true;
+  }
+
   isNodeSelected(nodeId: string): boolean {
     return this.selectedNodeIds().includes(nodeId);
   }

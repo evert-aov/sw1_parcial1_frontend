@@ -26,12 +26,12 @@
   --ff-node-padding: 0px !important;
   --ff-node-border-radius: 0px !important;
   --ff-node-border-color: transparent !important;
-  --ff-node-background-color: #151A30 !important;
+  --ff-node-background-color: #FFFDF9 !important;
   --ff-node-shadow: none !important;
-  --ff-canvas-background-color: transparent !important;
-  --ff-flow-background-color: #0D1124 !important;
-  --ff-color-surface-canvas: transparent !important;
-  --ff-color-surface-page: #0D1124 !important;
+  --ff-canvas-background-color: #FFFFFF !important;
+  --ff-flow-background-color: #FFFFFF !important;
+  --ff-color-surface-canvas: #FFFFFF !important;
+  --ff-color-surface-page: #FFFFFF !important;
 }
 
 html.dark {
@@ -72,12 +72,12 @@ f-flow {
 
 .dark .uml-canvas-container,
 .dark f-flow {
-  background-color: #0D1124 !important;
+  background-color: #FFFFFF !important;
   background-image: none !important;
 }
 
 /* Nodos UML 2.5 estilo Enterprise Architect (EA) */
-f-flow .f-node {
+f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: #FFFDF9 !important;
@@ -86,10 +86,16 @@ f-flow .f-node {
   box-sizing: border-box !important;
 }
 
-.dark f-flow .f-node {
-  background-color: #151A30 !important;
-  border: 1px solid #3B487A !important;
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.45) !important;
+f-flow .f-node.f-node-actor,
+f-flow .f-node.f-node-use-case,
+.dark f-flow .f-node.f-node-actor,
+.dark f-flow .f-node.f-node-use-case {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: visible !important;
 }
 
 f-flow .f-connector-source-target,
@@ -106,8 +112,9 @@ f-flow .f-connector-connectable {
 }
 
 /* Quitar círculo (drag handle) en el extremo de las conexiones */
-f-flow circle,
 f-connection circle,
+f-connection-for-create circle,
+f-flow f-connection circle,
 f-flow .f-connection-drag-handle,
 f-flow circle[f-connection-drag-handle-end],
 f-flow circle[f-connection-drag-handle-start],
@@ -220,7 +227,67 @@ f-flow .f-connection-path {
 .dark f-flow .f-connection path,
 .dark f-flow path[f-connection-path],
 .dark f-flow .f-connection-path {
-  stroke: #818CF8 !important;
+  stroke: #43352B !important;
+}
+
+/* ==========================================================================
+   ESTILOS DE SELECCIÓN PARA CONEXIONES / RELACIONES UML (CLICK O MARQUEE)
+   ========================================================================== */
+f-flow f-connection.f-selected path,
+f-flow f-connection.f-connection-selected path,
+f-flow .f-connection.f-selected path,
+f-flow .f-connection.f-connection-selected path,
+f-flow f-connection.f-selected path[f-connection-path],
+f-flow f-connection.f-connection-selected path[f-connection-path],
+.dark f-flow f-connection.f-selected path,
+.dark f-flow f-connection.f-connection-selected path,
+.dark f-flow .f-connection.f-selected path,
+.dark f-flow .f-connection.f-connection-selected path {
+  stroke: #2563EB !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.7)) !important;
+}
+
+/* Marcadores al estar seleccionada la relación */
+f-flow f-connection.f-selected marker polygon,
+f-flow f-connection.f-connection-selected marker polygon,
+f-flow f-connection.f-selected marker polyline,
+f-flow f-connection.f-connection-selected marker polyline,
+.dark f-flow f-connection.f-selected marker polygon,
+.dark f-flow f-connection.f-connection-selected marker polygon,
+.dark f-flow f-connection.f-selected marker polyline,
+.dark f-flow f-connection.f-connection-selected marker polyline {
+  stroke: #2563EB !important;
+}
+
+f-flow f-connection.f-selected marker polygon.uml-marker-filled,
+f-flow f-connection.f-connection-selected marker polygon.uml-marker-filled,
+.dark f-flow f-connection.f-selected marker polygon.uml-marker-filled,
+.dark f-flow f-connection.f-connection-selected marker polygon.uml-marker-filled {
+  fill: #2563EB !important;
+  stroke: #2563EB !important;
+}
+
+f-flow f-connection.f-selected marker polygon.uml-marker-hollow,
+f-flow f-connection.f-connection-selected marker polygon.uml-marker-hollow,
+.dark f-flow f-connection.f-selected marker polygon.uml-marker-hollow,
+.dark f-flow f-connection.f-connection-selected marker polygon.uml-marker-hollow {
+  fill: #FFFFFF !important;
+  stroke: #2563EB !important;
+}
+
+/* Badges de estereotipo / multiplicidad cuando la conexión está seleccionada */
+f-flow f-connection.f-selected .uml-relation-name-badge,
+f-flow f-connection.f-connection-selected .uml-relation-name-badge,
+f-flow f-connection.f-selected .uml-multiplicity-badge,
+f-flow f-connection.f-connection-selected .uml-multiplicity-badge,
+.dark f-flow f-connection.f-selected .uml-relation-name-badge,
+.dark f-flow f-connection.f-connection-selected .uml-relation-name-badge,
+.dark f-flow f-connection.f-selected .uml-multiplicity-badge,
+.dark f-flow f-connection.f-connection-selected .uml-multiplicity-badge {
+  border-color: #2563EB !important;
+  color: #2563EB !important;
+  box-shadow: 0 0 6px rgba(37, 99, 235, 0.45) !important;
 }
 
 f-flow f-connection.uml-relation-realization path[f-connection-path],
@@ -275,8 +342,8 @@ path.uml-marker-hollow {
 .dark f-flow .uml-marker-hollow,
 .dark polygon.uml-marker-hollow,
 .dark path.uml-marker-hollow {
-  fill: #151A30 !important;
-  stroke: #818CF8 !important;
+  fill: #ffffff !important;
+  stroke: #43352B !important;
 }
 
 /* Forzar relleno oscuro sólido en Composición estilo EA */
@@ -299,8 +366,8 @@ path.uml-marker-filled {
 .dark f-flow .uml-marker-filled,
 .dark polygon.uml-marker-filled,
 .dark path.uml-marker-filled {
-  fill: #818CF8 !important;
-  stroke: #818CF8 !important;
+  fill: #43352B !important;
+  stroke: #43352B !important;
 }
 
 /* Forzar trazo abierto sin relleno en Dependencia */
@@ -325,6 +392,44 @@ path.uml-marker-open {
 .dark f-flow .uml-marker-open,
 .dark polyline.uml-marker-open,
 .dark path.uml-marker-open {
-  stroke: #818CF8 !important;
+  stroke: #43352B !important;
+}
+
+/* Scrollbar estilizado para el sidebar (Toolbox y Explorador) */
+.custom-sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.dark .custom-sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark .custom-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+
+.dark .custom-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 

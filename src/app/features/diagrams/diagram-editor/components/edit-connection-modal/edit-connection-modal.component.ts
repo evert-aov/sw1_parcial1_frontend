@@ -9,8 +9,10 @@ import {
   UmlRelationTypeItem,
   UmlLineStyleItem,
   UML_RELATION_TYPES,
+  ALL_UML_RELATION_TYPES,
   UML_LINE_STYLES,
   UML_MULTIPLICITY_OPTIONS,
+  DiagramType,
 } from '../../../../../core/models/diagram.model';
 
 @Component({
@@ -28,9 +30,10 @@ import {
 export class EditConnectionModalComponent {
   readonly isOpen = input<boolean>(false);
   readonly connection = input<UmlConnection | null>(null);
-  readonly relationTypes = input<UmlRelationTypeItem[]>(UML_RELATION_TYPES);
+  readonly relationTypes = input<UmlRelationTypeItem[]>(ALL_UML_RELATION_TYPES);
   readonly lineStyles = input<UmlLineStyleItem[]>(UML_LINE_STYLES);
   readonly multiplicityOptions = input<string[]>(UML_MULTIPLICITY_OPTIONS);
+  readonly activeDiagramType = input<DiagramType>(DiagramType.CLASS);
 
   readonly close = output<void>();
   readonly save = output<UmlConnection>();

@@ -5,7 +5,7 @@
 
 :host-context(.dark) .uml-viewport,
 .dark .uml-viewport {
-  background-color: #0D1124 !important;
+  background-color: #FFFFFF !important;
 }
 
 /* Scrollbars clásicos y precisos para el viewport del diagrama estilo EA */
@@ -29,18 +29,18 @@
 
 :host-context(.dark) .uml-viewport::-webkit-scrollbar-track,
 .dark .uml-viewport::-webkit-scrollbar-track {
-  background: #0D1124;
+  background: #F1F3F5;
 }
 
 :host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb,
 .dark .uml-viewport::-webkit-scrollbar-thumb {
-  background: #2D3762;
-  border: 2px solid #0D1124;
+  background: #C1C7D0;
+  border: 2px solid #F1F3F5;
 }
 
 :host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb:hover,
 .dark .uml-viewport::-webkit-scrollbar-thumb:hover {
-  background: #4A5588;
+  background: #8993A4;
 }
 
 ::ng-deep f-flow {
@@ -50,7 +50,7 @@
 
 :host-context(.dark) ::ng-deep f-flow,
 .dark ::ng-deep f-flow {
-  background-color: #0D1124 !important;
+  background-color: #FFFFFF !important;
   background-image: none !important;
 }
 
@@ -64,7 +64,7 @@
   outline: none !important;
 }
 
-::ng-deep f-flow .f-node {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: #FFFDF9 !important;
@@ -73,11 +73,18 @@
   box-sizing: border-box !important;
 }
 
-:host-context(.dark) ::ng-deep f-flow .f-node,
-.dark ::ng-deep f-flow .f-node {
-  background-color: #151A30 !important;
-  border: 1px solid #3B487A !important;
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.45) !important;
+::ng-deep f-flow .f-node.f-node-actor,
+::ng-deep f-flow .f-node.f-node-use-case,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
+.dark ::ng-deep f-flow .f-node.f-node-actor,
+.dark ::ng-deep f-flow .f-node.f-node-use-case {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: visible !important;
 }
 
 ::ng-deep f-flow .uml-connector-point.uml-connector-inactive {
@@ -92,8 +99,8 @@
   pointer-events: auto !important;
 }
 
-::ng-deep f-flow circle,
 ::ng-deep f-flow f-connection circle,
+::ng-deep f-flow f-connection-for-create circle,
 ::ng-deep f-flow .f-connection-drag-handle {
   display: none !important;
   visibility: hidden !important;
@@ -110,14 +117,6 @@
   fill: none !important;
   stroke: #43352B !important;
   stroke-width: 1.3px !important;
-}
-
-:host-context(.dark) ::ng-deep f-flow f-connection path,
-:host-context(.dark) ::ng-deep f-flow f-connection-for-create path,
-:host-context(.dark) ::ng-deep f-flow .f-connection path,
-:host-context(.dark) ::ng-deep f-flow path[f-connection-path],
-:host-context(.dark) ::ng-deep f-flow .f-connection-path {
-  stroke: #818CF8 !important;
 }
 
 ::ng-deep f-flow f-connection.uml-relation-realization path[f-connection-path],
@@ -149,16 +148,6 @@
   stroke-width: 1.3px !important;
 }
 
-:host-context(.dark) ::ng-deep f-flow svg marker polygon.uml-marker-hollow,
-:host-context(.dark) ::ng-deep f-flow svg defs marker polygon.uml-marker-hollow,
-:host-context(.dark) ::ng-deep f-flow marker polygon.uml-marker-hollow,
-:host-context(.dark) ::ng-deep f-flow .f-marker polygon.uml-marker-hollow,
-:host-context(.dark) ::ng-deep f-flow .uml-marker-hollow,
-:host-context(.dark) ::ng-deep polygon.uml-marker-hollow {
-  fill: #151A30 !important;
-  stroke: #818CF8 !important;
-}
-
 ::ng-deep f-flow svg marker polygon.uml-marker-filled,
 ::ng-deep f-flow svg defs marker polygon.uml-marker-filled,
 ::ng-deep f-flow marker polygon.uml-marker-filled,
@@ -170,16 +159,6 @@
   stroke-width: 1.3px !important;
 }
 
-:host-context(.dark) ::ng-deep f-flow svg marker polygon.uml-marker-filled,
-:host-context(.dark) ::ng-deep f-flow svg defs marker polygon.uml-marker-filled,
-:host-context(.dark) ::ng-deep f-flow marker polygon.uml-marker-filled,
-:host-context(.dark) ::ng-deep f-flow .f-marker polygon.uml-marker-filled,
-:host-context(.dark) ::ng-deep f-flow .uml-marker-filled,
-:host-context(.dark) ::ng-deep polygon.uml-marker-filled {
-  fill: #818CF8 !important;
-  stroke: #818CF8 !important;
-}
-
 ::ng-deep f-flow svg marker polyline.uml-marker-open,
 ::ng-deep f-flow svg defs marker polyline.uml-marker-open,
 ::ng-deep f-flow marker polyline.uml-marker-open,
@@ -189,15 +168,6 @@
   fill: none !important;
   stroke: #43352B !important;
   stroke-width: 1.5px !important;
-}
-
-:host-context(.dark) ::ng-deep f-flow svg marker polyline.uml-marker-open,
-:host-context(.dark) ::ng-deep f-flow svg defs marker polyline.uml-marker-open,
-:host-context(.dark) ::ng-deep f-flow marker polyline.uml-marker-open,
-:host-context(.dark) ::ng-deep f-flow .f-marker polyline.uml-marker-open,
-:host-context(.dark) ::ng-deep f-flow .uml-marker-open,
-:host-context(.dark) ::ng-deep polyline.uml-marker-open {
-  stroke: #818CF8 !important;
 }
 
 /* =========================================================================
@@ -269,12 +239,21 @@
 
 :host-context(.dark) ::ng-deep .f-selection-area,
 .dark ::ng-deep .f-selection-area {
-  background-color: rgba(96, 165, 250, 0.2) !important;
-  border: 1.5px dashed #60a5fa !important;
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border: 1.5px dashed #2563eb !important;
 }
 
 ::ng-deep f-flow .f-node.f-selected {
   outline: 2px solid #2563eb !important;
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
   z-index: 30 !important;
+}
+
+::ng-deep f-flow f-connection.f-selected path,
+::ng-deep f-flow f-connection.f-connection-selected path,
+::ng-deep f-flow .f-connection.f-selected path,
+::ng-deep f-flow .f-connection.f-connection-selected path {
+  stroke: #2563eb !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.7)) !important;
 }

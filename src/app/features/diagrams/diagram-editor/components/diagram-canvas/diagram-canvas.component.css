@@ -19,8 +19,8 @@
 
 :host-context(.dark) .uml-viewport,
 .dark .uml-viewport {
-  background-color: #0D1124 !important;
-  background-image: radial-gradient(#283256 1.2px, transparent 1.2px) !important;
+  background-color: #FFFFFF !important;
+  background-image: radial-gradient(#CBD5E1 1.2px, transparent 1.2px) !important;
   background-size: 20px 20px !important;
 }
 
@@ -45,18 +45,18 @@
 
 :host-context(.dark) .uml-viewport::-webkit-scrollbar-track,
 .dark .uml-viewport::-webkit-scrollbar-track {
-  background: #0D1124;
+  background: #F1F3F5;
 }
 
 :host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb,
 .dark .uml-viewport::-webkit-scrollbar-thumb {
-  background: #2D3762;
-  border: 2px solid #0D1124;
+  background: #C1C7D0;
+  border: 2px solid #F1F3F5;
 }
 
 :host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb:hover,
 .dark .uml-viewport::-webkit-scrollbar-thumb:hover {
-  background: #4A5588;
+  background: #8993A4;
 }
 
 ::ng-deep f-flow {
@@ -66,7 +66,7 @@
 
 :host-context(.dark) ::ng-deep f-flow,
 .dark ::ng-deep f-flow {
-  background-color: #0D1124 !important;
+  background-color: #FFFFFF !important;
   background-image: none !important;
 }
 
@@ -75,20 +75,13 @@
   background: transparent !important;
 }
 
-::ng-deep f-flow .f-node {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: var(--node-bg, #FFFDDD) !important;
   border: 1px solid #796354 !important;
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15) !important;
   box-sizing: border-box !important;
-}
-
-:host-context(.dark) ::ng-deep f-flow .f-node,
-.dark ::ng-deep f-flow .f-node {
-  background-color: var(--node-bg, #FFFDDD) !important;
-  border: 1px solid #796354 !important;
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.35) !important;
 }
 
 ::ng-deep f-flow .f-node.opacity-0,
@@ -98,7 +91,39 @@
   box-shadow: none !important;
 }
 
-::ng-deep f-flow .f-node.f-selected {
+::ng-deep f-flow .f-node.f-node-actor,
+::ng-deep f-flow .f-node.f-node-use-case,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
+.dark ::ng-deep f-flow .f-node.f-node-actor,
+.dark ::ng-deep f-flow .f-node.f-node-use-case {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: visible !important;
+}
+
+::ng-deep f-flow .f-node.f-node-actor circle {
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+::ng-deep f-flow .f-node.f-node-actor.f-selected,
+::ng-deep f-flow .f-node.f-node-use-case.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-actor.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-use-case.f-selected {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+::ng-deep f-flow .f-node.f-node-class.f-selected,
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case).f-selected {
   outline: 2px solid #2563eb !important;
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
   z-index: 30 !important;
@@ -116,8 +141,8 @@
 
 :host-context(.dark) ::ng-deep f-selection-area,
 .dark ::ng-deep f-selection-area {
-  background-color: rgba(99, 102, 241, 0.2) !important;
-  border-color: #818CF8 !important;
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  border-color: #2563EB !important;
 }
 
 /* Estilos de Conexiones UML */
@@ -129,6 +154,18 @@
 ::ng-deep .uml-relation-dependency .f-connection-drag-handle,
 ::ng-deep .uml-relation-dependency path {
   stroke-dasharray: 5, 4 !important;
+}
+
+::ng-deep .uml-relation-include .f-connection-drag-handle,
+::ng-deep .uml-relation-include path {
+  stroke-dasharray: 5, 4 !important;
+  stroke: #2D3748 !important;
+}
+
+::ng-deep .uml-relation-extend .f-connection-drag-handle,
+::ng-deep .uml-relation-extend path {
+  stroke-dasharray: 5, 4 !important;
+  stroke: #2D3748 !important;
 }
 
 ::ng-deep .uml-relation-realization .f-connection-drag-handle,
@@ -165,19 +202,19 @@
 
 :host-context(.dark) .uml-marker-filled,
 .dark .uml-marker-filled {
-  fill: #E2E8F0;
-  stroke: #E2E8F0;
+  fill: #1A202C;
+  stroke: #1A202C;
 }
 
 :host-context(.dark) .uml-marker-hollow,
 .dark .uml-marker-hollow {
-  fill: #12162A;
-  stroke: #E2E8F0;
+  fill: #FFFFFF;
+  stroke: #1A202C;
 }
 
 :host-context(.dark) .uml-marker-open,
 .dark .uml-marker-open {
-  stroke: #E2E8F0;
+  stroke: #1A202C;
 }
 
 /* Etiquetas de Multiplicidad y Nombre */
@@ -198,9 +235,9 @@
 
 :host-context(.dark) .uml-multiplicity-badge,
 .dark .uml-multiplicity-badge {
-  background: rgba(20, 24, 46, 0.95);
-  color: #E2E8F0;
-  border-color: #2D3762;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1A202C;
+  border-color: #CBD5E1;
 }
 
 .uml-relation-name-badge {
@@ -221,9 +258,9 @@
 
 :host-context(.dark) .uml-relation-name-badge,
 .dark .uml-relation-name-badge {
-  background: rgba(20, 24, 46, 0.95);
-  color: #93C5FD;
-  border-color: #3B82F6;
+  background: rgba(255, 255, 255, 0.95);
+  color: #2B6CB0;
+  border-color: #90CDF4;
 }
 
 /* Conectores UML */

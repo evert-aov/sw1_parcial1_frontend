@@ -4,23 +4,28 @@
       
       <!-- Header -->
       <div class="border-b border-slate-100 dark:border-slate-800 px-5 py-3.5 flex items-center justify-between">
-        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">{{ 'editor.nodeModal.title' | translate }}</h3>
+        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">
+          {{ editingNode()!.nodeType === 'actor' ? 'Editar Actor' : editingNode()!.nodeType === 'use_case' ? 'Editar Caso de Uso' : ('editor.nodeModal.title' | translate) }}
+        </h3>
         <button (click)="onClose()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
       </div>
 
       <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
         
-        <!-- Nombre de la Clase -->
+        <!-- Nombre del Elemento / Clase -->
         <div>
-          <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">{{ 'editor.nodeModal.className' | translate }}</label>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">
+            {{ editingNode()!.nodeType === 'actor' ? 'Nombre del Actor' : editingNode()!.nodeType === 'use_case' ? 'Nombre del Caso de Uso' : ('editor.nodeModal.className' | translate) }}
+          </label>
           <input
             type="text"
             [(ngModel)]="editingNode()!.name"
-            placeholder="e.g. Usuario, Pedido"
+            [placeholder]="editingNode()!.nodeType === 'actor' ? 'e.g. Cliente, Administrador' : editingNode()!.nodeType === 'use_case' ? 'e.g. Realizar Pedido, Iniciar Sesión' : 'e.g. Usuario, Pedido'"
             class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all font-mono"
           />
         </div>
 
+        @if (!editingNode()!.nodeType || editingNode()!.nodeType === 'class') {
         <!-- Atributos con Tipos Estrictamente Predefinidos y Metadatos de BD -->
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -162,6 +167,7 @@
             }
           </div>
         </div>
+        }
 
       </div>
 

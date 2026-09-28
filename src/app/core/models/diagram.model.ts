@@ -10,18 +10,21 @@ export interface DiagramTypeItem {
   id: DiagramType;
   label: string;
   shortLabel: string;
+  folderName: string;
   icon: string;
   description: string;
   supported: boolean;
 }
 
 export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
-  { id: DiagramType.CLASS, label: 'Diagrama de Clases', shortLabel: 'Clases', icon: 'heroSquare3Stack3d', description: 'Estructura estática, atributos, métodos y relaciones UML 2.5', supported: true },
-  { id: DiagramType.USE_CASE, label: 'Casos de Uso', shortLabel: 'Casos Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: false },
-  { id: DiagramType.SEQUENCE, label: 'Secuencia', shortLabel: 'Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: false },
-  { id: DiagramType.COMMUNICATION, label: 'Comunicación', shortLabel: 'Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: false },
-  { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: false },
+  { id: DiagramType.CLASS, label: 'Diagrama de Clases', shortLabel: 'Clases', folderName: 'Diagramas de Clases', icon: 'heroSquare3Stack3d', description: 'Estructura estática, atributos, métodos y relaciones UML 2.5', supported: true },
+  { id: DiagramType.USE_CASE, label: 'Casos de Uso', shortLabel: 'Casos Uso', folderName: 'Casos de Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: false },
+  { id: DiagramType.SEQUENCE, label: 'Secuencia', shortLabel: 'Secuencia', folderName: 'Diagramas de Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: false },
+  { id: DiagramType.COMMUNICATION, label: 'Comunicación', shortLabel: 'Comunicación', folderName: 'Diagramas de Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: false },
+  { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', folderName: 'Diagramas de Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: false },
 ];
+
+export type UmlNodeType = 'class' | 'actor' | 'use_case' | 'package';
 
 export type UmlRelationshipType =
   | 'association'
@@ -30,7 +33,9 @@ export type UmlRelationshipType =
   | 'composition'
   | 'aggregation'
   | 'dependency'
-  | 'association_class';
+  | 'association_class'
+  | 'include'
+  | 'extend';
 
 export type UmlLineStyle = 'segment' | 'straight' | 'bezier' | 'adaptive-curve';
 
@@ -54,6 +59,20 @@ export const UML_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'aggregation', label: 'Agregación', icon: '◇──', description: 'Pertenencia débil o contenedor.' },
   { id: 'dependency', label: 'Dependencia', icon: '┈>', description: 'Uso temporal o dependencia débil.' },
   { id: 'association_class', label: 'Asociación de Clases', icon: '─*─┄[C]', description: 'Relación muchos a muchos con clases.' },
+];
+
+export const UML_USE_CASE_RELATION_TYPES: UmlRelationTypeItem[] = [
+  { id: 'association', label: 'Comunicación / Asociación', icon: '───', description: 'Interacción directa entre un Actor y un Caso de Uso.' },
+  { id: 'include', label: '«include»', icon: '┄«include»▷', description: 'Inclusión obligatoria del comportamiento de otro caso de uso.' },
+  { id: 'extend', label: '«extend»', icon: '┄«extend»▷', description: 'Extensión opcional o condicional de un caso de uso.' },
+  { id: 'generalization', label: 'Generalización', icon: '─▷', description: 'Herencia entre actores o entre casos de uso.' },
+  { id: 'dependency', label: 'Dependencia', icon: '┄>', description: 'Dependencia funcional entre elementos de casos de uso.' },
+];
+
+export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [
+  ...UML_RELATION_TYPES,
+  { id: 'include', label: '«include»', icon: '┄«include»▷', description: 'Inclusión obligatoria del comportamiento de otro caso de uso.' },
+  { id: 'extend', label: '«extend»', icon: '┄«extend»▷', description: 'Extensión opcional o condicional de un caso de uso.' },
 ];
 
 
@@ -105,6 +124,7 @@ export interface UmlClassNode {
   methods: UmlMethod[];
   isAnchor?: boolean;
   assocMainConnId?: string;
+  nodeType?: UmlNodeType;
 }
 
 export interface UmlConnection {
@@ -140,6 +160,7 @@ export interface DiagramDto {
     color?: string | null;
     isAnchor?: boolean;
     assocMainConnId?: string | null;
+    nodeType?: UmlNodeType | string;
     attributes?: UmlAttribute[];
     methods?: UmlMethod[];
   }[];
@@ -173,6 +194,7 @@ export interface SaveDiagramAstRequest {
     color?: string | null;
     isAnchor?: boolean;
     assocMainConnId?: string | null;
+    nodeType?: UmlNodeType | string;
     attributes?: UmlAttribute[];
     methods?: UmlMethod[];
   }[];

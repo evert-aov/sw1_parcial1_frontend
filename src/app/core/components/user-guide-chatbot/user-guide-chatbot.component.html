@@ -1,24 +1,44 @@
 <!-- BOTÓN FLOTANTE ACTIVADOR (LAUNCHER) -->
-@if (!isOpen()) {
-  <div class="fixed bottom-5 right-5 z-50 flex items-center gap-3">
-    <!-- Tooltip / Badge de Bienvenida -->
-    <div
-      (click)="toggleOpen()"
-      class="hidden md:flex items-center gap-2 bg-white dark:bg-[#151B38] text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 shadow-xl px-3.5 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:scale-105 transition-all animate-bounce">
-      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-      <span [innerHTML]="'guide.launcherBadge' | translate"></span>
-    </div>
+@if (!isOpen() && !guideService.isLauncherHidden()) {
+  <div
+    [style.left.px]="launcherPosX()"
+    [style.top.px]="launcherPosY()"
+    [class.bottom-5]="launcherPosX() === null"
+    [class.right-5]="launcherPosX() === null"
+    class="fixed z-50 flex items-center select-none group/launcher transition-shadow">
 
-    <!-- Botón Circular Principal -->
+    <!-- Botón Circular Principal del Manual (Draggable y sin mensaje de texto) -->
     <button
-      (click)="toggleOpen()"
-      [title]="'guide.openTooltip' | translate"
-      class="relative group bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-500 hover:from-blue-500 hover:to-indigo-500 text-white p-3.5 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white/20 cursor-pointer">
-      <ng-icon name="heroAcademicCap" class="text-2xl"></ng-icon>
+      type="button"
+      (mousedown)="onLauncherMouseDown($event)"
+      (touchstart)="onLauncherTouchStart($event)"
+      (click)="onLauncherClick()"
+      title="Manual Interactivo • Arrastra para mover de posición"
+      class="relative bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-500 hover:from-blue-500 hover:to-indigo-500 text-white p-3.5 rounded-full shadow-2xl transition-transform duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center border-2 border-white/20 cursor-grab active:cursor-grabbing">
+      <ng-icon name="heroAcademicCap" class="text-2xl pointer-events-none"></ng-icon>
       <!-- Indicador online -->
-      <span class="absolute top-0 right-0 block h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-[#0D1124] bg-emerald-400"></span>
+      <span class="absolute top-0 right-0 block h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-[#0D1124] bg-emerald-400 pointer-events-none"></span>
+
+      <!-- Botón Ocultar en esquina (visible en hover del botón) -->
+      <span
+        (click)="hideLauncher($event); $event.stopPropagation()"
+        title="Ocultar icono del manual"
+        class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-slate-800/90 dark:bg-slate-700/90 text-white hover:bg-red-600 rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover/launcher:opacity-100 transition-all shadow-md cursor-pointer hover:scale-110">
+        <ng-icon name="heroXMark" class="text-xs"></ng-icon>
+      </span>
     </button>
   </div>
+}
+
+<!-- Acceso discreto para restaurar el icono cuando está oculto -->
+@if (!isOpen() && guideService.isLauncherHidden()) {
+  <button
+    type="button"
+    (click)="showLauncher($event)"
+    title="Mostrar icono del manual interactivo"
+    class="fixed bottom-2 right-2 p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 opacity-40 hover:opacity-100 z-50 bg-white/70 dark:bg-[#0D1124]/70 backdrop-blur rounded-full border border-slate-200 dark:border-slate-800 shadow-xs transition-all cursor-pointer">
+    <ng-icon name="heroAcademicCap" class="text-sm"></ng-icon>
+  </button>
 }
 
 <!-- VENTANA DEL CHATBOT / GUÍA INTERACTIVA -->
@@ -49,6 +69,24 @@
 
       <!-- Acciones de Ventana -->
       <div class="flex items-center gap-1">
+        <!-- Alternar Visibilidad del Icono Flotante -->
+        @if (guideService.isLauncherHidden()) {
+          <button
+            (click)="showLauncher()"
+            title="Restaurar icono flotante del manual"
+            class="px-2 py-1 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-[#1E2548] rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1 font-medium">
+            <ng-icon name="heroEye" class="text-sm"></ng-icon>
+            <span class="hidden sm:inline">Mostrar icono</span>
+          </button>
+        } @else {
+          <button
+            (click)="hideLauncher()"
+            title="Ocultar icono flotante del manual"
+            class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#1E2548] rounded-lg transition-colors cursor-pointer">
+            <ng-icon name="heroEyeSlash" class="text-sm"></ng-icon>
+          </button>
+        }
+
         <!-- Reiniciar Chat -->
         <button
           (click)="resetChat()"
