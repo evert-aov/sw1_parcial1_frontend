@@ -18,13 +18,21 @@ export interface DiagramTypeItem {
 
 export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
   { id: DiagramType.CLASS, label: 'Diagrama de Clases', shortLabel: 'Clases', folderName: 'Diagramas de Clases', icon: 'heroSquare3Stack3d', description: 'Estructura estática, atributos, métodos y relaciones UML 2.5', supported: true },
-  { id: DiagramType.USE_CASE, label: 'Casos de Uso', shortLabel: 'Casos Uso', folderName: 'Casos de Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: false },
+  { id: DiagramType.USE_CASE, label: 'Casos de Uso', shortLabel: 'Casos Uso', folderName: 'Casos de Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: true },
   { id: DiagramType.SEQUENCE, label: 'Secuencia', shortLabel: 'Secuencia', folderName: 'Diagramas de Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: false },
   { id: DiagramType.COMMUNICATION, label: 'Comunicación', shortLabel: 'Comunicación', folderName: 'Diagramas de Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: false },
-  { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', folderName: 'Diagramas de Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: false },
+  { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', folderName: 'Diagramas de Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: true },
 ];
 
-export type UmlNodeType = 'class' | 'actor' | 'use_case' | 'package';
+export type UmlNodeType =
+  | 'class'
+  | 'actor'
+  | 'use_case'
+  | 'package'
+  | 'boundary'
+  | 'control'
+  | 'entity'
+  | 'lifeline';
 
 export type UmlRelationshipType =
   | 'association'
@@ -35,9 +43,31 @@ export type UmlRelationshipType =
   | 'dependency'
   | 'association_class'
   | 'include'
-  | 'extend';
+  | 'extend'
+  | 'import'
+  | 'access'
+  | 'merge'
+  | 'trace'
+  | 'message';
 
 export type UmlLineStyle = 'segment' | 'straight' | 'bezier' | 'adaptive-curve';
+
+export type UmlMessageType = 'sync' | 'async' | 'reply' | 'create';
+export type UmlMessageDirection = 'forward' | 'reverse';
+
+export interface UmlMessage {
+  id: string;
+  sequenceNumber: string;
+  functionName: string;
+  parameters?: string;
+  returnType?: string;
+  isReturn?: boolean;
+  type?: UmlMessageType | string;
+  direction?: UmlMessageDirection | string;
+  orderIndex?: number;
+  positionY?: number;
+  color?: string;
+}
 
 export interface UmlRelationTypeItem {
   id: UmlRelationshipType;
@@ -69,10 +99,23 @@ export const UML_USE_CASE_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'dependency', label: 'Dependencia', icon: '┄>', description: 'Dependencia funcional entre elementos de casos de uso.' },
 ];
 
+export const UML_PACKAGE_RELATION_TYPES: UmlRelationTypeItem[] = [
+  { id: 'dependency', label: 'Dependencia', icon: '┈>', description: 'Dependencia débil o uso entre paquetes.' },
+  { id: 'import', label: '«import»', icon: '┄«import»▷', description: 'Importación pública del contenido de un paquete.' },
+  { id: 'access', label: '«access»', icon: '┄«access»▷', description: 'Importación privada del contenido de un paquete.' },
+  { id: 'merge', label: '«merge»', icon: '┄«merge»▷', description: 'Fusión de definiciones complementarias de paquetes.' },
+  { id: 'trace', label: '«trace»', icon: '┄«trace»▷', description: 'Trazabilidad conceptual o histórica entre paquetes.' },
+  { id: 'generalization', label: 'Generalización', icon: '─▷', description: 'Especialización o herencia entre paquetes.' },
+];
+
 export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [
   ...UML_RELATION_TYPES,
   { id: 'include', label: '«include»', icon: '┄«include»▷', description: 'Inclusión obligatoria del comportamiento de otro caso de uso.' },
   { id: 'extend', label: '«extend»', icon: '┄«extend»▷', description: 'Extensión opcional o condicional de un caso de uso.' },
+  { id: 'import', label: '«import»', icon: '┄«import»▷', description: 'Importación pública del contenido de un paquete.' },
+  { id: 'access', label: '«access»', icon: '┄«access»▷', description: 'Importación privada del contenido de un paquete.' },
+  { id: 'merge', label: '«merge»', icon: '┄«merge»▷', description: 'Fusión de definiciones complementarias de paquetes.' },
+  { id: 'trace', label: '«trace»', icon: '┄«trace»▷', description: 'Trazabilidad conceptual o histórica entre paquetes.' },
 ];
 
 
@@ -128,6 +171,7 @@ export interface UmlClassNode {
   isAnchor?: boolean;
   assocMainConnId?: string;
   nodeType?: UmlNodeType;
+  activations?: any[];
 }
 
 export interface UmlConnection {
@@ -144,6 +188,7 @@ export interface UmlConnection {
   sourceMultiplicity?: string;
   targetMultiplicity?: string;
   assocAnchorNodeId?: string;
+  messages?: UmlMessage[];
 }
 
 export interface DiagramDto {
@@ -164,6 +209,7 @@ export interface DiagramDto {
     isAnchor?: boolean;
     assocMainConnId?: string | null;
     nodeType?: UmlNodeType | string;
+    activations?: any[];
     attributes?: UmlAttribute[];
     methods?: UmlMethod[];
   }[];
@@ -179,6 +225,7 @@ export interface DiagramDto {
     sourceMultiplicity?: string;
     targetMultiplicity?: string;
     assocAnchorNodeId?: string | null;
+    messages?: UmlMessage[];
   }[];
   updatedAt: string;
   createdAt: string;
@@ -198,6 +245,7 @@ export interface SaveDiagramAstRequest {
     isAnchor?: boolean;
     assocMainConnId?: string | null;
     nodeType?: UmlNodeType | string;
+    activations?: any[];
     attributes?: UmlAttribute[];
     methods?: UmlMethod[];
   }[];
@@ -213,5 +261,6 @@ export interface SaveDiagramAstRequest {
     sourceMultiplicity?: string;
     targetMultiplicity?: string;
     assocAnchorNodeId?: string | null;
+    messages?: UmlMessage[];
   }[];
 }
