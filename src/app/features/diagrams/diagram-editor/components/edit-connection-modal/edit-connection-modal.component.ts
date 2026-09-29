@@ -60,6 +60,21 @@ export class EditConnectionModalComponent {
     );
   }
 
+  readonly sequenceColorPalette: string[] = [
+    '#241C18', // 1: Negro Carbón
+    '#B91C1C', // 2: Rojo Carmín
+    '#1D4ED8', // 3: Azul Real
+    '#047857', // 4: Verde Esmeralda
+    '#7C3AED', // 5: Violeta Púrpura
+    '#C2410C', // 6: Naranja Óxido
+    '#0E7490', // 7: Cian Océano
+    '#BE185D', // 8: Rosa / Magenta
+    '#4D7C0F', // 9: Verde Oliva
+    '#4338CA', // 10: Índigo Profundo
+    '#9A3412', // 11: Terracota
+    '#0F766E', // 12: Teal
+  ];
+
   onSwapDirection(): void {
     const conn = this.editingConnection();
     if (!conn) return;
@@ -78,6 +93,7 @@ export class EditConnectionModalComponent {
     if (!conn) return;
     if (!conn.messages) conn.messages = [];
     const nextSeq = `${conn.messages.length + 1}`;
+    const defaultColor = this.sequenceColorPalette[conn.messages.length % this.sequenceColorPalette.length];
     const newMsg: UmlMessage = {
       id: `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       sequenceNumber: nextSeq,
@@ -87,7 +103,7 @@ export class EditConnectionModalComponent {
       isReturn: false,
       direction: 'forward',
       orderIndex: conn.messages.length,
-      color: '#241C18',
+      color: defaultColor,
     };
     conn.messages.push(newMsg);
     this.editingConnection.set({ ...conn });

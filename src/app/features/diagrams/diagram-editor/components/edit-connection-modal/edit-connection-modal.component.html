@@ -173,24 +173,23 @@
                       <!-- Color del mensaje -->
                       <div class="col-span-3">
                         <label class="block text-[9.5px] font-medium text-slate-400 mb-0.5">Color</label>
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-1">
                           <input
                             type="color"
                             [(ngModel)]="msg.color"
-                            class="w-7 h-6 p-0 border border-slate-300 dark:border-slate-700 rounded cursor-pointer bg-transparent"
+                            class="w-6 h-6 p-0 border border-slate-300 dark:border-slate-700 rounded cursor-pointer bg-transparent shrink-0"
+                            [title]="'Color: ' + (msg.color || '#241C18')"
                           />
-                          <button
-                            type="button"
-                            (click)="msg.color = '#241C18'"
-                            class="w-4 h-4 rounded-full border border-slate-300"
-                            style="background-color: #241C18"
-                            title="Negro UML"></button>
-                          <button
-                            type="button"
-                            (click)="msg.color = '#8B1D1D'"
-                            class="w-4 h-4 rounded-full border border-slate-300"
-                            style="background-color: #8B1D1D"
-                            title="Vino / Rojo"></button>
+                          <div class="flex items-center gap-1 flex-wrap">
+                            @for (palColor of sequenceColorPalette.slice(0, 6); track palColor) {
+                              <button
+                                type="button"
+                                (click)="msg.color = palColor"
+                                class="w-3.5 h-3.5 rounded-full border border-slate-300/80 hover:scale-125 transition-transform cursor-pointer"
+                                [style.backgroundColor]="palColor"
+                                [title]="palColor"></button>
+                            }
+                          </div>
                         </div>
                       </div>
                     </div>
