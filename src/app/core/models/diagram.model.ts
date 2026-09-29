@@ -110,7 +110,6 @@ export const UML_PACKAGE_RELATION_TYPES: UmlRelationTypeItem[] = [
 
 export const UML_COMMUNICATION_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'association', label: 'Enlace de Comunicación', icon: '───', description: 'Enlace entre objetos que transporta mensajes numerados secuenciales.' },
-  { id: 'dependency', label: 'Dependencia', icon: '┈>', description: 'Dependencia o uso temporal entre objetos.' },
 ];
 
 export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [

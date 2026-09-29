@@ -14,8 +14,9 @@
           <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">{{ 'editor.connModal.type' | translate }}</label>
           <select
             [(ngModel)]="editingConnection()!.type"
-            class="w-full px-3 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-800 dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-            @for (rel of relationTypes(); track rel.id) {
+            [disabled]="currentRelationTypes().length <= 1"
+            class="w-full px-3 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-xs text-slate-800 dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:opacity-80 disabled:cursor-default">
+            @for (rel of currentRelationTypes(); track rel.id) {
               <option [value]="rel.id">{{ rel.label }} ({{ rel.icon }})</option>
             }
           </select>

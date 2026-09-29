@@ -1,4 +1,4 @@
-import { Component, input, output, signal, effect } from '@angular/core';
+import { Component, input, output, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -9,6 +9,9 @@ import {
   UmlRelationTypeItem,
   UmlLineStyleItem,
   UML_RELATION_TYPES,
+  UML_USE_CASE_RELATION_TYPES,
+  UML_PACKAGE_RELATION_TYPES,
+  UML_COMMUNICATION_RELATION_TYPES,
   ALL_UML_RELATION_TYPES,
   UML_LINE_STYLES,
   UML_MULTIPLICITY_OPTIONS,
@@ -34,10 +37,27 @@ import {
 export class EditConnectionModalComponent {
   readonly isOpen = input<boolean>(false);
   readonly connection = input<UmlConnection | null>(null);
-  readonly relationTypes = input<UmlRelationTypeItem[]>(ALL_UML_RELATION_TYPES);
+  readonly relationTypes = input<UmlRelationTypeItem[] | null>(null);
   readonly lineStyles = input<UmlLineStyleItem[]>(UML_LINE_STYLES);
   readonly multiplicityOptions = input<string[]>(UML_MULTIPLICITY_OPTIONS);
   readonly activeDiagramType = input<DiagramType>(DiagramType.CLASS);
+
+  readonly currentRelationTypes = computed<UmlRelationTypeItem[]>(() => {
+    if (this.relationTypes()) {
+      return this.relationTypes()!;
+    }
+    switch (this.activeDiagramType()) {
+      case DiagramType.COMMUNICATION:
+        return UML_COMMUNICATION_RELATION_TYPES;
+      case DiagramType.USE_CASE:
+        return UML_USE_CASE_RELATION_TYPES;
+      case DiagramType.PACKAGE:
+        return UML_PACKAGE_RELATION_TYPES;
+      case DiagramType.CLASS:
+      default:
+        return UML_RELATION_TYPES;
+    }
+  });
 
   readonly close = output<void>();
   readonly save = output<UmlConnection>();

@@ -127,27 +127,30 @@
                 <div
                   fConnectionContent
                   [position]="0.5"
-                  [offset]="-18"
-                  (dblclick)="onConnectionDblClick(conn, $event)"
-                  title="Mensajes de Comunicación UML 2.5 (doble clic para editar)"
-                  class="uml-communication-messages-badge">
-                  @for (msg of conn.messages; track msg.id || $index) {
-                    <div class="uml-comm-msg-item" [style.color]="msg.color || '#241C18'">
-                      @if (msg.direction === 'reverse') {
-                        <span class="uml-comm-msg-arrow">←</span>
-                        <span class="font-mono">{{ msg.sequenceNumber }}: {{ msg.functionName }}({{ msg.parameters || '' }})</span>
-                        @if (msg.returnType) {
-                          <span class="opacity-75 font-mono">: {{ msg.returnType }}</span>
+                  [offset]="-8"
+                  class="uml-comm-messages-anchor">
+                  <div
+                    (dblclick)="onConnectionDblClick(conn, $event)"
+                    title="Mensajes de Comunicación UML 2.5 (doble clic para editar)"
+                    class="uml-communication-messages-badge">
+                    @for (msg of conn.messages; track msg.id || $index) {
+                      <div class="uml-comm-msg-item" [style.color]="msg.color || '#241C18'">
+                        @if (msg.direction === 'reverse') {
+                          <span class="uml-comm-msg-arrow font-bold text-xs leading-none select-none">←</span>
+                          <span class="font-mono font-medium">{{ msg.sequenceNumber }}: {{ msg.functionName }}({{ msg.parameters || '' }})</span>
+                          @if (msg.returnType) {
+                            <span class="opacity-75 font-mono">: {{ msg.returnType }}</span>
+                          }
+                        } @else {
+                          <span class="font-mono font-medium">{{ msg.sequenceNumber }}: {{ msg.functionName }}({{ msg.parameters || '' }})</span>
+                          @if (msg.returnType) {
+                            <span class="opacity-75 font-mono">: {{ msg.returnType }}</span>
+                          }
+                          <span class="uml-comm-msg-arrow font-bold text-xs leading-none select-none">→</span>
                         }
-                      } @else {
-                        <span class="font-mono">{{ msg.sequenceNumber }}: {{ msg.functionName }}({{ msg.parameters || '' }})</span>
-                        @if (msg.returnType) {
-                          <span class="opacity-75 font-mono">: {{ msg.returnType }}</span>
-                        }
-                        <span class="uml-comm-msg-arrow">→</span>
-                      }
-                    </div>
-                  }
+                      </div>
+                    }
+                  </div>
                 </div>
               }
 
@@ -655,14 +658,14 @@
                       <svg width="56" height="56" viewBox="0 0 56 56" fill="none" class="drop-shadow-xs text-[#241C18]">
                         <circle
                           cx="28"
-                          cy="23"
-                          r="17"
+                          cy="24"
+                          r="18"
                           [style.fill]="node.color || '#D2EEF3'"
                           [attr.fill]="node.color || '#D2EEF3'"
                           stroke="currentColor"
                           stroke-width="2"
                         />
-                        <line x1="8" y1="46" x2="48" y2="46" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="8" y1="42" x2="48" y2="42" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
                       </svg>
                     </div>
 

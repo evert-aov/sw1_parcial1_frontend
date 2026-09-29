@@ -300,7 +300,19 @@
 }
 
 /* Badges de Mensajes en Diagrama de Comunicación (UML 2.5) */
+.uml-comm-messages-anchor {
+  position: relative !important;
+  pointer-events: auto !important;
+  overflow: visible !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .uml-communication-messages-badge {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.97);
   color: #1A202C;
   border: 1px solid #CBD5E1;
@@ -310,7 +322,7 @@
   cursor: pointer;
   user-select: none;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse; /* El primer mensaje queda abajo pegado a la línea; los nuevos mensajes se agregan hacia arriba */
   gap: 2.5px;
   white-space: nowrap;
   pointer-events: auto;
