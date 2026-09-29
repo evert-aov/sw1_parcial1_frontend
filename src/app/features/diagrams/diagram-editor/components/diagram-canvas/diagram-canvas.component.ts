@@ -33,6 +33,7 @@ import {
   UmlRelationshipType,
   UmlLineStyle,
   DiagramType,
+  UmlMessage,
 } from '../../../../../core/models/diagram.model';
 
 @Component({
@@ -723,5 +724,21 @@ export class DiagramCanvasComponent {
     if (connectorId.endsWith('_bottom')) return 'bottom';
     if (connectorId.endsWith('_left')) return 'left';
     return defaultSide;
+  }
+
+  hasForwardMessages(conn: UmlConnection): boolean {
+    return !!conn.messages && conn.messages.some((m) => m.direction !== 'reverse');
+  }
+
+  hasReverseMessages(conn: UmlConnection): boolean {
+    return !!conn.messages && conn.messages.some((m) => m.direction === 'reverse');
+  }
+
+  getForwardMessages(conn: UmlConnection): UmlMessage[] {
+    return (conn.messages || []).filter((m) => m.direction !== 'reverse');
+  }
+
+  getReverseMessages(conn: UmlConnection): UmlMessage[] {
+    return (conn.messages || []).filter((m) => m.direction === 'reverse');
   }
 }

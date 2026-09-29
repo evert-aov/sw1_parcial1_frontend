@@ -300,7 +300,8 @@
 }
 
 /* Badges de Mensajes en Diagrama de Comunicación (UML 2.5) */
-.uml-comm-messages-anchor {
+.uml-comm-messages-anchor-above,
+.uml-comm-messages-anchor-below {
   position: relative !important;
   pointer-events: auto !important;
   overflow: visible !important;
@@ -308,32 +309,51 @@
   height: 0 !important;
 }
 
-.uml-communication-messages-badge {
+.uml-communication-messages-badge-above {
   position: absolute;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.97);
-  color: #1A202C;
-  border: 1px solid #CBD5E1;
-  padding: 3px 7px;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
   cursor: pointer;
   user-select: none;
   display: flex;
-  flex-direction: column-reverse; /* El primer mensaje queda abajo pegado a la línea; los nuevos mensajes se agregan hacia arriba */
-  gap: 2.5px;
+  flex-direction: column-reverse; /* Mensajes hacia adelante apilados hacia arriba */
+  gap: 2px;
   white-space: nowrap;
   pointer-events: auto;
   z-index: 25;
 }
 
-:host-context(.dark) .uml-communication-messages-badge,
-.dark .uml-communication-messages-badge {
-  background: rgba(255, 255, 255, 0.97);
-  color: #1A202C;
-  border-color: #94A3B8;
+.uml-communication-messages-badge-below {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  flex-direction: column; /* Mensajes hacia atrás apilados hacia abajo */
+  gap: 2px;
+  white-space: nowrap;
+  pointer-events: auto;
+  z-index: 25;
+}
+
+:host-context(.dark) .uml-communication-messages-badge-above,
+.dark .uml-communication-messages-badge-above,
+:host-context(.dark) .uml-communication-messages-badge-below,
+.dark .uml-communication-messages-badge-below {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .uml-comm-msg-item {
