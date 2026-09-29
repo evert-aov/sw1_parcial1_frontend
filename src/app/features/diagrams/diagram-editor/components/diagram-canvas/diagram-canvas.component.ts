@@ -630,7 +630,9 @@ export class DiagramCanvasComponent {
     if (
       this.activeDiagramType() === DiagramType.USE_CASE ||
       this.activeDiagramType() === DiagramType.PACKAGE ||
-      this.activeDiagramType() === DiagramType.COMMUNICATION
+      this.activeDiagramType() === DiagramType.COMMUNICATION ||
+      this.activeDiagramType() === DiagramType.SEQUENCE ||
+      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as any)
     ) return false;
     if (
       conn.type === 'generalization' ||
@@ -740,5 +742,23 @@ export class DiagramCanvasComponent {
 
   getReverseMessages(conn: UmlConnection): UmlMessage[] {
     return (conn.messages || []).filter((m) => m.direction === 'reverse');
+  }
+
+  // Slots interactivos para líneas de vida en diagrama de secuencia (puntos de anclaje cada 60px)
+  readonly sequenceSlots: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+
+  getLifelineLength(node?: UmlClassNode): number {
+    return 1200;
+  }
+
+  isSequenceConnection(conn: UmlConnection): boolean {
+    return (
+      this.activeDiagramType() === DiagramType.SEQUENCE ||
+      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as any)
+    );
+  }
+
+  isReplyConnection(conn: UmlConnection): boolean {
+    return conn.type === 'reply' || (!!conn.messages && conn.messages.some((m) => m.isReturn));
   }
 }

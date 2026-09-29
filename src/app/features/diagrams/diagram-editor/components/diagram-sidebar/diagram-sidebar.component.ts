@@ -43,6 +43,7 @@ import {
   UML_USE_CASE_RELATION_TYPES,
   UML_PACKAGE_RELATION_TYPES,
   UML_COMMUNICATION_RELATION_TYPES,
+  UML_SEQUENCE_RELATION_TYPES,
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe } from '../../../../../core/i18n';
@@ -165,6 +166,9 @@ export class DiagramSidebarComponent {
     if (this.activeDiagramType() === DiagramType.COMMUNICATION) {
       return UML_COMMUNICATION_RELATION_TYPES;
     }
+    if (this.activeDiagramType() === DiagramType.SEQUENCE) {
+      return UML_SEQUENCE_RELATION_TYPES;
+    }
     return UML_RELATION_TYPES;
   });
 
@@ -185,6 +189,7 @@ export class DiagramSidebarComponent {
   readonly addBoundary = output<void>();
   readonly addControl = output<void>();
   readonly addEntity = output<void>();
+  readonly addLifeline = output<void>();
 
   // Eventos del Explorador
   readonly selectDiagram = output<string>();
@@ -238,6 +243,17 @@ export class DiagramSidebarComponent {
         sourceDiagramType === DiagramType.COMMUNICATION
       );
     }
+    if (currentType === DiagramType.SEQUENCE) {
+      return (
+        nodeType === 'actor' ||
+        nodeType === 'lifeline' ||
+        nodeType === 'class' ||
+        nodeType === 'boundary' ||
+        nodeType === 'control' ||
+        nodeType === 'entity' ||
+        sourceDiagramType === DiagramType.SEQUENCE
+      );
+    }
     if (currentType === DiagramType.CLASS) {
       return !nodeType || nodeType === 'class' || sourceDiagramType === DiagramType.CLASS;
     }
@@ -259,6 +275,8 @@ export class DiagramSidebarComponent {
         ? 'control'
         : node.nodeType === 'entity'
         ? 'entidad'
+        : node.nodeType === 'lifeline'
+        ? 'línea de vida'
         : 'clase';
     if (isCurrent) {
       return `Duplicar ${typeLabel} "${node.name}" en este lienzo`;

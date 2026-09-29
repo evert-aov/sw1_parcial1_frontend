@@ -73,6 +73,7 @@ import {
   UmlMethod,
   UmlClassNode,
   UmlConnection,
+  UmlMessage,
   SaveDiagramAstRequest,
   UML_RELATION_TYPES,
   UML_LINE_STYLES,
@@ -1459,10 +1460,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             }
           }
 
-          const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-          const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
+          const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+          const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
           const sourceNode = nodeMap.get(baseSourceId);
           const targetNode = nodeMap.get(baseTargetId);
+
+          if (
+            conn.sourceId.includes('_slot_') ||
+            conn.targetId.includes('_slot_') ||
+            this.activeDiagramType() === DiagramType.SEQUENCE ||
+            ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type)
+          ) {
+            return {
+              ...conn,
+              sourceNodeId: baseSourceId,
+              targetNodeId: baseTargetId,
+            };
+          }
 
           if (sourceNode && targetNode && !sourceNode.isAnchor && !targetNode.isAnchor) {
             if (baseSourceId === baseTargetId) {
@@ -1851,11 +1865,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         return;
       }
 
+      const isSeqRel =
+        ['sync', 'reply', 'async', 'create', 'self'].includes(activeRel) ||
+        this.activeDiagramType() === DiagramType.SEQUENCE;
+
       let sourceId: string;
       let targetId: string;
       if (currentSource === nodeId) {
-        sourceId = `${currentSource}_top`;
+        sourceId = isSeqRel ? `${currentSource}_right` : `${currentSource}_top`;
         targetId = `${nodeId}_right`;
+      } else if (isSeqRel) {
+        if ((sourceNode.position?.x || 0) <= (targetNode.position?.x || 0)) {
+          sourceId = `${currentSource}_right`;
+          targetId = `${nodeId}_left`;
+        } else {
+          sourceId = `${currentSource}_left`;
+          targetId = `${nodeId}_right`;
+        }
       } else {
         const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
         sourceId = optimal.sourceId;
@@ -1893,6 +1919,39 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           : activeRel === 'trace'
           ? '«trace»'
           : undefined;
+
+      let messages: UmlMessage[] | undefined = undefined;
+      if (isSeqRel) {
+        const totalSeqMsgs = this.connections().reduce(
+          (acc, c) => acc + (c.messages?.length || (['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ? 1 : 0)),
+          0,
+        );
+        const seqNum = `1.${totalSeqMsgs}`;
+        const isReturn = activeRel === 'reply';
+        const palette = ['#0284C7', '#0D9488', '#16A34A', '#D97706', '#DC2626', '#7C3AED', '#DB2777', '#475569'];
+        const msgColor = palette[totalSeqMsgs % palette.length];
+        const fnName = isReturn
+          ? 'showSuccess'
+          : activeRel === 'create'
+          ? 'create'
+          : totalSeqMsgs === 0
+          ? 'register'
+          : `operation_${totalSeqMsgs}`;
+        messages = [
+          {
+            id: `msg_${Date.now()}`,
+            sequenceNumber: seqNum,
+            functionName: fnName,
+            parameters: isReturn ? '' : 'data',
+            returnType: isReturn ? 'void' : '',
+            isReturn,
+            direction: 'forward',
+            orderIndex: 0,
+            color: msgColor,
+          },
+        ];
+      }
+
       const newConn: UmlConnection = {
         id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         sourceNodeId: currentSource,
@@ -1900,10 +1959,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         sourceId,
         targetId,
         type: activeRel,
-        lineStyle: this.defaultLineStyle(),
+        lineStyle: isSeqRel ? 'straight' : this.defaultLineStyle(),
         name: relName,
-        sourceMultiplicity: (isInheritance || isUseCaseRel || isPackageRel) ? '' : '1',
-        targetMultiplicity: (isInheritance || isUseCaseRel || isPackageRel) ? '' : '0..*',
+        sourceMultiplicity: (isInheritance || isUseCaseRel || isPackageRel || isSeqRel) ? '' : '1',
+        targetMultiplicity: (isInheritance || isUseCaseRel || isPackageRel || isSeqRel) ? '' : '0..*',
+        messages,
       };
 
       this.pushSnapshot();
@@ -1925,8 +1985,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.isReadOnly() || !event.fInputId) return;
 
     const relType = this.selectedRelationType() || 'association';
-    const baseSourceId = event.fOutputId.replace(/_(top|bottom|left|right)$/, '');
-    const baseTargetId = event.fInputId.replace(/_(top|bottom|left|right)$/, '');
+    const isSeqRel =
+      ['sync', 'reply', 'async', 'create', 'self'].includes(relType) ||
+      this.activeDiagramType() === DiagramType.SEQUENCE;
+
+    const baseSourceId = event.fOutputId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const baseTargetId = event.fInputId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
 
     if (this.isNodeLockedByOther(baseSourceId) || this.isNodeLockedByOther(baseTargetId)) {
       alert('🔒 No se pueden crear conexiones hacia/desde una tabla que está siendo editada.');
@@ -1950,7 +2014,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     let targetId = event.fInputId;
 
     if (sourceNode && targetNode) {
-      if (baseSourceId === baseTargetId) {
+      if (isSeqRel || sourceId.includes('_slot_') || targetId.includes('_slot_')) {
+        if (!sourceId.includes('_slot_') && !targetId.includes('_slot_')) {
+          if (baseSourceId === baseTargetId) {
+            sourceId = `${baseSourceId}_right`;
+            targetId = `${baseTargetId}_right`;
+          } else if ((sourceNode.position?.x || 0) <= (targetNode.position?.x || 0)) {
+            sourceId = `${baseSourceId}_right`;
+            targetId = `${baseTargetId}_left`;
+          } else {
+            sourceId = `${baseSourceId}_left`;
+            targetId = `${baseTargetId}_right`;
+          }
+        }
+      } else if (baseSourceId === baseTargetId) {
         const validConnectors = [
           `${baseSourceId}_top`,
           `${baseSourceId}_right`,
@@ -2002,6 +2079,39 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         : relType === 'trace'
         ? '«trace»'
         : undefined;
+
+    let messages: UmlMessage[] | undefined = undefined;
+    if (isSeqRel) {
+      const totalSeqMsgs = this.connections().reduce(
+        (acc, c) => acc + (c.messages?.length || (['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ? 1 : 0)),
+        0,
+      );
+      const seqNum = `1.${totalSeqMsgs}`;
+      const isReturn = relType === 'reply';
+      const palette = ['#0284C7', '#0D9488', '#16A34A', '#D97706', '#DC2626', '#7C3AED', '#DB2777', '#475569'];
+      const msgColor = palette[totalSeqMsgs % palette.length];
+      const fnName = isReturn
+        ? 'showSuccess'
+        : relType === 'create'
+        ? 'create'
+        : totalSeqMsgs === 0
+        ? 'register'
+        : `operation_${totalSeqMsgs}`;
+      messages = [
+        {
+          id: `msg_${Date.now()}`,
+          sequenceNumber: seqNum,
+          functionName: fnName,
+          parameters: isReturn ? '' : 'data',
+          returnType: isReturn ? 'void' : '',
+          isReturn,
+          direction: 'forward',
+          orderIndex: 0,
+          color: msgColor,
+        },
+      ];
+    }
+
     const newConnection: UmlConnection = {
       id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       sourceNodeId: baseSourceId,
@@ -2009,10 +2119,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       sourceId,
       targetId,
       type: relType,
-      lineStyle: this.defaultLineStyle(),
+      lineStyle: isSeqRel ? 'straight' : this.defaultLineStyle(),
       name: relName,
-      sourceMultiplicity: (isInheritance || isUseCaseRel || isPackageRel) ? '' : '1',
-      targetMultiplicity: (isInheritance || isUseCaseRel || isPackageRel) ? '' : '0..*',
+      sourceMultiplicity: (isInheritance || isUseCaseRel || isPackageRel || isSeqRel) ? '' : '1',
+      targetMultiplicity: (isInheritance || isUseCaseRel || isPackageRel || isSeqRel) ? '' : '0..*',
+      messages,
     };
 
     this.pushSnapshot();
@@ -2177,16 +2288,28 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   addActor(): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
+    const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    let posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    let posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    if (isSequence) {
+      posY = 50;
+      const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
+      if (topNodes.length > 0) {
+        const maxRight = Math.max(...topNodes.map((n) => (n.position?.x || 0) + (n.width || 120)));
+        posX = maxRight + 60;
+      } else {
+        posX = 80;
+      }
+    }
 
     const count = this.nodes().filter((n) => n.nodeType === 'actor').length + 1;
     const newNode: UmlClassNode = {
       id: `actor_${Date.now()}`,
-      name: `Actor_${count}`,
+      name: isSequence ? `:Actor_${count}` : `Actor_${count}`,
       nodeType: 'actor',
       position: { x: posX, y: posY },
       width: 90,
@@ -2194,6 +2317,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       color: '#FFFDDD',
       attributes: [],
       methods: [],
+      activations: [],
     };
 
     this.nodes.update((list) => [...list, newNode]);
@@ -2329,6 +2453,57 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       color: '#D2EEF3',
       attributes: [],
       methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+  }
+
+  addLifeline(): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+
+    let posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    let posY = isSequence ? 50 : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    if (isSequence) {
+      posY = 50;
+      const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
+      if (topNodes.length > 0) {
+        const maxRight = Math.max(...topNodes.map((n) => (n.position?.x || 0) + (n.width || 140)));
+        posX = maxRight + 60;
+      } else {
+        posX = 80;
+      }
+    }
+
+    const count = this.nodes().filter((n) => n.nodeType === 'lifeline').length + 1;
+    const defaultNames = [
+      ':RegistrationController',
+      ':DBConnection',
+      ':NotificationSystem',
+      ':EmailService',
+      ':AuthManager',
+      ':PaymentGateway',
+    ];
+    const defaultName = count <= defaultNames.length ? defaultNames[count - 1] : `:Object_${count}`;
+
+    const newNode: UmlClassNode = {
+      id: `lifeline_${Date.now()}`,
+      name: defaultName,
+      nodeType: 'lifeline',
+      position: { x: posX, y: posY },
+      width: 140,
+      height: 48,
+      color: '#D2EEF3',
+      attributes: [],
+      methods: [],
+      activations: [],
     };
 
     this.nodes.update((list) => [...list, newNode]);

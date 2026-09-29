@@ -69,12 +69,12 @@
               </div>
             </div>
           </div>
-        } @else if (activeDiagramType() === 'communication' || (editingConnection()?.messages && editingConnection()!.messages!.length > 0)) {
-          <!-- Gestión de Mensajes Secuenciales (Diagramas de Comunicación UML 2.5) -->
+        } @else if (activeDiagramType() === 'communication' || activeDiagramType() === 'sequence' || (editingConnection()?.messages && editingConnection()!.messages!.length > 0) || editingConnection()!.type === 'sync' || editingConnection()!.type === 'reply' || editingConnection()!.type === 'async' || editingConnection()!.type === 'create' || editingConnection()!.type === 'self') {
+          <!-- Gestión de Mensajes Secuenciales (Comunicación / Secuencia UML 2.5) -->
           <div class="space-y-2.5">
             <div class="flex items-center justify-between">
               <span class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] flex items-center gap-1.5">
-                <span>Mensajes de Comunicación</span>
+                <span>Mensajes UML (Llamadas / Retornos)</span>
                 <span class="text-[10px] text-slate-400 font-normal">({{ editingConnection()!.messages?.length || 0 }})</span>
               </span>
               <button
@@ -192,6 +192,27 @@
                             }
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    <!-- Fila 3: Retorno (Línea punteada) y Tipo de Retorno -->
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                      <label class="flex items-center gap-1.5 cursor-pointer text-[10.5px] font-medium text-slate-600 dark:text-slate-300 select-none">
+                        <input
+                          type="checkbox"
+                          [(ngModel)]="msg.isReturn"
+                          class="rounded text-cyan-600 focus:ring-cyan-500 cursor-pointer"
+                        />
+                        <span>Mensaje de Retorno (línea discontinua ┄┄>)</span>
+                      </label>
+                      <div class="flex items-center gap-1">
+                        <span class="text-[9.5px] text-slate-400">Tipo retorno:</span>
+                        <input
+                          type="text"
+                          [(ngModel)]="msg.returnType"
+                          placeholder="void"
+                          class="w-24 px-1.5 py-0.5 bg-white dark:bg-[#0F1326] border border-slate-200 dark:border-slate-700 rounded text-[10.5px] font-mono text-slate-800 dark:text-slate-100"
+                        />
                       </div>
                     </div>
                   </div>

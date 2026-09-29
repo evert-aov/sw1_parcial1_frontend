@@ -19,7 +19,7 @@ export interface DiagramTypeItem {
 export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
   { id: DiagramType.CLASS, label: 'Diagrama de Clases', shortLabel: 'Clases', folderName: 'Diagramas de Clases', icon: 'heroSquare3Stack3d', description: 'Estructura estática, atributos, métodos y relaciones UML 2.5', supported: true },
   { id: DiagramType.USE_CASE, label: 'Casos de Uso', shortLabel: 'Casos Uso', folderName: 'Casos de Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: true },
-  { id: DiagramType.SEQUENCE, label: 'Secuencia', shortLabel: 'Secuencia', folderName: 'Diagramas de Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: false },
+  { id: DiagramType.SEQUENCE, label: 'Secuencia', shortLabel: 'Secuencia', folderName: 'Diagramas de Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: true },
   { id: DiagramType.COMMUNICATION, label: 'Comunicación', shortLabel: 'Comunicación', folderName: 'Diagramas de Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: true },
   { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', folderName: 'Diagramas de Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: true },
 ];
@@ -48,7 +48,12 @@ export type UmlRelationshipType =
   | 'access'
   | 'merge'
   | 'trace'
-  | 'message';
+  | 'message'
+  | 'sync'
+  | 'reply'
+  | 'async'
+  | 'create'
+  | 'self';
 
 export type UmlLineStyle = 'segment' | 'straight' | 'bezier' | 'adaptive-curve';
 
@@ -112,6 +117,14 @@ export const UML_COMMUNICATION_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'association', label: 'Enlace de Comunicación', icon: '───', description: 'Enlace entre objetos que transporta mensajes numerados secuenciales.' },
 ];
 
+export const UML_SEQUENCE_RELATION_TYPES: UmlRelationTypeItem[] = [
+  { id: 'sync', label: 'Llamada Síncrona', icon: '──►', description: 'Mensaje síncrono que bloquea la ejecución hasta que retorna.' },
+  { id: 'reply', label: 'Mensaje de Retorno', icon: '┄┄>', description: 'Retorno punteado del flujo de control o resultado.' },
+  { id: 'async', label: 'Mensaje Asíncrono', icon: '──>', description: 'Llamada asíncrona sin bloqueo.' },
+  { id: 'create', label: 'Creación de Instancia', icon: '┄«create»▷', description: 'Crea una nueva instancia de objeto.' },
+  { id: 'self', label: 'Auto-Llamada', icon: '┌─┐', description: 'Llamada interna sobre la misma línea de vida.' },
+];
+
 export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [
   ...UML_RELATION_TYPES,
   { id: 'include', label: '«include»', icon: '┄«include»▷', description: 'Inclusión obligatoria del comportamiento de otro caso de uso.' },
@@ -120,6 +133,7 @@ export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'access', label: '«access»', icon: '┄«access»▷', description: 'Importación privada del contenido de un paquete.' },
   { id: 'merge', label: '«merge»', icon: '┄«merge»▷', description: 'Fusión de definiciones complementarias de paquetes.' },
   { id: 'trace', label: '«trace»', icon: '┄«trace»▷', description: 'Trazabilidad conceptual o histórica entre paquetes.' },
+  ...UML_SEQUENCE_RELATION_TYPES,
 ];
 
 

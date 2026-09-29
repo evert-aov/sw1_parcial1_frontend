@@ -12,6 +12,7 @@ import {
   UML_USE_CASE_RELATION_TYPES,
   UML_PACKAGE_RELATION_TYPES,
   UML_COMMUNICATION_RELATION_TYPES,
+  UML_SEQUENCE_RELATION_TYPES,
   ALL_UML_RELATION_TYPES,
   UML_LINE_STYLES,
   UML_MULTIPLICITY_OPTIONS,
@@ -47,6 +48,8 @@ export class EditConnectionModalComponent {
       return this.relationTypes()!;
     }
     switch (this.activeDiagramType()) {
+      case DiagramType.SEQUENCE:
+        return UML_SEQUENCE_RELATION_TYPES;
       case DiagramType.COMMUNICATION:
         return UML_COMMUNICATION_RELATION_TYPES;
       case DiagramType.USE_CASE:
