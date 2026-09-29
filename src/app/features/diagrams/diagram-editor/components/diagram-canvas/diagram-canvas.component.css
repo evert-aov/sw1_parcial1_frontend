@@ -75,7 +75,7 @@
   background: transparent !important;
 }
 
-::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.w-0):not(.opacity-0) {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: var(--node-bg, #FFFDDD) !important;
@@ -93,10 +93,22 @@
 
 ::ng-deep f-flow .f-node.f-node-actor,
 ::ng-deep f-flow .f-node.f-node-use-case,
+::ng-deep f-flow .f-node.f-node-package,
+::ng-deep f-flow .f-node.f-node-boundary,
+::ng-deep f-flow .f-node.f-node-control,
+::ng-deep f-flow .f-node.f-node-entity,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-package,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-control,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity,
 .dark ::ng-deep f-flow .f-node.f-node-actor,
-.dark ::ng-deep f-flow .f-node.f-node-use-case {
+.dark ::ng-deep f-flow .f-node.f-node-use-case,
+.dark ::ng-deep f-flow .f-node.f-node-package,
+.dark ::ng-deep f-flow .f-node.f-node-boundary,
+.dark ::ng-deep f-flow .f-node.f-node-control,
+.dark ::ng-deep f-flow .f-node.f-node-entity {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -113,17 +125,29 @@
 
 ::ng-deep f-flow .f-node.f-node-actor.f-selected,
 ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
+::ng-deep f-flow .f-node.f-node-package.f-selected,
+::ng-deep f-flow .f-node.f-node-boundary.f-selected,
+::ng-deep f-flow .f-node.f-node-control.f-selected,
+::ng-deep f-flow .f-node.f-node-entity.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-package.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-control.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-actor.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-use-case.f-selected {
+.dark ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-package.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-boundary.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-control.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-entity.f-selected {
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
 }
 
 ::ng-deep f-flow .f-node.f-node-class.f-selected,
-::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case).f-selected {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity).f-selected {
   outline: 2px solid #2563eb !important;
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
   z-index: 30 !important;
@@ -164,6 +188,18 @@
 
 ::ng-deep .uml-relation-extend .f-connection-drag-handle,
 ::ng-deep .uml-relation-extend path {
+  stroke-dasharray: 5, 4 !important;
+  stroke: #2D3748 !important;
+}
+
+::ng-deep .uml-relation-import .f-connection-drag-handle,
+::ng-deep .uml-relation-import path,
+::ng-deep .uml-relation-access .f-connection-drag-handle,
+::ng-deep .uml-relation-access path,
+::ng-deep .uml-relation-merge .f-connection-drag-handle,
+::ng-deep .uml-relation-merge path,
+::ng-deep .uml-relation-trace .f-connection-drag-handle,
+::ng-deep .uml-relation-trace path {
   stroke-dasharray: 5, 4 !important;
   stroke: #2D3748 !important;
 }
@@ -261,6 +297,46 @@
   background: rgba(255, 255, 255, 0.95);
   color: #2B6CB0;
   border-color: #90CDF4;
+}
+
+/* Badges de Mensajes en Diagrama de Comunicación (UML 2.5) */
+.uml-communication-messages-badge {
+  background: rgba(255, 255, 255, 0.97);
+  color: #1A202C;
+  border: 1px solid #CBD5E1;
+  padding: 3px 7px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5px;
+  white-space: nowrap;
+  pointer-events: auto;
+  z-index: 25;
+}
+
+:host-context(.dark) .uml-communication-messages-badge,
+.dark .uml-communication-messages-badge {
+  background: rgba(255, 255, 255, 0.97);
+  color: #1A202C;
+  border-color: #94A3B8;
+}
+
+.uml-comm-msg-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.uml-comm-msg-arrow {
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1;
 }
 
 /* Conectores UML */
@@ -386,26 +462,31 @@
   transform: scale(1.3) !important;
 }
 
+.uml-resize-handle.uml-handle-left-top,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-left-top {
   left: 0 !important;
   top: 0 !important;
   transform: translate(-50%, -50%) !important;
   cursor: nwse-resize !important;
 }
+.uml-resize-handle.uml-handle-left-top:hover,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-left-top:hover {
   transform: translate(-50%, -50%) scale(1.3) !important;
 }
 
+.uml-resize-handle.uml-handle-top,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-top {
   left: 50% !important;
   top: 0 !important;
   transform: translate(-50%, -50%) !important;
   cursor: ns-resize !important;
 }
+.uml-resize-handle.uml-handle-top:hover,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-top:hover {
   transform: translate(-50%, -50%) scale(1.3) !important;
 }
 
+.uml-resize-handle.uml-handle-right-top,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-right-top {
   right: 0 !important;
   left: auto !important;
@@ -413,10 +494,12 @@
   transform: translate(50%, -50%) !important;
   cursor: nesw-resize !important;
 }
+.uml-resize-handle.uml-handle-right-top:hover,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-right-top:hover {
   transform: translate(50%, -50%) scale(1.3) !important;
 }
 
+.uml-resize-handle.uml-handle-right,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-right {
   right: 0 !important;
   left: auto !important;
@@ -424,10 +507,12 @@
   transform: translate(50%, -50%) !important;
   cursor: ew-resize !important;
 }
+.uml-resize-handle.uml-handle-right:hover,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-right:hover {
   transform: translate(50%, -50%) scale(1.3) !important;
 }
 
+.uml-resize-handle.uml-handle-right-bottom,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-right-bottom {
   right: 0 !important;
   left: auto !important;
@@ -436,10 +521,12 @@
   transform: translate(50%, 50%) !important;
   cursor: nwse-resize !important;
 }
+.uml-resize-handle.uml-handle-right-bottom:hover,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-right-bottom:hover {
   transform: translate(50%, 50%) scale(1.3) !important;
 }
 
+.uml-resize-handle.uml-handle-bottom,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-bottom {
   left: 50% !important;
   bottom: 0 !important;
@@ -447,10 +534,12 @@
   transform: translate(-50%, 50%) !important;
   cursor: ns-resize !important;
 }
+.uml-resize-handle.uml-handle-bottom:hover,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-bottom:hover {
   transform: translate(-50%, 50%) scale(1.3) !important;
 }
 
+.uml-resize-handle.uml-handle-left-bottom,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-left-bottom {
   left: 0 !important;
   bottom: 0 !important;
@@ -458,16 +547,19 @@
   transform: translate(-50%, 50%) !important;
   cursor: nesw-resize !important;
 }
+.uml-resize-handle.uml-handle-left-bottom:hover,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-left-bottom:hover {
   transform: translate(-50%, 50%) scale(1.3) !important;
 }
 
+.uml-resize-handle.uml-handle-left,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-left {
   left: 0 !important;
   top: 50% !important;
   transform: translate(-50%, -50%) !important;
   cursor: ew-resize !important;
 }
+.uml-resize-handle.uml-handle-left:hover,
 ::ng-deep .f-node .f-resize-handle.f-resize-handle-left:hover {
   transform: translate(-50%, -50%) scale(1.3) !important;
 }

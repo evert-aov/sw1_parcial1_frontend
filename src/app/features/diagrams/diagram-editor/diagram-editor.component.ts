@@ -560,6 +560,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               if (nodeType === 'class') {
                 if (n.id?.startsWith('actor_')) nodeType = 'actor';
                 else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
+                else if (n.id?.startsWith('package_')) nodeType = 'package';
+                else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
+                else if (n.id?.startsWith('control_')) nodeType = 'control';
+                else if (n.id?.startsWith('entity_')) nodeType = 'entity';
               }
               return { ...n, nodeType };
             });
@@ -576,25 +580,34 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
 
       const mappedNodes: UmlClassNode[] = (diagram.nodes || []).map((n) => {
-        let nodeType: UmlNodeType = (n.nodeType as any) || 'class';
+        let nodeType: UmlNodeType = (n.nodeType as any) || (diagram.type === 'package' ? 'package' : 'class');
         if (nodeType === 'class') {
           if (n.id.startsWith('actor_')) {
             nodeType = 'actor';
           } else if (n.id.startsWith('use_case_')) {
             nodeType = 'use_case';
+          } else if (n.id.startsWith('package_')) {
+            nodeType = 'package';
+          } else if (n.id.startsWith('boundary_')) {
+            nodeType = 'boundary';
+          } else if (n.id.startsWith('control_')) {
+            nodeType = 'control';
+          } else if (n.id.startsWith('entity_')) {
+            nodeType = 'entity';
           }
         }
         const isManuallyResized = !!(n.height && n.height > 0);
+        const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
         return {
           id: n.id,
           name: n.name,
           position: { x: n.positionX, y: n.positionY },
-          width: n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : 220)),
-          height: n.height || undefined,
+          width: n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : (nodeType === 'package' ? 200 : (isBce ? 90 : 220)))),
+          height: n.height || (isBce ? 95 : undefined),
           customWidth: isManuallyResized ? n.width : undefined,
           customHeight: isManuallyResized ? n.height! : undefined,
           isCustomSize: isManuallyResized,
-          color: n.color || '#FFFDDD',
+          color: n.color || (isBce ? '#D2EEF3' : '#FFFDDD'),
           isAnchor: n.isAnchor,
           nodeType,
           assocMainConnId: n.assocMainConnId || undefined,
@@ -629,6 +642,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         sourceMultiplicity: c.sourceMultiplicity || '',
         targetMultiplicity: c.targetMultiplicity || '',
         assocAnchorNodeId: c.assocAnchorNodeId || undefined,
+        messages: (c as any).messages || [],
       }));
       this.connections.set(mappedConnections);
 
@@ -876,7 +890,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             ? 'actor'
             : n.id.startsWith('use_case_')
             ? 'use_case'
-            : n.nodeType || 'class',
+            : n.id.startsWith('package_')
+            ? 'package'
+            : n.id.startsWith('boundary_')
+            ? 'boundary'
+            : n.id.startsWith('control_')
+            ? 'control'
+            : n.id.startsWith('entity_')
+            ? 'entity'
+            : n.nodeType || (this.activeDiagramType() === DiagramType.PACKAGE ? 'package' : 'class'),
         attributes: n.attributes,
         methods: n.methods,
       })),
@@ -895,6 +917,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           sourceMultiplicity: c.sourceMultiplicity || '',
           targetMultiplicity: c.targetMultiplicity || '',
           assocAnchorNodeId: c.assocAnchorNodeId || null,
+          messages: c.messages || [],
         };
       }),
     };
@@ -1049,6 +1072,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       const nameLen = (node.name || '').length;
       return Math.max(140, Math.round(nameLen * 7.5 + 40));
     }
+    if (node.nodeType === 'package') {
+      const tabTitle = node.name ? node.name.split('\n')[0].trim() : 'Paquete';
+      const bodyText = (node.attributes && node.attributes.length > 0 && node.attributes[0]?.name)
+        ? node.attributes[0].name
+        : (node.name && node.name.includes('\n') ? node.name.split('\n').slice(1).join('\n').trim() : '');
+      const maxLen = Math.max(tabTitle.length, bodyText.length);
+      return Math.max(180, Math.round(maxLen * 7.5 + 40));
+    }
+    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+      const nameLen = (node.name || '').length;
+      return Math.max(90, Math.round(nameLen * 7.5 + 24));
+    }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
     for (const attr of node.attributes || []) {
@@ -1066,16 +1101,30 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
     if (node.nodeType === 'use_case') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
-      if (manualW > 0) {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
         return Math.max(80, manualW);
       }
       return this.getDynamicNodeWidth(node);
     }
     if (node.nodeType === 'actor') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
-      if (manualW > 0) {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
         return Math.max(60, manualW);
+      }
+      return this.getDynamicNodeWidth(node);
+    }
+    if (node.nodeType === 'package') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(120, manualW);
+      }
+      return this.getDynamicNodeWidth(node);
+    }
+    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(70, manualW);
       }
       return this.getDynamicNodeWidth(node);
     }
@@ -1088,14 +1137,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (node.isAnchor) return 0;
     if (node.customHeight && node.customHeight > 0) return node.customHeight;
     if (node.isCustomSize && node.height && node.height > 0) return node.height;
-    if (node.nodeType === 'actor') return node.height || 110;
+    if (node.nodeType === 'actor') return node.customHeight || node.height || 110;
+    if (node.nodeType === 'package') return node.customHeight || node.height || 120;
+    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+      return node.customHeight || node.height || 95;
+    }
     if (node.nodeType === 'use_case') {
+      if (node.customHeight && node.customHeight > 0) return node.customHeight;
+      if (node.height && node.height > 0) return node.height;
       const w = this.getNodeWidth(node);
       const nameLen = (node.name || '').length;
       const usableWidth = Math.max(50, w - 24);
       const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
       const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
-      return Math.max(75, 45 + (lines - 1) * 18);
+      return Math.max(60, 45 + (lines - 1) * 18);
     }
     const headerH = 34;
     const attrCount = (node.attributes || []).length;
@@ -1808,6 +1863,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
 
       const isInheritance = activeRel === 'generalization' || activeRel === 'realization';
+      const isPackageRel =
+        activeRel === 'import' ||
+        activeRel === 'access' ||
+        activeRel === 'merge' ||
+        activeRel === 'trace' ||
+        this.activeDiagramType() === DiagramType.PACKAGE ||
+        sourceNode.nodeType === 'package' ||
+        targetNode.nodeType === 'package';
       const isUseCaseRel =
         activeRel === 'include' ||
         activeRel === 'extend' ||
@@ -1816,7 +1879,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         sourceNode.nodeType === 'use_case' ||
         targetNode.nodeType === 'actor' ||
         targetNode.nodeType === 'use_case';
-      const relName = activeRel === 'include' ? '«include»' : activeRel === 'extend' ? '«extend»' : undefined;
+      const relName =
+        activeRel === 'include'
+          ? '«include»'
+          : activeRel === 'extend'
+          ? '«extend»'
+          : activeRel === 'import'
+          ? '«import»'
+          : activeRel === 'access'
+          ? '«access»'
+          : activeRel === 'merge'
+          ? '«merge»'
+          : activeRel === 'trace'
+          ? '«trace»'
+          : undefined;
       const newConn: UmlConnection = {
         id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         sourceNodeId: currentSource,
@@ -1826,8 +1902,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         type: activeRel,
         lineStyle: this.defaultLineStyle(),
         name: relName,
-        sourceMultiplicity: (isInheritance || isUseCaseRel) ? '' : '1',
-        targetMultiplicity: (isInheritance || isUseCaseRel) ? '' : '0..*',
+        sourceMultiplicity: (isInheritance || isUseCaseRel || isPackageRel) ? '' : '1',
+        targetMultiplicity: (isInheritance || isUseCaseRel || isPackageRel) ? '' : '0..*',
       };
 
       this.pushSnapshot();
@@ -1898,13 +1974,34 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     const isInheritance = relType === 'generalization' || relType === 'realization';
+    const isPackageRel =
+      relType === 'import' ||
+      relType === 'access' ||
+      relType === 'merge' ||
+      relType === 'trace' ||
+      this.activeDiagramType() === DiagramType.PACKAGE ||
+      (sourceNode && sourceNode.nodeType === 'package') ||
+      (targetNode && targetNode.nodeType === 'package');
     const isUseCaseRel =
       relType === 'include' ||
       relType === 'extend' ||
       this.activeDiagramType() === DiagramType.USE_CASE ||
       (sourceNode && (sourceNode.nodeType === 'actor' || sourceNode.nodeType === 'use_case')) ||
       (targetNode && (targetNode.nodeType === 'actor' || targetNode.nodeType === 'use_case'));
-    const relName = relType === 'include' ? '«include»' : relType === 'extend' ? '«extend»' : undefined;
+    const relName =
+      relType === 'include'
+        ? '«include»'
+        : relType === 'extend'
+        ? '«extend»'
+        : relType === 'import'
+        ? '«import»'
+        : relType === 'access'
+        ? '«access»'
+        : relType === 'merge'
+        ? '«merge»'
+        : relType === 'trace'
+        ? '«trace»'
+        : undefined;
     const newConnection: UmlConnection = {
       id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       sourceNodeId: baseSourceId,
@@ -1914,8 +2011,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       type: relType,
       lineStyle: this.defaultLineStyle(),
       name: relName,
-      sourceMultiplicity: (isInheritance || isUseCaseRel) ? '' : '1',
-      targetMultiplicity: (isInheritance || isUseCaseRel) ? '' : '0..*',
+      sourceMultiplicity: (isInheritance || isUseCaseRel || isPackageRel) ? '' : '1',
+      targetMultiplicity: (isInheritance || isUseCaseRel || isPackageRel) ? '' : '0..*',
     };
 
     this.pushSnapshot();
@@ -2131,6 +2228,114 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
   }
 
+  addPackage(): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    const count = this.nodes().filter((n) => n.nodeType === 'package').length + 1;
+    const newNode: UmlClassNode = {
+      id: `package_${Date.now()}`,
+      name: `Paquete_${count}`,
+      nodeType: 'package',
+      position: { x: posX, y: posY },
+      width: 200,
+      height: 120,
+      color: '#FFFDDD',
+      attributes: [{ name: `Contenido Paquete ${count}`, type: 'package' }],
+      methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+  }
+
+  addBoundary(): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    const count = this.nodes().filter((n) => n.nodeType === 'boundary').length + 1;
+    const newNode: UmlClassNode = {
+      id: `boundary_${Date.now()}`,
+      name: `Boundary_${count}`,
+      nodeType: 'boundary',
+      position: { x: posX, y: posY },
+      width: 90,
+      height: 95,
+      color: '#D2EEF3',
+      attributes: [],
+      methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+  }
+
+  addControl(): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    const count = this.nodes().filter((n) => n.nodeType === 'control').length + 1;
+    const newNode: UmlClassNode = {
+      id: `control_${Date.now()}`,
+      name: `Control_${count}`,
+      nodeType: 'control',
+      position: { x: posX, y: posY },
+      width: 90,
+      height: 95,
+      color: '#D2EEF3',
+      attributes: [],
+      methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+  }
+
+  addEntity(): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    const count = this.nodes().filter((n) => n.nodeType === 'entity').length + 1;
+    const newNode: UmlClassNode = {
+      id: `entity_${Date.now()}`,
+      name: `Entity_${count}`,
+      nodeType: 'entity',
+      position: { x: posX, y: posY },
+      width: 90,
+      height: 95,
+      color: '#D2EEF3',
+      attributes: [],
+      methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+  }
+
   copySelectedNodes(): void {
     const selIds = this.selectedNodeIds();
     const selId = this.selectedNodeId();
@@ -2190,8 +2395,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         alert('Solo se pueden pegar actores y casos de uso en diagramas de Casos de Uso.');
         return;
       }
+    } else if (currentType === DiagramType.PACKAGE) {
+      const invalid = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case');
+      if (invalid) {
+        alert('Solo se pueden pegar paquetes y casos de uso en diagramas de Paquetes.');
+        return;
+      }
     } else if (currentType === DiagramType.CLASS) {
-      const invalid = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case');
+      const invalid = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'package');
       if (invalid) {
         alert('Solo se pueden pegar clases en diagramas de Clases.');
         return;
@@ -2291,9 +2502,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         alert('Solo se pueden copiar actores y casos de uso en diagramas de Casos de Uso.');
         return;
       }
+    } else if (currentType === DiagramType.PACKAGE) {
+      if (node.nodeType !== 'package' && node.nodeType !== 'use_case') {
+        alert('Solo se pueden copiar paquetes y casos de uso en diagramas de Paquetes.');
+        return;
+      }
     } else if (currentType === DiagramType.CLASS) {
-      if (node.nodeType === 'actor' || node.nodeType === 'use_case') {
+      if (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
         alert('Solo se pueden copiar clases en diagramas de Clases.');
+        return;
+      }
+    } else if (currentType === DiagramType.COMMUNICATION) {
+      if (node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity' && node.nodeType !== 'actor') {
+        alert('Solo se pueden copiar actores, boundaries, controles y entidades en diagramas de Comunicación.');
         return;
       }
     }
@@ -2318,14 +2539,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const newNodeId = `${node.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
+    const isBce = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
     const newNode: UmlClassNode = {
       id: newNodeId,
       name: newName,
-      nodeType: node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : 'class'),
+      nodeType: node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : (currentType === DiagramType.PACKAGE ? 'package' : (currentType === DiagramType.COMMUNICATION ? 'boundary' : 'class'))),
       position: { x: posX, y: posY },
-      width: node.width || (node.nodeType === 'actor' ? 90 : (node.nodeType === 'use_case' ? 140 : 220)),
-      height: node.height || (node.nodeType === 'actor' ? 100 : (node.nodeType === 'use_case' ? 60 : null)),
-      color: node.color || '#FFFDDD',
+      width: node.width || (node.nodeType === 'actor' ? 90 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (isBce ? 90 : 220)))),
+      height: node.height || (node.nodeType === 'actor' ? 100 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (isBce ? 95 : null)))),
+      color: node.color || (isBce ? '#D2EEF3' : '#FFFDDD'),
       attributes: (node.attributes || []).map((a: any) => ({ ...a })),
       methods: (node.methods || []).map((m: any) => ({ ...m })),
     };
@@ -2336,7 +2558,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
 
-    const typeLabel = newNode.nodeType === 'actor' ? 'Actor' : (newNode.nodeType === 'use_case' ? 'Caso de Uso' : 'Clase');
+    const typeLabel = newNode.nodeType === 'actor' ? 'Actor' : (newNode.nodeType === 'use_case' ? 'Caso de Uso' : (newNode.nodeType === 'package' ? 'Paquete' : (newNode.nodeType === 'boundary' ? 'Boundary' : (newNode.nodeType === 'control' ? 'Control' : (newNode.nodeType === 'entity' ? 'Entidad' : 'Clase')))));
     this.showQuickToast(`${typeLabel} "${newNode.name}" copiado al lienzo`);
   }
 
@@ -2672,32 +2894,46 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   private applyAiNodesMutation(targetNodes: any[]): UmlClassNode[] {
-    return targetNodes.map((n, i) => ({
-      id: n.id || `class_ai_${Date.now()}_${i}`,
-      name: n.name || (n.isAnchor ? '' : `Clase_${i + 1}`),
-      position: {
-        x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
-        y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
-      },
-      width: n.isAnchor ? 0 : (n.width || 220),
-      height: n.isAnchor ? 0 : n.height,
-      isAnchor: !!n.isAnchor,
-      assocMainConnId: n.assocMainConnId,
-      attributes: (n.attributes || []).map((a: any) => ({
-        ...a,
-        name: a.name,
-        type: this.normalizeDataType(a.type),
-        nullable: a.nullable !== undefined ? a.nullable : true,
-        unique: a.unique !== undefined ? a.unique : false,
-        length: a.length !== undefined ? a.length : 255,
-        defaultValue: a.defaultValue ?? a.default ?? null,
-      })),
-      methods: (n.methods || []).map((m: any) => ({
-        name: m.name,
-        parameters: m.parameters || '',
-        returnType: this.normalizeReturnType(m.returnType),
-      })),
-    }));
+    return targetNodes.map((n, i) => {
+      let nodeType: UmlNodeType = n.nodeType || 'class';
+      if (nodeType === 'class') {
+        if (n.id?.startsWith('actor_')) nodeType = 'actor';
+        else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
+        else if (n.id?.startsWith('package_')) nodeType = 'package';
+      }
+      const isManuallyResized = !!n.isCustomSize || (!!n.customHeight && n.customHeight > 0);
+      return {
+        id: n.id || `class_ai_${Date.now()}_${i}`,
+        name: n.name || (n.isAnchor ? '' : `Clase_${i + 1}`),
+        position: {
+          x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
+          y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
+        },
+        width: n.isAnchor ? 0 : (n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : (nodeType === 'package' ? 200 : 220)))),
+        height: n.isAnchor ? 0 : n.height,
+        customWidth: n.customWidth,
+        customHeight: n.customHeight,
+        isCustomSize: isManuallyResized,
+        color: n.color || (nodeType === 'use_case' || nodeType === 'actor' ? '#FFFDDD' : null),
+        nodeType,
+        isAnchor: !!n.isAnchor,
+        assocMainConnId: n.assocMainConnId,
+        attributes: (n.attributes || []).map((a: any) => ({
+          ...a,
+          name: a.name,
+          type: this.normalizeDataType(a.type),
+          nullable: a.nullable !== undefined ? a.nullable : true,
+          unique: a.unique !== undefined ? a.unique : false,
+          length: a.length !== undefined ? a.length : 255,
+          defaultValue: a.defaultValue ?? a.default ?? null,
+        })),
+        methods: (n.methods || []).map((m: any) => ({
+          name: m.name,
+          parameters: m.parameters || '',
+          returnType: this.normalizeReturnType(m.returnType),
+        })),
+      };
+    });
   }
 
   private sanitizeClientConnections(conns: any[], validNodes: UmlClassNode[]): UmlConnection[] {

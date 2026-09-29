@@ -20,7 +20,7 @@ export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
   { id: DiagramType.CLASS, label: 'Diagrama de Clases', shortLabel: 'Clases', folderName: 'Diagramas de Clases', icon: 'heroSquare3Stack3d', description: 'Estructura estática, atributos, métodos y relaciones UML 2.5', supported: true },
   { id: DiagramType.USE_CASE, label: 'Casos de Uso', shortLabel: 'Casos Uso', folderName: 'Casos de Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: true },
   { id: DiagramType.SEQUENCE, label: 'Secuencia', shortLabel: 'Secuencia', folderName: 'Diagramas de Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: false },
-  { id: DiagramType.COMMUNICATION, label: 'Comunicación', shortLabel: 'Comunicación', folderName: 'Diagramas de Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: false },
+  { id: DiagramType.COMMUNICATION, label: 'Comunicación', shortLabel: 'Comunicación', folderName: 'Diagramas de Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: true },
   { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', folderName: 'Diagramas de Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: true },
 ];
 
@@ -106,6 +106,11 @@ export const UML_PACKAGE_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'merge', label: '«merge»', icon: '┄«merge»▷', description: 'Fusión de definiciones complementarias de paquetes.' },
   { id: 'trace', label: '«trace»', icon: '┄«trace»▷', description: 'Trazabilidad conceptual o histórica entre paquetes.' },
   { id: 'generalization', label: 'Generalización', icon: '─▷', description: 'Especialización o herencia entre paquetes.' },
+];
+
+export const UML_COMMUNICATION_RELATION_TYPES: UmlRelationTypeItem[] = [
+  { id: 'association', label: 'Enlace de Comunicación', icon: '───', description: 'Enlace entre objetos que transporta mensajes numerados secuenciales.' },
+  { id: 'dependency', label: 'Dependencia', icon: '┈>', description: 'Dependencia o uso temporal entre objetos.' },
 ];
 
 export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [

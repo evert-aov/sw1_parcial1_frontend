@@ -338,6 +338,16 @@ export class DiagramCanvasComponent {
       const nameLen = (node.name || '').length;
       return Math.max(140, Math.round(nameLen * 7.5 + 40));
     }
+    if (node.nodeType === 'package') {
+      const tabTitle = this.getPackageTabTitle(node);
+      const bodyText = this.getPackageBodyText(node);
+      const maxLen = Math.max(tabTitle.length, bodyText.length);
+      return Math.max(180, Math.round(maxLen * 7.5 + 40));
+    }
+    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+      const nameLen = (node.name || '').length;
+      return Math.max(90, Math.round(nameLen * 7.5 + 24));
+    }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
     for (const attr of node.attributes || []) {
@@ -354,20 +364,34 @@ export class DiagramCanvasComponent {
 
   // Ancho efectivo del nodo:
   // - Para clases UML: la función principal y base es el cálculo dinámico según atributos (no se achica por debajo de atributos).
-  // - Para casos de uso y actores: permite redimensionar a dimensiones más reducidas adaptando el contenido.
+  // - Para casos de uso, actores y paquetes: permite redimensionar a dimensiones más reducidas adaptando el contenido.
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
     if (node.nodeType === 'use_case') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
-      if (manualW > 0) {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
         return Math.max(80, manualW);
       }
       return this.getDynamicNodeWidth(node);
     }
     if (node.nodeType === 'actor') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
-      if (manualW > 0) {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
         return Math.max(60, manualW);
+      }
+      return this.getDynamicNodeWidth(node);
+    }
+    if (node.nodeType === 'package') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(120, manualW);
+      }
+      return this.getDynamicNodeWidth(node);
+    }
+    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(70, manualW);
       }
       return this.getDynamicNodeWidth(node);
     }
@@ -386,19 +410,48 @@ export class DiagramCanvasComponent {
       return node.height;
     }
     if (node.nodeType === 'actor') {
-      return node.height || 110;
+      return node.customHeight || node.height || 110;
+    }
+    if (node.nodeType === 'package') {
+      return node.customHeight || node.height || 120;
+    }
+    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+      return node.customHeight || node.height || 95;
     }
     if (node.nodeType === 'use_case') {
+      if (node.customHeight && node.customHeight > 0) {
+        return node.customHeight;
+      }
+      if (node.height && node.height > 0) {
+        return node.height;
+      }
       // Cálculo adaptativo de alto para casos de uso según el ancho y las líneas que el texto ocupa
       const w = this.getNodeWidth(node);
       const nameLen = (node.name || '').length;
       const usableWidth = Math.max(50, w - 24);
       const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
       const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
-      return Math.max(75, 45 + (lines - 1) * 18);
+      return Math.max(60, 45 + (lines - 1) * 18);
     }
     // Para clases UML sin redimensión manual: el alto es 100% dinámico según el contenido
     return null;
+  }
+
+  getPackageTabTitle(node: UmlClassNode): string {
+    if (!node.name) return 'Paquete';
+    const lines = node.name.split('\n');
+    return lines[0].trim() || 'Paquete';
+  }
+
+  getPackageBodyText(node: UmlClassNode): string {
+    if (node.attributes && node.attributes.length > 0 && node.attributes[0]?.name) {
+      return node.attributes[0].name;
+    }
+    if (node.name && node.name.includes('\n')) {
+      const parts = node.name.split('\n');
+      return parts.slice(1).join('\n').trim();
+    }
+    return '';
   }
 
   getNodeSize(node: UmlClassNode): { width: number; height: number } | undefined {
@@ -422,6 +475,9 @@ export class DiagramCanvasComponent {
     } else if (node.nodeType === 'use_case') {
       minW = 80;
       minH = 45;
+    } else if (node.nodeType === 'package') {
+      minW = 120;
+      minH = 70;
     } else {
       minW = Math.max(120, this.getDynamicNodeWidth(node));
     }
@@ -457,8 +513,11 @@ export class DiagramCanvasComponent {
     const startY = event.clientY;
     const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
 
-    const initialW = this.getNodeWidth(node);
-    const initialH = this.getNodeHeight(node) || (node.nodeType === 'use_case' ? 75 : (node.nodeType === 'actor' ? 110 : 80));
+    // Medir las dimensiones reales actuales renderizadas para garantizar continuidad milimétrica (sin saltos bruscos)
+    const hostEl = (event.currentTarget as HTMLElement).closest('.f-node') as HTMLElement | null;
+    const hostRect = hostEl ? hostEl.getBoundingClientRect() : null;
+    const initialW = hostRect ? Math.round(hostRect.width / scale) : this.getNodeWidth(node);
+    const initialH = hostRect ? Math.round(hostRect.height / scale) : (this.getNodeHeight(node) || node.height || 60);
     const initialPosX = node.position ? node.position.x : 0;
     const initialPosY = node.position ? node.position.y : 0;
 
@@ -470,6 +529,12 @@ export class DiagramCanvasComponent {
     } else if (node.nodeType === 'use_case') {
       minW = 80;
       minH = 45;
+    } else if (node.nodeType === 'package') {
+      minW = 120;
+      minH = 70;
+    } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+      minW = 70;
+      minH = 65;
     } else {
       minW = Math.max(120, this.getDynamicNodeWidth(node));
     }
@@ -561,12 +626,20 @@ export class DiagramCanvasComponent {
 
   // Helpers de estado visual
   shouldShowMultiplicity(conn: UmlConnection): boolean {
-    if (this.activeDiagramType() === DiagramType.USE_CASE) return false;
+    if (
+      this.activeDiagramType() === DiagramType.USE_CASE ||
+      this.activeDiagramType() === DiagramType.PACKAGE ||
+      this.activeDiagramType() === DiagramType.COMMUNICATION
+    ) return false;
     if (
       conn.type === 'generalization' ||
       conn.type === 'realization' ||
       conn.type === 'include' ||
       conn.type === 'extend' ||
+      conn.type === 'import' ||
+      conn.type === 'access' ||
+      conn.type === 'merge' ||
+      conn.type === 'trace' ||
       conn.type === 'association_class' ||
       !!conn.assocAnchorNodeId
     ) {
@@ -577,8 +650,8 @@ export class DiagramCanvasComponent {
     const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
     const sNode = nodeMap.get(sourceBase);
     const tNode = nodeMap.get(targetBase);
-    if (sNode && (sNode.nodeType === 'actor' || sNode.nodeType === 'use_case')) return false;
-    if (tNode && (tNode.nodeType === 'actor' || tNode.nodeType === 'use_case')) return false;
+    if (sNode && (sNode.nodeType === 'actor' || sNode.nodeType === 'use_case' || sNode.nodeType === 'package')) return false;
+    if (tNode && (tNode.nodeType === 'actor' || tNode.nodeType === 'use_case' || tNode.nodeType === 'package')) return false;
     return true;
   }
 

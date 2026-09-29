@@ -172,6 +172,10 @@ export class BmpExportService {
       { classKey: 'uml-relation-extend', dash: '6, 4' },
       { classKey: 'uml-relation-realization', dash: '6, 4' },
       { classKey: 'uml-relation-association_class', dash: '4, 4' },
+      { classKey: 'uml-relation-import', dash: '6, 4' },
+      { classKey: 'uml-relation-access', dash: '6, 4' },
+      { classKey: 'uml-relation-merge', dash: '6, 4' },
+      { classKey: 'uml-relation-trace', dash: '6, 4' },
     ];
 
     dashedConfigs.forEach(({ classKey, dash }) => {

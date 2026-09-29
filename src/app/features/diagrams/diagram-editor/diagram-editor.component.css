@@ -64,7 +64,7 @@
   outline: none !important;
 }
 
-::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case) {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: #FFFDF9 !important;
@@ -75,10 +75,22 @@
 
 ::ng-deep f-flow .f-node.f-node-actor,
 ::ng-deep f-flow .f-node.f-node-use-case,
+::ng-deep f-flow .f-node.f-node-package,
+::ng-deep f-flow .f-node.f-node-boundary,
+::ng-deep f-flow .f-node.f-node-control,
+::ng-deep f-flow .f-node.f-node-entity,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-package,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-control,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity,
 .dark ::ng-deep f-flow .f-node.f-node-actor,
-.dark ::ng-deep f-flow .f-node.f-node-use-case {
+.dark ::ng-deep f-flow .f-node.f-node-use-case,
+.dark ::ng-deep f-flow .f-node.f-node-package,
+.dark ::ng-deep f-flow .f-node.f-node-boundary,
+.dark ::ng-deep f-flow .f-node.f-node-control,
+.dark ::ng-deep f-flow .f-node.f-node-entity {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -243,7 +255,7 @@
   border: 1.5px dashed #2563eb !important;
 }
 
-::ng-deep f-flow .f-node.f-selected {
+::ng-deep f-flow .f-node.f-selected:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package) {
   outline: 2px solid #2563eb !important;
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
   z-index: 30 !important;

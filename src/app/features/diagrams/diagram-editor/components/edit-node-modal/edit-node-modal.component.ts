@@ -93,6 +93,27 @@ export class EditNodeModalComponent {
     this.editingNode.set({ ...curr, methods });
   }
 
+  getPackageDescription(): string {
+    const curr = this.editingNode();
+    if (!curr) return '';
+    if (curr.attributes && curr.attributes.length > 0 && curr.attributes[0]?.name) {
+      return curr.attributes[0].name;
+    }
+    return '';
+  }
+
+  setPackageDescription(val: string): void {
+    const curr = this.editingNode();
+    if (!curr) return;
+    const attrs = [...(curr.attributes || [])];
+    if (attrs.length === 0) {
+      attrs.push({ name: val, type: 'package' });
+    } else {
+      attrs[0] = { ...attrs[0], name: val };
+    }
+    this.editingNode.set({ ...curr, attributes: attrs });
+  }
+
   onSave(): void {
     const curr = this.editingNode();
     if (!curr) return;

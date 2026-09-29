@@ -41,6 +41,8 @@ import {
   UmlLineStyleItem,
   UML_RELATION_TYPES,
   UML_USE_CASE_RELATION_TYPES,
+  UML_PACKAGE_RELATION_TYPES,
+  UML_COMMUNICATION_RELATION_TYPES,
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe } from '../../../../../core/i18n';
@@ -157,6 +159,12 @@ export class DiagramSidebarComponent {
     if (this.activeDiagramType() === DiagramType.USE_CASE) {
       return UML_USE_CASE_RELATION_TYPES;
     }
+    if (this.activeDiagramType() === DiagramType.PACKAGE) {
+      return UML_PACKAGE_RELATION_TYPES;
+    }
+    if (this.activeDiagramType() === DiagramType.COMMUNICATION) {
+      return UML_COMMUNICATION_RELATION_TYPES;
+    }
     return UML_RELATION_TYPES;
   });
 
@@ -173,6 +181,10 @@ export class DiagramSidebarComponent {
   readonly addClass = output<void>();
   readonly addActor = output<void>();
   readonly addUseCase = output<void>();
+  readonly addPackage = output<void>();
+  readonly addBoundary = output<void>();
+  readonly addControl = output<void>();
+  readonly addEntity = output<void>();
 
   // Eventos del Explorador
   readonly selectDiagram = output<string>();
@@ -213,6 +225,19 @@ export class DiagramSidebarComponent {
     if (currentType === DiagramType.USE_CASE) {
       return nodeType === 'actor' || nodeType === 'use_case' || sourceDiagramType === DiagramType.USE_CASE;
     }
+    if (currentType === DiagramType.PACKAGE) {
+      return nodeType === 'package' || nodeType === 'use_case' || sourceDiagramType === DiagramType.PACKAGE;
+    }
+    if (currentType === DiagramType.COMMUNICATION) {
+      return (
+        nodeType === 'actor' ||
+        nodeType === 'boundary' ||
+        nodeType === 'control' ||
+        nodeType === 'entity' ||
+        nodeType === 'class' ||
+        sourceDiagramType === DiagramType.COMMUNICATION
+      );
+    }
     if (currentType === DiagramType.CLASS) {
       return !nodeType || nodeType === 'class' || sourceDiagramType === DiagramType.CLASS;
     }
@@ -221,7 +246,20 @@ export class DiagramSidebarComponent {
 
   getCopyTooltip(diag: DiagramDto, node: any): string {
     const isCurrent = diag.id === this.currentDiagramId();
-    const typeLabel = node.nodeType === 'actor' ? 'actor' : (node.nodeType === 'use_case' ? 'caso de uso' : 'clase');
+    const typeLabel =
+      node.nodeType === 'actor'
+        ? 'actor'
+        : node.nodeType === 'use_case'
+        ? 'caso de uso'
+        : node.nodeType === 'package'
+        ? 'paquete'
+        : node.nodeType === 'boundary'
+        ? 'boundary'
+        : node.nodeType === 'control'
+        ? 'control'
+        : node.nodeType === 'entity'
+        ? 'entidad'
+        : 'clase';
     if (isCurrent) {
       return `Duplicar ${typeLabel} "${node.name}" en este lienzo`;
     }

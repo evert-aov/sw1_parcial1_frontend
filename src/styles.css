@@ -77,7 +77,7 @@ f-flow {
 }
 
 /* Nodos UML 2.5 estilo Enterprise Architect (EA) */
-f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.w-0):not(.opacity-0) {
+f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: #FFFDF9 !important;
@@ -88,8 +88,16 @@ f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.w-0):not(.opacity-0
 
 f-flow .f-node.f-node-actor,
 f-flow .f-node.f-node-use-case,
+f-flow .f-node.f-node-package,
+f-flow .f-node.f-node-boundary,
+f-flow .f-node.f-node-control,
+f-flow .f-node.f-node-entity,
 .dark f-flow .f-node.f-node-actor,
-.dark f-flow .f-node.f-node-use-case {
+.dark f-flow .f-node.f-node-use-case,
+.dark f-flow .f-node.f-node-package,
+.dark f-flow .f-node.f-node-boundary,
+.dark f-flow .f-node.f-node-control,
+.dark f-flow .f-node.f-node-entity {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -301,7 +309,19 @@ f-flow f-connection-for-create.uml-relation-include path[f-connection-path],
 f-flow .uml-relation-include path[f-connection-path],
 f-flow f-connection.uml-relation-extend path[f-connection-path],
 f-flow f-connection-for-create.uml-relation-extend path[f-connection-path],
-f-flow .uml-relation-extend path[f-connection-path] {
+f-flow .uml-relation-extend path[f-connection-path],
+f-flow f-connection.uml-relation-import path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-import path[f-connection-path],
+f-flow .uml-relation-import path[f-connection-path],
+f-flow f-connection.uml-relation-access path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-access path[f-connection-path],
+f-flow .uml-relation-access path[f-connection-path],
+f-flow f-connection.uml-relation-merge path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-merge path[f-connection-path],
+f-flow .uml-relation-merge path[f-connection-path],
+f-flow f-connection.uml-relation-trace path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-trace path[f-connection-path],
+f-flow .uml-relation-trace path[f-connection-path] {
   stroke-dasharray: 6 4 !important;
 }
 
