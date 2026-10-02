@@ -74,7 +74,31 @@ export class EditConnectionModalComponent {
       () => {
         const c = this.connection();
         if (c && this.isOpen()) {
-          this.editingConnection.set(JSON.parse(JSON.stringify(c)));
+          const cloned: UmlConnection = JSON.parse(JSON.stringify(c));
+          const isSeq =
+            this.activeDiagramType() === DiagramType.SEQUENCE ||
+            ['sync', 'reply', 'async', 'create', 'self'].includes(cloned.type as string);
+          if (isSeq) {
+            cloned.sourceMultiplicity = '';
+            cloned.targetMultiplicity = '';
+            cloned.lineStyle = 'straight';
+            if (!cloned.messages || cloned.messages.length === 0) {
+              cloned.messages = [
+                {
+                  id: `msg_${Date.now()}`,
+                  sequenceNumber: '1.0',
+                  functionName: '',
+                  parameters: '',
+                  returnType: '',
+                  isReturn: cloned.type === 'reply',
+                  direction: 'forward',
+                  orderIndex: 0,
+                  color: this.sequenceColorPalette[0],
+                },
+              ];
+            }
+          }
+          this.editingConnection.set(cloned);
         } else if (!this.isOpen()) {
           this.editingConnection.set(null);
         }
@@ -98,6 +122,36 @@ export class EditConnectionModalComponent {
     '#0F766E', // 12: Teal
   ];
 
+  canHaveMultiplicity(): boolean {
+    const conn = this.editingConnection();
+    if (!conn) return false;
+    if (
+      this.activeDiagramType() === DiagramType.SEQUENCE ||
+      this.activeDiagramType() === DiagramType.COMMUNICATION ||
+      this.activeDiagramType() === DiagramType.USE_CASE ||
+      this.activeDiagramType() === DiagramType.PACKAGE
+    ) {
+      return false;
+    }
+    const noMultTypes = [
+      'generalization', 'realization', 'include', 'extend',
+      'import', 'access', 'merge', 'trace',
+      'sync', 'reply', 'async', 'create', 'self',
+    ];
+    return !noMultTypes.includes(conn.type as string);
+  }
+
+  isSequenceOrCommunication(): boolean {
+    const conn = this.editingConnection();
+    if (!conn) return false;
+    return (
+      this.activeDiagramType() === DiagramType.SEQUENCE ||
+      this.activeDiagramType() === DiagramType.COMMUNICATION ||
+      Boolean(conn.messages && conn.messages.length > 0) ||
+      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as string)
+    );
+  }
+
   onSwapDirection(): void {
     const conn = this.editingConnection();
     if (!conn) return;
@@ -115,15 +169,18 @@ export class EditConnectionModalComponent {
     const conn = this.editingConnection();
     if (!conn) return;
     if (!conn.messages) conn.messages = [];
-    const nextSeq = `${conn.messages.length + 1}`;
+    const isSeq =
+      this.activeDiagramType() === DiagramType.SEQUENCE ||
+      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as string);
+    const nextSeq = isSeq ? `1.${conn.messages.length}` : `${conn.messages.length + 1}`;
     const defaultColor = this.sequenceColorPalette[conn.messages.length % this.sequenceColorPalette.length];
     const newMsg: UmlMessage = {
       id: `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       sequenceNumber: nextSeq,
-      functionName: `mensaje_${nextSeq}`,
+      functionName: '',
       parameters: '',
       returnType: '',
-      isReturn: false,
+      isReturn: isSeq && conn.type === 'reply',
       direction: 'forward',
       orderIndex: conn.messages.length,
       color: defaultColor,
@@ -160,6 +217,14 @@ export class EditConnectionModalComponent {
   onSave(): void {
     const conn = this.editingConnection();
     if (!conn) return;
+    const isSeq =
+      this.activeDiagramType() === DiagramType.SEQUENCE ||
+      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as string);
+    if (isSeq) {
+      conn.sourceMultiplicity = '';
+      conn.targetMultiplicity = '';
+      conn.lineStyle = 'straight';
+    }
     this.save.emit(conn);
     this.close.emit();
   }

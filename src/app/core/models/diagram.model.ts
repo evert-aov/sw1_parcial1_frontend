@@ -190,6 +190,7 @@ export interface UmlClassNode {
   assocMainConnId?: string;
   nodeType?: UmlNodeType;
   activations?: any[];
+  labelOffset?: { x: number; y: number };
 }
 
 export interface UmlConnection {

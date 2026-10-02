@@ -248,10 +248,19 @@ export class BmpExportService {
             return false;
           }
 
+          // Preservar siempre las líneas de vida y sus elementos SVG
+          if (
+            classList?.contains('uml-lifeline-vertical-line') ||
+            classList?.contains('uml-lifeline-svg') ||
+            domNode.closest?.('.uml-lifeline-vertical-line')
+          ) {
+            return true;
+          }
+
           // Filtrar controles flotantes de UI (cursores remotos, botones de acción flotantes)
           if (
             classList &&
-            (classList.contains('pointer-events-none') ||
+            ((classList.contains('pointer-events-none') && (classList.contains('remote-cursor') || classList.contains('remote-user-tag') || classList.contains('collaborator-cursor') || classList.contains('remote-selection'))) ||
               (classList.contains('z-40') && domNode.tagName === 'BUTTON'))
           ) {
             return false;

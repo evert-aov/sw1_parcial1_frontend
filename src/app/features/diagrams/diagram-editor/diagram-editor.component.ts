@@ -543,10 +543,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.currentDiagramName.set(diagram.name);
       if (diagram.type) {
         this.activeDiagramType.set(diagram.type as DiagramType);
+        this.collaborationService.currentDiagramType.set(diagram.type);
       }
       if (diagram.defaultLineStyle) {
         this.defaultLineStyle.set(diagram.defaultLineStyle as UmlLineStyle);
       }
+
+      const isSequence = diagram.type === 'sequence';
 
       // Si hay un borrador local generado por desconexión no guardada
       const localDraftRaw = localStorage.getItem(`uml_draft_${diagramId}`);
@@ -565,11 +568,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                 else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
                 else if (n.id?.startsWith('control_')) nodeType = 'control';
                 else if (n.id?.startsWith('entity_')) nodeType = 'entity';
+                else if (n.id?.startsWith('lifeline_') || isSequence) nodeType = 'lifeline';
               }
               return { ...n, nodeType };
             });
             this.nodes.set(sanitizedDraftNodes);
-            this.connections.set(draft.connections || []);
+            this.connections.set(this.recalculateSequenceNumbers(draft.connections || []));
             if (draft.defaultLineStyle) {
               this.defaultLineStyle.set(draft.defaultLineStyle);
             }
@@ -581,7 +585,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
 
       const mappedNodes: UmlClassNode[] = (diagram.nodes || []).map((n) => {
-        let nodeType: UmlNodeType = (n.nodeType as any) || (diagram.type === 'package' ? 'package' : 'class');
+        let nodeType: UmlNodeType = (n.nodeType as any) || (diagram.type === 'package' ? 'package' : (isSequence ? 'lifeline' : 'class'));
         if (nodeType === 'class') {
           if (n.id.startsWith('actor_')) {
             nodeType = 'actor';
@@ -595,33 +599,39 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             nodeType = 'control';
           } else if (n.id.startsWith('entity_')) {
             nodeType = 'entity';
+          } else if (n.id.startsWith('lifeline_')) {
+            nodeType = 'lifeline';
+          } else if (isSequence) {
+            nodeType = 'lifeline';
           }
         }
         const isManuallyResized = !!(n.height && n.height > 0);
         const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
+        const isLifeline = nodeType === 'lifeline';
         return {
           id: n.id,
           name: n.name,
           position: { x: n.positionX, y: n.positionY },
-          width: n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : (nodeType === 'package' ? 200 : (isBce ? 90 : 220)))),
-          height: n.height || (isBce ? 95 : undefined),
+          width: n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : (nodeType === 'package' ? 200 : (isBce ? 90 : (isLifeline ? 140 : 220))))),
+          height: n.height || (isBce ? 95 : (isLifeline ? 48 : (nodeType === 'actor' ? 100 : undefined))),
           customWidth: isManuallyResized ? n.width : undefined,
           customHeight: isManuallyResized ? n.height! : undefined,
           isCustomSize: isManuallyResized,
-          color: n.color || (isBce ? '#D2EEF3' : '#FFFDDD'),
+          color: n.color || (isBce || isLifeline ? '#D2EEF3' : '#FFFDDD'),
           isAnchor: n.isAnchor,
           nodeType,
           assocMainConnId: n.assocMainConnId || undefined,
-        attributes: (n.attributes || []).map((a) => ({
-          name: a.name,
-          type: this.normalizeDataType(a.type),
-          orderIndex: a.orderIndex,
-          nullable: a.nullable !== undefined ? a.nullable : true,
-          unique: a.unique !== undefined ? a.unique : false,
-          length: a.length !== undefined ? a.length : 255,
-          defaultValue: a.defaultValue ?? a.default ?? null,
-          default: a.default ?? a.defaultValue ?? null,
-        })),
+          activations: (n as any).activations || [],
+          attributes: (n.attributes || []).map((a) => ({
+            name: a.name,
+            type: this.normalizeDataType(a.type),
+            orderIndex: a.orderIndex,
+            nullable: a.nullable !== undefined ? a.nullable : true,
+            unique: a.unique !== undefined ? a.unique : false,
+            length: a.length !== undefined ? a.length : 255,
+            defaultValue: a.defaultValue ?? a.default ?? null,
+            default: a.default ?? a.defaultValue ?? null,
+          })),
           methods: (n.methods || []).map((m) => ({
             name: m.name,
             parameters: m.parameters,
@@ -640,12 +650,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         type: c.type as UmlRelationshipType,
         lineStyle: (c.lineStyle as UmlLineStyle) || 'segment',
         name: c.name || undefined,
-        sourceMultiplicity: c.sourceMultiplicity || '',
-        targetMultiplicity: c.targetMultiplicity || '',
+        sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
+        targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
         assocAnchorNodeId: c.assocAnchorNodeId || undefined,
         messages: (c as any).messages || [],
       }));
-      this.connections.set(mappedConnections);
+      this.connections.set(this.recalculateSequenceNumbers(mappedConnections));
 
       // Limpiar selecciones previas y pila de deshacer/rehacer al cambiar de diagrama
       this.selectedNodeId.set(null);
@@ -871,16 +881,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   buildSaveAstPayload(): SaveDiagramAstRequest {
+    const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
     return {
       type: this.activeDiagramType(),
       defaultLineStyle: this.defaultLineStyle(),
       nodes: this.nodes().map((n) => ({
         id: n.id,
-        name: n.name || (n.isAnchor ? 'Anchor' : 'ClassName'),
+        name: n.name !== undefined && n.name !== null ? n.name : (n.isAnchor ? 'Anchor' : (isSequence ? '' : 'ClassName')),
         positionX: n.position.x,
         positionY: n.position.y,
         width: this.getNodeWidth(n),
-        height: n.customHeight || (n.isCustomSize ? n.height : null) || null,
+        height: n.customHeight || (n.isCustomSize ? n.height : null) || (n.nodeType === 'lifeline' ? 48 : null),
         color: n.color || null,
         isAnchor: n.isAnchor,
         assocMainConnId: n.assocMainConnId,
@@ -899,13 +910,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             ? 'control'
             : n.id.startsWith('entity_')
             ? 'entity'
-            : n.nodeType || (this.activeDiagramType() === DiagramType.PACKAGE ? 'package' : 'class'),
+            : n.id.startsWith('lifeline_')
+            ? 'lifeline'
+            : isSequence
+            ? 'lifeline'
+            : this.activeDiagramType() === DiagramType.PACKAGE
+            ? 'package'
+            : n.nodeType || 'class',
+        activations: (n as any).activations || [],
         attributes: n.attributes,
         methods: n.methods,
       })),
       connections: this.connections().map((c) => {
-        const baseSourceId = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const baseTargetId = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
+        const baseSourceId = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+        const baseTargetId = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
         return {
           id: c.id,
           sourceNodeId: baseSourceId,
@@ -915,8 +933,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           type: c.type,
           lineStyle: c.lineStyle || this.defaultLineStyle(),
           name: c.name || null,
-          sourceMultiplicity: c.sourceMultiplicity || '',
-          targetMultiplicity: c.targetMultiplicity || '',
+          sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
+          targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
           assocAnchorNodeId: c.assocAnchorNodeId || null,
           messages: c.messages || [],
         };
@@ -985,6 +1003,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
     this.hasMovedDuringPointerDown = true;
 
+    const isSequenceNode = this.activeDiagramType() === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
+    if (isSequenceNode) {
+      newPosition = { x: Math.round(newPosition.x), y: 50 };
+    }
+
     if (!this.isDraggingNode) {
       this.isDraggingNode = true;
       this.pushSnapshot();
@@ -998,12 +1021,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const last = this.lastNodeDragPos.get(node.id);
     if (last) {
       const dx = newPosition.x - last.x;
-      const dy = newPosition.y - last.y;
+      const dy = isSequenceNode ? 0 : newPosition.y - last.y;
 
       if ((dx !== 0 || dy !== 0) && this.selectedNodeIds().size > 1 && this.selectedNodeIds().has(node.id)) {
         for (const other of this.nodes()) {
           if (other.id !== node.id && this.selectedNodeIds().has(other.id) && !other.isAnchor) {
-            other.position = { x: Math.round(other.position.x + dx), y: Math.round(other.position.y + dy) };
+            const otherIsSeq = this.activeDiagramType() === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
+            const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
+            other.position = { x: Math.round(other.position.x + dx), y: otherY };
             this.collaborationService.sendNodeDrag(other.id, other.position);
           }
         }
@@ -1017,6 +1042,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
     this.collaborationService.sendNodeDrag(node.id, newPosition);
     this.nodeDragEnd$.next();
+  }
+
+  onNodeLabelOffsetChange(node: UmlClassNode, offset: { x: number; y: number }): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    this.pushSnapshot();
+    this.nodes.update((list) =>
+      list.map((n) => (n.id === node.id ? { ...n, labelOffset: { ...offset } } : n))
+    );
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'move_node');
   }
 
   onMoveNodes(event: FMoveNodesEvent): void {
@@ -1033,10 +1068,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     for (const item of event.nodes) {
       const node = nodeMap.get(item.id);
-      if (node && (node.position.x !== Math.round(item.position.x) || node.position.y !== Math.round(item.position.y))) {
-        node.position = { x: Math.round(item.position.x), y: Math.round(item.position.y) };
-        anyMoved = true;
-        this.collaborationService.sendNodeDrag(node.id, node.position);
+      if (node) {
+        const isSequenceNode = this.activeDiagramType() === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
+        const targetX = Math.round(item.position.x);
+        const targetY = isSequenceNode ? 50 : Math.round(item.position.y);
+        if (node.position.x !== targetX || node.position.y !== targetY) {
+          node.position = { x: targetX, y: targetY };
+          anyMoved = true;
+          this.collaborationService.sendNodeDrag(node.id, node.position);
+        }
       }
     }
 
@@ -1068,7 +1108,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   getDynamicNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
-    if (node.nodeType === 'actor') return 90;
+    if (node.nodeType === 'actor') return 65;
+    if (node.nodeType === 'lifeline') {
+      const nameLen = (node.name || '').length;
+      return Math.max(160, Math.round(nameLen * 8.5 + 44));
+    }
     if (node.nodeType === 'use_case') {
       const nameLen = (node.name || '').length;
       return Math.max(140, Math.round(nameLen * 7.5 + 40));
@@ -1082,8 +1126,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return Math.max(180, Math.round(maxLen * 7.5 + 40));
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      const nameLen = (node.name || '').length;
-      return Math.max(90, Math.round(nameLen * 7.5 + 24));
+      return 70;
     }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
@@ -1109,11 +1152,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return this.getDynamicNodeWidth(node);
     }
     if (node.nodeType === 'actor') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
       if (manualW && manualW > 0) {
-        return Math.max(60, manualW);
+        return Math.max(50, manualW);
       }
-      return this.getDynamicNodeWidth(node);
+      return 65;
     }
     if (node.nodeType === 'package') {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
@@ -1123,11 +1166,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return this.getDynamicNodeWidth(node);
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
       if (manualW && manualW > 0) {
-        return Math.max(70, manualW);
+        return Math.max(50, manualW);
       }
-      return this.getDynamicNodeWidth(node);
+      return 70;
     }
     const dynamicW = this.getDynamicNodeWidth(node);
     const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
@@ -1138,10 +1181,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (node.isAnchor) return 0;
     if (node.customHeight && node.customHeight > 0) return node.customHeight;
     if (node.isCustomSize && node.height && node.height > 0) return node.height;
-    if (node.nodeType === 'actor') return node.customHeight || node.height || 110;
+    if (node.nodeType === 'actor') return node.customHeight || (node.isCustomSize ? node.height : null) || 95;
+    if (node.nodeType === 'lifeline') return node.customHeight || node.height || 48;
     if (node.nodeType === 'package') return node.customHeight || node.height || 120;
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      return node.customHeight || node.height || 95;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
     }
     if (node.nodeType === 'use_case') {
       if (node.customHeight && node.customHeight > 0) return node.customHeight;
@@ -1471,10 +1515,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             this.activeDiagramType() === DiagramType.SEQUENCE ||
             ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type)
           ) {
+            const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
+            const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
+            const slotNum = sMatch ? sMatch[1] : (tMatch ? tMatch[1] : '0');
             return {
               ...conn,
               sourceNodeId: baseSourceId,
               targetNodeId: baseTargetId,
+              sourceId: `${baseSourceId}_slot_${slotNum}`,
+              targetId: `${baseTargetId}_slot_${slotNum}`,
             };
           }
 
@@ -1835,6 +1884,137 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
+  private generateNextSequenceMessage(
+    sourceNode?: UmlClassNode,
+    targetNode?: UmlClassNode,
+    isReturn: boolean = false,
+  ): UmlMessage[] {
+    return [
+      {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        sequenceNumber: '',
+        functionName: '',
+        parameters: '',
+        returnType: '',
+        isReturn,
+        direction: 'forward',
+        orderIndex: 0,
+        color: '#0284C7',
+      },
+    ];
+  }
+
+  private recalculateSequenceNumbers(connectionsList: UmlConnection[]): UmlConnection[] {
+    const isSeq = this.activeDiagramType() === DiagramType.SEQUENCE;
+    if (!isSeq) {
+      return connectionsList;
+    }
+
+    const palette = [
+      '#0284C7', // Grupo 1: Azul cielo
+      '#7C3AED', // Grupo 2: Violeta
+      '#059669', // Grupo 3: Esmeralda
+      '#D97706', // Grupo 4: Ámbar
+      '#DC2626', // Grupo 5: Rojo carmesí
+      '#0891B2', // Grupo 6: Cyan
+      '#4F46E5', // Grupo 7: Índigo
+      '#C026D3', // Grupo 8: Magenta
+    ];
+
+    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
+
+    interface SeqConnMeta {
+      conn: UmlConnection;
+      slot: number;
+      index: number;
+    }
+
+    const seqMetas: SeqConnMeta[] = [];
+    connectionsList.forEach((c, idx) => {
+      const isConnSeq =
+        isSeq || ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
+      if (isConnSeq) {
+        const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+        const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+        const slot = sMatch ? parseInt(sMatch[1], 10) : (tMatch ? parseInt(tMatch[1], 10) : 0);
+        seqMetas.push({ conn: c, slot, index: idx });
+      }
+    });
+
+    if (seqMetas.length === 0) {
+      return connectionsList;
+    }
+
+    // Ordenar cronológicamente de arriba hacia abajo según el slot
+    seqMetas.sort((a, b) => a.slot - b.slot || a.index - b.index);
+
+    let currentGroup = 0;
+    let childIndex = 0;
+
+    const updatedConnMap = new Map<string, UmlConnection>();
+
+    for (const meta of seqMetas) {
+      const c = meta.conn;
+      const baseSourceId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const baseTargetId = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const sourceNode = nodeMap.get(baseSourceId);
+      const targetNode = nodeMap.get(baseTargetId);
+
+      // Una nueva interacción/grupo inicia cuando el Actor envía un mensaje hacia una línea de vida
+      const isActorSource = sourceNode?.nodeType === 'actor';
+
+      let seqNum: string;
+      if (isActorSource || currentGroup === 0) {
+        currentGroup++;
+        childIndex = 0;
+        seqNum = `${currentGroup}`;
+      } else {
+        childIndex++;
+        seqNum = `${currentGroup}.${childIndex}`;
+      }
+
+      const color = palette[(currentGroup - 1) % palette.length];
+
+      let updatedMessages: UmlMessage[];
+      if (c.messages && c.messages.length > 0) {
+        updatedMessages = c.messages.map((m, mIdx) => {
+          if (mIdx === 0) {
+            return {
+              ...m,
+              sequenceNumber: seqNum,
+              color,
+            };
+          }
+          return m;
+        });
+      } else {
+        updatedMessages = [
+          {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            sequenceNumber: seqNum,
+            functionName: '',
+            parameters: '',
+            returnType: '',
+            isReturn: c.type === 'reply',
+            direction: 'forward',
+            orderIndex: 0,
+            color,
+          },
+        ];
+      }
+
+      const updatedConn: UmlConnection = {
+        ...c,
+        name: c.name && /^\d+(\.\d+)?$/.test(c.name.trim()) ? seqNum : c.name,
+        messages: updatedMessages,
+      };
+
+      updatedConnMap.set(c.id, updatedConn);
+    }
+
+    return connectionsList.map((c) => updatedConnMap.get(c.id) || c);
+  }
+
   onTableClick(nodeId: string, event: MouseEvent): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(nodeId)) return;
 
@@ -1875,13 +2055,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         sourceId = isSeqRel ? `${currentSource}_right` : `${currentSource}_top`;
         targetId = `${nodeId}_right`;
       } else if (isSeqRel) {
-        if ((sourceNode.position?.x || 0) <= (targetNode.position?.x || 0)) {
-          sourceId = `${currentSource}_right`;
-          targetId = `${nodeId}_left`;
-        } else {
-          sourceId = `${currentSource}_left`;
-          targetId = `${nodeId}_right`;
+        const usedSlots = new Set<number>();
+        for (const c of this.connections()) {
+          const m1 = c.sourceId?.match(/_slot_(\d+)$/);
+          const m2 = c.targetId?.match(/_slot_(\d+)$/);
+          if (m1) usedSlots.add(parseInt(m1[1], 10));
+          if (m2) usedSlots.add(parseInt(m2[1], 10));
         }
+        let nextSlot = 0;
+        while (usedSlots.has(nextSlot)) {
+          nextSlot++;
+        }
+        sourceId = `${currentSource}_slot_${nextSlot}`;
+        targetId = `${nodeId}_slot_${nextSlot}`;
       } else {
         const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
         sourceId = optimal.sourceId;
@@ -1922,34 +2108,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
       let messages: UmlMessage[] | undefined = undefined;
       if (isSeqRel) {
-        const totalSeqMsgs = this.connections().reduce(
-          (acc, c) => acc + (c.messages?.length || (['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ? 1 : 0)),
-          0,
-        );
-        const seqNum = `1.${totalSeqMsgs}`;
         const isReturn = activeRel === 'reply';
-        const palette = ['#0284C7', '#0D9488', '#16A34A', '#D97706', '#DC2626', '#7C3AED', '#DB2777', '#475569'];
-        const msgColor = palette[totalSeqMsgs % palette.length];
-        const fnName = isReturn
-          ? 'showSuccess'
-          : activeRel === 'create'
-          ? 'create'
-          : totalSeqMsgs === 0
-          ? 'register'
-          : `operation_${totalSeqMsgs}`;
-        messages = [
-          {
-            id: `msg_${Date.now()}`,
-            sequenceNumber: seqNum,
-            functionName: fnName,
-            parameters: isReturn ? '' : 'data',
-            returnType: isReturn ? 'void' : '',
-            isReturn,
-            direction: 'forward',
-            orderIndex: 0,
-            color: msgColor,
-          },
-        ];
+        messages = this.generateNextSequenceMessage(sourceNode, targetNode, isReturn);
       }
 
       const newConn: UmlConnection = {
@@ -1967,11 +2127,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       };
 
       this.pushSnapshot();
-      this.connections.update((list) => [...list, newConn]);
+      this.connections.update((list) => this.recalculateSequenceNumbers([...list, newConn]));
       this.markAsUnsaved();
       this.setPointerMode();
       this.updateConnectionEndpoints();
       this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
+      if (isSeqRel) {
+        const created = this.connections().find((c) => c.id === newConn.id) || newConn;
+        setTimeout(() => this.openEditConnModal(created), 100);
+      }
     }
   }
 
@@ -1988,6 +2152,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const isSeqRel =
       ['sync', 'reply', 'async', 'create', 'self'].includes(relType) ||
       this.activeDiagramType() === DiagramType.SEQUENCE;
+
+    if (isSeqRel) {
+      const sHasSlot = event.fOutputId.includes('_slot_');
+      const tHasSlot = event.fInputId.includes('_slot_');
+      if (!sHasSlot || !tHasSlot) {
+        // En diagramas de secuencia sólo se permite conectar slots a lo largo de la línea de vida
+        return;
+      }
+    }
 
     const baseSourceId = event.fOutputId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
     const baseTargetId = event.fInputId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
@@ -2015,17 +2188,51 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     if (sourceNode && targetNode) {
       if (isSeqRel || sourceId.includes('_slot_') || targetId.includes('_slot_')) {
-        if (!sourceId.includes('_slot_') && !targetId.includes('_slot_')) {
-          if (baseSourceId === baseTargetId) {
-            sourceId = `${baseSourceId}_right`;
-            targetId = `${baseTargetId}_right`;
-          } else if ((sourceNode.position?.x || 0) <= (targetNode.position?.x || 0)) {
-            sourceId = `${baseSourceId}_right`;
-            targetId = `${baseTargetId}_left`;
+        if (baseSourceId === baseTargetId) {
+          sourceId = `${baseSourceId}_right`;
+          targetId = `${baseTargetId}_right`;
+        } else {
+          const sMatch = sourceId.match(/_slot_(\d+)$/);
+          const tMatch = targetId.match(/_slot_(\d+)$/);
+          let slotNum: string;
+          if (sMatch) {
+            slotNum = sMatch[1];
+          } else if (tMatch) {
+            slotNum = tMatch[1];
           } else {
-            sourceId = `${baseSourceId}_left`;
-            targetId = `${baseTargetId}_right`;
+            const usedSlots = new Set<number>();
+            for (const c of this.connections()) {
+              const m1 = c.sourceId?.match(/_slot_(\d+)$/);
+              const m2 = c.targetId?.match(/_slot_(\d+)$/);
+              if (m1) usedSlots.add(parseInt(m1[1], 10));
+              if (m2) usedSlots.add(parseInt(m2[1], 10));
+            }
+            let nextSlot = 0;
+            while (usedSlots.has(nextSlot)) {
+              nextSlot++;
+            }
+            slotNum = nextSlot.toString();
           }
+
+          // Validación estricta: No permitir colocar dos mensajes en la misma posición temporal (fila colineal)
+          const targetSlotNum = parseInt(slotNum, 10);
+          const isSlotOccupied = this.connections().some((c) => {
+            const isSeq =
+              this.activeDiagramType() === DiagramType.SEQUENCE ||
+              ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
+            if (!isSeq) return false;
+            const m1 = c.sourceId?.match(/_slot_(\d+)$/);
+            const m2 = c.targetId?.match(/_slot_(\d+)$/);
+            return (m1 && parseInt(m1[1], 10) === targetSlotNum) || (m2 && parseInt(m2[1], 10) === targetSlotNum);
+          });
+
+          if (isSlotOccupied) {
+            alert('⚠️ No se permite colocar dos mensajes en la misma posición temporal (fila colineal). Cada mensaje debe ubicarse en una posición distinta.');
+            return;
+          }
+
+          sourceId = `${baseSourceId}_slot_${slotNum}`;
+          targetId = `${baseTargetId}_slot_${slotNum}`;
         }
       } else if (baseSourceId === baseTargetId) {
         const validConnectors = [
@@ -2082,34 +2289,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     let messages: UmlMessage[] | undefined = undefined;
     if (isSeqRel) {
-      const totalSeqMsgs = this.connections().reduce(
-        (acc, c) => acc + (c.messages?.length || (['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ? 1 : 0)),
-        0,
-      );
-      const seqNum = `1.${totalSeqMsgs}`;
       const isReturn = relType === 'reply';
-      const palette = ['#0284C7', '#0D9488', '#16A34A', '#D97706', '#DC2626', '#7C3AED', '#DB2777', '#475569'];
-      const msgColor = palette[totalSeqMsgs % palette.length];
-      const fnName = isReturn
-        ? 'showSuccess'
-        : relType === 'create'
-        ? 'create'
-        : totalSeqMsgs === 0
-        ? 'register'
-        : `operation_${totalSeqMsgs}`;
-      messages = [
-        {
-          id: `msg_${Date.now()}`,
-          sequenceNumber: seqNum,
-          functionName: fnName,
-          parameters: isReturn ? '' : 'data',
-          returnType: isReturn ? 'void' : '',
-          isReturn,
-          direction: 'forward',
-          orderIndex: 0,
-          color: msgColor,
-        },
-      ];
+      messages = this.generateNextSequenceMessage(sourceNode, targetNode, isReturn);
     }
 
     const newConnection: UmlConnection = {
@@ -2127,32 +2308,183 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     };
 
     this.pushSnapshot();
-    this.connections.update((list) => [...list, newConnection]);
+    this.connections.update((list) => this.recalculateSequenceNumbers([...list, newConnection]));
     this.markAsUnsaved();
     this.setPointerMode();
     this.updateConnectionEndpoints();
 
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
+    if (isSeqRel) {
+      const created = this.connections().find((c) => c.id === newConnection.id) || newConnection;
+      setTimeout(() => this.openEditConnModal(created), 100);
+    }
   }
 
   onConnectionReassigned(event: FReassignConnectionEvent): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    this.connections.update((list) =>
-      list.map((c) => {
+    const isSeq = this.activeDiagramType() === DiagramType.SEQUENCE;
+    this.connections.update((list) => {
+      const reassigned = list.map((c) => {
         if (c.id === event.connectionId) {
+          let sId = event.nextSourceId || c.sourceId;
+          let tId = event.nextTargetId || c.targetId;
+          if (isSeq || ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any)) {
+            const sMatch = event.nextSourceId ? event.nextSourceId.match(/_slot_(\d+)$/) : null;
+            const tMatch = event.nextTargetId ? event.nextTargetId.match(/_slot_(\d+)$/) : null;
+            const slotNum = sMatch ? sMatch[1] : (tMatch ? tMatch[1] : null);
+            if (slotNum !== null) {
+              const targetSlotNum = parseInt(slotNum, 10);
+              const isOccupied = list.some((other) => {
+                if (other.id === event.connectionId) return false;
+                const m1 = other.sourceId?.match(/_slot_(\d+)$/);
+                const m2 = other.targetId?.match(/_slot_(\d+)$/);
+                return (m1 && parseInt(m1[1], 10) === targetSlotNum) || (m2 && parseInt(m2[1], 10) === targetSlotNum);
+              });
+              if (isOccupied) {
+                alert('⚠️ No se pueden colocar dos mensajes en la misma posición temporal (fila colineal).');
+                return c;
+              }
+              const baseSrc = sId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+              const baseTgt = tId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+              sId = `${baseSrc}_slot_${slotNum}`;
+              tId = `${baseTgt}_slot_${slotNum}`;
+            }
+          }
           return {
             ...c,
-            sourceId: event.nextSourceId || c.sourceId,
-            targetId: event.nextTargetId || c.targetId,
+            sourceId: sId,
+            targetId: tId,
           };
         }
         return c;
-      }),
-    );
+      });
+      return this.recalculateSequenceNumbers(reassigned);
+    });
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'reassign_conn');
+  }
+
+  onSequenceMessageMove(event: { connectionId: string; targetSlot: number }): void {
+    if (this.isReadOnly()) return;
+    const { connectionId, targetSlot } = event;
+
+    const allConns = this.connections();
+    const movingConn = allConns.find((c) => c.id === connectionId);
+    if (!movingConn) return;
+
+    const sMatch = movingConn.sourceId?.match(/_slot_(\d+)$/);
+    const fromSlot = sMatch ? parseInt(sMatch[1], 10) : 0;
+    const toSlot = Math.max(0, targetSlot);
+
+    if (fromSlot === toSlot) return;
+
+    this.pushSnapshot();
+
+    this.connections.update((conns) => {
+      const isSeqConn = (c: UmlConnection) =>
+        this.activeDiagramType() === DiagramType.SEQUENCE ||
+        ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
+
+      const getSlot = (c: UmlConnection) => {
+        const m = c.sourceId?.match(/_slot_(\d+)$/);
+        return m ? parseInt(m[1], 10) : 0;
+      };
+
+      const movingSeqNum = movingConn.messages?.[0]?.sequenceNumber?.trim() || '';
+      const isInitiator = /^\d+$/.test(movingSeqNum);
+
+      interface MoveItem {
+        conn: UmlConnection;
+        originalSlot: number;
+        relativeOffset: number;
+        targetSlot: number;
+      }
+
+      const moveItems: MoveItem[] = [];
+
+      if (isInitiator) {
+        const groupPrefix = `${movingSeqNum}.`;
+        const groupMembers = conns.filter(
+          (c) =>
+            isSeqConn(c) &&
+            (c.id === connectionId || (c.messages?.[0]?.sequenceNumber?.trim() || '').startsWith(groupPrefix))
+        );
+
+        // Ordenar los miembros del grupo por su slot actual
+        groupMembers.sort((a, b) => getSlot(a) - getSlot(b));
+
+        for (const m of groupMembers) {
+          const origSlot = getSlot(m);
+          const relOffset = origSlot - fromSlot;
+          moveItems.push({
+            conn: m,
+            originalSlot: origSlot,
+            relativeOffset: relOffset,
+            targetSlot: toSlot + relOffset,
+          });
+        }
+      } else {
+        moveItems.push({
+          conn: movingConn,
+          originalSlot: fromSlot,
+          relativeOffset: 0,
+          targetSlot: toSlot,
+        });
+      }
+
+      const movingIds = new Set(moveItems.map((mi) => mi.conn.id));
+      const targetSlotMap = new Map<string, number>(moveItems.map((mi) => [mi.conn.id, mi.targetSlot]));
+
+      const deltaSlot = toSlot - fromSlot;
+      const numMovedItems = moveItems.length;
+
+      // Calcular nuevos slots para todas las conexiones
+      const updatedSlotsList = conns.map((c) => {
+        if (!isSeqConn(c)) return c;
+
+        const currentSlot = getSlot(c);
+        const baseSrc = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+        const baseTgt = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+
+        let newSlot = currentSlot;
+
+        if (movingIds.has(c.id)) {
+          newSlot = targetSlotMap.get(c.id)!;
+        } else {
+          // Desplazar las conexiones intermedias que no forman parte del lote
+          if (deltaSlot > 0) {
+            // Lote arrastrado hacia abajo: las conexiones intermedias suben
+            const maxTargetSlot = Math.max(...moveItems.map((mi) => mi.targetSlot));
+            if (currentSlot > fromSlot && currentSlot <= maxTargetSlot) {
+              newSlot = currentSlot - numMovedItems;
+            }
+          } else {
+            // Lote arrastrado hacia arriba: las conexiones intermedias bajan
+            const minTargetSlot = Math.min(...moveItems.map((mi) => mi.targetSlot));
+            if (currentSlot >= minTargetSlot && currentSlot < fromSlot) {
+              newSlot = currentSlot + numMovedItems;
+            }
+          }
+        }
+
+        if (newSlot !== currentSlot) {
+          return {
+            ...c,
+            sourceId: `${baseSrc}_slot_${newSlot}`,
+            targetId: `${baseTgt}_slot_${newSlot}`,
+          };
+        }
+        return c;
+      });
+
+      return this.recalculateSequenceNumbers(updatedSlotsList);
+    });
+
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'move_seq_msg');
   }
 
   createAssociationClassBetween(sourceNode: UmlClassNode, targetNode: UmlClassNode): void {
@@ -2309,11 +2641,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const count = this.nodes().filter((n) => n.nodeType === 'actor').length + 1;
     const newNode: UmlClassNode = {
       id: `actor_${Date.now()}`,
-      name: isSequence ? `:Actor_${count}` : `Actor_${count}`,
+      name: isSequence ? '' : `Actor_${count}`,
       nodeType: 'actor',
       position: { x: posX, y: posY },
-      width: 90,
-      height: 100,
+      width: 65,
+      height: 95,
       color: '#FFFDDD',
       attributes: [],
       methods: [],
@@ -2323,6 +2655,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    if (isSequence) {
+      setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    }
   }
 
   addUseCase(): void {
@@ -2394,8 +2729,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       name: `Boundary_${count}`,
       nodeType: 'boundary',
       position: { x: posX, y: posY },
-      width: 90,
-      height: 95,
+      width: 70,
+      height: 70,
       color: '#D2EEF3',
       attributes: [],
       methods: [],
@@ -2421,8 +2756,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       name: `Control_${count}`,
       nodeType: 'control',
       position: { x: posX, y: posY },
-      width: 90,
-      height: 95,
+      width: 70,
+      height: 70,
       color: '#D2EEF3',
       attributes: [],
       methods: [],
@@ -2448,8 +2783,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       name: `Entity_${count}`,
       nodeType: 'entity',
       position: { x: posX, y: posY },
-      width: 90,
-      height: 95,
+      width: 70,
+      height: 70,
       color: '#D2EEF3',
       attributes: [],
       methods: [],
@@ -2483,22 +2818,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     const count = this.nodes().filter((n) => n.nodeType === 'lifeline').length + 1;
-    const defaultNames = [
-      ':RegistrationController',
-      ':DBConnection',
-      ':NotificationSystem',
-      ':EmailService',
-      ':AuthManager',
-      ':PaymentGateway',
-    ];
-    const defaultName = count <= defaultNames.length ? defaultNames[count - 1] : `:Object_${count}`;
+    const defaultName = isSequence ? '' : `Objeto_${count}`;
 
     const newNode: UmlClassNode = {
       id: `lifeline_${Date.now()}`,
       name: defaultName,
       nodeType: 'lifeline',
       position: { x: posX, y: posY },
-      width: 140,
+      width: 160,
       height: 48,
       color: '#D2EEF3',
       attributes: [],
@@ -2509,6 +2836,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    if (isSequence) {
+      setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    }
   }
 
   copySelectedNodes(): void {
@@ -2832,7 +3162,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     // 6. Aplicar la eliminación en cascada a los signals
     this.nodes.update((list) => list.filter((n) => !nodesToDelete.has(n.id)));
-    this.connections.update((list) => list.filter((c) => !connsToDelete.has(c.id)));
+    this.connections.update((list) => this.recalculateSequenceNumbers(list.filter((c) => !connsToDelete.has(c.id))));
 
     if (this.selectedNodeId() === nodeId || nodesToDelete.has(this.selectedNodeId() || '')) {
       this.selectedNodeId.set(null);
@@ -2934,8 +3264,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       edited.targetMultiplicity = '';
     }
 
+    if (this.activeDiagramType() === DiagramType.SEQUENCE && edited.messages && edited.messages.length > 0) {
+      const palette = ['#0284C7', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0891B2', '#4F46E5', '#C026D3'];
+      const m = edited.messages[0];
+      const match = m.sequenceNumber?.trim().match(/^(\d+)(?:\.|$)/);
+      if (match) {
+        const g = parseInt(match[1], 10);
+        m.color = palette[(Math.max(1, g) - 1) % palette.length];
+      }
+    }
+
     this.pushSnapshot();
-    this.connections.update((list) => list.map((c) => (c.id === edited.id ? edited : c)));
+    this.connections.update((list) => this.recalculateSequenceNumbers(list.map((c) => (c.id === edited.id ? edited : c))));
     this.markAsUnsaved();
     this.closeEditConnModal();
     this.updateConnectionEndpoints();
@@ -3006,7 +3346,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (nodesToDelete.size > 0) {
       this.nodes.update((list) => list.filter((n) => !nodesToDelete.has(n.id)));
     }
-    this.connections.update((list) => list.filter((c) => !connsToDelete.has(c.id)));
+    this.connections.update((list) => this.recalculateSequenceNumbers(list.filter((c) => !connsToDelete.has(c.id))));
 
     this.markAsUnsaved();
     this.closeEditConnModal();
@@ -3550,6 +3890,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onDiagramTypeChange(type: DiagramType): void {
     this.activeDiagramType.set(type);
+    this.collaborationService.currentDiagramType.set(type);
   }
 
   onSaveEditedNode(savedNode: UmlClassNode): void {
@@ -3563,11 +3904,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onSaveEditedConnection(savedConn: UmlConnection): void {
+    const isSeq =
+      this.activeDiagramType() === DiagramType.SEQUENCE ||
+      ['sync', 'reply', 'async', 'create', 'self'].includes(savedConn.type as any);
+
+    if (isSeq || savedConn.type === 'generalization' || savedConn.type === 'realization') {
+      savedConn.sourceMultiplicity = '';
+      savedConn.targetMultiplicity = '';
+    }
+
     this.pushSnapshot();
     this.connections.update((list) =>
-      list.map((c) => (c.id === savedConn.id ? savedConn : c))
+      list.map((c) => (c.id === savedConn.id ? { ...savedConn, messages: savedConn.messages ? [...savedConn.messages] : undefined } : c))
     );
     this.markAsUnsaved();
+    this.closeEditConnModal();
+    this.updateConnectionEndpoints();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
   }
 

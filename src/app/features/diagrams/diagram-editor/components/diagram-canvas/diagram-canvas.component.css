@@ -75,7 +75,7 @@
   background: transparent !important;
 }
 
-::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.w-0):not(.opacity-0) {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.f-node-lifeline):not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: var(--node-bg, #FFFDDD) !important;
@@ -97,18 +97,21 @@
 ::ng-deep f-flow .f-node.f-node-boundary,
 ::ng-deep f-flow .f-node.f-node-control,
 ::ng-deep f-flow .f-node.f-node-entity,
+::ng-deep f-flow .f-node.f-node-lifeline,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-package,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-control,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-lifeline,
 .dark ::ng-deep f-flow .f-node.f-node-actor,
 .dark ::ng-deep f-flow .f-node.f-node-use-case,
 .dark ::ng-deep f-flow .f-node.f-node-package,
 .dark ::ng-deep f-flow .f-node.f-node-boundary,
 .dark ::ng-deep f-flow .f-node.f-node-control,
-.dark ::ng-deep f-flow .f-node.f-node-entity {
+.dark ::ng-deep f-flow .f-node.f-node-entity,
+.dark ::ng-deep f-flow .f-node.f-node-lifeline {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -129,25 +132,37 @@
 ::ng-deep f-flow .f-node.f-node-boundary.f-selected,
 ::ng-deep f-flow .f-node.f-node-control.f-selected,
 ::ng-deep f-flow .f-node.f-node-entity.f-selected,
+::ng-deep f-flow .f-node.f-node-lifeline.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-package.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-control.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-lifeline.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-actor.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-package.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-boundary.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-control.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-entity.f-selected {
+.dark ::ng-deep f-flow .f-node.f-node-entity.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-lifeline.f-selected {
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
 }
 
+::ng-deep .f-connection-content,
+::ng-deep f-connection-content {
+  pointer-events: auto !important;
+}
+
+.uml-lifeline-vertical-line {
+  pointer-events: none !important;
+}
+
 ::ng-deep f-flow .f-node.f-node-class.f-selected,
-::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity).f-selected {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.f-node-lifeline).f-selected {
   outline: 2px solid #2563eb !important;
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
   z-index: 30 !important;
@@ -599,19 +614,29 @@
 /* =========================================================================
    DIAGRAMAS DE SECUENCIA UML 2.5 (ENTERPRISE ARCHITECT)
    ========================================================================= */
+::ng-deep .uml-relation-sync path,
+::ng-deep .uml-relation-reply path,
+::ng-deep .uml-relation-async path,
+::ng-deep .uml-relation-create path {
+  stroke: var(--seq-conn-color, #2D3748) !important;
+}
+
 ::ng-deep .uml-relation-reply .f-connection-drag-handle,
 ::ng-deep .uml-relation-reply path,
 ::ng-deep .uml-relation-create .f-connection-drag-handle,
 ::ng-deep .uml-relation-create path {
   stroke-dasharray: 6, 4 !important;
-  stroke: #2D3748 !important;
 }
 
+:host-context(.dark) ::ng-deep .uml-relation-sync path,
 :host-context(.dark) ::ng-deep .uml-relation-reply path,
+:host-context(.dark) ::ng-deep .uml-relation-async path,
 :host-context(.dark) ::ng-deep .uml-relation-create path,
+.dark ::ng-deep .uml-relation-sync path,
 .dark ::ng-deep .uml-relation-reply path,
+.dark ::ng-deep .uml-relation-async path,
 .dark ::ng-deep .uml-relation-create path {
-  stroke: #CBD5E1 !important;
+  stroke: var(--seq-conn-color, #CBD5E1) !important;
 }
 
 .uml-sequence-message-anchor {
@@ -620,18 +645,18 @@
 }
 
 .uml-sequence-message-badge {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 1.5px 7px;
-  border-radius: 4px;
-  border: 1px solid rgba(203, 213, 225, 0.7);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
   white-space: nowrap;
 }
 
 :host-context(.dark) .uml-sequence-message-badge,
 .dark .uml-sequence-message-badge {
-  background: rgba(15, 23, 42, 0.95);
-  border-color: rgba(51, 65, 85, 0.8);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .uml-sequence-slot {

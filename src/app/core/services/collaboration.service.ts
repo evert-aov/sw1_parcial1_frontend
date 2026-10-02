@@ -50,6 +50,7 @@ export class CollaborationService {
   readonly collaborators = signal<Collaborator[]>([]);
   readonly remoteCursors = signal<RemoteCursor[]>([]);
   readonly activeNodeLocks = signal<Map<string, NodeLock>>(new Map());
+  readonly currentDiagramType = signal<string | null>(null);
   readonly chatMessages = signal<ChatMessage[]>([]);
 
   // Indica si hay 2 o más usuarios editando concurrentemente en la sala
@@ -358,6 +359,7 @@ export class CollaborationService {
     connections: UmlConnection[],
     action = 'update',
     defaultLineStyle = 'segment',
+    diagramType?: string,
   ): void {
     const user = this.getCurrentUser();
     const diagramId = this.currentDiagramId();
@@ -372,6 +374,7 @@ export class CollaborationService {
       userId: user?.id || 'anon',
       action,
       defaultLineStyle,
+      diagramType: diagramType || this.currentDiagramType() || undefined,
     });
   }
 

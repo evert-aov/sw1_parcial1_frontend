@@ -55,7 +55,7 @@
               [fConnectionId]="conn.id"
               [fOutputId]="conn.sourceId"
               [fInputId]="conn.targetId"
-              [fType]="conn.lineStyle || defaultLineStyle()"
+              [fType]="isSequenceConnection(conn) && !isRecursiveConn(conn) ? 'straight' : (conn.lineStyle || defaultLineStyle())"
               [fBehavior]="isRecursiveConn(conn) ? 'fixed' : 'floating'"
               [fOutputSide]="isRecursiveConn(conn) ? getConnSide(conn.sourceId, 'top') : 'default'"
               [fInputSide]="isRecursiveConn(conn) ? getConnSide(conn.targetId, 'right') : 'default'"
@@ -65,7 +65,8 @@
               [class.uml-relation-reply]="isReplyConnection(conn)"
               [class.f-selected]="isConnectionSelected(conn.id)"
               [class.f-connection-selected]="isConnectionSelected(conn.id)"
-              [class.opacity-30]="isConnectionDimmed(conn.id)">
+              [class.opacity-30]="isConnectionDimmed(conn.id)"
+              [style.--seq-conn-color]="isSequenceConnection(conn) ? getSequenceConnColor(conn) : null">
 
               <!-- Marcadores Visuales según el tipo de Relación UML 2.5 -->
               @if (conn.type === 'generalization' || conn.type === 'realization') {
@@ -96,17 +97,33 @@
                 <svg fMarker [width]="16" [height]="16" [refX]="14" [refY]="8" viewBox="0 0 16 16" markerUnits="userSpaceOnUse" type="end-all-states">
                   <polyline points="2,2 14,8 2,14" class="uml-marker-open" />
                 </svg>
-              } @else if (conn.type === 'sync' || conn.type === 'self') {
+              } @else if (conn.type === 'sync' || conn.type === 'self' || (isSequenceConnection(conn) && conn.type !== 'reply' && conn.type !== 'async' && conn.type !== 'create')) {
                 <svg fMarker [width]="12" [height]="12" [refX]="11" [refY]="6" viewBox="0 0 12 12" markerUnits="userSpaceOnUse" type="end-all-states">
-                  <polygon points="1,2 11,6 1,10" class="fill-[#2D3748] dark:fill-slate-200 stroke-[#2D3748] dark:stroke-slate-200" stroke-width="1" />
+                  <polygon points="1,2 11,6 1,10"
+                    [style.fill]="isSequenceConnection(conn) ? getSequenceConnColor(conn) : undefined"
+                    [style.stroke]="isSequenceConnection(conn) ? getSequenceConnColor(conn) : undefined"
+                    [ngClass]="{
+                      'fill-[#2D3748] dark:fill-slate-200 stroke-[#2D3748] dark:stroke-slate-200': !isSequenceConnection(conn)
+                    }"
+                    stroke-width="1" />
                 </svg>
               } @else if (conn.type === 'reply') {
                 <svg fMarker [width]="12" [height]="12" [refX]="11" [refY]="6" viewBox="0 0 12 12" markerUnits="userSpaceOnUse" type="end-all-states">
-                  <polyline points="2,2 11,6 2,10" fill="none" class="stroke-[#2D3748] dark:stroke-slate-200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  <polyline points="2,2 11,6 2,10" fill="none"
+                    [style.stroke]="isSequenceConnection(conn) ? getSequenceConnColor(conn) : undefined"
+                    [ngClass]="{
+                      'stroke-[#2D3748] dark:stroke-slate-200': !isSequenceConnection(conn)
+                    }"
+                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               } @else if (conn.type === 'async' || conn.type === 'create') {
                 <svg fMarker [width]="12" [height]="12" [refX]="11" [refY]="6" viewBox="0 0 12 12" markerUnits="userSpaceOnUse" type="end-all-states">
-                  <polyline points="2,2 11,6 2,10" fill="none" class="stroke-[#2D3748] dark:stroke-slate-200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  <polyline points="2,2 11,6 2,10" fill="none"
+                    [style.stroke]="isSequenceConnection(conn) ? getSequenceConnColor(conn) : undefined"
+                    [ngClass]="{
+                      'stroke-[#2D3748] dark:stroke-slate-200': !isSequenceConnection(conn)
+                    }"
+                    stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               }
 
@@ -143,16 +160,29 @@
                   [offset]="-10"
                   class="uml-sequence-message-anchor pointer-events-auto">
                   <div
-                    (dblclick)="onConnectionDblClick(conn, $event)"
-                    title="Mensaje de Secuencia UML 2.5 (doble clic para editar)"
-                    class="uml-sequence-message-badge cursor-pointer select-none">
+                    (pointerdown)="onSequenceMessagePointerDown(conn, $event)"
+                    (click)="$event.stopPropagation(); onConnectionClick(conn.id, $event)"
+                    (dblclick)="$event.stopPropagation(); onConnectionDblClick(conn, $event)"
+                    title="Arrastrar arriba o abajo para mover de posición (doble clic para editar)"
+                    [style.transform]="getSequenceMessageTransform(conn)"
+                    [ngClass]="{
+                      'cursor-grabbing opacity-70': isDraggingSeqMessage() && draggingSeqMessageConnId() === conn.id,
+                      'hover:opacity-80 cursor-grab': !isDraggingSeqMessage() || draggingSeqMessageConnId() !== conn.id
+                    }"
+                    class="uml-sequence-message-badge select-none flex items-center gap-1.5 bg-transparent">
+
                     @if (conn.messages && conn.messages.length > 0) {
                       @for (msg of conn.messages; track msg.id || $index) {
-                        <div class="uml-seq-msg-item flex items-center gap-1 font-mono text-[11px] font-semibold" [style.color]="msg.color || '#241C18'">
+                        <div class="uml-seq-msg-item flex items-center gap-1 font-mono text-[11px] font-semibold" [style.color]="getSequenceConnColor(conn)">
                           <span class="font-bold">{{ msg.sequenceNumber }}</span>
-                          <span>{{ msg.functionName || 'message' }}({{ msg.parameters || '' }})</span>
+                          @if (msg.functionName) {
+                            <span>{{ msg.functionName }}({{ msg.parameters || '' }})</span>
+                          }
                           @if (msg.returnType) {
                             <span class="opacity-75 font-normal">: {{ msg.returnType }}</span>
+                          }
+                          @if (!msg.functionName && !msg.returnType) {
+                            <span class="font-normal italic text-slate-400 text-[10px]">(doble clic para editar)</span>
                           }
                         </div>
                       }
@@ -160,6 +190,20 @@
                       <div class="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-100">
                         {{ conn.name }}
                       </div>
+                    } @else {
+                      <div class="font-mono text-[10px] text-slate-400 italic">
+                        (doble clic para editar)
+                      </div>
+                    }
+
+                    @if (isDraggingSeqMessage() && draggingSeqMessageConnId() === conn.id) {
+                      <span class="ml-1 text-[9.5px] font-mono px-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 font-bold animate-pulse">
+                        @if (isGroupInitiator(conn) && getGroupMemberCount(conn) > 1) {
+                          Lote Grupo {{ conn.messages?.[0]?.sequenceNumber }} ({{ getGroupMemberCount(conn) }} msgs) → Fila {{ draggingSeqMessageTargetSlot() + 1 }}
+                        } @else {
+                          Fila {{ draggingSeqMessageTargetSlot() + 1 }}
+                        }
+                      </span>
                     }
                   </div>
                 </div>
@@ -258,11 +302,11 @@
             </svg>
           } @else if (selectedRelationType() === 'reply') {
             <svg fMarker [width]="12" [height]="12" [refX]="11" [refY]="6" viewBox="0 0 12 12" markerUnits="userSpaceOnUse" type="end-all-states">
-              <polyline points="2,2 11,6 2,10" fill="none" class="stroke-[#2D3748] dark:stroke-slate-200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              <polyline points="2,2 11,6 2,10" fill="none" class="stroke-[#2D3748] dark:stroke-slate-200" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           } @else if (selectedRelationType() === 'async' || selectedRelationType() === 'create') {
             <svg fMarker [width]="12" [height]="12" [refX]="11" [refY]="6" viewBox="0 0 12 12" markerUnits="userSpaceOnUse" type="end-all-states">
-              <polyline points="2,2 11,6 2,10" fill="none" class="stroke-[#2D3748] dark:stroke-slate-200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              <polyline points="2,2 11,6 2,10" fill="none" class="stroke-[#2D3748] dark:stroke-slate-200" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           }
         </f-connection-for-create>
@@ -284,9 +328,9 @@
               (mouseenter)="hoveredNodeId.set(node.id)"
               (mouseleave)="onNodeMouseLeave(node.id)"
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
-              [style.minWidth.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 80 : (node.nodeType === 'actor' ? 60 : (node.nodeType === 'lifeline' ? 100 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : getNodeWidth(node))))))"
-              [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 70 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 80 : (node.nodeType === 'lifeline' ? 40 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 65 : null)))))"
-              [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 110 : (node.nodeType === 'lifeline' ? 48 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 95 : null))))))"
+              [style.minWidth.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 80 : (node.nodeType === 'actor' ? 50 : (node.nodeType === 'lifeline' ? 100 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : getNodeWidth(node))))))"
+              [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 70 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 65 : (node.nodeType === 'lifeline' ? 40 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : null)))))"
+              [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 95 : (node.nodeType === 'lifeline' ? 48 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : null))))))"
               [style.--node-bg]="node.color || null"
               [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
               [class.f-selected]="isNodeSelected(node.id)"
@@ -428,7 +472,7 @@
                       'ring-2 ring-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.35)]': isNodeSelected(node.id),
                       'hover:bg-slate-100/40': !isNodeSelected(node.id)
                     }"
-                    class="w-full h-full flex flex-col items-center justify-between p-1.5 relative select-none cursor-pointer rounded-xl">
+                    class="w-full h-full flex items-center justify-center p-1 relative select-none cursor-pointer rounded-xl">
                     
                     <button
                       (click)="onDeleteNode(node.id, $event)"
@@ -439,28 +483,48 @@
                     </button>
 
                     <!-- Stick figure del Actor UML con cabeza completa coloreada -->
-                    <div class="flex-1 w-full min-h-0 flex items-center justify-center p-1 overflow-hidden">
-                      <svg viewBox="0 0 48 66" fill="none" class="w-full h-full max-w-full max-h-full drop-shadow-xs text-[#241C18]" preserveAspectRatio="xMidYMid meet">
+                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden">
+                      <svg viewBox="5 1 38 64" fill="none" class="w-full h-full max-w-full max-h-full text-[#241C18]" preserveAspectRatio="xMidYMid meet">
                         <!-- Cabeza circular completa estándar UML con color de relleno -->
                         <path
                           d="M 24 2 A 10 10 0 0 1 24 22 A 10 10 0 0 1 24 2 Z"
                           [style.fill]="node.color || '#FFFDDD'"
                           [attr.fill]="node.color || '#FFFDDD'"
                           stroke="currentColor"
-                          stroke-width="2"
+                          stroke-width="1.5"
                         />
                         <!-- Tronco -->
-                        <line x1="24" y1="22" x2="24" y2="43" stroke="currentColor" stroke-width="2" />
+                        <line x1="24" y1="22" x2="24" y2="43" stroke="currentColor" stroke-width="1.5" />
                         <!-- Brazos -->
-                        <line x1="7" y1="31" x2="41" y2="31" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        <line x1="7" y1="31" x2="41" y2="31" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                         <!-- Piernas -->
-                        <line x1="24" y1="43" x2="10" y2="63" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                        <line x1="24" y1="43" x2="38" y2="63" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        <line x1="24" y1="43" x2="10" y2="63" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                        <line x1="24" y1="43" x2="38" y2="63" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                       </svg>
                     </div>
 
-                    <!-- Nombre del Actor con badge de color UML -->
-                    <div class="w-full text-center px-1 py-0.5 mt-0.5">
+                    <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
+                    <div
+                      fConnector
+                      fConnectorType="source-target"
+                      [fConnectorId]="node.id"
+                      [fConnectorSelfConnectable]="true"
+                      [fConnectorDisabled]="activeDiagramType() === 'sequence' || selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                      [ngClass]="{
+                        'pointer-events-auto cursor-crosshair': activeDiagramType() !== 'sequence' && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                        'pointer-events-none': activeDiagramType() === 'sequence' || selectedRelationType() === null || isNodeLockedByOther(node.id)
+                      }"
+                      class="absolute inset-0 z-40 bg-transparent"
+                      (click)="activeDiagramType() !== 'sequence' ? onTableClick(node.id, $event) : null">
+                    </div>
+
+                    <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA DEL ACTOR (UML 2.5+) -->
+                    <div
+                      class="uml-floating-label absolute left-1/2 top-full select-none z-30 flex flex-col items-center group/label pointer-events-auto"
+                      [style.transform]="getLabelTransform(node)"
+                      (pointerdown)="onLabelPointerDown(node, $event)"
+                      (dblclick)="onLabelDblClick(node, $event)"
+                      [title]="'Arrastrar para reposicionar el texto (Doble clic para editar)'">
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameActorInput
@@ -471,51 +535,89 @@
                           (blur)="commitNodeRename(node.id, renameActorInput.value)"
                           (click)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
-                          class="w-full text-center font-bold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
+                          (pointerdown)="$event.stopPropagation()"
+                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 bg-white dark:bg-slate-800 border border-blue-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-sm min-w-[80px] max-w-[220px]"
                           autofocus
                         />
                       } @else {
-                        <span
-                          class="font-bold text-[11.5px] font-sans tracking-tight text-[#241C18] truncate inline-block max-w-full px-2 py-0.5 rounded-md border border-[#796354]/60 shadow-2xs"
-                          [style.backgroundColor]="node.color || '#FFFDDD'"
-                          [title]="node.name">
-                          {{ node.name }}
-                        </span>
+                        <div
+                          class="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all border border-transparent"
+                          [ngClass]="{
+                            'cursor-grabbing ring-1 ring-blue-400 bg-blue-50/80 dark:bg-blue-900/30': isDraggingLabel() && draggingLabelNodeId() === node.id,
+                            'cursor-grab hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:border-dashed hover:border-slate-400/60': !isDraggingLabel()
+                          }">
+                          <span
+                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 whitespace-nowrap select-none max-w-[240px] truncate"
+                            [title]="node.name">
+                            {{ node.name || (activeDiagramType() === 'sequence' ? '(actor)' : 'Actor') }}
+                          </span>
+                          @if (hasLabelOffset(node) && !isReadOnly() && !isNodeLockedByOther(node.id)) {
+                            <button
+                              type="button"
+                              (click)="resetLabelOffset(node, $event)"
+                              (pointerdown)="$event.stopPropagation()"
+                              title="Restablecer posición de texto al centro"
+                              class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer">
+                              ✕
+                            </button>
+                          }
+                        </div>
                       }
                     </div>
 
                     <!-- LÍNEA DISCONTINUA VERTICAL DESCENDENTE (SOLO EN SECUENCIA) -->
                     @if (activeDiagramType() === 'sequence') {
                       <div
-                        class="absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-10"
+                        class="uml-lifeline-vertical-line absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center z-10 w-[2px]"
                         [style.height.px]="getLifelineLength(node)">
-                        <div class="w-0 border-l-2 border-dashed border-[#796354] dark:border-slate-500 h-full"></div>
-                        @for (act of (node.activations || []); track act.id || $index) {
+                        <svg
+                          class="uml-lifeline-svg overflow-visible"
+                          width="2"
+                          [attr.height]="getLifelineLength(node)"
+                          [style.height.px]="getLifelineLength(node)"
+                          style="display: block;">
+                          <line
+                            x1="1"
+                            y1="0"
+                            x2="1"
+                            [attr.y2]="getLifelineLength(node)"
+                            stroke="#796354"
+                            stroke-width="1.5"
+                            stroke-dasharray="6,4"
+                            style="stroke: #796354; stroke-width: 1.5px; stroke-dasharray: 6px, 4px;"
+                          />
+                        </svg>
+                        @for (act of getNodeActivations(node); track act.id) {
                           <div
-                            class="absolute left-1/2 -translate-x-1/2 w-3.5 bg-white dark:bg-slate-200 border-1.5 border-[#796354] dark:border-slate-700 shadow-2xs pointer-events-auto rounded-none"
-                            [style.top.px]="act.startY || 40"
-                            [style.height.px]="act.height || 100"
+                            class="absolute left-1/2 -translate-x-1/2 w-3.5 border shadow-2xs pointer-events-none z-20 rounded-none"
+                            [style.top.px]="act.top"
+                            [style.height.px]="act.height"
+                            [style.backgroundColor]="node.color || '#FFFDDD'"
+                            style="border-color: #796354;"
                             title="Foco de control / Activación">
                           </div>
                         }
                       </div>
 
-                      <!-- SLOTS DE CONEXIÓN A LO LARGO DE LA LÍNEA DE VIDA -->
+                      <!-- SLOTS DE CONEXIÓN A LO LARGO DE LA LÍNEA DE VIDA (ZONA AMPLIA DE DESTINO) -->
                       @for (slot of sequenceSlots; track slot) {
                         <div
                           fConnector
                           fConnectorType="source-target"
                           [fConnectorId]="node.id + '_slot_' + slot"
                           [fConnectorSelfConnectable]="true"
-                          [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                          [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id) || isSequenceSlotOccupied(slot)"
                           (click)="onTableClick(node.id, $event)"
-                          [title]="'Punto de secuencia ' + (slot + 1)"
+                          [title]="isSequenceSlotOccupied(slot) ? 'Fila ocupada por otro mensaje' : ('Punto de secuencia ' + (slot + 1))"
                           [ngClass]="{
-                            'opacity-100 scale-100 pointer-events-auto': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
-                            'opacity-0 scale-75 pointer-events-none': selectedRelationType() === null
+                            'opacity-100 scale-100 pointer-events-auto': selectedRelationType() !== null && !isNodeLockedByOther(node.id) && !isSequenceSlotOccupied(slot),
+                            'opacity-0 scale-75 pointer-events-none': selectedRelationType() === null || isSequenceSlotOccupied(slot)
                           }"
-                          [style.top.px]="(node.height || 100) + slot * 60 + 20"
-                          class="uml-sequence-slot absolute left-1/2 -translate-x-1/2 w-3.5 h-3.5 -ml-[1px] rounded-full bg-cyan-500 border-2 border-white shadow-xs z-30 transition-all hover:scale-125 hover:bg-cyan-600 cursor-crosshair">
+                          [style.top.px]="getSlotTop(node, slot) - 18"
+                          class="uml-sequence-slot-zone group/slot absolute left-1/2 -translate-x-1/2 w-20 h-[50px] flex items-center justify-center z-30 cursor-crosshair">
+                          <div
+                            class="uml-sequence-slot w-3.5 h-3.5 rounded-full bg-cyan-500 border-2 border-white shadow-xs transition-transform group-hover/slot:scale-125 group-hover/slot:bg-cyan-600 pointer-events-none">
+                          </div>
                         </div>
                       }
                     }
@@ -629,7 +731,7 @@
                       'ring-2 ring-cyan-600 shadow-[0_0_12px_rgba(8,145,178,0.35)]': isNodeSelected(node.id),
                       'hover:bg-slate-100/40': !isNodeSelected(node.id)
                     }"
-                    class="w-full h-full flex flex-col items-center justify-between p-1.5 relative select-none cursor-pointer rounded-xl">
+                    class="w-full h-full flex items-center justify-center p-1 relative select-none cursor-pointer rounded-xl">
                     
                     <button
                       (click)="onDeleteNode(node.id, $event)"
@@ -640,10 +742,10 @@
                     </button>
 
                     <!-- Icono SVG Boundary UML 2.5 -->
-                    <div class="flex-1 w-full min-h-0 flex items-center justify-center p-1 overflow-hidden">
-                      <svg viewBox="0 0 56 56" fill="none" class="w-full h-full max-w-full max-h-full drop-shadow-xs text-[#241C18]" preserveAspectRatio="xMidYMid meet">
-                        <line x1="8" y1="12" x2="8" y2="44" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-                        <line x1="8" y1="28" x2="20" y2="28" stroke="currentColor" stroke-width="2.5"/>
+                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden">
+                      <svg viewBox="6 10 48 36" fill="none" class="w-full h-full max-w-full max-h-full text-[#241C18]" preserveAspectRatio="xMidYMid meet">
+                        <line x1="8" y1="12" x2="8" y2="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="8" y1="28" x2="20" y2="28" stroke="currentColor" stroke-width="1.5"/>
                         <circle
                           cx="36"
                           cy="28"
@@ -651,13 +753,18 @@
                           [style.fill]="node.color || '#D2EEF3'"
                           [attr.fill]="node.color || '#D2EEF3'"
                           stroke="currentColor"
-                          stroke-width="2"
+                          stroke-width="1.5"
                         />
                       </svg>
                     </div>
 
-                    <!-- Nombre del Boundary -->
-                    <div class="w-full text-center px-1 py-0.5 mt-0.5">
+                    <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA DEL BOUNDARY (UML 2.5+) -->
+                    <div
+                      class="uml-floating-label absolute left-1/2 top-full select-none z-30 flex flex-col items-center group/label pointer-events-auto"
+                      [style.transform]="getLabelTransform(node)"
+                      (pointerdown)="onLabelPointerDown(node, $event)"
+                      (dblclick)="onLabelDblClick(node, $event)"
+                      [title]="'Arrastrar para reposicionar el texto (Doble clic para editar)'">
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameBoundaryInput
@@ -668,16 +775,33 @@
                           (blur)="commitNodeRename(node.id, renameBoundaryInput.value)"
                           (click)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
-                          class="w-full text-center font-bold text-[11px] font-sans tracking-tight text-[#241C18] bg-white border border-cyan-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-cyan-500 shadow-xs"
+                          (pointerdown)="$event.stopPropagation()"
+                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 bg-white dark:bg-slate-800 border border-cyan-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-cyan-500 shadow-sm min-w-[80px] max-w-[220px]"
                           autofocus
                         />
                       } @else {
-                        <span
-                          class="font-bold text-[11px] font-sans tracking-tight text-[#241C18] truncate inline-block max-w-full px-2 py-0.5 rounded-md border border-[#796354]/60 shadow-2xs"
-                          [style.backgroundColor]="node.color || '#D2EEF3'"
-                          [title]="node.name">
-                          {{ node.name }}
-                        </span>
+                        <div
+                          class="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all border border-transparent"
+                          [ngClass]="{
+                            'cursor-grabbing ring-1 ring-cyan-400 bg-cyan-50/80 dark:bg-cyan-900/30': isDraggingLabel() && draggingLabelNodeId() === node.id,
+                            'cursor-grab hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:border-dashed hover:border-slate-400/60': !isDraggingLabel()
+                          }">
+                          <span
+                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 whitespace-nowrap select-none max-w-[240px] truncate"
+                            [title]="node.name">
+                            {{ node.name }}
+                          </span>
+                          @if (hasLabelOffset(node) && !isReadOnly() && !isNodeLockedByOther(node.id)) {
+                            <button
+                              type="button"
+                              (click)="resetLabelOffset(node, $event)"
+                              (pointerdown)="$event.stopPropagation()"
+                              title="Restablecer posición de texto al centro"
+                              class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer">
+                              ✕
+                            </button>
+                          }
+                        </div>
                       }
                     </div>
                   </div>
@@ -689,7 +813,7 @@
                       'ring-2 ring-teal-600 shadow-[0_0_12px_rgba(13,148,136,0.35)]': isNodeSelected(node.id),
                       'hover:bg-slate-100/40': !isNodeSelected(node.id)
                     }"
-                    class="w-full h-full flex flex-col items-center justify-between p-1.5 relative select-none cursor-pointer rounded-xl">
+                    class="w-full h-full flex items-center justify-center p-1 relative select-none cursor-pointer rounded-xl">
                     
                     <button
                       (click)="onDeleteNode(node.id, $event)"
@@ -700,8 +824,8 @@
                     </button>
 
                     <!-- Icono SVG Control UML 2.5 -->
-                    <div class="flex-1 w-full min-h-0 flex items-center justify-center p-1 overflow-hidden">
-                      <svg viewBox="0 0 56 56" fill="none" class="w-full h-full max-w-full max-h-full drop-shadow-xs text-[#241C18]" preserveAspectRatio="xMidYMid meet">
+                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden">
+                      <svg viewBox="8 2 40 46" fill="none" class="w-full h-full max-w-full max-h-full text-[#241C18]" preserveAspectRatio="xMidYMid meet">
                         <circle
                           cx="28"
                           cy="28"
@@ -709,20 +833,25 @@
                           [style.fill]="node.color || '#D2EEF3'"
                           [attr.fill]="node.color || '#D2EEF3'"
                           stroke="currentColor"
-                          stroke-width="2"
+                          stroke-width="1.5"
                         />
                         <polyline
                           points="36,3.5 26,10.2 36,17"
                           stroke="currentColor"
-                          stroke-width="2.2"
+                          stroke-width="1.5"
                           stroke-linecap="round"
                           stroke-linejoin="round"
                         />
                       </svg>
                     </div>
 
-                    <!-- Nombre del Control -->
-                    <div class="w-full text-center px-1 py-0.5 mt-0.5">
+                    <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA DEL CONTROL (UML 2.5+) -->
+                    <div
+                      class="uml-floating-label absolute left-1/2 top-full select-none z-30 flex flex-col items-center group/label pointer-events-auto"
+                      [style.transform]="getLabelTransform(node)"
+                      (pointerdown)="onLabelPointerDown(node, $event)"
+                      (dblclick)="onLabelDblClick(node, $event)"
+                      [title]="'Arrastrar para reposicionar el texto (Doble clic para editar)'">
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameControlInput
@@ -733,16 +862,33 @@
                           (blur)="commitNodeRename(node.id, renameControlInput.value)"
                           (click)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
-                          class="w-full text-center font-bold text-[11px] font-sans tracking-tight text-[#241C18] bg-white border border-teal-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-teal-500 shadow-xs"
+                          (pointerdown)="$event.stopPropagation()"
+                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 bg-white dark:bg-slate-800 border border-teal-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-teal-500 shadow-sm min-w-[80px] max-w-[220px]"
                           autofocus
                         />
                       } @else {
-                        <span
-                          class="font-bold text-[11px] font-sans tracking-tight text-[#241C18] truncate inline-block max-w-full px-2 py-0.5 rounded-md border border-[#796354]/60 shadow-2xs"
-                          [style.backgroundColor]="node.color || '#D2EEF3'"
-                          [title]="node.name">
-                          {{ node.name }}
-                        </span>
+                        <div
+                          class="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all border border-transparent"
+                          [ngClass]="{
+                            'cursor-grabbing ring-1 ring-teal-400 bg-teal-50/80 dark:bg-teal-900/30': isDraggingLabel() && draggingLabelNodeId() === node.id,
+                            'cursor-grab hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:border-dashed hover:border-slate-400/60': !isDraggingLabel()
+                          }">
+                          <span
+                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 whitespace-nowrap select-none max-w-[240px] truncate"
+                            [title]="node.name">
+                            {{ node.name }}
+                          </span>
+                          @if (hasLabelOffset(node) && !isReadOnly() && !isNodeLockedByOther(node.id)) {
+                            <button
+                              type="button"
+                              (click)="resetLabelOffset(node, $event)"
+                              (pointerdown)="$event.stopPropagation()"
+                              title="Restablecer posición de texto al centro"
+                              class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer">
+                              ✕
+                            </button>
+                          }
+                        </div>
                       }
                     </div>
                   </div>
@@ -754,7 +900,7 @@
                       'ring-2 ring-emerald-600 shadow-[0_0_12px_rgba(5,150,105,0.35)]': isNodeSelected(node.id),
                       'hover:bg-slate-100/40': !isNodeSelected(node.id)
                     }"
-                    class="w-full h-full flex flex-col items-center justify-between p-1.5 relative select-none cursor-pointer rounded-xl">
+                    class="w-full h-full flex items-center justify-center p-1 relative select-none cursor-pointer rounded-xl">
                     
                     <button
                       (click)="onDeleteNode(node.id, $event)"
@@ -765,8 +911,8 @@
                     </button>
 
                     <!-- Icono SVG Entity UML 2.5 -->
-                    <div class="flex-1 w-full min-h-0 flex items-center justify-center p-1 overflow-hidden">
-                      <svg viewBox="0 0 56 56" fill="none" class="w-full h-full max-w-full max-h-full drop-shadow-xs text-[#241C18]" preserveAspectRatio="xMidYMid meet">
+                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden">
+                      <svg viewBox="6 4 44 40" fill="none" class="w-full h-full max-w-full max-h-full text-[#241C18]" preserveAspectRatio="xMidYMid meet">
                         <circle
                           cx="28"
                           cy="24"
@@ -774,14 +920,19 @@
                           [style.fill]="node.color || '#D2EEF3'"
                           [attr.fill]="node.color || '#D2EEF3'"
                           stroke="currentColor"
-                          stroke-width="2"
+                          stroke-width="1.5"
                         />
-                        <line x1="8" y1="42" x2="48" y2="42" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="8" y1="42" x2="48" y2="42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                       </svg>
                     </div>
 
-                    <!-- Nombre de la Entidad -->
-                    <div class="w-full text-center px-1 py-0.5 mt-0.5">
+                    <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA DE LA ENTIDAD (UML 2.5+) -->
+                    <div
+                      class="uml-floating-label absolute left-1/2 top-full select-none z-30 flex flex-col items-center group/label pointer-events-auto"
+                      [style.transform]="getLabelTransform(node)"
+                      (pointerdown)="onLabelPointerDown(node, $event)"
+                      (dblclick)="onLabelDblClick(node, $event)"
+                      [title]="'Arrastrar para reposicionar el texto (Doble clic para editar)'">
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameEntityInput
@@ -792,16 +943,33 @@
                           (blur)="commitNodeRename(node.id, renameEntityInput.value)"
                           (click)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
-                          class="w-full text-center font-bold text-[11px] font-sans tracking-tight text-[#241C18] bg-white border border-emerald-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-emerald-500 shadow-xs"
+                          (pointerdown)="$event.stopPropagation()"
+                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 bg-white dark:bg-slate-800 border border-emerald-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-emerald-500 shadow-sm min-w-[80px] max-w-[220px]"
                           autofocus
                         />
                       } @else {
-                        <span
-                          class="font-bold text-[11px] font-sans tracking-tight text-[#241C18] truncate inline-block max-w-full px-2 py-0.5 rounded-md border border-[#796354]/60 shadow-2xs"
-                          [style.backgroundColor]="node.color || '#D2EEF3'"
-                          [title]="node.name">
-                          {{ node.name }}
-                        </span>
+                        <div
+                          class="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all border border-transparent"
+                          [ngClass]="{
+                            'cursor-grabbing ring-1 ring-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/30': isDraggingLabel() && draggingLabelNodeId() === node.id,
+                            'cursor-grab hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:border-dashed hover:border-slate-400/60': !isDraggingLabel()
+                          }">
+                          <span
+                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 whitespace-nowrap select-none max-w-[240px] truncate"
+                            [title]="node.name">
+                            {{ node.name }}
+                          </span>
+                          @if (hasLabelOffset(node) && !isReadOnly() && !isNodeLockedByOther(node.id)) {
+                            <button
+                              type="button"
+                              (click)="resetLabelOffset(node, $event)"
+                              (pointerdown)="$event.stopPropagation()"
+                              title="Restablecer posición de texto al centro"
+                              class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer">
+                              ✕
+                            </button>
+                          }
+                        </div>
                       }
                     </div>
                   </div>
@@ -820,14 +988,30 @@
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
 
-                    <!-- CABECERA SUPERIOR (HEADER BOX) -->
+                    <!-- CABECERA SUPERIOR (HEADER BOX - DISEÑO PLANO Y BORDE FINO) -->
                     <div
                       [ngClass]="{
-                        'ring-2 ring-cyan-600 shadow-[0_0_12px_rgba(8,145,178,0.4)]': isNodeSelected(node.id),
-                        'border-[#796354] dark:border-slate-400 shadow-[2px_2px_0px_rgba(0,0,0,0.12)]': !isNodeSelected(node.id)
+                        'ring-1.5 ring-cyan-600 shadow-none': isNodeSelected(node.id),
+                        'border-[#796354] dark:border-slate-400 shadow-none': !isNodeSelected(node.id)
                       }"
                       [style.backgroundColor]="node.color || '#D2EEF3'"
-                      class="w-full h-full min-h-[44px] border-2 rounded-none px-2.5 py-1.5 flex items-center justify-center text-center relative z-20 transition-all">
+                      class="w-full h-full min-h-[44px] border rounded-none px-2.5 py-1.5 flex items-center justify-center text-center relative z-20 transition-all shadow-none">
+
+                      <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
+                      <div
+                        fConnector
+                        fConnectorType="source-target"
+                        [fConnectorId]="node.id"
+                        [fConnectorSelfConnectable]="true"
+                        [fConnectorDisabled]="activeDiagramType() === 'sequence' || selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                        [ngClass]="{
+                          'pointer-events-auto cursor-crosshair': activeDiagramType() !== 'sequence' && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                          'pointer-events-none': activeDiagramType() === 'sequence' || selectedRelationType() === null || isNodeLockedByOther(node.id)
+                        }"
+                        class="absolute inset-0 z-40 bg-transparent"
+                        (click)="activeDiagramType() !== 'sequence' ? onTableClick(node.id, $event) : null">
+                      </div>
+
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameLifelineInput
@@ -843,50 +1027,77 @@
                         />
                       } @else {
                         <div class="flex flex-col items-center justify-center max-w-full">
-                          <span
-                            class="font-bold text-xs font-sans tracking-tight text-[#241C18] truncate underline underline-offset-2 decoration-[#796354]/60 max-w-full block"
-                            [title]="node.name">
-                            {{ node.name.startsWith(':') ? node.name : ':' + node.name }}
-                          </span>
+                          @if (node.name && node.name.trim()) {
+                            <span
+                              class="font-bold text-xs font-sans tracking-tight text-[#241C18] truncate underline underline-offset-2 decoration-[#796354]/60 max-w-full block"
+                              [title]="node.name">
+                              {{ node.name }}
+                            </span>
+                          } @else {
+                            <span class="font-normal italic text-slate-400 text-[11px] truncate block select-none">
+                              (sin nombre)
+                            </span>
+                          }
                         </div>
                       }
                     </div>
 
                     <!-- LÍNEA DISCONTINUA VERTICAL (SOLO SUPERIOR, SIN CABECERA INFERIOR) -->
                     <div
-                      class="absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-10"
+                      class="uml-lifeline-vertical-line absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center z-10 w-[2px]"
                       [style.height.px]="getLifelineLength(node)">
                       
-                      <!-- Línea discontinua central vertical -->
-                      <div class="w-0 border-l-2 border-dashed border-[#796354] dark:border-slate-500 h-full"></div>
+                      <!-- Línea discontinua central vertical SVG (nítida y continua desde el borde inferior) -->
+                      <svg
+                        class="uml-lifeline-svg overflow-visible"
+                        width="2"
+                        [attr.height]="getLifelineLength(node)"
+                        [style.height.px]="getLifelineLength(node)"
+                        style="display: block;">
+                        <line
+                          x1="1"
+                          y1="0"
+                          x2="1"
+                          [attr.y2]="getLifelineLength(node)"
+                          stroke="#796354"
+                          stroke-width="1.5"
+                          stroke-dasharray="6,4"
+                          style="stroke: #796354; stroke-width: 1.5px; stroke-dasharray: 6px, 4px;"
+                        />
+                      </svg>
 
                       <!-- Focos de Activación (Activation Bars) -->
-                      @for (act of (node.activations || []); track act.id || $index) {
+                      @for (act of getNodeActivations(node); track act.id) {
                         <div
-                          class="absolute left-1/2 -translate-x-1/2 w-3.5 bg-white dark:bg-slate-200 border-1.5 border-[#796354] dark:border-slate-700 shadow-2xs pointer-events-auto rounded-none"
-                          [style.top.px]="act.startY || 40"
-                          [style.height.px]="act.height || 100"
+                          class="absolute left-1/2 -translate-x-1/2 w-3.5 border shadow-2xs pointer-events-none z-20 rounded-none"
+                          [style.top.px]="act.top"
+                          [style.height.px]="act.height"
+                          [style.backgroundColor]="node.color || '#D2EEF3'"
+                          style="border-color: #796354;"
                           title="Foco de control / Activación">
                         </div>
                       }
                     </div>
 
-                    <!-- SLOTS DE CONEXIÓN A LO LARGO DE LA LÍNEA DE VIDA -->
+                    <!-- SLOTS DE CONEXIÓN A LO LARGO DE LA LÍNEA DE VIDA (ZONA AMPLIA DE DESTINO) -->
                     @for (slot of sequenceSlots; track slot) {
                       <div
                         fConnector
                         fConnectorType="source-target"
                         [fConnectorId]="node.id + '_slot_' + slot"
                         [fConnectorSelfConnectable]="true"
-                        [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                        [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id) || isSequenceSlotOccupied(slot)"
                         (click)="onTableClick(node.id, $event)"
-                        [title]="'Punto de secuencia ' + (slot + 1)"
+                        [title]="isSequenceSlotOccupied(slot) ? 'Fila ocupada por otro mensaje' : ('Punto de secuencia ' + (slot + 1))"
                         [ngClass]="{
-                          'opacity-100 scale-100 pointer-events-auto': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
-                          'opacity-0 scale-75 pointer-events-none': selectedRelationType() === null
+                          'opacity-100 scale-100 pointer-events-auto': selectedRelationType() !== null && !isNodeLockedByOther(node.id) && !isSequenceSlotOccupied(slot),
+                          'opacity-0 scale-75 pointer-events-none': selectedRelationType() === null || isSequenceSlotOccupied(slot)
                         }"
-                        [style.top.px]="(node.height || 48) + slot * 60 + 20"
-                        class="uml-sequence-slot absolute left-1/2 -translate-x-1/2 w-3.5 h-3.5 -ml-[1px] rounded-full bg-cyan-500 border-2 border-white shadow-xs z-30 transition-all hover:scale-125 hover:bg-cyan-600 cursor-crosshair">
+                        [style.top.px]="getSlotTop(node, slot) - 18"
+                        class="uml-sequence-slot-zone group/slot absolute left-1/2 -translate-x-1/2 w-20 h-[50px] flex items-center justify-center z-30 cursor-crosshair">
+                        <div
+                          class="uml-sequence-slot w-3.5 h-3.5 rounded-full bg-cyan-500 border-2 border-white shadow-xs transition-transform group-hover/slot:scale-125 group-hover/slot:bg-cyan-600 pointer-events-none">
+                        </div>
                       </div>
                     }
                   </div>

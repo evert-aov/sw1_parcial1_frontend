@@ -97,10 +97,129 @@ export class DiagramCanvasComponent {
   readonly zoomChange = output<number>();
   readonly viewportScroll = output<Event>();
   readonly nodeRename = output<{ nodeId: string; newName: string }>();
+  readonly nodeLabelOffsetChange = output<{ node: UmlClassNode; offset: { x: number; y: number } }>();
+  readonly sequenceMessageMove = output<{ connectionId: string; targetSlot: number }>();
 
   readonly zoomLevel = signal<number>(100);
   readonly hoveredNodeId = signal<string | null>(null);
   readonly renamingNodeId = signal<string | null>(null);
+  readonly isDraggingLabel = signal<boolean>(false);
+  readonly draggingLabelNodeId = signal<string | null>(null);
+
+  readonly isDraggingSeqMessage = signal<boolean>(false);
+  readonly draggingSeqMessageConnId = signal<string | null>(null);
+  readonly draggingSeqMessageDeltaY = signal<number>(0);
+  readonly draggingSeqMessageTargetSlot = signal<number>(0);
+
+  getLabelTransform(node: UmlClassNode): string {
+    const ox = node.labelOffset?.x || 0;
+    const oy = node.labelOffset?.y || 0;
+    return `translate(calc(-50% + ${ox}px), calc(6px + ${oy}px))`;
+  }
+
+  hasLabelOffset(node: UmlClassNode): boolean {
+    return !!node.labelOffset && (Math.abs(node.labelOffset.x) > 1 || Math.abs(node.labelOffset.y) > 1);
+  }
+
+  resetLabelOffset(node: UmlClassNode, event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    node.labelOffset = { x: 0, y: 0 };
+    this.cdr.detectChanges();
+    this.nodeLabelOffsetChange.emit({ node, offset: { x: 0, y: 0 } });
+  }
+
+  onLabelDblClick(node: UmlClassNode, event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    this.startRenameNode(node.id);
+  }
+
+  onLabelPointerDown(node: UmlClassNode, event: PointerEvent): void {
+    if (this.renamingNodeId() === node.id) return;
+    if (event.button !== 0) return;
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+
+    // Detener propagación para evitar arrastre del nodo completo por Foblex
+    event.stopPropagation();
+
+    const targetEl = event.currentTarget as HTMLElement | null;
+    if (targetEl && targetEl.setPointerCapture) {
+      try {
+        targetEl.setPointerCapture(event.pointerId);
+      } catch (_) {}
+    }
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
+    const initialOffsetX = node.labelOffset?.x || 0;
+    const initialOffsetY = node.labelOffset?.y || 0;
+
+    let hasMoved = false;
+    let animationFrameId: number | null = null;
+    let latestE: PointerEvent | null = null;
+
+    const applyMove = () => {
+      if (!latestE) return;
+      const dx = (latestE.clientX - startX) / scale;
+      const dy = (latestE.clientY - startY) / scale;
+
+      if (!hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+        hasMoved = true;
+        this.isDraggingLabel.set(true);
+        this.draggingLabelNodeId.set(node.id);
+      }
+
+      if (hasMoved) {
+        node.labelOffset = {
+          x: Math.round(initialOffsetX + dx),
+          y: Math.round(initialOffsetY + dy),
+        };
+        this.cdr.detectChanges();
+      }
+      animationFrameId = null;
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      latestE = e;
+      if (!animationFrameId) {
+        animationFrameId = requestAnimationFrame(applyMove);
+      }
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (targetEl && targetEl.releasePointerCapture) {
+        try {
+          targetEl.releasePointerCapture(event.pointerId);
+        } catch (_) {}
+      }
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+
+      this.isDraggingLabel.set(false);
+      this.draggingLabelNodeId.set(null);
+
+      if (hasMoved && latestE) {
+        applyMove();
+        this.nodeLabelOffsetChange.emit({
+          node,
+          offset: node.labelOffset || { x: 0, y: 0 },
+        });
+      } else if (!hasMoved) {
+        this.onNodeClick(node.id, e);
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  }
 
   startRenameNode(nodeId: string): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(nodeId)) return;
@@ -181,6 +300,10 @@ export class DiagramCanvasComponent {
   }
 
   onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
+    if (this.activeDiagramType() === DiagramType.SEQUENCE || node.nodeType === 'lifeline') {
+      newPosition = { x: Math.round(newPosition.x), y: 50 };
+      node.position = { x: newPosition.x, y: 50 };
+    }
     this.nodePositionChange.emit({ node, newPosition });
   }
 
@@ -198,6 +321,121 @@ export class DiagramCanvasComponent {
 
   onConnectionDblClick(conn: UmlConnection, event: MouseEvent): void {
     this.connectionDblClick.emit({ conn, event });
+  }
+
+  isGroupInitiator(conn: UmlConnection): boolean {
+    const seqNum = conn.messages?.[0]?.sequenceNumber?.trim() || '';
+    return /^\d+$/.test(seqNum);
+  }
+
+  getGroupMemberCount(conn: UmlConnection): number {
+    const seqNum = conn.messages?.[0]?.sequenceNumber?.trim() || '';
+    if (!/^\d+$/.test(seqNum)) return 1;
+    const groupPrefix = `${seqNum}.`;
+    let count = 1;
+    for (const c of this.connections()) {
+      if (c.id === conn.id) continue;
+      const s = c.messages?.[0]?.sequenceNumber?.trim() || '';
+      if (s.startsWith(groupPrefix)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  getSequenceMessageTransform(conn: UmlConnection): string {
+    if (!this.isDraggingSeqMessage()) return '';
+    const dragId = this.draggingSeqMessageConnId();
+    if (dragId === conn.id) {
+      return `translateY(${this.draggingSeqMessageDeltaY()}px)`;
+    }
+    // Si se está arrastrando el iniciador de un grupo, sus hijos también se mueven visualmente en tiempo real
+    if (dragId) {
+      const draggingConn = this.connections().find((c) => c.id === dragId);
+      if (draggingConn && this.isGroupInitiator(draggingConn)) {
+        const rootSeq = draggingConn.messages?.[0]?.sequenceNumber?.trim() || '';
+        const connSeq = conn.messages?.[0]?.sequenceNumber?.trim() || '';
+        if (connSeq.startsWith(`${rootSeq}.`)) {
+          return `translateY(${this.draggingSeqMessageDeltaY()}px)`;
+        }
+      }
+    }
+    return '';
+  }
+
+  onSequenceMessagePointerDown(conn: UmlConnection, event: PointerEvent): void {
+    if (event.button !== 0) return;
+    if (this.isReadOnly()) return;
+    if (!this.isSequenceConnection(conn)) return;
+
+    const sNode = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const tNode = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    if (this.isNodeLockedByOther(sNode) || this.isNodeLockedByOther(tNode)) return;
+
+    event.stopPropagation();
+
+    const targetEl = event.currentTarget as HTMLElement | null;
+    if (targetEl && targetEl.setPointerCapture) {
+      try {
+        targetEl.setPointerCapture(event.pointerId);
+      } catch (_) {}
+    }
+
+    const startY = event.clientY;
+    const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
+
+    const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
+    const initialSlot = sMatch ? parseInt(sMatch[1], 10) : 0;
+
+    let hasMoved = false;
+    let latestTargetSlot = initialSlot;
+
+    const onPointerMove = (moveEv: PointerEvent) => {
+      const rawDy = (moveEv.clientY - startY) / scale;
+
+      if (!hasMoved && Math.abs(rawDy) > 4) {
+        hasMoved = true;
+        this.isDraggingSeqMessage.set(true);
+        this.draggingSeqMessageConnId.set(conn.id);
+      }
+
+      if (hasMoved) {
+        this.draggingSeqMessageDeltaY.set(rawDy);
+        const slotOffset = Math.round(rawDy / 50);
+        latestTargetSlot = Math.max(0, initialSlot + slotOffset);
+        this.draggingSeqMessageTargetSlot.set(latestTargetSlot);
+      }
+    };
+
+    const onPointerUp = (upEv: PointerEvent) => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+
+      if (targetEl && targetEl.releasePointerCapture) {
+        try {
+          targetEl.releasePointerCapture(upEv.pointerId);
+        } catch (_) {}
+      }
+
+      const moved = hasMoved;
+      const finalSlot = latestTargetSlot;
+
+      this.isDraggingSeqMessage.set(false);
+      this.draggingSeqMessageConnId.set(null);
+      this.draggingSeqMessageDeltaY.set(0);
+
+      if (moved && finalSlot !== initialSlot) {
+        this.sequenceMessageMove.emit({
+          connectionId: conn.id,
+          targetSlot: finalSlot,
+        });
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   }
 
   onDeleteNode(nodeId: string, event: MouseEvent): void {
@@ -333,7 +571,11 @@ export class DiagramCanvasComponent {
   getDynamicNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
     if (node.nodeType === 'actor') {
-      return 90;
+      return 65;
+    }
+    if (node.nodeType === 'lifeline') {
+      const nameLen = (node.name || '').length;
+      return Math.max(160, Math.round(nameLen * 8.5 + 44));
     }
     if (node.nodeType === 'use_case') {
       const nameLen = (node.name || '').length;
@@ -346,8 +588,7 @@ export class DiagramCanvasComponent {
       return Math.max(180, Math.round(maxLen * 7.5 + 40));
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      const nameLen = (node.name || '').length;
-      return Math.max(90, Math.round(nameLen * 7.5 + 24));
+      return 70;
     }
     const CHAR_W = 7.2;
     let maxLen = (node.name || '').length + 3;
@@ -376,11 +617,19 @@ export class DiagramCanvasComponent {
       return this.getDynamicNodeWidth(node);
     }
     if (node.nodeType === 'actor') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+      if (manualW && manualW > 0) {
+        return Math.max(50, manualW);
+      }
+      return 65;
+    }
+    if (node.nodeType === 'lifeline') {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
       if (manualW && manualW > 0) {
-        return Math.max(60, manualW);
+        return Math.max(130, manualW);
       }
-      return this.getDynamicNodeWidth(node);
+      const nameLen = (node.name || '').length;
+      return Math.max(160, Math.round(nameLen * 8.5 + 44));
     }
     if (node.nodeType === 'package') {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
@@ -390,11 +639,11 @@ export class DiagramCanvasComponent {
       return this.getDynamicNodeWidth(node);
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
       if (manualW && manualW > 0) {
-        return Math.max(70, manualW);
+        return Math.max(50, manualW);
       }
-      return this.getDynamicNodeWidth(node);
+      return 70;
     }
     const dynamicW = this.getDynamicNodeWidth(node);
     const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
@@ -410,14 +659,17 @@ export class DiagramCanvasComponent {
     if (node.isCustomSize && node.height && node.height > 0) {
       return node.height;
     }
+    if (node.nodeType === 'lifeline') {
+      return node.customHeight || node.height || 48;
+    }
     if (node.nodeType === 'actor') {
-      return node.customHeight || node.height || 110;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || 95;
     }
     if (node.nodeType === 'package') {
       return node.customHeight || node.height || 120;
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      return node.customHeight || node.height || 95;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
     }
     if (node.nodeType === 'use_case') {
       if (node.customHeight && node.customHeight > 0) {
@@ -471,14 +723,17 @@ export class DiagramCanvasComponent {
     let minW = 120;
     let minH = 60;
     if (node.nodeType === 'actor') {
-      minW = 60;
-      minH = 80;
+      minW = 50;
+      minH = 65;
     } else if (node.nodeType === 'use_case') {
       minW = 80;
       minH = 45;
     } else if (node.nodeType === 'package') {
       minW = 120;
       minH = 70;
+    } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+      minW = 50;
+      minH = 50;
     } else {
       minW = Math.max(120, this.getDynamicNodeWidth(node));
     }
@@ -525,8 +780,8 @@ export class DiagramCanvasComponent {
     let minW = 120;
     let minH = 60;
     if (node.nodeType === 'actor') {
-      minW = 60;
-      minH = 80;
+      minW = 50;
+      minH = 65;
     } else if (node.nodeType === 'use_case') {
       minW = 80;
       minH = 45;
@@ -534,8 +789,8 @@ export class DiagramCanvasComponent {
       minW = 120;
       minH = 70;
     } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      minW = 70;
-      minH = 65;
+      minW = 50;
+      minH = 50;
     } else {
       minW = Math.max(120, this.getDynamicNodeWidth(node));
     }
@@ -744,11 +999,309 @@ export class DiagramCanvasComponent {
     return (conn.messages || []).filter((m) => m.direction === 'reverse');
   }
 
-  // Slots interactivos para líneas de vida en diagrama de secuencia (puntos de anclaje cada 60px)
-  readonly sequenceSlots: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+  getMaxSequenceSlotUsed(): number {
+    let maxSlot = -1;
+    for (const c of this.connections()) {
+      if (!c.sourceId && !c.targetId) continue;
+      const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+      if (sMatch) {
+        maxSlot = Math.max(maxSlot, parseInt(sMatch[1], 10));
+      }
+      const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+      if (tMatch) {
+        maxSlot = Math.max(maxSlot, parseInt(tMatch[1], 10));
+      }
+    }
+    return maxSlot;
+  }
+
+  isSequenceSlotOccupied(slot: number): boolean {
+    return this.connections().some((c) => {
+      if (!this.isSequenceConnection(c)) return false;
+      const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+      const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+      return (
+        (sMatch && parseInt(sMatch[1], 10) === slot) ||
+        (tMatch && parseInt(tMatch[1], 10) === slot)
+      );
+    });
+  }
+
+  // Slots interactivos para líneas de vida en diagrama de secuencia (puntos de anclaje cada 50px)
+  get sequenceSlots(): number[] {
+    const maxSlot = this.getMaxSequenceSlotUsed();
+    // Inicia con un tamaño reducido (4 slots: 0, 1, 2, 3) y crece dinámicamente con 3 slots libres adicionales debajo del último mensaje
+    const count = Math.max(4, maxSlot + 1 + 3);
+    return Array.from({ length: count }, (_, i) => i);
+  }
 
   getLifelineLength(node?: UmlClassNode): number {
-    return 1200;
+    const maxSlot = this.getMaxSequenceSlotUsed();
+    const count = Math.max(4, maxSlot + 1 + 3);
+    const nodeHeaderHeight = node?.nodeType === 'actor' ? 95 : (node?.height || 48);
+    // La línea discontinua se extiende 40px más allá del último slot disponible
+    const targetBottom = 160 + (count - 1) * 50 + 40;
+    const minLength = node?.nodeType === 'actor' ? 80 : 120;
+    return Math.max(minLength, targetBottom - nodeHeaderHeight);
+  }
+
+  getSlotTop(node: UmlClassNode, slot: number): number {
+    return 160 + slot * 50;
+  }
+
+  getNodeActivations(node: UmlClassNode): { id: string; top: number; height: number }[] {
+    if (this.activeDiagramType() !== DiagramType.SEQUENCE && node.nodeType !== 'lifeline') {
+      return [];
+    }
+
+    const headerHeight = node.nodeType === 'actor' ? 95 : (node.height || 48);
+
+    interface ParsedSeqConn {
+      conn: UmlConnection;
+      slot: number;
+      sourceId: string;
+      targetId: string;
+      isReply: boolean;
+      groupKey: string;
+      seqNum: string;
+    }
+
+    const allSeqConns: ParsedSeqConn[] = [];
+
+    for (const c of this.connections()) {
+      if (!this.isSequenceConnection(c)) continue;
+
+      const baseSrc = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const baseTgt = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      if (!baseSrc || !baseTgt) continue;
+
+      const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+      const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+      const slot = sMatch ? parseInt(sMatch[1], 10) : (tMatch ? parseInt(tMatch[1], 10) : 0);
+      const isReply = this.isReplyConnection(c);
+
+      let seqNum = '';
+      if (c.messages && c.messages.length > 0 && c.messages[0].sequenceNumber) {
+        seqNum = c.messages[0].sequenceNumber.trim();
+      } else if (c.name) {
+        seqNum = c.name.trim();
+      }
+
+      let groupKey = '';
+      const dotMatch = seqNum.match(/^(\d+)(?:\.|$)/);
+      if (dotMatch) {
+        groupKey = dotMatch[1];
+      }
+
+      allSeqConns.push({
+        conn: c,
+        slot,
+        sourceId: baseSrc,
+        targetId: baseTgt,
+        isReply,
+        groupKey,
+        seqNum,
+      });
+    }
+
+    if (allSeqConns.length === 0) {
+      if (node.activations && node.activations.length > 0) {
+        return node.activations.map((a, i) => ({
+          id: a.id || `act_manual_${i}`,
+          top: a.startY ?? a.top ?? 40,
+          height: a.height ?? 60,
+        }));
+      }
+      return [];
+    }
+
+    allSeqConns.sort((a, b) => a.slot - b.slot);
+
+    interface Interaction {
+      id: string;
+      initiatorId: string;
+      conns: ParsedSeqConn[];
+    }
+
+    const interactions: Interaction[] = [];
+    const keyedGroups = new Map<string, ParsedSeqConn[]>();
+    const unkeyedConns: ParsedSeqConn[] = [];
+
+    for (const sc of allSeqConns) {
+      if (sc.groupKey) {
+        if (!keyedGroups.has(sc.groupKey)) {
+          keyedGroups.set(sc.groupKey, []);
+        }
+        keyedGroups.get(sc.groupKey)!.push(sc);
+      } else {
+        unkeyedConns.push(sc);
+      }
+    }
+
+    for (const [key, grp] of keyedGroups.entries()) {
+      grp.sort((a, b) => a.slot - b.slot);
+      interactions.push({
+        id: `keyed_${key}`,
+        initiatorId: grp[0].sourceId,
+        conns: grp,
+      });
+    }
+
+    if (unkeyedConns.length > 0) {
+      let currentInter: Interaction | null = null;
+      let replySeenToInitiator = false;
+
+      for (const sc of unkeyedConns) {
+        const isNewInitiatorCall = currentInter && (
+          replySeenToInitiator ||
+          (sc.sourceId === currentInter.initiatorId && sc.slot - currentInter.conns[currentInter.conns.length - 1].slot >= 2) ||
+          (sc.sourceId !== currentInter.initiatorId && !currentInter.conns.some(prev => prev.targetId === sc.sourceId || prev.sourceId === sc.sourceId))
+        );
+
+        if (!currentInter || isNewInitiatorCall) {
+          if (currentInter) {
+            interactions.push(currentInter);
+          }
+          currentInter = {
+            id: `unkeyed_${sc.slot}`,
+            initiatorId: sc.sourceId,
+            conns: [sc],
+          };
+          replySeenToInitiator = sc.isReply && sc.targetId === sc.sourceId;
+        } else {
+          currentInter.conns.push(sc);
+          if (sc.isReply && sc.targetId === currentInter.initiatorId) {
+            replySeenToInitiator = true;
+          }
+        }
+      }
+
+      if (currentInter) {
+        interactions.push(currentInter);
+      }
+    }
+
+    const intervals: { id: string; minSlot: number; maxSlot: number }[] = [];
+
+    for (const inter of interactions) {
+      const conns = inter.conns;
+      const interMinSlot = Math.min(...conns.map(c => c.slot));
+      const interMaxSlot = Math.max(...conns.map(c => c.slot));
+
+      const isActorInitiator = node.nodeType === 'actor' && node.id === inter.initiatorId;
+
+      if (isActorInitiator) {
+        // SOLO EN EL ACTOR: la barra de activación es una sola y continua en toda la interacción
+        const startSlot = interMinSlot;
+        const replyToInitiator = conns.find(
+          c => c.isReply && c.targetId === node.id && c.slot > startSlot
+        );
+        const endSlot = replyToInitiator ? replyToInitiator.slot : interMaxSlot;
+
+        intervals.push({
+          id: `act_${node.id}_${inter.id}_${startSlot}_${endSlot}`,
+          minSlot: startSlot,
+          maxSlot: endSlot,
+        });
+      } else {
+        // EN LOS DEMÁS ELEMENTOS (View, Controller, etc.):
+        // Como en EA, cada llamada entrante tiene su propia activación independiente.
+        // Por más que estén en slots contiguos, NO se genera un junte entre llamadas separadas.
+        const myConns = conns.filter(c => c.sourceId === node.id || c.targetId === node.id);
+        if (myConns.length === 0) {
+          continue;
+        }
+
+        const incomingCalls = conns.filter(c => c.targetId === node.id && !c.isReply);
+        const effectiveIncoming = incomingCalls.length > 0 ? incomingCalls : conns.filter(c => c.targetId === node.id);
+
+        if (effectiveIncoming.length > 0) {
+          const sortedIncoming = [...effectiveIncoming].sort((a, b) => a.slot - b.slot);
+
+          for (let i = 0; i < sortedIncoming.length; i++) {
+            const inc = sortedIncoming[i];
+            const incSlot = inc.slot;
+            const nextIncSlot = i + 1 < sortedIncoming.length ? sortedIncoming[i + 1].slot : Infinity;
+
+            // Salidas o respuestas de este nodo generadas a partir de esta llamada (antes de la siguiente llamada entrante)
+            const myOutgoing = conns.filter(
+              c => c.sourceId === node.id && c.slot >= incSlot && c.slot < nextIncSlot
+            );
+
+            let endSlot = incSlot;
+            if (myOutgoing.length > 0) {
+              endSlot = Math.max(...myOutgoing.map(c => c.slot));
+            }
+
+            intervals.push({
+              id: `act_${node.id}_${inter.id}_${incSlot}_${endSlot}`,
+              minSlot: incSlot,
+              maxSlot: endSlot,
+            });
+          }
+        }
+
+        // Si hay llamadas salientes no cubiertas por llamadas entrantes
+        const orphanOutgoing = conns.filter(
+          c => c.sourceId === node.id && !intervals.some(inv => c.slot >= inv.minSlot && c.slot <= inv.maxSlot)
+        );
+        for (const out of orphanOutgoing) {
+          intervals.push({
+            id: `act_${node.id}_${inter.id}_${out.slot}_${out.slot}`,
+            minSlot: out.slot,
+            maxSlot: out.slot,
+          });
+        }
+      }
+    }
+
+    intervals.sort((a, b) => a.minSlot - b.minSlot);
+
+    // Merge overlapping intervals (only if they actually overlap in slots: minSlot <= prev.maxSlot)
+    // Non-overlapping slots (even if adjacent: minSlot > prev.maxSlot) remain separate!
+    const mergedIntervals: { id: string; minSlot: number; maxSlot: number }[] = [];
+    for (const inv of intervals) {
+      if (mergedIntervals.length === 0) {
+        mergedIntervals.push({ ...inv });
+      } else {
+        const prev = mergedIntervals[mergedIntervals.length - 1];
+        if (inv.minSlot <= prev.maxSlot) {
+          prev.maxSlot = Math.max(prev.maxSlot, inv.maxSlot);
+          prev.id = `${prev.id}_${inv.maxSlot}`;
+        } else {
+          mergedIntervals.push({ ...inv });
+        }
+      }
+    }
+
+    return mergedIntervals.map((inv) => {
+      const slotYStart = 160 + inv.minSlot * 50 - headerHeight;
+      const slotYEnd = 160 + inv.maxSlot * 50 - headerHeight;
+      const top = Math.max(0, slotYStart - 4);
+      const height = slotYEnd - slotYStart + 22;
+      return {
+        id: inv.id,
+        top,
+        height,
+      };
+    });
+  }
+
+  getSequenceConnColor(conn: UmlConnection): string {
+    if (conn.messages && conn.messages.length > 0 && conn.messages[0].color) {
+      return conn.messages[0].color;
+    }
+    const seqNum = conn.messages?.[0]?.sequenceNumber || conn.name || '';
+    const match = seqNum.trim().match(/^(\d+)(?:\.|$)/);
+    const palette = [
+      '#0284C7', '#7C3AED', '#059669', '#D97706',
+      '#DC2626', '#0891B2', '#4F46E5', '#C026D3'
+    ];
+    if (match) {
+      const g = parseInt(match[1], 10);
+      return palette[(Math.max(1, g) - 1) % palette.length];
+    }
+    return '#0284C7';
   }
 
   isSequenceConnection(conn: UmlConnection): boolean {
@@ -760,5 +1313,10 @@ export class DiagramCanvasComponent {
 
   isReplyConnection(conn: UmlConnection): boolean {
     return conn.type === 'reply' || (!!conn.messages && conn.messages.some((m) => m.isReturn));
+  }
+
+  formatLifelineName(name?: string): string {
+    if (!name || !name.trim()) return '';
+    return name;
   }
 }

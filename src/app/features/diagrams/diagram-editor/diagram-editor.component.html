@@ -232,7 +232,9 @@
         (canvasMouseMove)="onCanvasMouseMove($event)"
         (zoomChange)="onZoomChanged($event)"
         (viewportScroll)="onViewportScroll($event)"
-        (nodeRename)="onNodeRename($event)">
+        (nodeRename)="onNodeRename($event)"
+        (nodeLabelOffsetChange)="onNodeLabelOffsetChange($event.node, $event.offset)"
+        (sequenceMessageMove)="onSequenceMessageMove($event)">
       </app-diagram-canvas>
 
     </div>
