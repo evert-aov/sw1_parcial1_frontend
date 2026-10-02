@@ -47,11 +47,12 @@ import {
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe } from '../../../../../core/i18n';
+import { UML_SVG_COMPONENTS } from '../uml-svg';
 
 @Component({
   selector: 'app-diagram-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe, ...UML_SVG_COMPONENTS],
   providers: [
     provideIcons({
       heroBars3,

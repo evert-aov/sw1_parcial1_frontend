@@ -85,17 +85,8 @@
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
-              <svg width="18" height="22" viewBox="0 0 48 66" fill="none" class="stroke-current">
-                <circle cx="24" cy="12" r="10" fill="currentColor" fill-opacity="0.18" stroke-width="2.5" />
-                <circle cx="20.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
-                <circle cx="27.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
-                <path d="M 20 14.5 Q 24 17.5 28 14.5" stroke-width="1.8" fill="none" stroke-linecap="round" />
-                <line x1="24" y1="22" x2="24" y2="43" stroke-width="2.5" />
-                <line x1="7" y1="31" x2="41" y2="31" stroke-width="2.5" stroke-linecap="round" />
-                <line x1="24" y1="43" x2="10" y2="63" stroke-width="2.5" stroke-linecap="round" />
-                <line x1="24" y1="43" x2="38" y2="63" stroke-width="2.5" stroke-linecap="round" />
-              </svg>
+            <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
+              <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
@@ -109,8 +100,8 @@
             (click)="addUseCase.emit()"
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-amber-300 dark:hover:border-amber-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
-              <ng-icon name="heroEllipsisHorizontalCircle" class="text-base"></ng-icon>
+            <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform p-1">
+              <app-use-case-svg width="24" height="15" strokeColor="currentColor" fillColor="currentColor" [strokeWidth]="1.5" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Caso de Uso</div>
@@ -147,41 +138,8 @@
                   'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
                 }"
                 class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
-                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
-                  @switch (rel.id) {
-                    @case ('association') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                      </svg>
-                    }
-                    @case ('include') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('extend') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('generalization') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="18" y2="7" stroke="currentColor" stroke-width="1.8"/>
-                        <polygon points="18,2 26,7 18,12" fill="white" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('dependency') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @default {
-                      <span class="font-mono text-xs">{{ rel.icon }}</span>
-                    }
-                  }
+                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5">
+                  <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
@@ -262,48 +220,8 @@
                   'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
                 }"
                 class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
-                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
-                  @switch (rel.id) {
-                    @case ('association') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                      </svg>
-                    }
-                    @case ('generalization') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="18" y2="7" stroke="currentColor" stroke-width="1.8"/>
-                        <polygon points="18,2 26,7 18,12" fill="white" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('composition') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <polygon points="2,7 8,3 14,7 8,11" fill="currentColor" stroke="currentColor" stroke-width="1"/>
-                        <line x1="14" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8"/>
-                      </svg>
-                    }
-                    @case ('aggregation') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <polygon points="2,7 8,3 14,7 8,11" fill="white" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                        <line x1="14" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8"/>
-                      </svg>
-                    }
-                    @case ('dependency') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('association_class') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="15" y2="7" stroke="currentColor" stroke-width="1.5"/>
-                        <line x1="8" y1="7" x2="8" y2="2" stroke="currentColor" stroke-width="1" stroke-dasharray="2,2"/>
-                        <rect x="15" y="2" width="10" height="10" rx="1" fill="white" stroke="currentColor" stroke-width="1.2"/>
-                      </svg>
-                    }
-                    @default {
-                      <span class="font-mono text-xs">{{ rel.icon }}</span>
-                    }
-                  }
+                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5">
+                  <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
@@ -429,48 +347,8 @@
                   'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
                 }"
                 class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
-                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
-                  @switch (rel.id) {
-                    @case ('dependency') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('import') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('access') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('merge') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('trace') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('generalization') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="18" y2="7" stroke="currentColor" stroke-width="1.8"/>
-                        <polygon points="18,2 26,7 18,12" fill="white" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @default {
-                      <span class="font-mono text-xs">{{ rel.icon }}</span>
-                    }
-                  }
+                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5">
+                  <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
@@ -539,17 +417,8 @@
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-600 dark:text-cyan-400 group-hover:scale-105 transition-transform">
-              <svg width="18" height="22" viewBox="0 0 48 66" fill="none" class="stroke-current">
-                <circle cx="24" cy="12" r="10" fill="currentColor" fill-opacity="0.18" stroke-width="2.5" />
-                <circle cx="20.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
-                <circle cx="27.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
-                <path d="M 20 14.5 Q 24 17.5 28 14.5" stroke-width="1.8" fill="none" stroke-linecap="round" />
-                <line x1="24" y1="22" x2="24" y2="43" stroke-width="2.5" />
-                <line x1="7" y1="31" x2="41" y2="31" stroke-width="2.5" stroke-linecap="round" />
-                <line x1="24" y1="43" x2="10" y2="63" stroke-width="2.5" stroke-linecap="round" />
-                <line x1="24" y1="43" x2="38" y2="63" stroke-width="2.5" stroke-linecap="round" />
-              </svg>
+            <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-600 dark:text-cyan-400 group-hover:scale-105 transition-transform p-0.5">
+              <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
@@ -563,12 +432,8 @@
             (click)="addBoundary.emit()"
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform">
-              <svg width="22" height="22" viewBox="0 0 56 56" fill="none" class="stroke-current">
-                <line x1="10" y1="12" x2="10" y2="44" stroke-width="3" stroke-linecap="round"/>
-                <line x1="10" y1="28" x2="20" y2="28" stroke-width="3"/>
-                <circle cx="36" cy="28" r="15" fill="currentColor" fill-opacity="0.18" stroke-width="2.5"/>
-              </svg>
+            <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform p-0.5">
+              <app-boundary-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Boundary (Interfaz)</div>
@@ -582,11 +447,8 @@
             (click)="addControl.emit()"
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform">
-              <svg width="22" height="22" viewBox="0 0 56 56" fill="none" class="stroke-current">
-                <circle cx="28" cy="28" r="18" fill="currentColor" fill-opacity="0.18" stroke-width="2.5"/>
-                <polyline points="36,3.5 26,10.2 36,17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+            <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform p-0.5">
+              <app-control-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Control (Gestor)</div>
@@ -600,11 +462,8 @@
             (click)="addEntity.emit()"
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform">
-              <svg width="22" height="22" viewBox="0 0 56 56" fill="none" class="stroke-current">
-                <circle cx="28" cy="24" r="18" fill="currentColor" fill-opacity="0.18" stroke-width="2.5"/>
-                <line x1="8" y1="42" x2="48" y2="42" stroke-width="3" stroke-linecap="round"/>
-              </svg>
+            <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform p-0.5">
+              <app-entity-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Entidad (Entity)</div>
@@ -641,23 +500,8 @@
                   'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
                 }"
                 class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
-                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
-                  @switch (rel.id) {
-                    @case ('association') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="26" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                      </svg>
-                    }
-                    @case ('dependency') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="18,3 25,7 18,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @default {
-                      <span class="font-mono text-xs">{{ rel.icon }}</span>
-                    }
-                  }
+                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5">
+                  <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
@@ -728,9 +572,8 @@
             (click)="addLifeline.emit()"
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
-            <div class="w-9 h-8 flex flex-col items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform">
-              <div class="w-6 h-3 bg-cyan-200/70 border border-cyan-600 rounded-2xs"></div>
-              <div class="w-0.5 h-2.5 border-l border-dashed border-cyan-600 mt-0.5"></div>
+            <div class="w-9 h-8 flex flex-col items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform p-0.5">
+              <app-lifeline-svg mode="icon" width="22" height="22" strokeColor="currentColor" fillColor="currentColor" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Línea de Vida (Lifeline)</div>
@@ -744,14 +587,8 @@
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-700 dark:text-blue-300 group-hover:scale-105 transition-transform">
-              <svg width="18" height="20" viewBox="0 0 48 66" fill="none" class="stroke-current">
-                <circle cx="24" cy="12" r="10" fill="currentColor" fill-opacity="0.15" stroke-width="2.5" />
-                <line x1="24" y1="22" x2="24" y2="43" stroke-width="2.5" />
-                <line x1="7" y1="31" x2="41" y2="31" stroke-width="2.5" stroke-linecap="round" />
-                <line x1="24" y1="43" x2="10" y2="63" stroke-width="2.5" stroke-linecap="round" />
-                <line x1="24" y1="43" x2="38" y2="63" stroke-width="2.5" stroke-linecap="round" />
-              </svg>
+            <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-700 dark:text-blue-300 group-hover:scale-105 transition-transform p-0.5">
+              <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor (Participante)</div>
@@ -788,42 +625,8 @@
                   'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
                 }"
                 class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
-                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors">
-                  @switch (rel.id) {
-                    @case ('sync') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="1.8"/>
-                        <polygon points="20,3 27,7 20,11" fill="currentColor"/>
-                      </svg>
-                    }
-                    @case ('reply') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polyline points="19,3 26,7 19,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('async') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="1.8"/>
-                        <polyline points="19,3 26,7 19,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    }
-                    @case ('create') {
-                      <svg class="w-6 h-3" viewBox="0 0 28 14" fill="none">
-                        <line x1="2" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/>
-                        <polygon points="19,3 26,7 19,11" fill="none" stroke="currentColor" stroke-width="1.2"/>
-                      </svg>
-                    }
-                    @case ('self') {
-                      <svg class="w-6 h-4" viewBox="0 0 28 16" fill="none">
-                        <path d="M 6 3 L 20 3 L 20 12 L 8 12" stroke="currentColor" stroke-width="1.5"/>
-                        <polygon points="10,9 6,12 10,15" fill="currentColor"/>
-                      </svg>
-                    }
-                    @default {
-                      <span class="font-mono text-xs">{{ rel.icon }}</span>
-                    }
-                  }
+                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5">
+                  <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
@@ -860,13 +663,7 @@
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
             class="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-            <svg width="13" height="15" viewBox="0 0 48 66" fill="none" class="stroke-white">
-              <circle cx="24" cy="12" r="10" fill="white" fill-opacity="0.3" stroke-width="3" />
-              <line x1="24" y1="22" x2="24" y2="43" stroke-width="3" />
-              <line x1="7" y1="31" x2="41" y2="31" stroke-width="3" stroke-linecap="round" />
-              <line x1="24" y1="43" x2="10" y2="63" stroke-width="3" stroke-linecap="round" />
-              <line x1="24" y1="43" x2="38" y2="63" stroke-width="3" stroke-linecap="round" />
-            </svg>
+            <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" />
             <span>+ ACTOR</span>
           </button>
           <button
@@ -1170,32 +967,36 @@
                                     
                                     <!-- Icono e Indicador de Tipo de Nodo -->
                                     @if (node.nodeType === 'actor') {
-                                      <div class="w-4 h-4 rounded bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0" title="Actor">
-                                        <ng-icon name="heroUser" class="text-[10px]"></ng-icon>
+                                      <div class="w-4 h-4 rounded bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0 p-0.5" title="Actor">
+                                        <app-actor-svg width="12" height="12" strokeColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'use_case') {
-                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0" title="Caso de Uso">
-                                        <ng-icon name="heroEllipsisHorizontalCircle" class="text-[10px]"></ng-icon>
+                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 p-0.5" title="Caso de Uso">
+                                        <app-use-case-svg width="14" height="10" strokeColor="currentColor" fillColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'package') {
-                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0" title="Paquete">
-                                        <ng-icon name="heroFolder" class="text-[10px]"></ng-icon>
+                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 p-0.5" title="Paquete">
+                                        <app-directory-svg mode="icon" width="13" height="11" strokeColor="currentColor" fillColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'boundary') {
-                                      <div class="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 font-bold text-[9px]" title="Boundary (Interfaz)">
-                                        ├○
+                                      <div class="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 p-0.5" title="Boundary (Interfaz)">
+                                        <app-boundary-svg width="13" height="11" strokeColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'control') {
-                                      <div class="w-4 h-4 rounded bg-teal-100 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0 font-bold text-[9px]" title="Control (Gestor)">
-                                        ⟲
+                                      <div class="w-4 h-4 rounded bg-teal-100 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0 p-0.5" title="Control (Gestor)">
+                                        <app-control-svg width="13" height="11" strokeColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'entity') {
-                                      <div class="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 font-bold text-[9px]" title="Entidad (Entity)">
-                                        ○_
+                                      <div class="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 p-0.5" title="Entidad (Entity)">
+                                        <app-entity-svg width="13" height="11" strokeColor="currentColor" />
+                                      </div>
+                                    } @else if (node.nodeType === 'lifeline') {
+                                      <div class="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 p-0.5" title="Línea de Vida">
+                                        <app-lifeline-svg mode="icon" width="12" height="12" strokeColor="currentColor" />
                                       </div>
                                     } @else {
-                                      <div class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0" title="Clase UML">
-                                        <ng-icon name="heroSquare3Stack3d" class="text-[10px]"></ng-icon>
+                                      <div class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 p-0.5" title="Clase UML">
+                                        <app-table-svg mode="icon" width="13" height="11" strokeColor="currentColor" />
                                       </div>
                                     }
 

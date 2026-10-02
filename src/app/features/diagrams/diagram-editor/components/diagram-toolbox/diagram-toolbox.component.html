@@ -58,8 +58,8 @@
               }"
               class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer group">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="font-mono font-bold text-xs shrink-0 text-slate-800 dark:text-slate-200 w-11 text-center bg-white/80 dark:bg-[#151A30] py-0.5 border border-slate-300 dark:border-[#2D3762] rounded-[2px]">
-                  {{ rel.icon }}
+                <span class="shrink-0 w-11 h-6 flex items-center justify-center bg-white/80 dark:bg-[#151A30] px-1 py-0.5 border border-slate-300 dark:border-[#2D3762] rounded-[2px] text-slate-800 dark:text-slate-200">
+                  <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="34" height="14" strokeColor="currentColor" />
                 </span>
                 <div class="truncate">
                   <div class="text-[11.5px] leading-tight font-medium">{{ rel.label }}</div>

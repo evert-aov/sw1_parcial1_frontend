@@ -22,11 +22,12 @@ import {
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe } from '../../../../../core/i18n';
+import { UML_SVG_COMPONENTS } from '../uml-svg';
 
 @Component({
   selector: 'app-diagram-toolbox',
   standalone: true,
-  imports: [CommonModule, NgIconComponent, TranslatePipe],
+  imports: [CommonModule, NgIconComponent, TranslatePipe, ...UML_SVG_COMPONENTS],
   providers: [
     provideIcons({
       heroBars3,

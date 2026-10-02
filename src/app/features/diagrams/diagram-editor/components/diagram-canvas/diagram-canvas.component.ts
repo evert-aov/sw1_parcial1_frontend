@@ -35,11 +35,12 @@ import {
   DiagramType,
   UmlMessage,
 } from '../../../../../core/models/diagram.model';
+import { UML_SVG_COMPONENTS } from '../uml-svg';
 
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
-  imports: [CommonModule, FFlowModule, NgIconComponent],
+  imports: [CommonModule, FFlowModule, NgIconComponent, ...UML_SVG_COMPONENTS],
   host: {
     class: 'flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden',
   },

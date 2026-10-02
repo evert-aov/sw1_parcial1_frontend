@@ -483,24 +483,12 @@
                     </button>
 
                     <!-- Stick figure del Actor UML con cabeza completa coloreada -->
-                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden">
-                      <svg viewBox="5 1 38 64" fill="none" class="w-full h-full max-w-full max-h-full text-[#241C18]" preserveAspectRatio="xMidYMid meet">
-                        <!-- Cabeza circular completa estándar UML con color de relleno -->
-                        <path
-                          d="M 24 2 A 10 10 0 0 1 24 22 A 10 10 0 0 1 24 2 Z"
-                          [style.fill]="node.color || '#FFFDDD'"
-                          [attr.fill]="node.color || '#FFFDDD'"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                        />
-                        <!-- Tronco -->
-                        <line x1="24" y1="22" x2="24" y2="43" stroke="currentColor" stroke-width="1.5" />
-                        <!-- Brazos -->
-                        <line x1="7" y1="31" x2="41" y2="31" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                        <!-- Piernas -->
-                        <line x1="24" y1="43" x2="10" y2="63" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                        <line x1="24" y1="43" x2="38" y2="63" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-                      </svg>
+                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden text-[#241C18]">
+                      <app-actor-svg
+                        [fillColor]="node.color || '#FFFDDD'"
+                        strokeColor="currentColor"
+                        className="w-full h-full max-w-full max-h-full text-[#241C18]"
+                      />
                     </div>
 
                     <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
@@ -742,20 +730,12 @@
                     </button>
 
                     <!-- Icono SVG Boundary UML 2.5 -->
-                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden">
-                      <svg viewBox="6 10 48 36" fill="none" class="w-full h-full max-w-full max-h-full text-[#241C18]" preserveAspectRatio="xMidYMid meet">
-                        <line x1="8" y1="12" x2="8" y2="44" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        <line x1="8" y1="28" x2="20" y2="28" stroke="currentColor" stroke-width="1.5"/>
-                        <circle
-                          cx="36"
-                          cy="28"
-                          r="16"
-                          [style.fill]="node.color || '#D2EEF3'"
-                          [attr.fill]="node.color || '#D2EEF3'"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                        />
-                      </svg>
+                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden text-[#241C18]">
+                      <app-boundary-svg
+                        [fillColor]="node.color || '#D2EEF3'"
+                        strokeColor="currentColor"
+                        className="w-full h-full max-w-full max-h-full text-[#241C18]"
+                      />
                     </div>
 
                     <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA DEL BOUNDARY (UML 2.5+) -->
@@ -824,25 +804,12 @@
                     </button>
 
                     <!-- Icono SVG Control UML 2.5 -->
-                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden">
-                      <svg viewBox="8 2 40 46" fill="none" class="w-full h-full max-w-full max-h-full text-[#241C18]" preserveAspectRatio="xMidYMid meet">
-                        <circle
-                          cx="28"
-                          cy="28"
-                          r="18"
-                          [style.fill]="node.color || '#D2EEF3'"
-                          [attr.fill]="node.color || '#D2EEF3'"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                        />
-                        <polyline
-                          points="36,3.5 26,10.2 36,17"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </svg>
+                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden text-[#241C18]">
+                      <app-control-svg
+                        [fillColor]="node.color || '#D2EEF3'"
+                        strokeColor="currentColor"
+                        className="w-full h-full max-w-full max-h-full text-[#241C18]"
+                      />
                     </div>
 
                     <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA DEL CONTROL (UML 2.5+) -->
@@ -911,19 +878,12 @@
                     </button>
 
                     <!-- Icono SVG Entity UML 2.5 -->
-                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden">
-                      <svg viewBox="6 4 44 40" fill="none" class="w-full h-full max-w-full max-h-full text-[#241C18]" preserveAspectRatio="xMidYMid meet">
-                        <circle
-                          cx="28"
-                          cy="24"
-                          r="18"
-                          [style.fill]="node.color || '#D2EEF3'"
-                          [attr.fill]="node.color || '#D2EEF3'"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                        />
-                        <line x1="8" y1="42" x2="48" y2="42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                      </svg>
+                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden text-[#241C18]">
+                      <app-entity-svg
+                        [fillColor]="node.color || '#D2EEF3'"
+                        strokeColor="currentColor"
+                        className="w-full h-full max-w-full max-h-full text-[#241C18]"
+                      />
                     </div>
 
                     <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA DE LA ENTIDAD (UML 2.5+) -->
