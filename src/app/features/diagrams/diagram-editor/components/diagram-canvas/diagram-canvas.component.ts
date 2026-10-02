@@ -35,7 +35,7 @@ import {
   DiagramType,
   UmlMessage,
 } from '../../../../../core/models/diagram.model';
-import { UML_SVG_COMPONENTS } from '../uml-svg';
+import { UML_SVG_COMPONENTS, getUmlMarkerConfig, UmlMarkerConfig } from '../uml-svg';
 
 @Component({
   selector: 'app-diagram-canvas',
@@ -964,6 +964,10 @@ export class DiagramCanvasComponent {
 
   isDiamondAtStart(conn: UmlConnection): boolean {
     return conn.type === 'composition' || conn.type === 'aggregation';
+  }
+
+  getMarkerConfig(connType: UmlRelationshipType | string | null | undefined, isStartDiamond: boolean = false): UmlMarkerConfig {
+    return getUmlMarkerConfig(connType, isStartDiamond);
   }
 
   isRecursiveConn(conn: UmlConnection): boolean {

@@ -7,6 +7,7 @@ export * from './table-svg.component';
 export * from './use-case-svg.component';
 export * from './lifeline-svg.component';
 export * from './relationship-svg.component';
+export * from './connection-marker-svg.component';
 
 import { ActorSvgComponent } from './actor-svg.component';
 import { BoundarySvgComponent } from './boundary-svg.component';
@@ -17,6 +18,7 @@ import { TableSvgComponent } from './table-svg.component';
 import { UseCaseSvgComponent } from './use-case-svg.component';
 import { LifelineSvgComponent } from './lifeline-svg.component';
 import { RelationshipSvgComponent } from './relationship-svg.component';
+import { ConnectionMarkerSvgComponent } from './connection-marker-svg.component';
 
 /**
  * Array containing all UML 2.5 SVG standalone components for convenient bulk import:
@@ -31,5 +33,6 @@ export const UML_SVG_COMPONENTS = [
   TableSvgComponent,
   UseCaseSvgComponent,
   LifelineSvgComponent,
-  RelationshipSvgComponent
+  RelationshipSvgComponent,
+  ConnectionMarkerSvgComponent
 ] as const;
