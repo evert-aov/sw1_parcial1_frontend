@@ -84,7 +84,7 @@ import { Subject, debounceTime } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
 import { DiagramSidebarComponent } from './components/diagram-sidebar/diagram-sidebar.component';
-import { DiagramCanvasComponent } from './components/diagram-canvas/diagram-canvas.component';
+import { DiagramCanvasComponent, DiagramCanvasViewState } from './components/diagram-canvas/diagram-canvas.component';
 import { DiagramStatusbarComponent } from './components/diagram-statusbar/diagram-statusbar.component';
 import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
@@ -232,6 +232,40 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // Pestañas abiertas en el lienzo (Multi-diagram tabs)
   readonly openTabs = signal<DiagramTab[]>([]);
+
+  // Estado de vista independiente por diagrama (zoom y posición de scroll)
+  private readonly diagramViewStates = new Map<string, DiagramCanvasViewState>();
+
+  saveDiagramViewState(diagramId: string, state?: Partial<DiagramCanvasViewState>): void {
+    if (!diagramId) return;
+    const current = this.getDiagramViewState(diagramId);
+    const updated: DiagramCanvasViewState = {
+      zoom: state?.zoom !== undefined ? state.zoom : current.zoom,
+      scrollLeft: state?.scrollLeft !== undefined ? state.scrollLeft : current.scrollLeft,
+      scrollTop: state?.scrollTop !== undefined ? state.scrollTop : current.scrollTop,
+    };
+    this.diagramViewStates.set(diagramId, updated);
+    try {
+      sessionStorage.setItem(`diagram_view_state_${diagramId}`, JSON.stringify(updated));
+    } catch (_) {}
+  }
+
+  getDiagramViewState(diagramId: string): DiagramCanvasViewState {
+    if (this.diagramViewStates.has(diagramId)) {
+      return this.diagramViewStates.get(diagramId)!;
+    }
+    try {
+      const raw = sessionStorage.getItem(`diagram_view_state_${diagramId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.zoom === 'number') {
+          this.diagramViewStates.set(diagramId, parsed);
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return { zoom: 100, scrollLeft: 0, scrollTop: 0 };
+  }
 
   // Pipelines reactivos para auto-guardado en tiempo real (Google Docs style)
   private readonly autoSave$ = new Subject<void>();
@@ -707,7 +741,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           this.updateConnectionEndpoints();
           this.diagramCanvas?.clearSelection();
           this.diagramCanvas?.reset();
-          this.restoreViewportScroll(diagramId);
+          const targetState = this.getDiagramViewState(diagramId);
+          this.zoomLevel.set(targetState.zoom);
+          this.diagramCanvas?.applyViewState(targetState);
         });
       });
     });
@@ -887,7 +923,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       defaultLineStyle: this.defaultLineStyle(),
       nodes: this.nodes().map((n) => ({
         id: n.id,
-        name: n.name !== undefined && n.name !== null ? n.name : (n.isAnchor ? 'Anchor' : (isSequence ? '' : 'ClassName')),
+        name: n.name?.trim() ? n.name : (n.isAnchor ? 'Anchor' : (isSequence ? (n.nodeType === 'actor' || n.id.startsWith('actor_') ? 'actor_1' : 'lifeline_1') : 'ClassName')),
         positionX: n.position.x,
         positionY: n.position.y,
         width: this.getNodeWidth(n),
@@ -936,7 +972,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
           targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
           assocAnchorNodeId: c.assocAnchorNodeId || null,
-          messages: c.messages || [],
+          messages: (c.messages || []).map((m) => ({
+            ...m,
+            functionName: m.functionName?.trim() ? m.functionName : 'msj',
+          })),
         };
       }),
     };
@@ -1900,7 +1939,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       {
         id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         sequenceNumber: '',
-        functionName: '',
+        functionName: 'msj',
         parameters: '',
         returnType: '',
         isReturn,
@@ -1999,7 +2038,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           {
             id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
             sequenceNumber: seqNum,
-            functionName: '',
+            functionName: 'msj',
             parameters: '',
             returnType: '',
             isReturn: c.type === 'reply',
@@ -2648,7 +2687,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const count = this.nodes().filter((n) => n.nodeType === 'actor').length + 1;
     const newNode: UmlClassNode = {
       id: `actor_${Date.now()}`,
-      name: isSequence ? '' : `Actor_${count}`,
+      name: isSequence ? `actor_${count}` : `Actor_${count}`,
       nodeType: 'actor',
       position: { x: posX, y: posY },
       width: 65,
@@ -2825,7 +2864,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     const count = this.nodes().filter((n) => n.nodeType === 'lifeline').length + 1;
-    const defaultName = isSequence ? '' : `Objeto_${count}`;
+    const defaultName = isSequence ? `lifeline_${count}` : `Objeto_${count}`;
 
     const newNode: UmlClassNode = {
       id: `lifeline_${Date.now()}`,
@@ -3896,6 +3935,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onZoomChanged(zoom: number): void {
     this.zoomLevel.set(zoom);
+    const diagId = this.currentDiagramId();
+    if (diagId) {
+      this.saveDiagramViewState(diagId, { zoom });
+    }
   }
 
   zoomIn(): void {
@@ -3911,6 +3954,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (!el) return;
     const diagramId = this.currentDiagramId();
     if (diagramId) {
+      this.saveDiagramViewState(diagramId, {
+        scrollLeft: el.scrollLeft,
+        scrollTop: el.scrollTop,
+      });
       sessionStorage.setItem(
         `diagram_scroll_${diagramId}`,
         JSON.stringify({ left: el.scrollLeft, top: el.scrollTop }),
@@ -4044,6 +4091,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onSelectDiagram(diagramId: string): void {
     if (this.currentDiagramId() === diagramId) return;
 
+    // Guardar el estado de vista del lienzo del diagrama saliente
+    const outgoingId = this.currentDiagramId();
+    if (outgoingId && this.diagramCanvas) {
+      this.saveDiagramViewState(outgoingId, this.diagramCanvas.getViewState());
+    }
+
     // Si hay cambios sin guardar en el diagrama actual, persistirlos antes de cambiar
     if (this.hasUnsavedChanges() && !this.isReadOnly()) {
       this.saveToBackend(true);
@@ -4071,6 +4124,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.currentDiagramId() === tabId && this.hasUnsavedChanges() && !this.isReadOnly()) {
       this.saveToBackend(true);
     }
+
+    this.diagramViewStates.delete(tabId);
+    try {
+      sessionStorage.removeItem(`diagram_view_state_${tabId}`);
+      sessionStorage.removeItem(`diagram_scroll_${tabId}`);
+    } catch (_) {}
 
     const index = currentTabs.findIndex((t) => t.id === tabId);
     const newTabs = currentTabs.filter((t) => t.id !== tabId);
@@ -4112,6 +4171,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     this.diagramService.deleteDiagram(diagramId).subscribe({
       next: () => {
+        this.diagramViewStates.delete(diagramId);
+        try {
+          sessionStorage.removeItem(`diagram_view_state_${diagramId}`);
+          sessionStorage.removeItem(`diagram_scroll_${diagramId}`);
+        } catch (_) {}
+
         const currentTabs = this.openTabs();
         const wasActive = this.currentDiagramId() === diagramId;
         const newTabs = currentTabs.filter((t) => t.id !== diagramId);

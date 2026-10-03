@@ -37,6 +37,12 @@ import {
 } from '../../../../../core/models/diagram.model';
 import { UML_SVG_COMPONENTS, getUmlMarkerConfig, UmlMarkerConfig } from '../uml-svg';
 
+export interface DiagramCanvasViewState {
+  zoom: number;
+  scrollLeft: number;
+  scrollTop: number;
+}
+
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
@@ -264,8 +270,11 @@ export class DiagramCanvasComponent {
   readonly boardWidth = computed(() => {
     let max = 2200;
     for (const node of this.nodes()) {
-      if (node.position && node.position.x + 350 > max) {
-        max = node.position.x + 350;
+      if (node.position) {
+        const w = node.width || 350;
+        if (node.position.x + w + 350 > max) {
+          max = node.position.x + w + 350;
+        }
       }
     }
     return max;
@@ -274,24 +283,44 @@ export class DiagramCanvasComponent {
   readonly boardHeight = computed(() => {
     let max = 1400;
     for (const node of this.nodes()) {
-      if (node.position && node.position.y + 350 > max) {
-        max = node.position.y + 350;
+      if (node.position) {
+        const h = node.height || (node.nodeType === 'lifeline' ? 600 : 350);
+        if (node.position.y + h + 350 > max) {
+          max = node.position.y + h + 350;
+        }
       }
     }
     return max;
   });
 
+  readonly scaledBoardWidth = computed(() => {
+    const scale = Math.max(0.2, this.zoomLevel() / 100);
+    return Math.round(this.boardWidth() * scale);
+  });
+
+  readonly scaledBoardHeight = computed(() => {
+    const scale = Math.max(0.2, this.zoomLevel() / 100);
+    return Math.round(this.boardHeight() * scale);
+  });
+
   // Triggers Foblex Flow
   readonly canvasMoveTrigger = () => false;
-  readonly zoomWheelTrigger = (e: any): boolean =>
-    (e instanceof WheelEvent || (e && 'ctrlKey' in e)) && (e.ctrlKey || e.metaKey);
+  readonly canvasWheelTrigger = () => false;
   readonly dblClickZoomTrigger = () => false;
   readonly selectionAreaTrigger = (event: FTriggerEvent) =>
     primaryButtonEventTrigger(event) && isOnFlowBackground(event);
 
   onFlowLoaded(): void {
     this.flowLoaded.emit();
-    this.syncZoomFromCanvas();
+    if (this.canvas) {
+      const scale = this.zoomLevel() / 100;
+      this.canvas.setScale(scale, { x: 0, y: 0 });
+      if (this.canvas.transform) {
+        this.canvas.transform.position = { x: 0, y: 0 };
+        this.canvas.transform.scaledPosition = { x: 0, y: 0 };
+        this.canvas.redraw();
+      }
+    }
     requestAnimationFrame(() => {
       this.restoreViewportScroll(this.diagramId());
     });
@@ -331,7 +360,58 @@ export class DiagramCanvasComponent {
 
   private lastConnClickTime = 0;
   private lastConnClickId: string | null = null;
+  private lastConnPointerDownTime = 0;
+  private lastConnPointerDownId: string | null = null;
+  private lastConnPointerDownPos = { x: 0, y: 0 };
   private lastModalOpenTime = 0;
+
+  onConnectionPointerDown(connId: string, event: PointerEvent | MouseEvent): void {
+    if ((event as any)._connPointerHandled) return;
+    (event as any)._connPointerHandled = true;
+
+    if (event.button !== 0) return; // Solo botón principal (izquierdo)
+
+    const now = Date.now();
+    const timeDiff = now - this.lastConnPointerDownTime;
+    const dist = Math.hypot(
+      event.clientX - this.lastConnPointerDownPos.x,
+      event.clientY - this.lastConnPointerDownPos.y
+    );
+
+    // Doble pulsación rápida en la misma relación (dentro de tolerancia de 12px)
+    if (this.lastConnPointerDownId === connId && timeDiff < 450 && dist < 12) {
+      this.lastConnPointerDownTime = 0;
+      this.lastConnPointerDownId = null;
+      const conn = this.connections().find((c) => c.id === connId);
+      if (conn) {
+        event.stopPropagation();
+        event.preventDefault();
+        this.onConnectionDblClick(conn, event);
+        return;
+      }
+    }
+
+    this.lastConnPointerDownTime = now;
+    this.lastConnPointerDownId = connId;
+    this.lastConnPointerDownPos = { x: event.clientX, y: event.clientY };
+  }
+
+  onFlowPointerDown(event: PointerEvent | MouseEvent): void {
+    if ((event as any)._connPointerHandled) return;
+    if (event.button !== 0) return;
+
+    const target = event.target as HTMLElement | SVGElement | null;
+    if (!target) return;
+
+    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+      return;
+    }
+
+    const connId = this.findConnectionIdFromEventTarget(target);
+    if (connId) {
+      this.onConnectionPointerDown(connId, event);
+    }
+  }
 
   onConnectionClick(connId: string, event: MouseEvent): void {
     if ((event as any)._connHandled) return;
@@ -358,7 +438,7 @@ export class DiagramCanvasComponent {
     this.connectionClick.emit({ connId, event });
   }
 
-  onConnectionDblClick(conn: UmlConnection, event: MouseEvent): void {
+  onConnectionDblClick(conn: UmlConnection, event?: MouseEvent | PointerEvent): void {
     const now = Date.now();
     if (now - this.lastModalOpenTime < 450) {
       return; // Prevenir apertura duplicada si tanto la cadencia como el evento nativo se disparan
@@ -368,7 +448,7 @@ export class DiagramCanvasComponent {
       event.stopPropagation();
       event.preventDefault();
     }
-    this.connectionDblClick.emit({ conn, event });
+    this.connectionDblClick.emit({ conn, event: event as MouseEvent });
   }
 
   onFlowClick(event: MouseEvent): void {
@@ -377,7 +457,7 @@ export class DiagramCanvasComponent {
     if (!target) return;
 
     // Si se hizo clic en un nodo o control, ignorar
-    if (target.closest('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
       return;
     }
 
@@ -392,7 +472,7 @@ export class DiagramCanvasComponent {
     if (!target) return;
 
     // Si el doble clic ocurrió sobre un nodo o su contenido, dejar que el nodo lo maneje
-    if (target.closest('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
       return;
     }
 
@@ -408,6 +488,29 @@ export class DiagramCanvasComponent {
   }
 
   private findConnectionIdFromEventTarget(target: HTMLElement | SVGElement): string | null {
+    if (!target) return null;
+
+    // 1. Si target está dentro de un nodo, ignorar
+    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+      return null;
+    }
+
+    // 2. Búsqueda directa con closest hacia el contenedor f-connection
+    const connEl = target.closest?.('f-connection, [data-connection-id], .f-connection');
+    if (connEl) {
+      const dataId = connEl.getAttribute('data-connection-id');
+      if (dataId && this.connections().some((c) => c.id === dataId)) {
+        return dataId;
+      }
+      const rawId = connEl.getAttribute('id') || connEl.getAttribute('fconnectionid') || (connEl as any).id || '';
+      for (const c of this.connections()) {
+        if (c.id === rawId || rawId === `_${c.id}` || rawId.endsWith(c.id)) {
+          return c.id;
+        }
+      }
+    }
+
+    // 3. Inspección manual ascendente de la jerarquía DOM / SVG
     let curr: Element | null = target;
     while (curr && curr !== document.body) {
       const tagName = curr.tagName ? curr.tagName.toLowerCase() : '';
@@ -423,6 +526,7 @@ export class DiagramCanvasComponent {
           }
         }
       }
+
       const idAttr = curr.getAttribute('id') || '';
       if (idAttr) {
         for (const c of this.connections()) {
@@ -431,7 +535,8 @@ export class DiagramCanvasComponent {
           }
         }
       }
-      curr = curr.parentElement;
+
+      curr = curr.parentElement || (curr.parentNode as Element | null);
     }
     return null;
   }
@@ -580,64 +685,221 @@ export class DiagramCanvasComponent {
         `diagram_scroll_${dId}`,
         JSON.stringify({ left: el.scrollLeft, top: el.scrollTop }),
       );
+      try {
+        const raw = sessionStorage.getItem(`diagram_view_state_${dId}`);
+        const current = raw ? JSON.parse(raw) : { zoom: this.zoomLevel() };
+        sessionStorage.setItem(
+          `diagram_view_state_${dId}`,
+          JSON.stringify({ ...current, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop }),
+        );
+      } catch (_) {}
+    }
+  }
+
+  onContainerWheel(event: WheelEvent): void {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
+      if (Math.abs(delta) < 1) return;
+      const zoomStep = Math.abs(delta) > 50 ? 15 : 5;
+      const direction = delta < 0 ? 1 : -1;
+      const nextZoom = this.zoomLevel() + direction * zoomStep;
+      this.setZoom(nextZoom, true, { clientX: event.clientX, clientY: event.clientY });
     }
   }
 
   onCanvasChange(event?: FCanvasChangeEvent): void {
+    if (this.canvas?.transform) {
+      if (this.canvas.transform.scaledPosition.x !== 0 || this.canvas.transform.scaledPosition.y !== 0) {
+        this.canvas.transform.scaledPosition = { x: 0, y: 0 };
+        this.canvas.transform.position = { x: 0, y: 0 };
+        this.canvas.redraw();
+      }
+    }
     if (event?.scale != null) {
       const pct = Math.round(event.scale * 100);
-      this.zoomLevel.set(pct);
-      this.zoomChange.emit(pct);
+      if (pct !== this.zoomLevel()) {
+        this.zoomLevel.set(pct);
+        this.zoomChange.emit(pct);
+      }
     }
   }
 
   syncZoomFromCanvas(): void {
     if (this.canvas?.transform?.scale != null) {
       const pct = Math.round(this.canvas.transform.scale * 100);
-      this.zoomLevel.set(pct);
-      this.zoomChange.emit(pct);
+      if (pct !== this.zoomLevel()) {
+        this.zoomLevel.set(pct);
+        this.zoomChange.emit(pct);
+      }
     }
   }
 
-  zoomIn(): void {
-    this.fZoom?.zoomIn();
-    requestAnimationFrame(() => {
-      this.syncZoomFromCanvas();
-    });
-  }
+  setZoom(targetPct: number, autoAdjustScroll = true, focusPoint?: { clientX: number; clientY: number }): void {
+    const clamped = Math.max(25, Math.min(300, Math.round(targetPct)));
+    const oldZoom = this.zoomLevel();
+    if (oldZoom === clamped && this.canvas?.transform?.scale === clamped / 100) {
+      return;
+    }
 
-  zoomOut(): void {
-    this.fZoom?.zoomOut();
-    requestAnimationFrame(() => {
-      this.syncZoomFromCanvas();
-    });
-  }
+    const container = this.flowContainerRef?.nativeElement;
+    const oldScale = oldZoom / 100;
+    const newScale = clamped / 100;
 
-  resetView(): void {
+    let contentFocusX = 0;
+    let contentFocusY = 0;
+    let viewFocusX = 0;
+    let viewFocusY = 0;
+
+    if (container && autoAdjustScroll) {
+      const rect = container.getBoundingClientRect();
+      if (focusPoint) {
+        viewFocusX = focusPoint.clientX - rect.left;
+        viewFocusY = focusPoint.clientY - rect.top;
+      } else {
+        viewFocusX = container.clientWidth / 2;
+        viewFocusY = container.clientHeight / 2;
+      }
+      contentFocusX = (container.scrollLeft + viewFocusX) / oldScale;
+      contentFocusY = (container.scrollTop + viewFocusY) / oldScale;
+    }
+
+    this.zoomLevel.set(clamped);
+
     if (this.canvas) {
-      this.canvas.resetScale();
+      this.canvas.setScale(newScale, { x: 0, y: 0 });
       if (this.canvas.transform) {
         this.canvas.transform.position = { x: 0, y: 0 };
         this.canvas.transform.scaledPosition = { x: 0, y: 0 };
         this.canvas.redraw();
       }
-    } else if (this.fZoom) {
-      this.fZoom.reset();
     }
-    this.zoomLevel.set(100);
-    this.zoomChange.emit(100);
+
+    this.zoomChange.emit(clamped);
+
+    const dId = this.diagramId();
+    if (dId) {
+      try {
+        const raw = sessionStorage.getItem(`diagram_view_state_${dId}`);
+        const current = raw ? JSON.parse(raw) : { scrollLeft: 0, scrollTop: 0 };
+        sessionStorage.setItem(
+          `diagram_view_state_${dId}`,
+          JSON.stringify({ ...current, zoom: clamped }),
+        );
+      } catch (_) {}
+    }
+
+    if (container && autoAdjustScroll) {
+      requestAnimationFrame(() => {
+        const newScrollLeft = Math.max(0, Math.round(contentFocusX * newScale - viewFocusX));
+        const newScrollTop = Math.max(0, Math.round(contentFocusY * newScale - viewFocusY));
+        container.scrollLeft = newScrollLeft;
+        container.scrollTop = newScrollTop;
+      });
+    }
+  }
+
+  zoomIn(): void {
+    const current = this.zoomLevel();
+    const next = current < 100 ? current + 10 : current + 25;
+    this.setZoom(next, true);
+  }
+
+  zoomOut(): void {
+    const current = this.zoomLevel();
+    const next = current <= 100 ? current - 10 : current - 25;
+    this.setZoom(next, true);
+  }
+
+  resetView(): void {
+    this.setZoom(100, false);
     this.centerViewportOnBoard();
-    requestAnimationFrame(() => {
-      this.syncZoomFromCanvas();
-    });
   }
 
   fitView(): void {
-    this.resetView();
+    const container = this.flowContainerRef?.nativeElement;
+    const nodes = this.nodes();
+    if (!container || nodes.length === 0) {
+      this.resetView();
+      return;
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const node of nodes) {
+      if (!node.position) continue;
+      const nx = node.position.x;
+      const ny = node.position.y;
+      const nw = node.width || (node.nodeType === 'actor' ? 65 : 220);
+      const nh = node.height || (node.nodeType === 'lifeline' ? 600 : 120);
+
+      if (nx < minX) minX = nx;
+      if (ny < minY) minY = ny;
+      if (nx + nw > maxX) maxX = nx + nw;
+      if (ny + nh > maxY) maxY = ny + nh;
+    }
+
+    if (!isFinite(minX) || !isFinite(maxX)) {
+      this.resetView();
+      return;
+    }
+
+    const padding = 60;
+    const diagramWidth = Math.max(100, maxX - minX + padding * 2);
+    const diagramHeight = Math.max(100, maxY - minY + padding * 2);
+
+    const availableWidth = container.clientWidth || 1000;
+    const availableHeight = container.clientHeight || 700;
+
+    const scaleX = availableWidth / diagramWidth;
+    const scaleY = availableHeight / diagramHeight;
+    const targetScale = Math.min(1.25, Math.max(0.3, Math.min(scaleX, scaleY)));
+    const targetZoom = Math.round(targetScale * 100);
+
+    this.setZoom(targetZoom, false);
+
+    requestAnimationFrame(() => {
+      container.scrollLeft = Math.max(0, Math.round(minX * targetScale - padding * targetScale));
+      container.scrollTop = Math.max(0, Math.round(minY * targetScale - padding * targetScale));
+    });
+  }
+
+  getViewState(): DiagramCanvasViewState {
+    const el = this.flowContainerRef?.nativeElement;
+    return {
+      zoom: this.zoomLevel(),
+      scrollLeft: el?.scrollLeft || 0,
+      scrollTop: el?.scrollTop || 0,
+    };
+  }
+
+  applyViewState(state: DiagramCanvasViewState): void {
+    this.setZoom(state.zoom, false);
+    const el = this.flowContainerRef?.nativeElement;
+    if (el) {
+      requestAnimationFrame(() => {
+        el.scrollLeft = Math.max(0, state.scrollLeft);
+        el.scrollTop = Math.max(0, state.scrollTop);
+      });
+    }
   }
 
   restoreViewportScroll(diagramId: string | null): void {
     if (!diagramId) return;
+    const viewStateRaw = sessionStorage.getItem(`diagram_view_state_${diagramId}`);
+    if (viewStateRaw) {
+      try {
+        const state = JSON.parse(viewStateRaw);
+        if (state && typeof state.zoom === 'number') {
+          this.applyViewState(state);
+          return;
+        }
+      } catch (_) {}
+    }
     const saved = sessionStorage.getItem(`diagram_scroll_${diagramId}`);
     if (saved && this.flowContainerRef?.nativeElement) {
       try {

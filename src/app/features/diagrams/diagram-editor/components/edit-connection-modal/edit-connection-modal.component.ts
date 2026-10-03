@@ -87,7 +87,7 @@ export class EditConnectionModalComponent {
                 {
                   id: `msg_${Date.now()}`,
                   sequenceNumber: '1.0',
-                  functionName: '',
+                  functionName: 'msj',
                   parameters: '',
                   returnType: '',
                   isReturn: cloned.type === 'reply',
@@ -177,7 +177,7 @@ export class EditConnectionModalComponent {
     const newMsg: UmlMessage = {
       id: `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       sequenceNumber: nextSeq,
-      functionName: '',
+      functionName: 'msj',
       parameters: '',
       returnType: '',
       isReturn: isSeq && conn.type === 'reply',

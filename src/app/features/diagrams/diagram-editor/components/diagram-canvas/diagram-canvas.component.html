@@ -1,24 +1,25 @@
 <div
   #flowContainer
   (scroll)="onViewportScroll($event)"
+  (wheel)="onContainerWheel($event)"
   (mousedown)="onCanvasMouseDown($event)"
   (mousemove)="onCanvasMouseMove($event)"
   (click)="onCanvasBackgroundClick($event)"
   class="flex-1 relative w-full h-full overflow-auto cursor-default bg-white uml-viewport select-none">
 
-  <!-- TABLERO / LIENZO A PANTALLA COMPLETA (OCUPA TODO EL ESPACIO, MÍNIMO 1500px x 1000px) -->
+  <!-- TABLERO / LIENZO A PANTALLA COMPLETA (OCUPA TODO EL ESPACIO, ESCALADO CON ZOOM) -->
   <div
     #boardElement
-    [style.min-width.px]="boardWidth()"
-    [style.min-height.px]="boardHeight()"
+    [style.min-width.px]="scaledBoardWidth()"
+    [style.min-height.px]="scaledBoardHeight()"
     class="relative w-full h-full bg-white">
 
     <!-- Cursores Remotos Colaborativos en Vivo (posicionados sobre la hoja) -->
     @for (cursor of remoteCursors(); track cursor.userId) {
       <div
         class="absolute pointer-events-none z-40 flex items-center gap-1 transition-all duration-75"
-        [style.left.px]="cursor.x"
-        [style.top.px]="cursor.y">
+        [style.left.px]="cursor.x * (zoomLevel() / 100)"
+        [style.top.px]="cursor.y * (zoomLevel() / 100)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="drop-shadow-md">
           <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z" [attr.fill]="cursor.color" stroke="white" stroke-width="1.5" />
         </svg>
@@ -40,13 +41,14 @@
       (fReassignConnection)="onConnectionReassigned($event)"
       (fMoveNodes)="onMoveNodes($event)"
       (fSelectionChange)="onSelectionChange($event)"
+      (pointerdown)="onFlowPointerDown($event)"
       (click)="onFlowClick($event)"
       (dblclick)="onFlowDblClick($event)"
       class="w-full h-full block">
 
       <f-canvas
         fZoom
-        [fWheelTrigger]="zoomWheelTrigger"
+        [fWheelTrigger]="canvasWheelTrigger"
         [fDblClickTrigger]="dblClickZoomTrigger"
         (fCanvasChange)="onCanvasChange($any($event))">
 
@@ -62,6 +64,7 @@
               [fBehavior]="isRecursiveConn(conn) ? 'fixed' : 'floating'"
               [fOutputSide]="isRecursiveConn(conn) ? getConnSide(conn.sourceId, 'top') : 'default'"
               [fInputSide]="isRecursiveConn(conn) ? getConnSide(conn.targetId, 'right') : 'default'"
+              (pointerdown)="onConnectionPointerDown(conn.id, $event)"
               (click)="onConnectionClick(conn.id, $event)"
               (dblclick)="onConnectionDblClick(conn, $event)"
               [class]="'uml-relation-' + (conn.type || 'association')"
@@ -479,18 +482,18 @@
                           (click)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
                           (pointerdown)="$event.stopPropagation()"
-                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 bg-white dark:bg-slate-800 border border-blue-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-sm min-w-[80px] max-w-[220px]"
+                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-sm min-w-[80px] max-w-[220px]"
                           autofocus
                         />
                       } @else {
                         <div
-                          class="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all border border-transparent"
+                          class="flex items-center gap-1 px-2 py-0.5 rounded-md transition-all border border-slate-200/80 bg-white/95 shadow-2xs"
                           [ngClass]="{
-                            'cursor-grabbing ring-1 ring-blue-400 bg-blue-50/80 dark:bg-blue-900/30': isDraggingLabel() && draggingLabelNodeId() === node.id,
-                            'cursor-grab hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:border-dashed hover:border-slate-400/60': !isDraggingLabel()
+                            'cursor-grabbing ring-1 ring-blue-400 bg-blue-50/95 border-blue-300': isDraggingLabel() && draggingLabelNodeId() === node.id,
+                            'cursor-grab hover:bg-slate-50 hover:border-slate-300': !isDraggingLabel()
                           }">
                           <span
-                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 whitespace-nowrap select-none max-w-[240px] truncate"
+                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] whitespace-nowrap select-none max-w-[240px] truncate"
                             [title]="node.name">
                             {{ node.name || (activeDiagramType() === 'sequence' ? '(actor)' : 'Actor') }}
                           </span>
@@ -521,7 +524,7 @@
                           style="display: block;">
                           <line
                             x1="1"
-                            y1="0"
+                            y1="34"
                             x2="1"
                             [attr.y2]="getLifelineLength(node)"
                             stroke="#796354"
@@ -712,18 +715,18 @@
                           (click)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
                           (pointerdown)="$event.stopPropagation()"
-                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 bg-white dark:bg-slate-800 border border-cyan-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-cyan-500 shadow-sm min-w-[80px] max-w-[220px]"
+                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-cyan-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-cyan-500 shadow-sm min-w-[80px] max-w-[220px]"
                           autofocus
                         />
                       } @else {
                         <div
-                          class="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all border border-transparent"
+                          class="flex items-center gap-1 px-2 py-0.5 rounded-md transition-all border border-slate-200/80 bg-white/95 shadow-2xs"
                           [ngClass]="{
-                            'cursor-grabbing ring-1 ring-cyan-400 bg-cyan-50/80 dark:bg-cyan-900/30': isDraggingLabel() && draggingLabelNodeId() === node.id,
-                            'cursor-grab hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:border-dashed hover:border-slate-400/60': !isDraggingLabel()
+                            'cursor-grabbing ring-1 ring-cyan-400 bg-cyan-50/95 border-cyan-300': isDraggingLabel() && draggingLabelNodeId() === node.id,
+                            'cursor-grab hover:bg-slate-50 hover:border-slate-300': !isDraggingLabel()
                           }">
                           <span
-                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 whitespace-nowrap select-none max-w-[240px] truncate"
+                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] whitespace-nowrap select-none max-w-[240px] truncate"
                             [title]="node.name">
                             {{ node.name }}
                           </span>
@@ -787,18 +790,18 @@
                           (click)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
                           (pointerdown)="$event.stopPropagation()"
-                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 bg-white dark:bg-slate-800 border border-teal-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-teal-500 shadow-sm min-w-[80px] max-w-[220px]"
+                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-teal-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-teal-500 shadow-sm min-w-[80px] max-w-[220px]"
                           autofocus
                         />
                       } @else {
                         <div
-                          class="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all border border-transparent"
+                          class="flex items-center gap-1 px-2 py-0.5 rounded-md transition-all border border-slate-200/80 bg-white/95 shadow-2xs"
                           [ngClass]="{
-                            'cursor-grabbing ring-1 ring-teal-400 bg-teal-50/80 dark:bg-teal-900/30': isDraggingLabel() && draggingLabelNodeId() === node.id,
-                            'cursor-grab hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:border-dashed hover:border-slate-400/60': !isDraggingLabel()
+                            'cursor-grabbing ring-1 ring-teal-400 bg-teal-50/95 border-teal-300': isDraggingLabel() && draggingLabelNodeId() === node.id,
+                            'cursor-grab hover:bg-slate-50 hover:border-slate-300': !isDraggingLabel()
                           }">
                           <span
-                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 whitespace-nowrap select-none max-w-[240px] truncate"
+                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] whitespace-nowrap select-none max-w-[240px] truncate"
                             [title]="node.name">
                             {{ node.name }}
                           </span>
@@ -862,18 +865,18 @@
                           (click)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
                           (pointerdown)="$event.stopPropagation()"
-                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 bg-white dark:bg-slate-800 border border-emerald-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-emerald-500 shadow-sm min-w-[80px] max-w-[220px]"
+                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-emerald-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-emerald-500 shadow-sm min-w-[80px] max-w-[220px]"
                           autofocus
                         />
                       } @else {
                         <div
-                          class="flex items-center gap-1 px-1.5 py-0.5 rounded transition-all border border-transparent"
+                          class="flex items-center gap-1 px-2 py-0.5 rounded-md transition-all border border-slate-200/80 bg-white/95 shadow-2xs"
                           [ngClass]="{
-                            'cursor-grabbing ring-1 ring-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/30': isDraggingLabel() && draggingLabelNodeId() === node.id,
-                            'cursor-grab hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:border-dashed hover:border-slate-400/60': !isDraggingLabel()
+                            'cursor-grabbing ring-1 ring-emerald-400 bg-emerald-50/95 border-emerald-300': isDraggingLabel() && draggingLabelNodeId() === node.id,
+                            'cursor-grab hover:bg-slate-50 hover:border-slate-300': !isDraggingLabel()
                           }">
                           <span
-                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] dark:text-slate-100 whitespace-nowrap select-none max-w-[240px] truncate"
+                            class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] whitespace-nowrap select-none max-w-[240px] truncate"
                             [title]="node.name">
                             {{ node.name }}
                           </span>

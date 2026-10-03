@@ -310,7 +310,7 @@ f-flow f-connection path[fConnectionSelection],
 path[fConnectionSelection],
 .f-connection-selection {
   fill: none !important;
-  stroke: rgba(0, 0, 0, 0.001) !important;
+  stroke: rgba(0, 0, 0, 0.005) !important;
   stroke-width: 40px !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
@@ -323,26 +323,28 @@ path[fConnectionSelection],
 .dark f-flow f-connection path[fConnectionSelection],
 .dark path[fConnectionSelection],
 .dark .f-connection-selection {
-  stroke: rgba(255, 255, 255, 0.001) !important;
+  stroke: rgba(255, 255, 255, 0.005) !important;
 }
 
 f-flow .f-connection:hover .f-connection-selection,
 f-flow f-connection:hover .f-connection-selection,
 .f-connection:hover .f-connection-selection {
-  stroke: rgba(0, 0, 0, 0.001) !important;
+  stroke: rgba(0, 0, 0, 0.005) !important;
 }
 
 .dark f-flow .f-connection:hover .f-connection-selection,
 .dark f-flow f-connection:hover .f-connection-selection,
 .dark .f-connection:hover .f-connection-selection {
-  stroke: rgba(255, 255, 255, 0.001) !important;
+  stroke: rgba(255, 255, 255, 0.005) !important;
 }
 
 /* Cursor pointer para toda la conexión al pasar por el área ampliada */
 f-flow .f-connection,
 f-flow f-connection,
-f-flow .f-connection-group {
+f-flow .f-connection-group,
+f-flow f-connection svg .f-connection-group {
   cursor: pointer !important;
+  pointer-events: all !important;
 }
 
 /* La línea visual interna también responde a pointer events */
