@@ -474,16 +474,18 @@
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameActorInput
+                          appAutofocusInput
                           type="text"
+                          [attr.data-rename-node-id]="node.id"
                           [value]="node.name"
                           (keydown.enter)="commitNodeRename(node.id, renameActorInput.value)"
                           (keydown.escape)="cancelNodeRename()"
                           (blur)="commitNodeRename(node.id, renameActorInput.value)"
-                          (click)="$event.stopPropagation()"
-                          (mousedown)="$event.stopPropagation()"
+                          (keydown)="$event.stopPropagation()"
                           (pointerdown)="$event.stopPropagation()"
-                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-sm min-w-[80px] max-w-[220px]"
-                          autofocus
+                          (mousedown)="$event.stopPropagation()"
+                          (click)="$event.stopPropagation()"
+                          class="uml-rename-input text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-sm min-w-[80px] max-w-[220px]"
                         />
                       } @else {
                         <div
@@ -592,15 +594,18 @@
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameUcInput
+                          appAutofocusInput
                           type="text"
+                          [attr.data-rename-node-id]="node.id"
                           [value]="node.name"
                           (keydown.enter)="commitNodeRename(node.id, renameUcInput.value)"
                           (keydown.escape)="cancelNodeRename()"
                           (blur)="commitNodeRename(node.id, renameUcInput.value)"
-                          (click)="$event.stopPropagation()"
+                          (keydown)="$event.stopPropagation()"
+                          (pointerdown)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
-                          class="w-full text-center font-bold text-[11.5px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
-                          autofocus
+                          (click)="$event.stopPropagation()"
+                          class="uml-rename-input w-full text-center font-bold text-[11.5px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
                         />
                       } @else {
                         <span class="font-bold text-[11.5px] font-sans leading-snug text-[#241C18] block text-center break-words select-none max-w-full px-1" [title]="node.name">
@@ -626,15 +631,18 @@
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renamePkgInput
+                          appAutofocusInput
                           type="text"
+                          [attr.data-rename-node-id]="node.id"
                           [value]="getPackageTabTitle(node)"
                           (keydown.enter)="commitNodeRename(node.id, renamePkgInput.value)"
                           (keydown.escape)="cancelNodeRename()"
                           (blur)="commitNodeRename(node.id, renamePkgInput.value)"
-                          (click)="$event.stopPropagation()"
+                          (keydown)="$event.stopPropagation()"
+                          (pointerdown)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
-                          class="w-full font-bold text-[11px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded-none px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
-                          autofocus
+                          (click)="$event.stopPropagation()"
+                          class="uml-rename-input w-full font-bold text-[11px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded-none px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
                         />
                       } @else {
                         <span class="truncate" [title]="getPackageTabTitle(node)">
@@ -707,16 +715,18 @@
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameBoundaryInput
+                          appAutofocusInput
                           type="text"
+                          [attr.data-rename-node-id]="node.id"
                           [value]="node.name"
                           (keydown.enter)="commitNodeRename(node.id, renameBoundaryInput.value)"
                           (keydown.escape)="cancelNodeRename()"
                           (blur)="commitNodeRename(node.id, renameBoundaryInput.value)"
-                          (click)="$event.stopPropagation()"
-                          (mousedown)="$event.stopPropagation()"
+                          (keydown)="$event.stopPropagation()"
                           (pointerdown)="$event.stopPropagation()"
-                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-cyan-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-cyan-500 shadow-sm min-w-[80px] max-w-[220px]"
-                          autofocus
+                          (mousedown)="$event.stopPropagation()"
+                          (click)="$event.stopPropagation()"
+                          class="uml-rename-input text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-cyan-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-cyan-500 shadow-sm min-w-[80px] max-w-[220px]"
                         />
                       } @else {
                         <div
@@ -782,16 +792,18 @@
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameControlInput
+                          appAutofocusInput
                           type="text"
+                          [attr.data-rename-node-id]="node.id"
                           [value]="node.name"
                           (keydown.enter)="commitNodeRename(node.id, renameControlInput.value)"
                           (keydown.escape)="cancelNodeRename()"
                           (blur)="commitNodeRename(node.id, renameControlInput.value)"
-                          (click)="$event.stopPropagation()"
-                          (mousedown)="$event.stopPropagation()"
+                          (keydown)="$event.stopPropagation()"
                           (pointerdown)="$event.stopPropagation()"
-                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-teal-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-teal-500 shadow-sm min-w-[80px] max-w-[220px]"
-                          autofocus
+                          (mousedown)="$event.stopPropagation()"
+                          (click)="$event.stopPropagation()"
+                          class="uml-rename-input text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-teal-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-teal-500 shadow-sm min-w-[80px] max-w-[220px]"
                         />
                       } @else {
                         <div
@@ -857,16 +869,18 @@
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameEntityInput
+                          appAutofocusInput
                           type="text"
+                          [attr.data-rename-node-id]="node.id"
                           [value]="node.name"
                           (keydown.enter)="commitNodeRename(node.id, renameEntityInput.value)"
                           (keydown.escape)="cancelNodeRename()"
                           (blur)="commitNodeRename(node.id, renameEntityInput.value)"
-                          (click)="$event.stopPropagation()"
-                          (mousedown)="$event.stopPropagation()"
+                          (keydown)="$event.stopPropagation()"
                           (pointerdown)="$event.stopPropagation()"
-                          class="text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-emerald-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-emerald-500 shadow-sm min-w-[80px] max-w-[220px]"
-                          autofocus
+                          (mousedown)="$event.stopPropagation()"
+                          (click)="$event.stopPropagation()"
+                          class="uml-rename-input text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border border-emerald-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-emerald-500 shadow-sm min-w-[80px] max-w-[220px]"
                         />
                       } @else {
                         <div
@@ -936,15 +950,18 @@
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameLifelineInput
+                          appAutofocusInput
                           type="text"
+                          [attr.data-rename-node-id]="node.id"
                           [value]="node.name"
                           (keydown.enter)="commitNodeRename(node.id, renameLifelineInput.value)"
                           (keydown.escape)="cancelNodeRename()"
                           (blur)="commitNodeRename(node.id, renameLifelineInput.value)"
-                          (click)="$event.stopPropagation()"
+                          (keydown)="$event.stopPropagation()"
+                          (pointerdown)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
-                          class="w-full text-center font-bold text-xs font-sans tracking-tight text-[#241C18] bg-white border border-cyan-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-cyan-500 shadow-xs"
-                          autofocus
+                          (click)="$event.stopPropagation()"
+                          class="uml-rename-input w-full text-center font-bold text-xs font-sans tracking-tight text-[#241C18] bg-white border border-cyan-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-cyan-500 shadow-xs"
                         />
                       } @else {
                         <div class="flex flex-col items-center justify-center max-w-full">
@@ -1037,15 +1054,18 @@
                     @if (renamingNodeId() === node.id) {
                       <input
                         #renameClassInput
+                        appAutofocusInput
                         type="text"
+                        [attr.data-rename-node-id]="node.id"
                         [value]="node.name"
                         (keydown.enter)="commitNodeRename(node.id, renameClassInput.value)"
                         (keydown.escape)="cancelNodeRename()"
                         (blur)="commitNodeRename(node.id, renameClassInput.value)"
-                        (click)="$event.stopPropagation()"
+                        (keydown)="$event.stopPropagation()"
+                        (pointerdown)="$event.stopPropagation()"
                         (mousedown)="$event.stopPropagation()"
-                        class="w-full text-center font-bold text-[12px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
-                        autofocus
+                        (click)="$event.stopPropagation()"
+                        class="uml-rename-input w-full text-center font-bold text-[12px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
                       />
                     } @else {
                       <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">

@@ -1,5 +1,7 @@
 import {
   Component,
+  Directive,
+  AfterViewInit,
   input,
   output,
   signal,
@@ -43,10 +45,31 @@ export interface DiagramCanvasViewState {
   scrollTop: number;
 }
 
+@Directive({
+  selector: 'input[appAutofocusInput]',
+  standalone: true,
+})
+export class AutofocusInputDirective implements AfterViewInit {
+  private readonly el = inject(ElementRef<HTMLInputElement>);
+
+  ngAfterViewInit(): void {
+    const input = this.el.nativeElement;
+    const focusAndSelect = () => {
+      try {
+        input.focus({ preventScroll: true });
+        input.select();
+      } catch (_) {}
+    };
+    requestAnimationFrame(focusAndSelect);
+    setTimeout(focusAndSelect, 30);
+    setTimeout(focusAndSelect, 100);
+  }
+}
+
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
-  imports: [CommonModule, FFlowModule, NgIconComponent, ...UML_SVG_COMPONENTS],
+  imports: [CommonModule, FFlowModule, NgIconComponent, AutofocusInputDirective, ...UML_SVG_COMPONENTS],
   host: {
     class: 'flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden',
   },
@@ -244,6 +267,24 @@ export class DiagramCanvasComponent {
   startRenameNode(nodeId: string): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(nodeId)) return;
     this.renamingNodeId.set(nodeId);
+    this.cdr.detectChanges();
+
+    const doFocus = () => {
+      const board = this.boardElementRef?.nativeElement || document;
+      const input = (board.querySelector(`[data-rename-node-id="${nodeId}"]`) as HTMLInputElement | null)
+        || (board.querySelector('.uml-rename-input') as HTMLInputElement | null)
+        || (document.querySelector(`[data-rename-node-id="${nodeId}"]`) as HTMLInputElement | null);
+      if (input) {
+        try {
+          input.focus({ preventScroll: true });
+          input.select();
+        } catch (_) {}
+      }
+    };
+
+    requestAnimationFrame(doFocus);
+    setTimeout(doFocus, 30);
+    setTimeout(doFocus, 100);
   }
 
   commitNodeRename(nodeId: string, newName: string): void {

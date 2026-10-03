@@ -283,3 +283,28 @@ export interface SaveDiagramAstRequest {
     messages?: UmlMessage[];
   }[];
 }
+
+export function hexToRgb(hex: string | null | undefined): { r: number; g: number; b: number } {
+  let clean = (hex || '#FFFDDD').replace('#', '').trim();
+  if (clean.length === 3) {
+    clean = clean.split('').map((c) => c + c).join('');
+  }
+  const num = parseInt(clean, 16);
+  if (isNaN(num) || clean.length !== 6) {
+    return { r: 255, g: 253, b: 221 };
+  }
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  };
+}
+
+export function rgbToHex(r: number, g: number, b: number): string {
+  const clamp = (v: any) => {
+    const n = Math.round(Number(v) || 0);
+    return Math.max(0, Math.min(255, n));
+  };
+  const toHex = (v: number) => clamp(v).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+}

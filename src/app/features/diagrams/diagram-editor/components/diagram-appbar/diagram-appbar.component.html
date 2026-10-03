@@ -499,10 +499,16 @@
             [class.opacity-40]="!selectedNodeId() || isReadOnly()"
             class="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium cursor-pointer">
             <input
+              #nativeColorInput
               type="color"
               [disabled]="!selectedNodeId() || isReadOnly()"
-              [value]="selectedNodeColor() || '#FFFDDD'"
+              (focus)="onColorPickerFocus()"
+              (blur)="onColorPickerBlur()"
+              (click)="onColorPickerFocus()"
               (input)="onCustomColorInput($event)"
+              (change)="onCustomColorChange($event)"
+              (keydown)="$event.stopPropagation()"
+              (pointerdown)="$event.stopPropagation()"
               class="w-3.5 h-3.5 p-0 border-0 rounded cursor-pointer disabled:cursor-not-allowed bg-transparent" />
             <span>Elementos de clase</span>
             <ng-icon name="heroChevronDown" class="text-[9px] text-slate-400"></ng-icon>

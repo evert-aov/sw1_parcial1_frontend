@@ -191,38 +191,45 @@
           </label>
           <div class="flex items-center gap-3">
             <input
+              #modalColorInput
               type="color"
-              [(ngModel)]="editingNode()!.color"
+              (focus)="onColorPickerFocus()"
+              (blur)="onColorPickerBlur()"
+              (click)="onColorPickerFocus()"
+              (input)="onColorInput($event)"
+              (change)="onColorChange($event)"
+              (keydown)="$event.stopPropagation()"
+              (pointerdown)="$event.stopPropagation()"
               class="w-9 h-8 p-0 border border-slate-300 dark:border-slate-700 rounded-lg cursor-pointer bg-transparent"
             />
             <div class="flex items-center gap-1.5">
               <button
                 type="button"
-                (click)="editingNode()!.color = '#FFFDDD'"
+                (click)="setColor('#FFFDDD')"
                 class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
                 style="background-color: #FFFDDD"
                 title="Amarillo UML"></button>
               <button
                 type="button"
-                (click)="editingNode()!.color = '#D2EEF3'"
+                (click)="setColor('#D2EEF3')"
                 class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
                 style="background-color: #D2EEF3"
                 title="Cyan BCE"></button>
               <button
                 type="button"
-                (click)="editingNode()!.color = '#E9F5EC'"
+                (click)="setColor('#E9F5EC')"
                 class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
                 style="background-color: #E9F5EC"
                 title="Verde Suave"></button>
               <button
                 type="button"
-                (click)="editingNode()!.color = '#F5EBF7'"
+                (click)="setColor('#F5EBF7')"
                 class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
                 style="background-color: #F5EBF7"
                 title="Púrpura Suave"></button>
               <button
                 type="button"
-                (click)="editingNode()!.color = '#FFFFFF'"
+                (click)="setColor('#FFFFFF')"
                 class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
                 style="background-color: #FFFFFF"
                 title="Blanco"></button>

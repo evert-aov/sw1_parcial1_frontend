@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, input, output, ElementRef, ViewChild } from '@angular/core';
+import { Component, inject, signal, computed, input, output, ElementRef, ViewChild, AfterViewInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -45,6 +45,7 @@ import { CollaborationService } from '../../../../../core/services/collaboration
 import { UserGuideService } from '../../../../../core/services/user-guide.service';
 import { TranslatePipe, LanguageSelectorComponent, TranslationService } from '../../../../../core/i18n';
 import { ThemeToggleComponent } from '../../../../../core/components/theme-toggle/theme-toggle.component';
+import { hexToRgb, rgbToHex } from '../../../../../core/models/diagram.model';
 
 export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'start';
 
@@ -94,7 +95,7 @@ export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'star
   ],
   templateUrl: './diagram-appbar.component.html',
 })
-export class DiagramAppbarComponent {
+export class DiagramAppbarComponent implements AfterViewInit {
   readonly authService = inject(AuthService);
   readonly collaborationService = inject(CollaborationService);
   readonly guideService = inject(UserGuideService);
@@ -258,7 +259,45 @@ export class DiagramAppbarComponent {
     }
   }
 
+  @ViewChild('nativeColorInput') nativeColorInputRef?: ElementRef<HTMLInputElement>;
+  private isPickerOpen = false;
+
+  constructor() {
+    effect(() => {
+      const color = this.selectedNodeColor() || '#FFFDDD';
+      if (!this.isPickerOpen && this.nativeColorInputRef?.nativeElement) {
+        this.nativeColorInputRef.nativeElement.value = color;
+      }
+    });
+  }
+
+  ngAfterViewInit(): void {
+    if (this.nativeColorInputRef?.nativeElement) {
+      this.nativeColorInputRef.nativeElement.value = this.selectedNodeColor() || '#FFFDDD';
+    }
+  }
+
+  onColorPickerFocus(): void {
+    this.isPickerOpen = true;
+  }
+
+  onColorPickerBlur(): void {
+    this.isPickerOpen = false;
+    if (this.nativeColorInputRef?.nativeElement) {
+      this.nativeColorInputRef.nativeElement.value = this.selectedNodeColor() || '#FFFDDD';
+    }
+  }
+
   onCustomColorInput(event: Event): void {
+    this.isPickerOpen = true;
+    const target = event.target as HTMLInputElement;
+    if (target?.value) {
+      this.changeNodeColor.emit(target.value);
+    }
+  }
+
+  onCustomColorChange(event: Event): void {
+    this.isPickerOpen = false;
     const target = event.target as HTMLInputElement;
     if (target?.value) {
       this.changeNodeColor.emit(target.value);

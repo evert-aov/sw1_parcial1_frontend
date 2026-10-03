@@ -1,4 +1,4 @@
-import { Component, input, output, signal, effect } from '@angular/core';
+import { Component, input, output, signal, effect, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '../../../../../core/i18n';
@@ -6,6 +6,8 @@ import {
   UmlClassNode,
   UML_PREDEFINED_TYPES,
   UML_PREDEFINED_RETURN_TYPES,
+  hexToRgb,
+  rgbToHex,
 } from '../../../../../core/models/diagram.model';
 
 @Component({
@@ -43,12 +45,59 @@ export class EditNodeModalComponent {
             }));
           }
           this.editingNode.set(cloned);
+          setTimeout(() => {
+            if (this.modalColorInputRef?.nativeElement && !this.isModalPickerOpen) {
+              this.modalColorInputRef.nativeElement.value = cloned.color || '#FFFDDD';
+            }
+          }, 0);
         } else if (!this.isOpen()) {
           this.editingNode.set(null);
         }
       },
       { allowSignalWrites: true }
     );
+  }
+
+  @ViewChild('modalColorInput') modalColorInputRef?: ElementRef<HTMLInputElement>;
+  private isModalPickerOpen = false;
+
+  setColor(color: string): void {
+    const curr = this.editingNode();
+    if (curr) {
+      curr.color = color;
+      if (this.modalColorInputRef?.nativeElement) {
+        this.modalColorInputRef.nativeElement.value = color;
+      }
+    }
+  }
+
+  onColorPickerFocus(): void {
+    this.isModalPickerOpen = true;
+  }
+
+  onColorPickerBlur(): void {
+    this.isModalPickerOpen = false;
+    if (this.modalColorInputRef?.nativeElement && this.editingNode()) {
+      this.modalColorInputRef.nativeElement.value = this.editingNode()!.color || '#FFFDDD';
+    }
+  }
+
+  onColorInput(event: Event): void {
+    this.isModalPickerOpen = true;
+    const target = event.target as HTMLInputElement;
+    const curr = this.editingNode();
+    if (curr && target?.value) {
+      curr.color = target.value;
+    }
+  }
+
+  onColorChange(event: Event): void {
+    this.isModalPickerOpen = false;
+    const target = event.target as HTMLInputElement;
+    const curr = this.editingNode();
+    if (curr && target?.value) {
+      curr.color = target.value;
+    }
   }
 
   addAttribute(): void {

@@ -182,6 +182,8 @@
                           <input
                             type="color"
                             [(ngModel)]="msg.color"
+                            (keydown)="$event.stopPropagation()"
+                            (pointerdown)="$event.stopPropagation()"
                             class="w-6 h-6 p-0 border border-slate-300 dark:border-slate-700 rounded cursor-pointer bg-transparent shrink-0"
                             [title]="'Color: ' + (msg.color || '#241C18')"
                           />
