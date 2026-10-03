@@ -273,64 +273,58 @@ export class DiagramSidebarComponent {
 
   isNodeTypeCompatibleWithCurrent(nodeType?: string, sourceDiagramType?: DiagramType | string): boolean {
     const currentType = this.activeDiagramType();
+    const type = nodeType || 'class';
+
     if (currentType === DiagramType.USE_CASE) {
-      return nodeType === 'actor' || nodeType === 'use_case' || sourceDiagramType === DiagramType.USE_CASE;
+      return type === 'actor' || type === 'use_case';
     }
     if (currentType === DiagramType.PACKAGE) {
-      return nodeType === 'package' || nodeType === 'use_case' || sourceDiagramType === DiagramType.PACKAGE;
+      return type === 'package' || type === 'use_case' || type === 'actor';
     }
     if (currentType === DiagramType.COMMUNICATION) {
       return (
-        nodeType === 'actor' ||
-        nodeType === 'boundary' ||
-        nodeType === 'control' ||
-        nodeType === 'entity' ||
-        nodeType === 'class' ||
-        sourceDiagramType === DiagramType.COMMUNICATION
+        type === 'actor' ||
+        type === 'boundary' ||
+        type === 'control' ||
+        type === 'entity' ||
+        type === 'class'
       );
     }
     if (currentType === DiagramType.SEQUENCE) {
       return (
-        nodeType === 'actor' ||
-        nodeType === 'lifeline' ||
-        nodeType === 'class' ||
-        nodeType === 'boundary' ||
-        nodeType === 'control' ||
-        nodeType === 'entity' ||
-        sourceDiagramType === DiagramType.SEQUENCE
+        type === 'actor' ||
+        type === 'lifeline' ||
+        type === 'class' ||
+        type === 'boundary' ||
+        type === 'control' ||
+        type === 'entity'
       );
     }
     if (currentType === DiagramType.CLASS) {
-      return !nodeType || nodeType === 'class' || sourceDiagramType === DiagramType.CLASS;
+      return type === 'class';
     }
     return true;
   }
 
   getCopyTooltip(diag: DiagramDto, node: any): string {
+    this.translationService.currentLang();
     const isCurrent = diag.id === this.currentDiagramId();
-    const typeLabel =
-      node.nodeType === 'actor'
-        ? 'actor'
-        : node.nodeType === 'use_case'
-        ? 'caso de uso'
-        : node.nodeType === 'package'
-        ? 'paquete'
-        : node.nodeType === 'boundary'
-        ? 'boundary'
-        : node.nodeType === 'control'
-        ? 'control'
-        : node.nodeType === 'entity'
-        ? 'entidad'
-        : node.nodeType === 'lifeline'
-        ? 'línea de vida'
-        : 'clase';
+    const typeLabel = this.getNodeTypeLabel(node.nodeType);
     if (isCurrent) {
-      return `Duplicar ${typeLabel} "${node.name}" en este lienzo`;
+      return this.translationService.translate('editor.explorer.duplicateNode', {
+        type: typeLabel,
+        name: node.name,
+      });
     }
     if (!this.isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type)) {
-      return `Incompatible con diagramas de tipo ${this.activeDiagramType()}`;
+      return this.translationService.translate('editor.explorer.incompatibleNode', {
+        type: this.getDiagramTypeLabel(this.activeDiagramType()),
+      });
     }
-    return `Copiar ${typeLabel} "${node.name}" al diagrama actual`;
+    return this.translationService.translate('editor.explorer.copyNode', {
+      type: typeLabel,
+      name: node.name,
+    });
   }
 
   onCopyNode(diag: DiagramDto, node: any, event?: MouseEvent): void {
@@ -348,6 +342,9 @@ export class DiagramSidebarComponent {
     if (diag.id === this.currentDiagramId()) {
       this.selectNode.emit(node.id);
     } else {
+      if (!this.isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type)) {
+        return;
+      }
       this.onCopyNode(diag, node);
     }
   }

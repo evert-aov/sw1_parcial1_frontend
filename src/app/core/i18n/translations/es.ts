@@ -293,6 +293,9 @@ export const es = {
       delete: 'Eliminar diagrama',
       noNodes: '(Sin nodos)',
       clickToSelect: 'Clic para seleccionar en el lienzo',
+      duplicateNode: 'Duplicar {{type}} "{{name}}" en este lienzo',
+      incompatibleNode: 'Incompatible con diagramas de tipo {{type}}',
+      copyNode: 'Copiar {{type}} "{{name}}" al diagrama actual',
       resizerTooltip: 'Arrastra para ajustar el ancho (Doble clic para restablecer)',
       nodeTypes: {
         actor: 'actor',

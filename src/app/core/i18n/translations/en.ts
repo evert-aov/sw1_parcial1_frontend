@@ -293,6 +293,9 @@ export const en = {
       delete: 'Delete diagram',
       noNodes: '(No nodes)',
       clickToSelect: 'Click to select on canvas',
+      duplicateNode: 'Duplicate {{type}} "{{name}}" on this canvas',
+      incompatibleNode: 'Incompatible with {{type}} diagrams',
+      copyNode: 'Copy {{type}} "{{name}}" to current diagram',
       resizerTooltip: 'Drag to adjust width (Double-click to reset)',
       nodeTypes: {
         actor: 'actor',

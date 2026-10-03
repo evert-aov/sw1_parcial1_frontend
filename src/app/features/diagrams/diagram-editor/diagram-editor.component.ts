@@ -2951,13 +2951,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         return;
       }
     } else if (currentType === DiagramType.PACKAGE) {
-      const invalid = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case');
+      const invalid = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case' && n.nodeType !== 'actor');
       if (invalid) {
-        alert('Solo se pueden pegar paquetes y casos de uso en diagramas de Paquetes.');
+        alert('Solo se pueden pegar paquetes, casos de uso y actores en diagramas de Paquetes.');
+        return;
+      }
+    } else if (currentType === DiagramType.COMMUNICATION) {
+      const invalid = clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor' && n.nodeType !== 'class');
+      if (invalid) {
+        alert('Solo se pueden pegar actores, boundaries, controles y entidades en diagramas de Comunicación.');
+        return;
+      }
+    } else if (currentType === DiagramType.SEQUENCE) {
+      const invalid = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'lifeline' && n.nodeType !== 'class' && n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity');
+      if (invalid) {
+        alert('Solo se pueden pegar actores, líneas de vida o participantes en diagramas de Secuencia.');
         return;
       }
     } else if (currentType === DiagramType.CLASS) {
-      const invalid = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'package');
+      const invalid = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'package' || n.nodeType === 'boundary' || n.nodeType === 'control' || n.nodeType === 'entity' || n.nodeType === 'lifeline');
       if (invalid) {
         alert('Solo se pueden pegar clases en diagramas de Clases.');
         return;
@@ -3062,14 +3074,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         alert('Solo se pueden copiar paquetes, casos de uso y actores en diagramas de Paquetes.');
         return;
       }
-    } else if (currentType === DiagramType.CLASS) {
-      if (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-        alert('Solo se pueden copiar clases en diagramas de Clases.');
+    } else if (currentType === DiagramType.COMMUNICATION) {
+      if (node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity' && node.nodeType !== 'actor' && node.nodeType !== 'class') {
+        alert('Solo se pueden copiar actores, boundaries, controles y entidades en diagramas de Comunicación.');
         return;
       }
-    } else if (currentType === DiagramType.COMMUNICATION) {
-      if (node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity' && node.nodeType !== 'actor') {
-        alert('Solo se pueden copiar actores, boundaries, controles y entidades en diagramas de Comunicación.');
+    } else if (currentType === DiagramType.SEQUENCE) {
+      if (node.nodeType !== 'actor' && node.nodeType !== 'lifeline' && node.nodeType !== 'class' && node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity') {
+        alert('Solo se pueden copiar actores, líneas de vida o participantes en diagramas de Secuencia.');
+        return;
+      }
+    } else if (currentType === DiagramType.CLASS) {
+      if (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' || node.nodeType === 'lifeline') {
+        alert('Solo se pueden copiar clases en diagramas de Clases.');
         return;
       }
     }
@@ -3079,12 +3096,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
 
-    const posX = isCurrentDiag && node.position?.x
+    let posX = isCurrentDiag && node.position?.x
       ? node.position.x + 40
       : Math.max(60, Math.round(scrollLeft + 150 + Math.random() * 50));
-    const posY = isCurrentDiag && node.position?.y
+    let posY = isCurrentDiag && node.position?.y
       ? node.position.y + 40
       : Math.max(60, Math.round(scrollTop + 100 + Math.random() * 50));
+
+    if (currentType === DiagramType.SEQUENCE && (node.nodeType === 'actor' || node.nodeType === 'lifeline')) {
+      posY = 50;
+      const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
+      if (topNodes.length > 0) {
+        const maxRight = Math.max(...topNodes.map((n) => (n.position?.x || 0) + (n.width || 120)));
+        posX = maxRight + 60;
+      } else {
+        posX = 80;
+      }
+    }
 
     let newName = node.name;
     if (isCurrentDiag) {
