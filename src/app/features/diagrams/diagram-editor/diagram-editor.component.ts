@@ -3415,8 +3415,31 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         if (n.id?.startsWith('actor_')) nodeType = 'actor';
         else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
         else if (n.id?.startsWith('package_')) nodeType = 'package';
+        else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
+        else if (n.id?.startsWith('control_')) nodeType = 'control';
+        else if (n.id?.startsWith('entity_')) nodeType = 'entity';
+        else if (n.id?.startsWith('lifeline_')) nodeType = 'lifeline';
       }
       const isManuallyResized = !!n.isCustomSize || (!!n.customHeight && n.customHeight > 0);
+      let defaultWidth = 220;
+      let defaultHeight: number | undefined = undefined;
+      if (nodeType === 'actor') {
+        defaultWidth = 90;
+        defaultHeight = 100;
+      } else if (nodeType === 'use_case') {
+        defaultWidth = 150;
+        defaultHeight = 65;
+      } else if (nodeType === 'package') {
+        defaultWidth = 200;
+        defaultHeight = 120;
+      } else if (['boundary', 'control', 'entity'].includes(nodeType)) {
+        defaultWidth = 90;
+        defaultHeight = 95;
+      } else if (nodeType === 'lifeline') {
+        defaultWidth = 120;
+        defaultHeight = 48;
+      }
+
       return {
         id: n.id || `class_ai_${Date.now()}_${i}`,
         name: n.name || (n.isAnchor ? '' : `Clase_${i + 1}`),
@@ -3424,13 +3447,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
           y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
         },
-        width: n.isAnchor ? 0 : (n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : (nodeType === 'package' ? 200 : 220)))),
-        height: n.isAnchor ? 0 : n.height,
+        width: n.isAnchor ? 0 : (n.width || defaultWidth),
+        height: n.isAnchor ? 0 : (n.height || defaultHeight),
         customWidth: n.customWidth,
         customHeight: n.customHeight,
         isCustomSize: isManuallyResized,
         color: n.color || (nodeType === 'use_case' || nodeType === 'actor' ? '#FFFDDD' : null),
         nodeType,
+        activations: n.activations || [],
+        labelOffset: n.labelOffset,
         isAnchor: !!n.isAnchor,
         assocMainConnId: n.assocMainConnId,
         attributes: (n.attributes || []).map((a: any) => ({
@@ -3454,22 +3479,35 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private sanitizeClientConnections(conns: any[], validNodes: UmlClassNode[]): UmlConnection[] {
     const nodeMap = new Map(validNodes.map((n) => [n.id, n]));
     const nodeIds = new Set(validNodes.map((n) => n.id));
+    const extractBaseNodeId = (rawId?: string) => {
+      if (!rawId) return '';
+      return rawId
+        .replace(/_(top|bottom|left|right)$/, '')
+        .replace(/_slot_\d+$/, '');
+    };
+
     return conns
       .filter((c) => {
-        const s = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-        const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        const s = c.sourceNodeId || extractBaseNodeId(c.sourceId);
+        const t = c.targetNodeId || extractBaseNodeId(c.targetId);
         return nodeIds.has(s) && nodeIds.has(t);
       })
       .map((c) => {
-        const sourceNodeId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-        const targetNodeId = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        const sourceNodeId = c.sourceNodeId || extractBaseNodeId(c.sourceId);
+        const targetNodeId = c.targetNodeId || extractBaseNodeId(c.targetId);
         const sourceNode = nodeMap.get(sourceNodeId);
         const targetNode = nodeMap.get(targetNodeId);
 
         let sourceId = c.sourceId;
         let targetId = c.targetId;
 
-        if (sourceNode && targetNode) {
+        const isSeqConn =
+          this.activeDiagramType() === DiagramType.SEQUENCE ||
+          ['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ||
+          (c.sourceId && c.sourceId.includes('_slot_')) ||
+          (c.targetId && c.targetId.includes('_slot_'));
+
+        if (!isSeqConn && sourceNode && targetNode) {
           if (sourceNodeId === targetNodeId) {
             const validConnectors = [
               `${sourceNodeId}_top`,
@@ -3508,14 +3546,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           id: c.id || `conn_ai_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
           sourceNodeId,
           targetNodeId,
-          sourceId: sourceId || `${sourceNodeId}_right`,
-          targetId: targetId || `${targetNodeId}_left`,
-          type: (c.type as UmlRelationshipType) || 'association',
+          sourceId: sourceId || (isSeqConn ? `${sourceNodeId}_slot_0` : `${sourceNodeId}_right`),
+          targetId: targetId || (isSeqConn ? `${targetNodeId}_slot_0` : `${targetNodeId}_left`),
+          type: (c.type as UmlRelationshipType) || (isSeqConn ? 'sync' : 'association'),
           lineStyle: (c.lineStyle as UmlLineStyle) || this.defaultLineStyle(),
           name: c.name || undefined,
           sourceMultiplicity: c.sourceMultiplicity || (sourceNodeId === targetNodeId ? '1' : ''),
           targetMultiplicity: c.targetMultiplicity || (sourceNodeId === targetNodeId ? '0..*' : ''),
           assocAnchorNodeId: c.assocAnchorNodeId || undefined,
+          messages: c.messages && c.messages.length > 0 ? c.messages : undefined,
         };
       });
   }
