@@ -18,35 +18,70 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
 
 ## ✨ Características Principales
 
-* **Lienzo UML de Alto Rendimiento (@foblex/flow)**:
-  * Creación y edición interactiva de clases, interfaces, enums y paquetes.
-  * Gestión granular de miembros: visibilidades (`+`, `-`, `#`, `~`), tipos de datos de base de datos/Java, modificadores (`PK`, `AutoIncrement`, `Nullable`, `Unique`) y métodos con parámetros tipados.
-  * Conexiones inteligentes con enrutamiento dinámico de conectores y visualización de multiplicidades ($1..1$, $0..*$, $1..*$) y nombres de relación mediante badges visibles.
-  * Soporte para relaciones semánticas: Asociación, Agregación, Composición, Herencia/Generalización, Realización y Dependencia.
+* **Soporte Multidiagrama UML 2.5 Completo (@foblex/flow & SVG)**:
+  * **Diagrama de Clases (Class Diagram)**:
+    * Clases, interfaces, enumeraciones, paquetes y clases de asociación.
+    * Gestión granular de atributos y operaciones con visibilidades (`+`, `-`, `#`, `~`), tipos de datos de base de datos/Java, modificadores (`PK`, `AutoIncrement`, `Nullable`, `Unique`) y parámetros de métodos tipados.
+    * Relaciones semánticas: Asociación, Agregación, Composición, Herencia/Generalización, Realización y Dependencia con marcadores conformes al estándar UML.
+  * **Diagrama de Casos de Uso (Use Case Diagram)**:
+    * Actores modelados mediante SVG vectorial calibrado con encuadre de cabeza y cuerpo balanceado sin recortes visuales.
+    * Casos de uso elípticos con soporte para estereotipos (`«include»`, `«extend»`).
+    * Límites del Sistema (*System Boundary*) con agrupación visual.
+    * Posicionamiento optimizado de estereotipos y etiquetas de relación, asegurando que se ubiquen por debajo del nombre del actor para evitar solapamientos.
+  * **Diagrama de Secuencia (Sequence Diagram)**:
+    * Líneas de vida (*Lifelines*) para objetos y actores con cabeceras estilizadas y líneas discontinuas verticales.
+    * Barras de activación vertical dinámicas (*Execution Specifications / Activations*) con cálculo automático de intervalos solapados e interacciones concurrentes.
+    * Mensajes síncronos (flecha sólida), asíncronos (flecha abierta), retornos (`reply` con línea discontinua), creación de objetos y llamadas reflexivas/recursivas con asignación cromática personalizable y numeración secuencial.
+  * **Diagrama de Comunicación / Colaboración (Communication Diagram)**:
+    * Participantes y actores con estereotipos de Robustez de Jacobson (**Boundary**, **Control**, **Entity**), visualmente calibrados con diámetros de círculos armónicos e idénticos al tamaño del Entity.
+    * Conexiones con etiquetas de mensajes, orden de secuencia numérico jerárquico y flechas direccionales de llamada.
+  * **Diagrama de Paquetes (Package Diagram)**:
+    * Contenedores de paquetes con pestaña (*tab*) superior estilizada.
+    * Relaciones de dependencia y estereotipos de importación/acceso (`«import»`, `«access»`, `«merge»`).
+
+* **Motor de Interacción y Relaciones UML de Alta Precisión**:
+  * **Hit Target Expandido de 40px**: Facilita la selección y edición de cualquier relación sin importar su delgadez visual (trazo elegante de 1.3px a 2.5px), ofreciendo un área de impacto invisible de 40px (±20px a cada lado) que previene clics fallidos a través de la línea hacia el lienzo.
+  * **Hit-Testing SVG Robusto con Alfa No Nulo**: Implementación técnica en CSS con `stroke: rgba(0, 0, 0, 0.001)` y `pointer-events: stroke`, superando las limitaciones nativas de Chromium/WebKit donde los trazos transparentes (`alpha = 0`) son ignorados por el motor de detección de puntero.
+  * **Doble Clic Inteligente por Cadencia (< 450ms) y Traversal DOM**: Permite abrir instantáneamente el modal de edición de relación (`EditConnectionModalComponent`) con un doble clic rápido en cualquier tramo de la línea (no solo en el badge central), identificando la conexión mediante recorrido ascendente del árbol SVG/DOM y soporte de atributos `data-connection-id`.
+  * **Modal de Edición de Conexión en Caliente**: Configuración reactiva de nombre, tipo de relación, multiplicidad de origen/destino, estereotipos y estilos de línea.
+
+* **Espacio de Trabajo Multi-Pestaña (Multi-Tab Workspace)**:
+  * Barra de pestañas integrada en el editor que permite mantener múltiples diagramas abiertos simultáneamente (Clases, Casos de Uso, Secuencia, Comunicación, Paquetes).
+  * Conmutación instantánea entre diagramas dentro del mismo proyecto sin recargar el estado, conservando el nivel de zoom y posición del viewport en cada pestaña.
+
+* **Toolbox Responsivo y Consistente**:
+  * Barra de herramientas lateral con ancho adaptativo e iconos SVG de escala fija que conservan su nitidez y proporción sin agrandamientos desmedidos al expandir la barra.
+  * Formularios y modales de edición limpios y consistentes para atributos, operaciones y miembros sin duplicación de indicadores visuales.
+
 * **Colaboración Multiusuario en Tiempo Real**:
   * Sincronización instantánea mediante **Socket.io**.
   * Visualización de cursores remotos con identificación de usuario y color asignado.
   * Arrastre de nodos en vivo entre colaboradores.
   * Sistema de bloqueo exclusivo de nodos (`NodeLock`) para evitar conflictos de edición simultánea.
   * Chat integrado en vivo en cada sala de diagrama.
+
 * **Copilot de Inteligencia Artificial Híbrido (Local & Multimodal)**:
   * Panel lateral flotante con historial conversacional reactivo.
   * Soporte de inferencia soberana local con **Ollama (`qwen2.5:3b`)** para mutaciones del AST sin salida de datos a internet, con respaldo cloud en **Google Gemini 2.5 Flash**.
   * Entrada visual mediante captura de cámara web (Webcam) o subida de imágenes para transformar bocetos en diagramas UML interactivos.
+
 * **Interoperabilidad CASE (Enterprise Architect)**:
   * Exportación e importación de archivos estándar **XMI 2.1**.
   * Historial de versiones del diagrama con previsualización y restauración instantánea.
+
 * **Explorador y Generador de Código Fullstack**:
   * Modal interactivo con árbol de archivos en tiempo real y resaltado de sintaxis.
   * **Spring Boot 3 (Java 21)** con JPA, Flyway, Docker Compose y PostgreSQL.
   * **Flutter Móvil (Clean Architecture / BLoC)** con **Asistente IA On-Device** integrado que descarga automáticamente el modelo **Qwen 2.5 GGUF** (`qwen2.5-0.5b-instruct-q4_k_m.gguf` desde Hugging Face) ejecutando inferencia 100% offline con `llama.cpp` en el dispositivo móvil, sin necesidad de apps externas.
   * Descarga directa del proyecto completo empaquetado en `.zip` o distribución en la nube mediante URLs prefirmadas de **Amazon S3**.
+
 * **Guía Interactiva de Usuario & Chatbot Inteligente**:
   * **Sustituto del Manual Tradicional**: Asistente conversacional flotante disponible en toda la aplicación para orientar a nuevos usuarios en tiempo real.
   * **Tour Guiado en 7 Pasos**: Flujo paso a paso con controles de navegación (Anterior, Siguiente, Finalizar) cubriendo desde la creación de proyectos hasta el despliegue con Docker y Flutter.
   * **Chatbot con Búsqueda Semántica**: Respuestas instantáneas en lenguaje natural con renderizado enriquecido (Rich HTML), títulos estilizados, viñetas y alertas.
   * **Bloques de Código con Copia en 1 Clic**: Snippets de terminal para Docker, Gradle y Flutter con retroalimentación visual de copiado.
   * **Carrusel de Temas con Scroll y Flechas**: Selector horizontal con botones de desplazamiento suave, soporte de rueda de ratón (`mousewheel`) y barra de scroll estilizada (`topics-scrollbar`).
+
 * **Gestión de Proyectos & Seguridad**:
   * Dashboard de proyectos con control de miembros y asignación de roles (`OWNER`, `EDITOR`, `VIEWER`).
   * Autenticación JWT persistente con interceptores HTTP reactivos y guardias de ruta.
@@ -57,6 +92,7 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
 
 * **Framework:** Angular 22+ (Standalone Components, Signals & Reactive Forms).
 * **Motor de Diagramación:** `@foblex/flow` v19 + `@foblex/2d`.
+* **Renderizado SVG:** Componentes vectoriales personalizados para Actores, Jacobson Robustness (Boundary, Control, Entity), Activaciones y Marcadores UML.
 * **Colaboración:** `socket.io-client`.
 * **Estilos & Diseño:** Tailwind CSS v4 + Heroicons (`@ng-icons/heroicons`).
 * **Formatos & Utilidades:** `fast-xml-parser` (XMI Parsing), `html-to-image` (Exportación PNG).
@@ -179,8 +215,11 @@ frontend/
 
 ## 🧩 Módulos y Componentes Clave
 
+* **`DiagramEditorComponent`**: Orquestador principal del editor, gestión de pestañas multidiagrama, atajos de teclado, persistencia y control de sincronización en tiempo real.
+* **`DiagramCanvasComponent`**: Lienzo visual interactivo con `@foblex/flow` que renderiza nodos de Clases, Casos de Uso, Secuencia, Comunicación y Paquetes, barras de activación, líneas de vida y relaciones con hit target expandido de 40px y captura de eventos SVG.
+* **`DiagramToolboxComponent`**: Barra de herramientas responsiva y consistente con iconos vectoriales fijos para añadir entidades, actores, casos de uso, paquetes y objetos de Jacobson a cada diagrama.
+* **`EditConnectionModalComponent`**: Modal flotante reactivo activado por doble clic sobre cualquier relación para editar nombres, multiplicidades ($0..1$, $1..*$, etc.), estereotipos y tipo de relación UML.
 * **`UserGuideChatbotComponent`**: Manual de usuario interactivo global tipo chatbot con tour guiado en 7 etapas, búsqueda semántica en lenguaje natural, renderizado Markdown enriquecido, bloques con copia de comandos y carrusel de temas con scroll y flechas.
-* **`DiagramEditorComponent`**: Lienzo principal con soporte de zoom, pan, selección múltiple, creación de nodos mediante doble clic o menú contextual, y conexión visual de relaciones UML.
 * **`AiAssistantPanelComponent`**: Asistente inteligente lateral con integración de cámara web para captura en vivo y prompts en lenguaje natural.
 * **`SpringBootModalComponent`**: Modal de generación de código fullstack con explorador de archivos y visor de código en tiempo real para Java/Spring Boot y Dart/Flutter.
 * **`DiagramAppbarComponent`**: Barra de herramientas superior con opciones de guardado, historial de versiones XMI, exportación a imagen PNG, control de colaboradores, botón de Manual Interactivo y estado de conexión en vivo.
