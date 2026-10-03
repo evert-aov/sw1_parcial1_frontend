@@ -428,11 +428,14 @@
                     </button>
 
                     <!-- Stick figure del Actor UML con cabeza completa coloreada -->
-                    <div class="w-full h-full flex items-center justify-center p-0 overflow-hidden text-[#241C18]">
+                    <div
+                      class="w-full h-full flex items-center justify-center overflow-visible text-[#241C18]"
+                      [ngClass]="activeDiagramType() === 'use_case' ? 'p-2' : 'p-0'">
                       <app-actor-svg
                         [fillColor]="node.color || '#FFFDDD'"
                         strokeColor="currentColor"
-                        className="w-full h-full max-w-full max-h-full text-[#241C18]"
+                        [ngClass]="activeDiagramType() === 'use_case' ? '!w-[72%] !h-[72%]' : 'w-full h-full'"
+                        [className]="activeDiagramType() === 'use_case' ? 'w-[72%] h-[72%] max-w-[72%] max-h-[72%] text-[#241C18]' : 'w-full h-full max-w-full max-h-full text-[#241C18]'"
                       />
                     </div>
 

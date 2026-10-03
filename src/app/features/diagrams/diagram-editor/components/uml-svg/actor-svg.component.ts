@@ -11,9 +11,19 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [`
+    :host {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+  `],
   template: `
     <svg
-      [attr.viewBox]="showLabel && label ? '0 0 48 78' : '5 1 38 64'"
+      [attr.viewBox]="showLabel && label ? '0 -2 48 80' : '2 -2 44 68'"
       [attr.width]="width"
       [attr.height]="height"
       fill="none"
@@ -21,10 +31,14 @@ import { CommonModule } from '@angular/common';
       preserveAspectRatio="xMidYMid meet"
       xmlns="http://www.w3.org/2000/svg">
       <!-- Cabeza circular estándar UML 2.5 -->
-      <path
-        d="M 24 2 A 10 10 0 0 1 24 22 A 10 10 0 0 1 24 2 Z"
+      <circle
+        cx="24"
+        cy="12"
+        r="10"
         [attr.fill]="fillColor"
+        [style.fill]="fillColor"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
       />
       <!-- Columna / Tronco -->
@@ -34,6 +48,7 @@ import { CommonModule } from '@angular/common';
         x2="24"
         y2="43"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
       />
       <!-- Brazos horizontales -->
@@ -43,6 +58,7 @@ import { CommonModule } from '@angular/common';
         x2="41"
         y2="31"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
         stroke-linecap="round"
       />
@@ -53,6 +69,7 @@ import { CommonModule } from '@angular/common';
         x2="10"
         y2="63"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
         stroke-linecap="round"
       />
@@ -62,6 +79,7 @@ import { CommonModule } from '@angular/common';
         x2="38"
         y2="63"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
         stroke-linecap="round"
       />
