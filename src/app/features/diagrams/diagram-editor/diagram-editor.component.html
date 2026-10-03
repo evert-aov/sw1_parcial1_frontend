@@ -246,6 +246,7 @@
       [roomCode]="collaborationService.activeRoomCode()"
       [currentNodes]="nodes()"
       [currentConnections]="connections()"
+      [diagramType]="activeDiagramType()"
       (closePanel)="isAiPanelOpen.set(false)"
       (applyMutation)="onAiMutation($event)">
     </app-ai-assistant-panel>
