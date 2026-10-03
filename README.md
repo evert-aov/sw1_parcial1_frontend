@@ -10,9 +10,10 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
 3. [Configuración de Conexión con Backend](#-configuración-de-conexión-con-backend)
 4. [Estructura del Proyecto](#-estructura-del-proyecto)
 5. [Requisitos Previos](#-requisitos-previos)
-6. [Instalación y Ejecución](#-instalación-y-ejecución)
-7. [Módulos y Componentes Clave](#-módulos-y-componentes-clave)
-8. [Scripts Disponibles](#-scripts-disponibles)
+6. [Instalación y Ejecución Web](#-instalación-y-ejecución-web)
+7. [Modo Escritorio (Electron) por Sistema Operativo](#-modo-escritorio-electron-por-sistema-operativo)
+8. [Módulos y Componentes Clave](#-módulos-y-componentes-clave)
+9. [Scripts Disponibles](#-scripts-disponibles)
 
 ---
 
@@ -190,7 +191,7 @@ frontend/
 
 ---
 
-## 🚀 Instalación y Ejecución
+## 🚀 Instalación y Ejecución Web
 
 1. **Instalar dependencias:**
    ```bash
@@ -205,11 +206,123 @@ frontend/
    ```
    La aplicación se abrirá en `http://localhost:4200/`.
 
-3. **Compilar para producción:**
+3. **Compilar para producción (Web):**
    ```bash
    npm run build
    ```
    Los artefactos optimizados se generarán en el directorio `dist/frontend`.
+
+---
+
+## 🖥️ Modo Escritorio (Electron) por Sistema Operativo
+
+La aplicación cuenta con soporte nativo de escritorio mediante **Electron**, permitiendo ejecutar el diagramador como una aplicación independiente con aceleración por hardware, ventana auto-escalable y sin interferencia de atajos del navegador.
+
+### ⚡ Flujos de Ejecución Rápida
+
+* **Modo Producción Local (Compilado Embebido):**
+  Compila los activos de Angular con base de ruta relativa y abre la ventana nativa de Electron sirviendo los archivos locales:
+  ```bash
+  npm run electron:start
+  ```
+
+* **Modo Desarrollo en Caliente (Live Reload & DevTools):**
+  Permite editar el código Angular y ver cambios instantáneamente en la ventana de Electron:
+  ```bash
+  # Terminal 1: Iniciar servidor Angular
+  npm start
+
+  # Terminal 2: Abrir ventana Electron conectada al servidor local
+  npm run electron:dev
+  ```
+
+---
+
+### 🐧 Linux (Ubuntu, Debian, Fedora, Arch, etc.)
+
+1. **Generar paquete AppImage portable:**
+   ```bash
+   npm run dist:linux
+   ```
+   El paquete se generará en la carpeta `release/Diagramador UML-1.0.0.AppImage`.
+
+2. **Otorgar permisos de ejecución y abrir:**
+   ```bash
+   chmod +x "release/Diagramador UML-1.0.0.AppImage"
+   ./release/"Diagramador UML-1.0.0.AppImage"
+   ```
+
+---
+
+### ❄️ NixOS (Linux Declarativo)
+
+> [!NOTE]
+> En NixOS, los binarios FHS estándar precompilados de Electron descargados por `npm` no encuentran las librerías dinámicas del sistema (como `libnspr4.so`, `libnss3.so`, etc.) debido al aislamiento del *Nix store*.
+
+Para ejecutar el modo de escritorio en NixOS, utiliza cualquiera de las siguientes alternativas según tu preferencia:
+
+* **Opción A: Ejecutar el AppImage generado con `appimage-run` (Recomendada para producción):**
+  ```bash
+  # 1. Generar el paquete
+  npm run dist:linux
+
+  # 2. Ejecutar mediante appimage-run
+  nix-shell -p appimage-run --run "appimage-run 'release/Diagramador UML-1.0.0.AppImage'"
+  ```
+
+* **Opción B: Entorno FHS temporal con `steam-run` (Ideal para desarrollo rápido):**
+  `steam-run` provee un entorno FHS completo con todas las librerías gráficas necesarias:
+  ```bash
+  # Para desarrollo local con Electron:
+  steam-run npm run electron:start
+
+  # O para ejecutar el AppImage:
+  steam-run ./release/"Diagramador UML-1.0.0.AppImage"
+  ```
+
+* **Opción C: Nix-Shell con Electron nativo del sistema:**
+  Puedes usar el binario de Electron provisto directamente por nixpkgs:
+  ```bash
+  nix-shell -p electron nodejs --run "npm run build:electron && electron ."
+  ```
+
+* **Opción D: `nix-ld` en tu configuración del sistema:**
+  Si tienes habilitado `programs.nix-ld.enable = true;` en tu `/etc/nixos/configuration.nix`, puedes ejecutar directamente los comandos estándar:
+  ```bash
+  npm run electron:start
+  ```
+
+---
+
+### 🪟 Windows (Windows 10 / 11)
+
+1. **Ejecución directa en desarrollo (PowerShell o CMD):**
+   ```powershell
+   npm run electron:start
+   ```
+
+2. **Empaquetado para distribución:**
+   ```powershell
+   npm run dist:win
+   ```
+   Genera automáticamente en la carpeta `release/`:
+   * **Instalador NSIS:** `Diagramador UML Setup 1.0.0.exe` (crea accesos directos e instalador para el sistema).
+   * **Versión Portable:** `Diagramador UML 1.0.0.exe` (ejecutable autónomo de 1 clic sin necesidad de instalación).
+
+---
+
+### 🍎 macOS (Intel / Apple Silicon)
+
+1. **Ejecución directa en desarrollo:**
+   ```bash
+   npm run electron:start
+   ```
+
+2. **Empaquetado DMG / Aplicación nativa:**
+   ```bash
+   npm run dist:mac
+   ```
+   *(Nota: El empaquetado para macOS requiere ejecutarse en un entorno macOS con Xcode Command Line Tools instalados).*
 
 ---
 
@@ -228,7 +341,15 @@ frontend/
 
 ## 🛠 Scripts Disponibles
 
-* `npm start`: Inicia el servidor de desarrollo local en el puerto 4200.
-* `npm run build`: Compila la aplicación en modo producción en la carpeta `dist/`.
-* `npm run watch`: Compila y escucha cambios continuos en modo desarrollo.
-* `npm test`: Ejecuta la suite de pruebas unitarias con Vitest.
+| Script | Descripción |
+| :--- | :--- |
+| `npm start` | Inicia el servidor de desarrollo web local en `http://localhost:4200/`. |
+| `npm run build` | Compila la aplicación web optimizada para producción en `dist/frontend`. |
+| `npm run watch` | Compila y escucha cambios continuos en Angular en modo desarrollo. |
+| `npm test` | Ejecuta las pruebas unitarias del proyecto con Vitest. |
+| `npm run build:electron` | Compila la aplicación con base de ruta relativa (`--base-href ./`) para Electron. |
+| `npm run electron:start` | Compila y ejecuta la aplicación en modo escritorio nativo. |
+| `npm run electron:dev` | Abre Electron conectado a `http://localhost:4200` con DevTools para desarrollo en caliente. |
+| `npm run dist:linux` | Genera el binario ejecutable `AppImage` para Linux en la carpeta `release/`. |
+| `npm run dist:win` | Genera el instalador NSIS `.exe` y la versión portable para Windows en `release/`. |
+| `npm run dist:mac` | Genera el instalador `.dmg` para macOS en `release/`. |
