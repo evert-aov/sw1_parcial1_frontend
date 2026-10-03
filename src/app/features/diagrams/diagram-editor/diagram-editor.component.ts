@@ -612,8 +612,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           id: n.id,
           name: n.name,
           position: { x: n.positionX, y: n.positionY },
-          width: n.width || (nodeType === 'actor' ? 90 : (nodeType === 'use_case' ? 140 : (nodeType === 'package' ? 200 : (isBce ? 90 : (isLifeline ? 140 : 220))))),
-          height: n.height || (isBce ? 95 : (isLifeline ? 48 : (nodeType === 'actor' ? 100 : undefined))),
+          width: n.width || (nodeType === 'actor' ? 65 : (nodeType === 'use_case' ? 140 : (nodeType === 'package' ? 200 : (isBce ? 90 : (isLifeline ? 140 : 220))))),
+          height: n.height || (isBce ? 95 : (isLifeline ? 48 : (nodeType === 'actor' ? 95 : undefined))),
           customWidth: isManuallyResized ? n.width : undefined,
           customHeight: isManuallyResized ? n.height! : undefined,
           isCustomSize: isManuallyResized,
@@ -3008,8 +3008,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         return;
       }
     } else if (currentType === DiagramType.PACKAGE) {
-      if (node.nodeType !== 'package' && node.nodeType !== 'use_case') {
-        alert('Solo se pueden copiar paquetes y casos de uso en diagramas de Paquetes.');
+      if (node.nodeType !== 'package' && node.nodeType !== 'use_case' && node.nodeType !== 'actor') {
+        alert('Solo se pueden copiar paquetes, casos de uso y actores en diagramas de Paquetes.');
         return;
       }
     } else if (currentType === DiagramType.CLASS) {
@@ -3050,8 +3050,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       name: newName,
       nodeType: node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : (currentType === DiagramType.PACKAGE ? 'package' : (currentType === DiagramType.COMMUNICATION ? 'boundary' : 'class'))),
       position: { x: posX, y: posY },
-      width: node.width || (node.nodeType === 'actor' ? 90 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (isBce ? 90 : 220)))),
-      height: node.height || (node.nodeType === 'actor' ? 100 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (isBce ? 95 : null)))),
+      width: node.width || (node.nodeType === 'actor' ? 65 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (isBce ? 90 : 220)))),
+      height: node.height || (node.nodeType === 'actor' ? 95 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (isBce ? 95 : null)))),
       color: node.color || (isBce ? '#D2EEF3' : '#FFFDDD'),
       attributes: (node.attributes || []).map((a: any) => ({ ...a })),
       methods: (node.methods || []).map((m: any) => ({ ...m })),

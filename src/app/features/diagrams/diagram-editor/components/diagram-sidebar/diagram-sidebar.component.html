@@ -318,6 +318,20 @@
             </div>
             <span class="text-xs text-amber-600 dark:text-amber-400 font-bold px-1">+</span>
           </button>
+          <!-- Botón Actor -->
+          <button
+            (click)="addActor.emit()"
+            [disabled]="isReadOnly()"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
+            <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
+              <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Usuario o sistema externo</div>
+            </div>
+            <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
+          </button>
         </div>
       </div>
 
@@ -675,13 +689,22 @@
           </button>
         </div>
       } @else if (activeDiagramType() === DiagramType.PACKAGE) {
-        <button
-          (click)="addPackage.emit()"
-          [disabled]="isReadOnly()"
-          class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-          <ng-icon name="heroFolder" class="text-xs"></ng-icon>
-          <span>+ NUEVO PAQUETE</span>
-        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            (click)="addActor.emit()"
+            [disabled]="isReadOnly()"
+            class="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" />
+            <span>+ ACTOR</span>
+          </button>
+          <button
+            (click)="addPackage.emit()"
+            [disabled]="isReadOnly()"
+            class="py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ng-icon name="heroFolder" class="text-xs"></ng-icon>
+            <span>+ PAQUETE</span>
+          </button>
+        </div>
       } @else if (activeDiagramType() === DiagramType.COMMUNICATION) {
         <div class="grid grid-cols-2 gap-1.5">
           <button
