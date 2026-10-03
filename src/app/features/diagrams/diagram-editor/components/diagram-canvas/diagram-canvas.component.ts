@@ -411,6 +411,7 @@ export class DiagramCanvasComponent {
     (event as any)._connPointerHandled = true;
 
     if (event.button !== 0) return; // Solo botón principal (izquierdo)
+    if (!this.isValidConnectionTarget(event.target)) return;
 
     const now = Date.now();
     const timeDiff = now - this.lastConnPointerDownTime;
@@ -444,7 +445,7 @@ export class DiagramCanvasComponent {
     const target = event.target as HTMLElement | SVGElement | null;
     if (!target) return;
 
-    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+    if (!this.isValidConnectionTarget(target)) {
       return;
     }
 
@@ -457,6 +458,8 @@ export class DiagramCanvasComponent {
   onConnectionClick(connId: string, event: MouseEvent): void {
     if ((event as any)._connHandled) return;
     (event as any)._connHandled = true;
+
+    if (!this.isValidConnectionTarget(event?.target)) return;
 
     const now = Date.now();
     const timeDiff = now - this.lastConnClickTime;
@@ -480,6 +483,8 @@ export class DiagramCanvasComponent {
   }
 
   onConnectionDblClick(conn: UmlConnection, event?: MouseEvent | PointerEvent): void {
+    if (event && !this.isValidConnectionTarget(event.target)) return;
+
     const now = Date.now();
     if (now - this.lastModalOpenTime < 450) {
       return; // Prevenir apertura duplicada si tanto la cadencia como el evento nativo se disparan
@@ -497,8 +502,7 @@ export class DiagramCanvasComponent {
     const target = event.target as HTMLElement | SVGElement | null;
     if (!target) return;
 
-    // Si se hizo clic en un nodo o control, ignorar
-    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+    if (!this.isValidConnectionTarget(target)) {
       return;
     }
 
@@ -512,8 +516,7 @@ export class DiagramCanvasComponent {
     const target = event.target as HTMLElement | SVGElement | null;
     if (!target) return;
 
-    // Si el doble clic ocurrió sobre un nodo o su contenido, dejar que el nodo lo maneje
-    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+    if (!this.isValidConnectionTarget(target)) {
       return;
     }
 
@@ -528,8 +531,48 @@ export class DiagramCanvasComponent {
     }
   }
 
+  private isValidConnectionTarget(target: EventTarget | null): boolean {
+    if (!target || !(target instanceof Element)) return false;
+
+    // Si el target está dentro de un nodo o control de nodo, no es la conexión
+    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+      return false;
+    }
+
+    // Si el target es directamente el contenedor de conexión, svg o defs (espacio vacío de la esquina), descartar
+    const tagName = target.tagName ? target.tagName.toLowerCase() : '';
+    if (
+      tagName === 'f-connection' ||
+      tagName === 'svg' ||
+      tagName === 'defs' ||
+      tagName === 'g' ||
+      target.classList.contains('f-connection') ||
+      target.classList.contains('f-connection-group')
+    ) {
+      return false;
+    }
+
+    // Debe ser un trazo interactivo (path de selección de 40px o path visible), marcador o badge/etiqueta
+    const isStrokeOrMarker =
+      tagName === 'path' ||
+      tagName === 'polygon' ||
+      tagName === 'polyline' ||
+      tagName === 'circle' ||
+      tagName === 'line';
+
+    const isContentBadge = !!target.closest?.(
+      '[fConnectionContent], [fconnectioncontent], .f-connection-content, .uml-multiplicity-badge, .uml-relation-name-badge, .uml-message-badge, [fMarker], [fmarker]'
+    );
+
+    const isDragHandle = !!target.closest?.(
+      '[f-connection-drag-handle-start], [f-connection-drag-handle-end], .f-connection-drag-handle'
+    );
+
+    return isStrokeOrMarker || isContentBadge || isDragHandle;
+  }
+
   private findConnectionIdFromEventTarget(target: HTMLElement | SVGElement): string | null {
-    if (!target) return null;
+    if (!target || !this.isValidConnectionTarget(target)) return null;
 
     // 1. Si target está dentro de un nodo, ignorar
     if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {

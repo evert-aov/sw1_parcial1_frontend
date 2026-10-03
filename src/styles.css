@@ -338,19 +338,35 @@ f-flow f-connection:hover .f-connection-selection,
   stroke: rgba(255, 255, 255, 0.005) !important;
 }
 
-/* Cursor pointer para toda la conexión al pasar por el área ampliada */
+/* Deshabilitar eventos de puntero en los contenedores de conexión para que el área vacía / caja SVG no intercepte clics (ej. esquina superior izquierda 0,0) */
 f-flow .f-connection,
 f-flow f-connection,
+f-flow f-connection-for-create,
+f-flow .f-connection > svg,
+f-flow f-connection > svg,
+f-flow f-connection-for-create > svg,
 f-flow .f-connection-group,
 f-flow f-connection svg .f-connection-group {
-  cursor: pointer !important;
-  pointer-events: all !important;
+  pointer-events: none !important;
+  cursor: default !important;
 }
 
-/* La línea visual interna también responde a pointer events */
+/* La línea visual interna y el trazo responden a eventos de puntero */
 f-flow .f-connection-path,
 f-flow path[f-connection-path] {
   pointer-events: stroke !important;
+  cursor: pointer !important;
+}
+
+/* Badges de texto, multiplicidad y marcadores de relación sí responden a eventos de puntero */
+f-flow .f-connection-content,
+f-flow [fConnectionContent],
+f-flow .uml-multiplicity-badge,
+f-flow .uml-relation-name-badge,
+f-flow .uml-message-badge,
+f-flow [fMarker],
+f-flow svg[fMarker] {
+  pointer-events: auto !important;
   cursor: pointer !important;
 }
 
