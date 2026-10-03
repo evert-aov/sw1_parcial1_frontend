@@ -64,6 +64,7 @@ import { AiAssistantService } from '../../../core/services/ai-assistant.service'
 import { XmiService } from '../../../core/services/xmi.service';
 import { XmiClientParser } from '../../../core/services/xmi-client-parser';
 import { BmpExportService } from '../../../core/services/bmp-export.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import {
   DiagramType,
   UmlNodeType,
@@ -187,6 +188,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly translationService = inject(TranslationService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly confirmDialogService = inject(ConfirmDialogService);
 
   // Lista reactiva de diagramas del proyecto para el Explorador por tipo
   readonly projectDiagrams = this.diagramService.projectDiagrams;
@@ -2661,6 +2663,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   addActor(): void {
@@ -2701,9 +2704,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    if (isSequence) {
-      setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
-    }
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   addUseCase(): void {
@@ -2731,6 +2732,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   addPackage(): void {
@@ -2758,6 +2760,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   addBoundary(): void {
@@ -2785,6 +2788,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   addControl(): void {
@@ -2812,6 +2816,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   addEntity(): void {
@@ -2839,6 +2844,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   addLifeline(): void {
@@ -2882,9 +2888,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    if (isSequence) {
-      setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
-    }
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   copySelectedNodes(): void {
@@ -4028,11 +4032,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       : (this.selectedNodeId() ? [this.selectedNodeId()!] : []);
     if (targetIds.length === 0) return;
 
+    const newColor = color || '#FFFDDD';
+    const anyChanged = this.nodes().some(
+      (node) => targetIds.includes(node.id) && !node.isAnchor && (node.color || '#FFFDDD') !== newColor,
+    );
+    if (!anyChanged) return;
+
     this.pushSnapshot();
     this.nodes.update((nodes) =>
       nodes.map((node) => {
         if (targetIds.includes(node.id) && !node.isAnchor) {
-          return { ...node, color: color || '#FFFDDD' };
+          return { ...node, color: newColor };
         }
         return node;
       }),
@@ -4161,11 +4171,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  onDeleteDiagram(diagramId: string): void {
+  async onDeleteDiagram(diagramId: string): Promise<void> {
     if (this.isReadOnly()) return;
     const diag = this.projectDiagrams().find((d) => d.id === diagramId);
     const diagName = diag ? diag.name : 'este diagrama';
-    if (!confirm(`¿Estás seguro de que deseas eliminar el diagrama "${diagName}"? Esta acción no se puede deshacer.`)) {
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Eliminar Diagrama',
+      message: `¿Estás seguro de que deseas eliminar el diagrama "${diagName}"?\nEsta acción es irreversible y eliminará todos sus elementos.`,
+      confirmText: 'Eliminar Diagrama',
+      cancelText: 'Cancelar',
+      type: 'danger',
+    });
+
+    if (!confirmed) {
       return;
     }
 

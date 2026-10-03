@@ -27,6 +27,7 @@ import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserGuideService } from '../../../core/services/user-guide.service';
 import { Project, ProjectRole } from '../../../core/models/project.model';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { UserProfileModalComponent } from '../../diagrams/diagram-editor/components/user-profile-modal/user-profile-modal.component';
 import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
 import { ThemeToggleComponent } from '../../../core/components/theme-toggle/theme-toggle.component';
@@ -74,6 +75,7 @@ export class ProjectListComponent implements OnInit {
   readonly authService = inject(AuthService);
   readonly guideService = inject(UserGuideService);
   private readonly router = inject(Router);
+  private readonly confirmDialogService = inject(ConfirmDialogService);
 
   openGuide(prompt?: string): void {
     this.guideService.openGuide(prompt);
@@ -235,11 +237,19 @@ export class ProjectListComponent implements OnInit {
     });
   }
 
-  onRemoveMember(userId: string): void {
+  async onRemoveMember(userId: string): Promise<void> {
     const project = this.selectedProjectForMembers();
     if (!project) return;
 
-    if (confirm('¿Estás seguro de remover a este miembro del proyecto?')) {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Remover Miembro',
+      message: '¿Estás seguro de que deseas remover a este miembro del proyecto?',
+      confirmText: 'Remover',
+      cancelText: 'Cancelar',
+      type: 'danger',
+    });
+
+    if (confirmed) {
       this.projectService.removeMember(project.id, userId).subscribe({
         next: () => {
           this.projectService.getProject(project.id).subscribe((p) => {
@@ -263,9 +273,17 @@ export class ProjectListComponent implements OnInit {
     });
   }
 
-  onDeleteProject(project: Project, event: MouseEvent): void {
+  async onDeleteProject(project: Project, event: MouseEvent): Promise<void> {
     event.stopPropagation();
-    if (confirm(`¿Estás seguro de eliminar el proyecto "${project.name}" y todos sus diagramas asociados?`)) {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Eliminar Proyecto',
+      message: `¿Estás seguro de que deseas eliminar el proyecto "${project.name}" y todos sus diagramas asociados?\nEsta acción no se puede deshacer.`,
+      confirmText: 'Eliminar Proyecto',
+      cancelText: 'Cancelar',
+      type: 'danger',
+    });
+
+    if (confirmed) {
       this.projectService.deleteProject(project.id).subscribe();
     }
   }

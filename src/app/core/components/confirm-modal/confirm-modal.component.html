@@ -1,0 +1,88 @@
+@if (isModalOpen()) {
+  <div
+    class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+    (click)="onCancel()"
+  >
+    <div
+      class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150"
+      (click)="$event.stopPropagation()"
+    >
+      <!-- Header -->
+      <div class="border-b border-slate-100 dark:border-slate-800 px-5 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <!-- Icono con estilo dinámico según tipo -->
+          @if (displayType() === 'danger') {
+            <div class="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200/60 dark:border-red-800/50 flex items-center justify-center shadow-xs">
+              <ng-icon [name]="displayIcon()" class="text-base"></ng-icon>
+            </div>
+          } @else if (displayType() === 'warning') {
+            <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/50 flex items-center justify-center shadow-xs">
+              <ng-icon [name]="displayIcon()" class="text-base"></ng-icon>
+            </div>
+          } @else {
+            <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/50 flex items-center justify-center shadow-xs">
+              <ng-icon [name]="displayIcon()" class="text-base"></ng-icon>
+            </div>
+          }
+
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">
+            {{ displayTitle() }}
+          </h3>
+        </div>
+
+        <button
+          type="button"
+          (click)="onCancel()"
+          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          aria-label="Cerrar"
+        >
+          <ng-icon name="heroXMark" class="text-base block"></ng-icon>
+        </button>
+      </div>
+
+      <!-- Body / Mensaje -->
+      <div class="p-5">
+        <p class="text-slate-600 dark:text-slate-300 text-xs leading-relaxed whitespace-pre-line">
+          {{ displayMessage() }}
+        </p>
+      </div>
+
+      <!-- Footer / Acciones -->
+      <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-[#0c0f1d] border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-end gap-2.5">
+        <button
+          type="button"
+          (click)="onCancel()"
+          class="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-[#161b33] border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer shadow-xs"
+        >
+          {{ displayCancelText() }}
+        </button>
+
+        @if (displayType() === 'danger') {
+          <button
+            type="button"
+            (click)="onConfirm()"
+            class="px-4 py-2 font-semibold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-xl transition-all cursor-pointer shadow-xs focus:ring-2 focus:ring-red-500/20"
+          >
+            {{ displayConfirmText() }}
+          </button>
+        } @else if (displayType() === 'warning') {
+          <button
+            type="button"
+            (click)="onConfirm()"
+            class="px-4 py-2 font-semibold text-white bg-amber-600 hover:bg-amber-700 active:bg-amber-800 rounded-xl transition-all cursor-pointer shadow-xs focus:ring-2 focus:ring-amber-500/20"
+          >
+            {{ displayConfirmText() }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            (click)="onConfirm()"
+            class="px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl transition-all cursor-pointer shadow-xs focus:ring-2 focus:ring-blue-500/20"
+          >
+            {{ displayConfirmText() }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
