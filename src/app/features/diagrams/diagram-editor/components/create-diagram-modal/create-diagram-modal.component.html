@@ -45,7 +45,7 @@
             @if (lockedType()) {
               <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-200/60 dark:border-amber-800/50">
                 <ng-icon name="heroLockClosed" class="text-[10px]"></ng-icon>
-                Fijado por carpeta
+                {{ 'editor.createDiagramModal.lockedByFolder' | translate }}
               </span>
             }
           </div>
@@ -58,8 +58,8 @@
                   <ng-icon [name]="targetTypeItem()?.icon || 'heroSquare3Stack3d'" class="text-base"></ng-icon>
                 </div>
                 <div>
-                  <div class="font-bold text-slate-800 dark:text-slate-100 text-xs">{{ targetTypeItem()?.label }}</div>
-                  <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ targetTypeItem()?.description }}</div>
+                  <div class="font-bold text-slate-800 dark:text-slate-100 text-xs">{{ getTypeLabel(targetTypeItem()) }}</div>
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ getTypeDescription(targetTypeItem()) }}</div>
                 </div>
               </div>
             </div>
@@ -78,8 +78,8 @@
                   <div class="flex items-center gap-2.5 min-w-0">
                     <ng-icon [name]="dt.icon" class="text-sm shrink-0"></ng-icon>
                     <div class="min-w-0">
-                      <div class="font-semibold text-xs truncate">{{ dt.label }}</div>
-                      <div class="text-[10px] text-slate-400 dark:text-slate-500 truncate">{{ dt.description }}</div>
+                      <div class="font-semibold text-xs truncate">{{ getTypeLabel(dt) }}</div>
+                      <div class="text-[10px] text-slate-400 dark:text-slate-500 truncate">{{ getTypeDescription(dt) }}</div>
                     </div>
                   </div>
                   @if (selectedType() === dt.id) {

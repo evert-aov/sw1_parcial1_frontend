@@ -4,7 +4,9 @@ export type ConfirmDialogType = 'danger' | 'warning' | 'info';
 
 export interface ConfirmDialogOptions {
   title?: string;
+  titleParams?: Record<string, any>;
   message: string;
+  messageParams?: Record<string, any>;
   confirmText?: string;
   cancelText?: string;
   type?: ConfirmDialogType;
@@ -27,10 +29,12 @@ export class ConfirmDialogService {
     }
 
     this.options.set({
-      title: options.title || '¿Estás seguro?',
+      title: options.title || 'common.confirmModal.defaultTitle',
+      titleParams: options.titleParams,
       message: options.message,
-      confirmText: options.confirmText || 'Confirmar',
-      cancelText: options.cancelText || 'Cancelar',
+      messageParams: options.messageParams,
+      confirmText: options.confirmText,
+      cancelText: options.cancelText,
       type: options.type || 'danger',
       icon: options.icon,
     });

@@ -1,7 +1,7 @@
 @if (isOpen() && editingConnection()) {
   <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
     <div class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
-      
+
       <!-- Header -->
       <div class="border-b border-slate-100 dark:border-slate-800 px-5 py-3.5 flex items-center justify-between">
         <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">{{ 'editor.connModal.title' | translate }}</h3>
@@ -227,21 +227,6 @@
             }
           </div>
         }
-
-        @if (activeDiagramType() === 'package' || editingConnection()!.type === 'import' || editingConnection()!.type === 'access' || editingConnection()!.type === 'merge' || editingConnection()!.type === 'trace') {
-          <div class="p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-            ℹ️ En los diagramas de Paquetes, las dependencias, importaciones, fusiones y trazabilidades representan relaciones a nivel de espacio de nombres y no llevan multiplicidad.
-          </div>
-        } @else if (activeDiagramType() === 'use_case' || editingConnection()!.type === 'include' || editingConnection()!.type === 'extend') {
-          <div class="p-3 bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 rounded-xl text-xs text-purple-800 dark:text-purple-300 leading-relaxed">
-            ℹ️ En los diagramas de Casos de Uso, las asociaciones y dependencias representan interacciones funcionales y en el estándar UML no llevan multiplicidad.
-          </div>
-        } @else if (editingConnection()!.type === 'generalization' || editingConnection()!.type === 'realization') {
-          <div class="p-3 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
-            ℹ️ Las relaciones de herencia (Generalización) representan una taxonomía ("es-un") y en el estándar UML no llevan multiplicidad.
-          </div>
-        }
-
         <div>
           <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">{{ 'editor.connModal.name' | translate }}</label>
           <input

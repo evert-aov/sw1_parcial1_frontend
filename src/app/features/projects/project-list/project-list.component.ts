@@ -242,10 +242,8 @@ export class ProjectListComponent implements OnInit {
     if (!project) return;
 
     const confirmed = await this.confirmDialogService.confirm({
-      title: 'Remover Miembro',
-      message: '¿Estás seguro de que deseas remover a este miembro del proyecto?',
-      confirmText: 'Remover',
-      cancelText: 'Cancelar',
+      title: 'common.confirmModal.removeMemberTitle',
+      message: 'common.confirmModal.removeMemberMessage',
       type: 'danger',
     });
 
@@ -276,10 +274,9 @@ export class ProjectListComponent implements OnInit {
   async onDeleteProject(project: Project, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     const confirmed = await this.confirmDialogService.confirm({
-      title: 'Eliminar Proyecto',
-      message: `¿Estás seguro de que deseas eliminar el proyecto "${project.name}" y todos sus diagramas asociados?\nEsta acción no se puede deshacer.`,
-      confirmText: 'Eliminar Proyecto',
-      cancelText: 'Cancelar',
+      title: 'common.confirmModal.deleteProjectTitle',
+      message: 'common.confirmModal.deleteProjectMessage',
+      messageParams: { name: project.name },
       type: 'danger',
     });
 

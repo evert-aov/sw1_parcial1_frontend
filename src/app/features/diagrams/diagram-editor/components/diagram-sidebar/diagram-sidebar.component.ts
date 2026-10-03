@@ -1,4 +1,4 @@
-import { Component, input, output, signal, computed, effect } from '@angular/core';
+import { Component, input, output, signal, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
@@ -46,7 +46,7 @@ import {
   UML_SEQUENCE_RELATION_TYPES,
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
-import { TranslatePipe } from '../../../../../core/i18n';
+import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
 import { UML_SVG_COMPONENTS } from '../uml-svg';
 
 @Component({
@@ -86,6 +86,51 @@ import { UML_SVG_COMPONENTS } from '../uml-svg';
 })
 export class DiagramSidebarComponent {
   readonly DiagramType = DiagramType;
+  protected readonly translationService = inject(TranslationService);
+
+  getRelationLabel(rel: UmlRelationTypeItem): string {
+    this.translationService.currentLang();
+    const key = `editor.toolbox.${rel.id}`;
+    const translated = this.translationService.translate(key);
+    return translated !== key ? translated : rel.label;
+  }
+
+  getRelationDescription(rel: UmlRelationTypeItem): string {
+    this.translationService.currentLang();
+    const key = `editor.toolbox.${rel.id}Desc`;
+    const translated = this.translationService.translate(key);
+    return translated !== key ? translated : rel.description;
+  }
+
+  getLineStyleLabel(id: string, fallback: string): string {
+    this.translationService.currentLang();
+    const key = `editor.toolbox.${id}`;
+    const translated = this.translationService.translate(key);
+    return translated !== key ? translated : fallback;
+  }
+
+  getDiagramTypeLabel(dt: DiagramTypeItem | DiagramType | string): string {
+    this.translationService.currentLang();
+    const id = typeof dt === 'string' ? dt : dt.id;
+    const key = `editor.explorer.folders.${id}`;
+    const translated = this.translationService.translate(key);
+    if (translated !== key) return translated;
+    return typeof dt === 'object' ? dt.label : id;
+  }
+
+  getDiagramTypeFolderName(dt: DiagramTypeItem): string {
+    this.translationService.currentLang();
+    const key = `editor.explorer.folders.${dt.id}`;
+    const translated = this.translationService.translate(key);
+    return translated !== key ? translated : dt.folderName;
+  }
+
+  getNodeTypeLabel(nodeType: string): string {
+    this.translationService.currentLang();
+    const key = `editor.explorer.nodeTypes.${nodeType}`;
+    const translated = this.translationService.translate(key);
+    return translated !== key ? translated : nodeType;
+  }
 
   // Tabs (Por defecto 'explorer' para mostrar el árbol del proyecto al abrir el lienzo)
   readonly activeTab = signal<'toolbox' | 'explorer'>('explorer');

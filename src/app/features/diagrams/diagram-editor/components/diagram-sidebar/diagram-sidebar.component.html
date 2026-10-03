@@ -11,14 +11,14 @@
         [ngClass]="activeTab() === 'toolbox' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-white dark:bg-[#0D1124]' : 'text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 bg-slate-50/60 dark:bg-[#0F142A] border-b-2 border-transparent'"
         class="flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
         <ng-icon name="heroBars3" class="text-sm"></ng-icon>
-        <span class="tracking-wide text-[11px] font-bold">TOOLBOX</span>
+        <span class="tracking-wide text-[11px] font-bold">{{ 'editor.explorer.toolbox' | translate | uppercase }}</span>
       </button>
       <button
         (click)="activeTab.set('explorer')"
         [ngClass]="activeTab() === 'explorer' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 bg-white dark:bg-[#0D1124]' : 'text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 bg-slate-50/60 dark:bg-[#0F142A] border-b-2 border-transparent'"
         class="flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
         <ng-icon name="heroFolder" class="text-sm"></ng-icon>
-        <span class="tracking-wide text-[11px] font-semibold">EXPLORADOR</span>
+        <span class="tracking-wide text-[11px] font-semibold">{{ 'editor.explorer.explorer' | translate | uppercase }}</span>
       </button>
     </div>
 
@@ -34,10 +34,10 @@
         class="px-3.5 py-2.5 font-bold flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
         <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
           <ng-icon [name]="isDiagramTypesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-          Diagramas UML
+          {{ 'editor.toolbox.umlDiagrams' | translate }}
         </span>
         <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold border border-blue-100 dark:border-blue-900/40">
-          5 tipos ▾
+          {{ 'editor.toolbox.typesCount' | translate:{ count: 5 } }}
         </span>
       </div>
 
@@ -54,12 +54,12 @@
               class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center justify-between transition-colors cursor-pointer">
               <div class="flex items-center gap-2 min-w-0">
                 <ng-icon [name]="dt.icon" class="text-xs shrink-0"></ng-icon>
-                <div class="truncate text-[11px]">{{ dt.label }}</div>
+                <div class="truncate text-[11px]">{{ getDiagramTypeLabel(dt) }}</div>
               </div>
               @if (dt.supported) {
-                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold">Listo</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold">{{ 'editor.toolbox.ready' | translate }}</span>
               } @else {
-                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500">Próx.</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500">{{ 'editor.toolbox.soon' | translate }}</span>
               }
             </button>
           }
@@ -75,7 +75,7 @@
         <div class="px-3.5 py-2.5 flex items-center justify-between">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon name="heroUserGroup" class="text-xs text-blue-500"></ng-icon>
-            <span>Elementos <span class="font-normal text-slate-500">de Casos de Uso</span></span>
+            <span>{{ 'editor.toolbox.elements' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.use_case' | translate }}</span></span>
           </span>
         </div>
 
@@ -89,8 +89,8 @@
               <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" className="w-[18px] h-[22px] shrink-0" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Usuario o sistema externo</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.actor' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.actorDesc' | translate }}</div>
             </div>
             <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
           </button>
@@ -104,8 +104,8 @@
               <app-use-case-svg width="24" height="15" strokeColor="currentColor" fillColor="currentColor" [strokeWidth]="1.5" className="w-[24px] h-[15px] shrink-0" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Caso de Uso</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Elipse de funcionalidad</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.useCase' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.useCaseDesc' | translate }}</div>
             </div>
             <span class="text-xs text-amber-600 dark:text-amber-400 font-bold px-1">+</span>
           </button>
@@ -119,7 +119,7 @@
           class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-            <span>Relaciones <span class="font-normal text-slate-500">de Casos de Uso</span></span>
+            <span>{{ 'editor.toolbox.relationships' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.use_case' | translate }}</span></span>
           </span>
           @if (selectedRelationType()) {
             <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-blue-600 hover:text-red-600 dark:text-blue-400 dark:hover:text-red-400 font-normal cursor-pointer">
@@ -142,8 +142,8 @@
                   <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
-                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="rel.description">{{ rel.description }}</div>
+                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ getRelationLabel(rel) }}</div>
+                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="getRelationDescription(rel)">{{ getRelationDescription(rel) }}</div>
                 </div>
               </button>
             }
@@ -158,7 +158,7 @@
           class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-            <span>Line Style (Routing)</span>
+            <span>{{ 'editor.toolbox.routingStyle' | translate }}</span>
           </span>
           <ng-icon name="heroArrowsPointingOut" class="text-xs text-slate-400"></ng-icon>
         </div>
@@ -169,23 +169,23 @@
               [value]="defaultLineStyle()"
               (change)="onSetLineStyle($any($event.target).value)"
               class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
-              <option value="segment">Línea Personalizada (Segmentos)</option>
-              <option value="straight">Direct (Directa / Recta)</option>
-              <option value="bezier">Bezier (Curva Suave)</option>
-              <option value="adaptive-curve">Orthogonal - Rounded (Curva Adaptativa)</option>
+              <option value="segment">{{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}</option>
+              <option value="straight">{{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}</option>
+              <option value="bezier">{{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}</option>
+              <option value="adaptive-curve">{{ getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)') }}</option>
             </select>
 
             <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-              <button (click)="zoomOut.emit()" title="Alejar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="zoomOut.emit()" [title]="'toolbar.canvas.zoomOut' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
               </button>
-              <button (click)="zoomIn.emit()" title="Acercar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="zoomIn.emit()" [title]="'toolbar.canvas.zoomIn' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
               </button>
-              <button (click)="resetView.emit()" title="1:1" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="resetView.emit()" [title]="'toolbar.canvas.oneToOne' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
                 1:1
               </button>
-              <button (click)="fitView.emit()" title="Ajustar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="fitView.emit()" [title]="'toolbar.canvas.fitView' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
               </button>
             </div>
@@ -284,7 +284,7 @@
         <div class="px-3.5 py-2.5 flex items-center justify-between">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon name="heroFolderOpen" class="text-xs text-amber-500"></ng-icon>
-            <span>Elementos <span class="font-normal text-slate-500">de Paquetes</span></span>
+            <span>{{ 'editor.toolbox.elements' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.package' | translate }}</span></span>
           </span>
         </div>
 
@@ -298,8 +298,8 @@
               <ng-icon name="heroFolder" class="text-base"></ng-icon>
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Paquete</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Módulo o espacio de nombres</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.package' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.packageDesc' | translate }}</div>
             </div>
             <span class="text-xs text-amber-600 dark:text-amber-400 font-bold px-1">+</span>
           </button>
@@ -313,8 +313,8 @@
               <ng-icon name="heroEllipsisHorizontalCircle" class="text-base"></ng-icon>
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Caso de Uso</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Elipse de funcionalidad / análisis</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.useCase' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.useCaseDesc' | translate }}</div>
             </div>
             <span class="text-xs text-amber-600 dark:text-amber-400 font-bold px-1">+</span>
           </button>
@@ -327,8 +327,8 @@
               <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" className="w-[18px] h-[22px] shrink-0" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Usuario o sistema externo</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.actor' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.actorDesc' | translate }}</div>
             </div>
             <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
           </button>
@@ -342,7 +342,7 @@
           class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-            <span>Relaciones <span class="font-normal text-slate-500">de Paquetes</span></span>
+            <span>{{ 'editor.toolbox.relationships' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.package' | translate }}</span></span>
           </span>
           @if (selectedRelationType()) {
             <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-blue-600 hover:text-red-600 dark:text-blue-400 dark:hover:text-red-400 font-normal cursor-pointer">
@@ -365,8 +365,8 @@
                   <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
-                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="rel.description">{{ rel.description }}</div>
+                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ getRelationLabel(rel) }}</div>
+                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="getRelationDescription(rel)">{{ getRelationDescription(rel) }}</div>
                 </div>
               </button>
             }
@@ -381,7 +381,7 @@
           class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-            <span>Line Style (Routing)</span>
+            <span>{{ 'editor.toolbox.routingStyle' | translate }}</span>
           </span>
           <ng-icon name="heroArrowsPointingOut" class="text-xs text-slate-400"></ng-icon>
         </div>
@@ -392,23 +392,23 @@
               [value]="defaultLineStyle()"
               (change)="onSetLineStyle($any($event.target).value)"
               class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
-              <option value="segment">Línea Personalizada (Segmentos)</option>
-              <option value="straight">Direct (Directa / Recta)</option>
-              <option value="bezier">Bezier (Curva Suave)</option>
-              <option value="adaptive-curve">Orthogonal - Rounded (Curva Adaptativa)</option>
+              <option value="segment">{{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}</option>
+              <option value="straight">{{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}</option>
+              <option value="bezier">{{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}</option>
+              <option value="adaptive-curve">{{ getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)') }}</option>
             </select>
 
             <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-              <button (click)="zoomOut.emit()" title="Alejar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="zoomOut.emit()" [title]="'toolbar.canvas.zoomOut' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
               </button>
-              <button (click)="zoomIn.emit()" title="Acercar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="zoomIn.emit()" [title]="'toolbar.canvas.zoomIn' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
               </button>
-              <button (click)="resetView.emit()" title="1:1" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="resetView.emit()" [title]="'toolbar.canvas.oneToOne' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
                 1:1
               </button>
-              <button (click)="fitView.emit()" title="Ajustar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="fitView.emit()" [title]="'toolbar.canvas.fitView' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
               </button>
             </div>
@@ -421,7 +421,7 @@
         <div class="px-3.5 py-2.5 flex items-center justify-between">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon name="heroArrowsRightLeft" class="text-xs text-cyan-600 dark:text-cyan-400"></ng-icon>
-            <span>Elementos <span class="font-normal text-slate-500">de Comunicación (BCE)</span></span>
+            <span>{{ 'editor.toolbox.elements' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.communication' | translate }}</span></span>
           </span>
         </div>
 
@@ -435,8 +435,8 @@
               <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Usuario o iniciador externo</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.actor' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.actorDesc' | translate }}</div>
             </div>
             <span class="text-xs text-cyan-600 dark:text-cyan-400 font-bold px-1">+</span>
           </button>
@@ -450,7 +450,7 @@
               <app-boundary-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Boundary (Interfaz)</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.boundary' | translate }}</div>
               <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Pantalla, Formulario o API externa</div>
             </div>
             <span class="text-xs text-cyan-600 dark:text-cyan-400 font-bold px-1">+</span>
@@ -465,7 +465,7 @@
               <app-control-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Control (Gestor)</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.control' | translate }}</div>
               <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Controlador y lógica de aplicación</div>
             </div>
             <span class="text-xs text-cyan-600 dark:text-cyan-400 font-bold px-1">+</span>
@@ -480,7 +480,7 @@
               <app-entity-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Entidad (Entity)</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.entity' | translate }}</div>
               <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Datos persistentes y dominio</div>
             </div>
             <span class="text-xs text-cyan-600 dark:text-cyan-400 font-bold px-1">+</span>
@@ -495,7 +495,7 @@
           class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-            <span>Relaciones <span class="font-normal text-slate-500">de Comunicación</span></span>
+            <span>{{ 'editor.toolbox.relationships' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.communication' | translate }}</span></span>
           </span>
           @if (selectedRelationType()) {
             <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-blue-600 hover:text-red-600 dark:text-blue-400 dark:hover:text-red-400 font-normal cursor-pointer">
@@ -518,8 +518,8 @@
                   <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
-                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="rel.description">{{ rel.description }}</div>
+                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ getRelationLabel(rel) }}</div>
+                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="getRelationDescription(rel)">{{ getRelationDescription(rel) }}</div>
                 </div>
               </button>
             }
@@ -534,7 +534,7 @@
           class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-            <span>Line Style (Routing)</span>
+            <span>{{ 'editor.toolbox.routingStyle' | translate }}</span>
           </span>
           <ng-icon name="heroArrowsPointingOut" class="text-xs text-slate-400"></ng-icon>
         </div>
@@ -545,23 +545,23 @@
               [value]="defaultLineStyle()"
               (change)="onSetLineStyle($any($event.target).value)"
               class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
-              <option value="segment">Línea Personalizada (Segmentos)</option>
-              <option value="straight">Direct (Directa / Recta)</option>
-              <option value="bezier">Bezier (Curva Suave)</option>
-              <option value="adaptive-curve">Orthogonal - Rounded (Curva Adaptativa)</option>
+              <option value="segment">{{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}</option>
+              <option value="straight">{{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}</option>
+              <option value="bezier">{{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}</option>
+              <option value="adaptive-curve">{{ getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)') }}</option>
             </select>
 
             <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-              <button (click)="zoomOut.emit()" title="Alejar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="zoomOut.emit()" [title]="'toolbar.canvas.zoomOut' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
               </button>
-              <button (click)="zoomIn.emit()" title="Acercar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="zoomIn.emit()" [title]="'toolbar.canvas.zoomIn' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
               </button>
-              <button (click)="resetView.emit()" title="1:1" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="resetView.emit()" [title]="'toolbar.canvas.oneToOne' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
                 1:1
               </button>
-              <button (click)="fitView.emit()" title="Ajustar" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+              <button (click)="fitView.emit()" [title]="'toolbar.canvas.fitView' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
                 <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
               </button>
             </div>
@@ -576,9 +576,9 @@
         <div class="px-3.5 py-2.5 flex items-center justify-between">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon name="heroArrowsUpDown" class="text-xs text-blue-600 dark:text-blue-400"></ng-icon>
-            <span>Elementos de Cabecera</span>
+            <span>{{ 'editor.toolbox.sequenceElements' | translate }}</span>
           </span>
-          <span class="text-[10px] text-slate-400 font-medium">Solo arriba</span>
+          <span class="text-[10px] text-slate-400 font-medium">{{ 'editor.toolbox.topOnly' | translate }}</span>
         </div>
         <div class="p-2 space-y-1">
           <!-- Botón Lifeline (Objeto) -->
@@ -590,8 +590,8 @@
               <app-lifeline-svg mode="icon" width="22" height="22" strokeColor="currentColor" fillColor="currentColor" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Línea de Vida (Lifeline)</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Objeto / Instancia temporal</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.lifeline' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.lifelineDesc' | translate }}</div>
             </div>
             <span class="text-xs text-cyan-600 dark:text-cyan-400 font-bold px-1">+</span>
           </button>
@@ -605,8 +605,8 @@
               <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor (Participante)</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Usuario o rol en la secuencia</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.actor' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.actorSequenceDesc' | translate }}</div>
             </div>
             <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
           </button>
@@ -620,7 +620,7 @@
           class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-            <span>Mensajes <span class="font-normal text-slate-500">de Secuencia</span></span>
+            <span>{{ 'editor.toolbox.sequenceMessages' | translate }}</span>
           </span>
           @if (selectedRelationType()) {
             <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-blue-600 hover:text-red-600 dark:text-blue-400 dark:hover:text-red-400 font-normal cursor-pointer">
@@ -643,8 +643,8 @@
                   <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ rel.label }}</div>
-                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="rel.description">{{ rel.description }}</div>
+                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ getRelationLabel(rel) }}</div>
+                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="getRelationDescription(rel)">{{ getRelationDescription(rel) }}</div>
                 </div>
               </button>
             }
@@ -655,15 +655,15 @@
       <!-- Placeholder para los otros diagramas -->
       <div class="p-4 text-center text-slate-500 dark:text-slate-400 space-y-2">
         <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">
-          Paleta de {{ activeDiagramType() }}
+          {{ 'editor.toolbox.paletteOf' | translate:{ name: getDiagramTypeLabel(activeDiagramType()) } }}
         </p>
         <p class="text-[11px] leading-relaxed">
-          Los elementos de este diagrama se activarán en el lienzo al seleccionarlo.
+          {{ 'editor.toolbox.fallbackDesc' | translate }}
         </p>
         <button
           (click)="onSelectDiagramType(DiagramType.CLASS)"
           class="px-2.5 py-1 text-[11px] bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium cursor-pointer">
-          Volver a Diagrama de Clases
+          {{ 'editor.toolbox.backToClass' | translate }}
         </button>
       </div>
     }
@@ -680,14 +680,14 @@
             <span class="w-3.5 h-4 shrink-0 flex items-center justify-center">
               <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" className="w-[13px] h-[15px] shrink-0" />
             </span>
-            <span>+ ACTOR</span>
+            <span>+ {{ 'editor.toolbox.actor' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addUseCase.emit()"
             [disabled]="isReadOnly()"
             class="py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
             <ng-icon name="heroEllipsisHorizontalCircle" class="text-xs"></ng-icon>
-            <span>+ CASO USO</span>
+            <span>+ {{ 'editor.toolbox.useCase' | translate | uppercase }}</span>
           </button>
         </div>
       } @else if (activeDiagramType() === DiagramType.PACKAGE) {
@@ -699,14 +699,14 @@
             <span class="w-3.5 h-4 shrink-0 flex items-center justify-center">
               <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" className="w-[13px] h-[15px] shrink-0" />
             </span>
-            <span>+ ACTOR</span>
+            <span>+ {{ 'editor.toolbox.actor' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addPackage.emit()"
             [disabled]="isReadOnly()"
             class="py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
             <ng-icon name="heroFolder" class="text-xs"></ng-icon>
-            <span>+ PAQUETE</span>
+            <span>+ {{ 'editor.toolbox.package' | translate | uppercase }}</span>
           </button>
         </div>
       } @else if (activeDiagramType() === DiagramType.COMMUNICATION) {
@@ -715,25 +715,25 @@
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
             class="py-2 px-1 bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
-            <span>+ ACTOR</span>
+            <span>+ {{ 'editor.toolbox.actor' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addBoundary.emit()"
             [disabled]="isReadOnly()"
             class="py-2 px-1 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
-            <span>+ BOUNDARY</span>
+            <span>+ {{ 'editor.toolbox.boundary' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addControl.emit()"
             [disabled]="isReadOnly()"
             class="py-2 px-1 bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
-            <span>+ CONTROL</span>
+            <span>+ {{ 'editor.toolbox.control' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addEntity.emit()"
             [disabled]="isReadOnly()"
             class="py-2 px-1 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
-            <span>+ ENTIDAD</span>
+            <span>+ {{ 'editor.toolbox.entity' | translate | uppercase }}</span>
           </button>
         </div>
       } @else if (activeDiagramType() === DiagramType.SEQUENCE) {
@@ -742,13 +742,13 @@
             (click)="addLifeline.emit()"
             [disabled]="isReadOnly()"
             class="py-2.5 px-2 bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-            <span>+ LIFELINE</span>
+            <span>+ {{ 'editor.toolbox.lifeline' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
             class="py-2.5 px-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-            <span>+ ACTOR</span>
+            <span>+ {{ 'editor.toolbox.actor' | translate | uppercase }}</span>
           </button>
         </div>
       } @else {
@@ -758,7 +758,7 @@
           [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('toolbar.addClassTooltip' | translate)"
           class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
           <ng-icon name="heroPlus" class="text-xs"></ng-icon>
-          <span>NUEVA CLASE UML</span>
+          <span>{{ 'editor.toolbox.newUmlClass' | translate }}</span>
         </button>
       }
     </div>
@@ -774,10 +774,10 @@
             </div>
             <div class="min-w-0">
               <div class="font-bold text-xs text-slate-800 dark:text-slate-100 truncate" [title]="currentProjectName()">
-                {{ currentProjectName() || 'Proyecto Actual' }}
+                {{ currentProjectName() || ('editor.explorer.currentProject' | translate) }}
               </div>
               <div class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                {{ projectDiagrams().length }} {{ projectDiagrams().length === 1 ? 'diagrama' : 'diagramas' }}
+                {{ projectDiagrams().length }} {{ (projectDiagrams().length === 1 ? 'editor.explorer.diagram' : 'editor.explorer.diagrams') | translate }}
               </div>
             </div>
           </div>
@@ -787,7 +787,7 @@
             [title]="'editor.explorer.newDiagram' | translate"
             class="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold text-[10.5px] flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
             <ng-icon name="heroPlus" class="text-xs"></ng-icon>
-            <span>Nuevo</span>
+            <span>{{ 'editor.explorer.new' | translate }}</span>
           </button>
         </div>
 
@@ -811,7 +811,7 @@
                     class="text-sm text-blue-500 dark:text-blue-400 shrink-0">
                   </ng-icon>
                   <span class="font-semibold text-[11px] text-slate-800 dark:text-slate-200 truncate">
-                    {{ dt.folderName }}
+                    {{ getDiagramTypeFolderName(dt) }}
                   </span>
                 </div>
 
@@ -828,7 +828,7 @@
                   <!-- Botón contextual "+" para crear directamente en este directorio -->
                   <button
                     (click)="onCreateInFolder(dt.id, $event)"
-                    [title]="('editor.explorer.createInFolder' | translate) + ': ' + dt.folderName"
+                    [title]="('editor.explorer.createInFolder' | translate) + ': ' + getDiagramTypeFolderName(dt)"
                     class="w-5 h-5 rounded-md hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-400 dark:text-slate-400 flex items-center justify-center transition-colors cursor-pointer opacity-70 group-hover:opacity-100">
                     <ng-icon name="heroPlus" class="text-xs"></ng-icon>
                   </button>
@@ -878,7 +878,7 @@
                             <!-- Handle para arrastrar en orden (D&D) -->
                             @if (!isReadOnly() && totalDiags > 1) {
                               <span
-                                title="Arrastrar para reordenar"
+                                [title]="'editor.explorer.dragToReorder' | translate"
                                 class="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 p-0.5 shrink-0">
                                 <ng-icon name="heroBars2" class="text-[10px]"></ng-icon>
                               </span>
@@ -888,7 +888,7 @@
                             <button
                               type="button"
                               (click)="toggleDiagramExpanded(diag.id, $event)"
-                              title="Ver nodos del diagrama"
+                              [title]="'editor.explorer.viewNodes' | translate"
                               class="w-4 h-4 rounded hover:bg-slate-200/80 dark:hover:bg-slate-700/60 flex items-center justify-center text-slate-400 dark:text-slate-500 shrink-0 transition-colors">
                               <ng-icon
                                 [name]="isDiagramExpanded(diag.id) ? 'heroChevronDown' : 'heroChevronRight'"
@@ -915,7 +915,7 @@
                                 autofocus
                               />
                             } @else {
-                              <span class="truncate text-[11px]" [title]="diag.name + ' (Presiona F2 para renombrar)'">{{ diag.name }}</span>
+                              <span class="truncate text-[11px]" [title]="diag.name + ' (' + ('editor.explorer.f2ToRename' | translate) + ')'">{{ diag.name }}</span>
                             }
                           </div>
 
@@ -929,7 +929,7 @@
                                     type="button"
                                     (click)="moveDiagram(diag.id, 'up', dt.id, $event)"
                                     [disabled]="diagIdx === 0"
-                                    title="Mover arriba"
+                                    [title]="'editor.explorer.moveUp' | translate"
                                     class="p-0.5 rounded hover:text-blue-600 dark:hover:text-blue-400 text-slate-400 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer">
                                     <ng-icon name="heroChevronUp" class="text-[10px]"></ng-icon>
                                   </button>
@@ -937,7 +937,7 @@
                                     type="button"
                                     (click)="moveDiagram(diag.id, 'down', dt.id, $event)"
                                     [disabled]="diagIdx === totalDiags - 1"
-                                    title="Mover abajo"
+                                    [title]="'editor.explorer.moveDown' | translate"
                                     class="p-0.5 rounded hover:text-blue-600 dark:hover:text-blue-400 text-slate-400 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer">
                                     <ng-icon name="heroChevronDown" class="text-[10px]"></ng-icon>
                                   </button>
@@ -948,7 +948,7 @@
                               @if (!isReadOnly()) {
                                 <button
                                   (click)="startRenameDiagram(diag, $event)"
-                                  title="Renombrar diagrama (F2)"
+                                  [title]="'editor.explorer.rename' | translate"
                                   class="opacity-0 group-hover/diag:opacity-100 hover:text-blue-600 dark:hover:text-blue-400 text-slate-400 p-0.5 rounded cursor-pointer transition-opacity">
                                   <ng-icon name="heroPencilSquare" class="text-xs"></ng-icon>
                                 </button>
@@ -958,7 +958,7 @@
                               @if (!isReadOnly()) {
                                 <button
                                   (click)="onDeleteDiagram(diag, $event)"
-                                  title="Eliminar diagrama"
+                                  [title]="'editor.explorer.delete' | translate"
                                   class="opacity-0 group-hover/diag:opacity-100 hover:text-red-600 dark:hover:text-red-400 text-slate-400 p-0.5 rounded cursor-pointer transition-opacity">
                                   <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                                 </button>
@@ -978,13 +978,13 @@
                           <div class="ml-3.5 pl-2.5 my-0.5 border-l border-slate-200 dark:border-slate-800 space-y-0.5">
                             @if (getNodesForDiagram(diag).length === 0) {
                               <div class="text-[10px] text-slate-400 dark:text-slate-500 italic py-1 px-1">
-                                (Sin nodos)
+                                {{ 'editor.explorer.noNodes' | translate }}
                               </div>
                             } @else {
                               @for (node of getNodesForDiagram(diag); track node.id; let last = $last) {
                                 <div
                                   (click)="onNodeItemClick(diag, node, $event)"
-                                  [title]="diag.id === currentDiagramId() ? 'Clic para seleccionar en el lienzo' : getCopyTooltip(diag, node)"
+                                  [title]="diag.id === currentDiagramId() ? ('editor.explorer.clickToSelect' | translate) : getCopyTooltip(diag, node)"
                                   class="flex items-center justify-between px-1.5 py-1 rounded text-[11px] hover:bg-slate-100/80 dark:hover:bg-[#161B36] transition-colors group/nodeitem cursor-pointer">
                                   
                                   <div class="flex items-center gap-1.5 min-w-0 flex-1">
@@ -994,35 +994,35 @@
                                     
                                     <!-- Icono e Indicador de Tipo de Nodo -->
                                     @if (node.nodeType === 'actor') {
-                                      <div class="w-4 h-4 rounded bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0 p-0.5" title="Actor">
+                                      <div class="w-4 h-4 rounded bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('actor')">
                                         <app-actor-svg width="12" height="12" strokeColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'use_case') {
-                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 p-0.5" title="Caso de Uso">
+                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('use_case')">
                                         <app-use-case-svg width="14" height="10" strokeColor="currentColor" fillColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'package') {
-                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 p-0.5" title="Paquete">
+                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('package')">
                                         <app-directory-svg mode="icon" width="13" height="11" strokeColor="currentColor" fillColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'boundary') {
-                                      <div class="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 p-0.5" title="Boundary (Interfaz)">
+                                      <div class="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('boundary')">
                                         <app-boundary-svg width="13" height="11" strokeColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'control') {
-                                      <div class="w-4 h-4 rounded bg-teal-100 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0 p-0.5" title="Control (Gestor)">
+                                      <div class="w-4 h-4 rounded bg-teal-100 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('control')">
                                         <app-control-svg width="13" height="11" strokeColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'entity') {
-                                      <div class="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 p-0.5" title="Entidad (Entity)">
+                                      <div class="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('entity')">
                                         <app-entity-svg width="13" height="11" strokeColor="currentColor" />
                                       </div>
                                     } @else if (node.nodeType === 'lifeline') {
-                                      <div class="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 p-0.5" title="Línea de Vida">
+                                      <div class="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('lifeline')">
                                         <app-lifeline-svg mode="icon" width="12" height="12" strokeColor="currentColor" />
                                       </div>
                                     } @else {
-                                      <div class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 p-0.5" title="Clase UML">
+                                      <div class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('class')">
                                         <app-table-svg mode="icon" width="13" height="11" strokeColor="currentColor" />
                                       </div>
                                     }
@@ -1034,7 +1034,7 @@
 
                                     <!-- Tag sutil de Tipo -->
                                     <span class="text-[8.5px] px-1 py-0.2 rounded font-mono text-slate-400 dark:text-slate-500 shrink-0">
-                                      {{ node.nodeType === 'actor' ? 'actor' : (node.nodeType === 'use_case' ? 'caso-uso' : (node.nodeType === 'package' ? 'paquete' : (node.nodeType === 'boundary' ? 'boundary' : (node.nodeType === 'control' ? 'control' : (node.nodeType === 'entity' ? 'entidad' : (node.nodeType === 'lifeline' ? 'línea-vida' : 'clase')))))) }}
+                                      {{ getNodeTypeLabel(node.nodeType) }}
                                     </span>
                                   </div>
 
@@ -1074,7 +1074,7 @@
     <div
       (mousedown)="onStartResize($event)"
       (dblclick)="resetWidth($event)"
-      title="Arrastra para ajustar el ancho (Doble clic para restablecer)"
+      [title]="'editor.explorer.resizerTooltip' | translate"
       class="absolute top-0 right-0 w-2 h-full cursor-col-resize hover:bg-blue-500/25 active:bg-blue-600/40 z-30 transition-colors group flex items-center justify-center select-none">
       <div class="w-0.5 h-7 rounded-full bg-slate-300/80 dark:bg-slate-700/80 group-hover:bg-blue-500 group-hover:h-12 group-hover:w-1 transition-all"></div>
     </div>

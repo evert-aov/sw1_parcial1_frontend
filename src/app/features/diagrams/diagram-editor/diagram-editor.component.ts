@@ -4177,10 +4177,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const diagName = diag ? diag.name : 'este diagrama';
 
     const confirmed = await this.confirmDialogService.confirm({
-      title: 'Eliminar Diagrama',
-      message: `¿Estás seguro de que deseas eliminar el diagrama "${diagName}"?\nEsta acción es irreversible y eliminará todos sus elementos.`,
-      confirmText: 'Eliminar Diagrama',
-      cancelText: 'Cancelar',
+      title: 'common.confirmModal.deleteDiagramTitle',
+      message: 'common.confirmModal.deleteDiagramMessage',
+      messageParams: { name: diagName },
       type: 'danger',
     });
 

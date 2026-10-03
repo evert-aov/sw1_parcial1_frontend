@@ -8,6 +8,7 @@ import {
   heroXMark,
 } from '@ng-icons/heroicons/outline';
 import { ConfirmDialogService, ConfirmDialogType } from '../../services/confirm-dialog.service';
+import { TranslationService } from '../../i18n';
 
 @Component({
   selector: 'app-confirm-modal',
@@ -25,11 +26,14 @@ import { ConfirmDialogService, ConfirmDialogType } from '../../services/confirm-
 })
 export class ConfirmModalComponent {
   protected readonly confirmService = inject(ConfirmDialogService);
+  protected readonly translationService = inject(TranslationService);
 
   // Inputs opcionales para uso declarativo como componente
   readonly isOpen = input<boolean | null>(null);
   readonly title = input<string | null>(null);
+  readonly titleParams = input<Record<string, any> | null>(null);
   readonly message = input<string | null>(null);
+  readonly messageParams = input<Record<string, any> | null>(null);
   readonly type = input<ConfirmDialogType | null>(null);
   readonly confirmText = input<string | null>(null);
   readonly cancelText = input<string | null>(null);
@@ -45,11 +49,18 @@ export class ConfirmModalComponent {
   });
 
   readonly displayTitle = computed(() => {
-    return this.title() || this.confirmService.options()?.title || '¿Estás seguro?';
+    this.translationService.currentLang();
+    const raw = this.title() || this.confirmService.options()?.title;
+    const params = this.titleParams() || this.confirmService.options()?.titleParams;
+    if (!raw) return this.translationService.translate('common.confirmModal.defaultTitle');
+    return this.translationService.translate(raw, params || undefined);
   });
 
   readonly displayMessage = computed(() => {
-    return this.message() || this.confirmService.options()?.message || '';
+    this.translationService.currentLang();
+    const raw = this.message() || this.confirmService.options()?.message || '';
+    const params = this.messageParams() || this.confirmService.options()?.messageParams;
+    return this.translationService.translate(raw, params || undefined);
   });
 
   readonly displayType = computed<ConfirmDialogType>(() => {
@@ -57,11 +68,20 @@ export class ConfirmModalComponent {
   });
 
   readonly displayConfirmText = computed(() => {
-    return this.confirmText() || this.confirmService.options()?.confirmText || 'Confirmar';
+    this.translationService.currentLang();
+    const raw = this.confirmText() || this.confirmService.options()?.confirmText;
+    if (raw) return this.translationService.translate(raw);
+    const type = this.displayType();
+    if (type === 'danger') return this.translationService.translate('common.confirmModal.defaultDangerConfirm');
+    if (type === 'warning') return this.translationService.translate('common.confirmModal.defaultWarningConfirm');
+    return this.translationService.translate('common.confirmModal.defaultInfoConfirm');
   });
 
   readonly displayCancelText = computed(() => {
-    return this.cancelText() || this.confirmService.options()?.cancelText || 'Cancelar';
+    this.translationService.currentLang();
+    const raw = this.cancelText() || this.confirmService.options()?.cancelText;
+    if (raw) return this.translationService.translate(raw);
+    return this.translationService.translate('common.confirmModal.cancel');
   });
 
   readonly displayIcon = computed(() => {

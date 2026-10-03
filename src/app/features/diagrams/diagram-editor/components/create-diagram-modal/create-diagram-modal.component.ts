@@ -1,4 +1,4 @@
-import { Component, input, output, signal, effect, computed } from '@angular/core';
+import { Component, input, output, signal, effect, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -11,7 +11,7 @@ import {
   heroFolder,
   heroLockClosed,
 } from '@ng-icons/heroicons/outline';
-import { TranslatePipe } from '../../../../../core/i18n';
+import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
 import {
   DiagramType,
   UML_DIAGRAM_TYPES,
@@ -36,6 +36,8 @@ import {
   templateUrl: './create-diagram-modal.component.html',
 })
 export class CreateDiagramModalComponent {
+  private readonly translationService = inject(TranslationService);
+
   readonly DiagramType = DiagramType;
   readonly diagramTypes = UML_DIAGRAM_TYPES;
 
@@ -63,8 +65,28 @@ export class CreateDiagramModalComponent {
   });
 
   readonly targetFolderName = computed<string>(() => {
-    return this.targetTypeItem()?.folderName || 'Diagramas de Clases';
+    this.translationService.currentLang();
+    const type = this.activeType();
+    const key = `editor.explorer.folders.${type}`;
+    const translated = this.translationService.translate(key);
+    return translated !== key ? translated : (this.targetTypeItem()?.folderName || 'Diagramas de Clases');
   });
+
+  getTypeLabel(dt: DiagramTypeItem | undefined): string {
+    if (!dt) return '';
+    this.translationService.currentLang();
+    const key = `editor.createDiagramModal.types.${dt.id}.label`;
+    const translated = this.translationService.translate(key);
+    return translated !== key ? translated : dt.label;
+  }
+
+  getTypeDescription(dt: DiagramTypeItem | undefined): string {
+    if (!dt) return '';
+    this.translationService.currentLang();
+    const key = `editor.createDiagramModal.types.${dt.id}.description`;
+    const translated = this.translationService.translate(key);
+    return translated !== key ? translated : dt.description;
+  }
 
   constructor() {
     effect(
