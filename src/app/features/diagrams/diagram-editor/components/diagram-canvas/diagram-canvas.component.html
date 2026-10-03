@@ -373,11 +373,12 @@
                   [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
                   (click)="onTableClick(node.id, $event)"
                   title="Conectar por abajo"
+                  [style.bottom.px]="getBottomConnectorOffset(node)"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                     'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                   }"
-                  class="uml-connector-point absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  class="uml-connector-point absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
                 </div>
 
                 <div

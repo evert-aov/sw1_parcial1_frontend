@@ -118,6 +118,19 @@ export class DiagramCanvasComponent {
     return `translate(calc(-50% + ${ox}px), calc(6px + ${oy}px))`;
   }
 
+  getBottomConnectorOffset(node: UmlClassNode): number {
+    if (
+      node.nodeType === 'actor' ||
+      node.nodeType === 'boundary' ||
+      node.nodeType === 'control' ||
+      node.nodeType === 'entity'
+    ) {
+      const oy = Math.max(0, node.labelOffset?.y || 0);
+      return -44 - oy;
+    }
+    return -6;
+  }
+
   hasLabelOffset(node: UmlClassNode): boolean {
     return !!node.labelOffset && (Math.abs(node.labelOffset.x) > 1 || Math.abs(node.labelOffset.y) > 1);
   }

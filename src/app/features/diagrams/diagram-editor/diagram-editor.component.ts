@@ -1413,6 +1413,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
     const w = node.isAnchor ? 0 : node.width || 220;
     const h = this.getNodeHeight(node);
+    const bottomExtra =
+      node.nodeType === 'actor' ||
+      node.nodeType === 'boundary' ||
+      node.nodeType === 'control' ||
+      node.nodeType === 'entity'
+        ? 38 + Math.max(0, node.labelOffset?.y || 0)
+        : 0;
     switch (side) {
       case 'left':
         return { x: node.position.x, y: node.position.y + h / 2 };
@@ -1421,7 +1428,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       case 'top':
         return { x: node.position.x + w / 2, y: node.position.y };
       case 'bottom':
-        return { x: node.position.x + w / 2, y: node.position.y + h };
+        return { x: node.position.x + w / 2, y: node.position.y + h + bottomExtra };
       default:
         return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
     }
