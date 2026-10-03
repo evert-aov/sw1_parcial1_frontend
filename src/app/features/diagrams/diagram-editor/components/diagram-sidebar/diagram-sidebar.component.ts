@@ -169,6 +169,7 @@ export class DiagramSidebarComponent {
   // Orden personalizado y estados de arrastrar y soltar (Drag and Drop)
   readonly customDiagramOrder = signal<string[]>([]);
   readonly draggedDiagramId = signal<string | null>(null);
+  readonly draggedNodeId = signal<string | null>(null);
   readonly dragOverDiagramId = signal<string | null>(null);
   readonly dragOverPosition = signal<'above' | 'below' | null>(null);
 
@@ -532,6 +533,43 @@ export class DiagramSidebarComponent {
         console.warn('Could not save diagram order to localStorage', e);
       }
     }
+  }
+
+  onToolboxDragStart(nodeType: string, event: DragEvent): void {
+    if (this.isReadOnly()) return;
+    const payload = {
+      type: 'toolbox_node',
+      nodeType,
+    };
+    if (event.dataTransfer) {
+      event.dataTransfer.setData('application/json', JSON.stringify(payload));
+      event.dataTransfer.setData('text/plain', nodeType);
+      event.dataTransfer.effectAllowed = 'copy';
+    }
+  }
+
+  onNodeDragStart(diag: DiagramDto, node: any, event: DragEvent): void {
+    if (this.isReadOnly()) return;
+    event.stopPropagation();
+    const isCompatible = this.isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type);
+    const payload = {
+      type: 'explorer_node',
+      nodeType: node.nodeType || 'class',
+      sourceDiagramId: diag.id,
+      sourceDiagramType: diag.type as DiagramType,
+      nodeData: node,
+      isCompatible,
+    };
+    this.draggedNodeId.set(node.id);
+    if (event.dataTransfer) {
+      event.dataTransfer.setData('application/json', JSON.stringify(payload));
+      event.dataTransfer.setData('text/plain', node.name || node.nodeType);
+      event.dataTransfer.effectAllowed = 'copy';
+    }
+  }
+
+  onNodeDragEnd(): void {
+    this.draggedNodeId.set(null);
   }
 
   onDiagramDragStart(diag: DiagramDto, event: DragEvent): void {

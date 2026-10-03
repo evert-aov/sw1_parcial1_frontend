@@ -28,7 +28,7 @@ import {
   isOnFlowBackground,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroLockClosed, heroTrash } from '@ng-icons/heroicons/outline';
+import { heroLockClosed, heroTrash, heroPlus } from '@ng-icons/heroicons/outline';
 import {
   UmlClassNode,
   UmlConnection,
@@ -37,6 +37,7 @@ import {
   DiagramType,
   UmlMessage,
 } from '../../../../../core/models/diagram.model';
+import { TranslatePipe } from '../../../../../core/i18n';
 import { UML_SVG_COMPONENTS, getUmlMarkerConfig, UmlMarkerConfig } from '../uml-svg';
 
 export interface DiagramCanvasViewState {
@@ -69,7 +70,7 @@ export class AutofocusInputDirective implements AfterViewInit {
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
-  imports: [CommonModule, FFlowModule, NgIconComponent, AutofocusInputDirective, ...UML_SVG_COMPONENTS],
+  imports: [CommonModule, FFlowModule, NgIconComponent, AutofocusInputDirective, TranslatePipe, ...UML_SVG_COMPONENTS],
   host: {
     class: 'flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden',
   },
@@ -77,6 +78,7 @@ export class AutofocusInputDirective implements AfterViewInit {
     provideIcons({
       heroLockClosed,
       heroTrash,
+      heroPlus,
     }),
   ],
   templateUrl: './diagram-canvas.component.html',
@@ -129,8 +131,10 @@ export class DiagramCanvasComponent {
   readonly nodeRename = output<{ nodeId: string; newName: string }>();
   readonly nodeLabelOffsetChange = output<{ node: UmlClassNode; offset: { x: number; y: number } }>();
   readonly sequenceMessageMove = output<{ connectionId: string; targetSlot: number }>();
+  readonly nodeDropped = output<{ payload: any; position: { x: number; y: number } }>();
 
   readonly zoomLevel = signal<number>(100);
+  readonly isDragOverCanvas = signal<boolean>(false);
   readonly hoveredNodeId = signal<string | null>(null);
   readonly renamingNodeId = signal<string | null>(null);
   readonly isDraggingLabel = signal<boolean>(false);
@@ -758,6 +762,56 @@ export class DiagramCanvasComponent {
 
   onCanvasBackgroundClick(event?: MouseEvent): void {
     this.canvasBackgroundClick.emit(event);
+  }
+
+  onCanvasDragOver(event: DragEvent): void {
+    if (this.isReadOnly()) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+    if (!this.isDragOverCanvas()) {
+      this.isDragOverCanvas.set(true);
+    }
+  }
+
+  onCanvasDragLeave(event: DragEvent): void {
+    const container = this.flowContainerRef?.nativeElement;
+    const related = event.relatedTarget as Node | null;
+    if (!container || !container.contains(related)) {
+      this.isDragOverCanvas.set(false);
+    }
+  }
+
+  onCanvasDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOverCanvas.set(false);
+    if (this.isReadOnly()) return;
+
+    const raw = event.dataTransfer?.getData('application/json');
+    if (!raw) return;
+
+    try {
+      const payload = JSON.parse(raw);
+      const position = this.clientToCanvasCoordinates(event.clientX, event.clientY);
+      this.nodeDropped.emit({ payload, position });
+    } catch (err) {
+      console.error('Error parsing dropped payload:', err);
+    }
+  }
+
+  clientToCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } {
+    const container = this.flowContainerRef?.nativeElement;
+    const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
+    if (!container) {
+      return { x: Math.max(20, Math.round(clientX)), y: Math.max(20, Math.round(clientY)) };
+    }
+    const rect = container.getBoundingClientRect();
+    const viewX = clientX - rect.left;
+    const viewY = clientY - rect.top;
+    const canvasX = Math.round((container.scrollLeft + viewX) / scale);
+    const canvasY = Math.round((container.scrollTop + viewY) / scale);
+    return { x: Math.max(20, canvasX), y: Math.max(20, canvasY) };
   }
 
   onViewportScroll(event: Event): void {

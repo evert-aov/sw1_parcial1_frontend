@@ -84,7 +84,10 @@
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('actor', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-blue-300 dark:hover:border-blue-700">
             <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
               <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" className="w-[18px] h-[22px] shrink-0" />
             </div>
@@ -99,7 +102,10 @@
           <button
             (click)="addUseCase.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-amber-300 dark:hover:border-amber-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('use_case', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-amber-300 dark:hover:border-amber-700">
             <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform p-1">
               <app-use-case-svg width="24" height="15" strokeColor="currentColor" fillColor="currentColor" [strokeWidth]="1.5" className="w-[24px] h-[15px] shrink-0" />
             </div>
@@ -194,7 +200,35 @@
       </div>
 
     } @else if (activeDiagramType() === DiagramType.CLASS) {
-      <!-- Sección 1B: Relaciones y Elementos para Diagrama de Clases -->
+      <!-- Sección 1B: Elementos Básicos y Relaciones para Diagrama de Clases -->
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
+        <div class="px-3.5 py-2.5 flex items-center justify-between">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon name="heroSquare3Stack3d" class="text-xs text-blue-600 dark:text-blue-400"></ng-icon>
+            <span>{{ 'editor.toolbox.elements' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.class' | translate }}</span></span>
+          </span>
+        </div>
+        <div class="p-2 space-y-1.5">
+          <!-- Botón Clase UML Estándar -->
+          <button
+            (click)="addClass.emit()"
+            [disabled]="isReadOnly()"
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('class', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-blue-300 dark:hover:border-blue-700">
+            <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
+              <app-table-svg mode="icon" width="20" height="18" strokeColor="currentColor" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.classStandard' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.classStandardDesc' | translate }}</div>
+            </div>
+            <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
+          </button>
+        </div>
+      </div>
+
       <div class="border-b border-slate-100 dark:border-slate-800/80">
         <div
           (click)="isRelationshipsOpen.set(!isRelationshipsOpen())"
@@ -293,7 +327,10 @@
           <button
             (click)="addPackage.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-amber-300 dark:hover:border-amber-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('package', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-amber-300 dark:hover:border-amber-700">
             <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
               <ng-icon name="heroFolder" class="text-base"></ng-icon>
             </div>
@@ -308,7 +345,10 @@
           <button
             (click)="addUseCase.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-amber-300 dark:hover:border-amber-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('use_case', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-amber-300 dark:hover:border-amber-700">
             <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
               <ng-icon name="heroEllipsisHorizontalCircle" class="text-base"></ng-icon>
             </div>
@@ -322,7 +362,10 @@
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('actor', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-blue-300 dark:hover:border-blue-700">
             <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
               <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" className="w-[18px] h-[22px] shrink-0" />
             </div>
@@ -430,7 +473,10 @@
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('actor', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-cyan-300 dark:hover:border-cyan-700">
             <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-600 dark:text-cyan-400 group-hover:scale-105 transition-transform p-0.5">
               <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
@@ -445,7 +491,10 @@
           <button
             (click)="addBoundary.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('boundary', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-cyan-300 dark:hover:border-cyan-700">
             <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform p-0.5">
               <app-boundary-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
@@ -460,7 +509,10 @@
           <button
             (click)="addControl.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('control', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-cyan-300 dark:hover:border-cyan-700">
             <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform p-0.5">
               <app-control-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
@@ -475,7 +527,10 @@
           <button
             (click)="addEntity.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('entity', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-cyan-300 dark:hover:border-cyan-700">
             <div class="w-9 h-8 flex items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform p-0.5">
               <app-entity-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
@@ -585,7 +640,10 @@
           <button
             (click)="addLifeline.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-cyan-300 dark:hover:border-cyan-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('lifeline', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-cyan-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-cyan-300 dark:hover:border-cyan-700">
             <div class="w-9 h-8 flex flex-col items-center justify-center bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200/80 dark:border-cyan-800/60 rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform p-0.5">
               <app-lifeline-svg mode="icon" width="22" height="22" strokeColor="currentColor" fillColor="currentColor" />
             </div>
@@ -600,7 +658,10 @@
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('actor', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-blue-300 dark:hover:border-blue-700">
             <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-700 dark:text-blue-300 group-hover:scale-105 transition-transform p-0.5">
               <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
             </div>
@@ -676,7 +737,10 @@
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
-            class="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('actor', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
             <span class="w-3.5 h-4 shrink-0 flex items-center justify-center">
               <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" className="w-[13px] h-[15px] shrink-0" />
             </span>
@@ -685,26 +749,45 @@
           <button
             (click)="addUseCase.emit()"
             [disabled]="isReadOnly()"
-            class="py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('use_case', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
             <ng-icon name="heroEllipsisHorizontalCircle" class="text-xs"></ng-icon>
             <span>+ {{ 'editor.toolbox.useCase' | translate | uppercase }}</span>
           </button>
         </div>
       } @else if (activeDiagramType() === DiagramType.PACKAGE) {
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-3 gap-1.5">
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
-            class="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-            <span class="w-3.5 h-4 shrink-0 flex items-center justify-center">
-              <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" className="w-[13px] h-[15px] shrink-0" />
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('actor', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            <span class="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+              <app-actor-svg width="11" height="13" strokeColor="white" fillColor="transparent" [strokeWidth]="2" />
             </span>
             <span>+ {{ 'editor.toolbox.actor' | translate | uppercase }}</span>
           </button>
           <button
+            (click)="addUseCase.emit()"
+            [disabled]="isReadOnly()"
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('use_case', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            <ng-icon name="heroEllipsisHorizontalCircle" class="text-xs"></ng-icon>
+            <span>+ {{ 'editor.toolbox.useCase' | translate | uppercase }}</span>
+          </button>
+          <button
             (click)="addPackage.emit()"
             [disabled]="isReadOnly()"
-            class="py-2.5 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('package', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
             <ng-icon name="heroFolder" class="text-xs"></ng-icon>
             <span>+ {{ 'editor.toolbox.package' | translate | uppercase }}</span>
           </button>
@@ -714,25 +797,37 @@
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
-            class="py-2 px-1 bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('actor', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2 px-1 bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
             <span>+ {{ 'editor.toolbox.actor' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addBoundary.emit()"
             [disabled]="isReadOnly()"
-            class="py-2 px-1 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('boundary', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2 px-1 bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
             <span>+ {{ 'editor.toolbox.boundary' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addControl.emit()"
             [disabled]="isReadOnly()"
-            class="py-2 px-1 bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('control', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2 px-1 bg-teal-600 hover:bg-teal-500 active:bg-teal-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
             <span>+ {{ 'editor.toolbox.control' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addEntity.emit()"
             [disabled]="isReadOnly()"
-            class="py-2 px-1 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('entity', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2 px-1 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
             <span>+ {{ 'editor.toolbox.entity' | translate | uppercase }}</span>
           </button>
         </div>
@@ -741,13 +836,19 @@
           <button
             (click)="addLifeline.emit()"
             [disabled]="isReadOnly()"
-            class="py-2.5 px-2 bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('lifeline', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2.5 px-2 bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
             <span>+ {{ 'editor.toolbox.lifeline' | translate | uppercase }}</span>
           </button>
           <button
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
-            class="py-2.5 px-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('actor', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2.5 px-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
             <span>+ {{ 'editor.toolbox.actor' | translate | uppercase }}</span>
           </button>
         </div>
@@ -755,8 +856,10 @@
         <button
           (click)="addClass.emit()"
           [disabled]="isReadOnly()"
-          [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('toolbar.addClassTooltip' | translate)"
-          class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+          [draggable]="!isReadOnly()"
+          (dragstart)="onToolboxDragStart('class', $event)"
+          [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('editor.toolbox.dragHint' | translate)"
+          class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
           <ng-icon name="heroPlus" class="text-xs"></ng-icon>
           <span>{{ 'editor.toolbox.newUmlClass' | translate }}</span>
         </button>
@@ -983,14 +1086,26 @@
                             } @else {
                               @for (node of getNodesForDiagram(diag); track node.id; let last = $last) {
                                 <div
+                                  [draggable]="!isReadOnly()"
+                                  (dragstart)="onNodeDragStart(diag, node, $event)"
+                                  (dragend)="onNodeDragEnd()"
                                   (click)="onNodeItemClick(diag, node, $event)"
-                                  [title]="diag.id === currentDiagramId() ? ('editor.explorer.clickToSelect' | translate) : getCopyTooltip(diag, node)"
-                                  class="flex items-center justify-between px-1.5 py-1 rounded text-[11px] hover:bg-slate-100/80 dark:hover:bg-[#161B36] transition-colors group/nodeitem cursor-pointer">
+                                  [title]="diag.id === currentDiagramId() ? ('editor.explorer.clickToSelect' | translate) : (getCopyTooltip(diag, node) + ' • ' + ('editor.toolbox.dragNodeToCopy' | translate))"
+                                  [class.opacity-50]="draggedNodeId() === node.id"
+                                  class="flex items-center justify-between px-1.5 py-1 rounded text-[11px] hover:bg-slate-100/80 dark:hover:bg-[#161B36] transition-colors group/nodeitem cursor-pointer select-none">
                                   
                                   <div class="flex items-center gap-1.5 min-w-0 flex-1">
                                     <span class="text-slate-300 dark:text-slate-600 font-mono text-[10px] select-none shrink-0">
                                       {{ last ? '└─' : '├─' }}
                                     </span>
+
+                                    @if (!isReadOnly()) {
+                                      <span
+                                        [title]="'editor.toolbox.dragNodeToCopy' | translate"
+                                        class="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-blue-500 dark:hover:text-blue-400 shrink-0 opacity-0 group-hover/nodeitem:opacity-100 transition-opacity">
+                                        <ng-icon name="heroBars2" class="text-[8.5px]"></ng-icon>
+                                      </span>
+                                    }
                                     
                                     <!-- Icono e Indicador de Tipo de Nodo -->
                                     @if (node.nodeType === 'actor') {

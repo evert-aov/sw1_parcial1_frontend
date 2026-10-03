@@ -2640,14 +2640,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
   }
 
-  addClass(): void {
+  addClass(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - 110)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 40)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => !n.isAnchor).length + 1;
     const newNode: UmlClassNode = {
@@ -2666,17 +2666,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
-  addActor(): void {
+  addActor(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    let posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    let posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    let posX = position ? Math.max(20, Math.round(position.x - 32)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    let posY = isSequence ? 50 : (position ? Math.max(20, Math.round(position.y - 47)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60)));
 
-    if (isSequence) {
+    if (isSequence && !position) {
       posY = 50;
       const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
       if (topNodes.length > 0) {
@@ -2707,14 +2707,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
-  addUseCase(): void {
+  addUseCase(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - 70)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 30)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => n.nodeType === 'use_case').length + 1;
     const newNode: UmlClassNode = {
@@ -2735,14 +2735,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
-  addPackage(): void {
+  addPackage(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - 100)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 60)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => n.nodeType === 'package').length + 1;
     const newNode: UmlClassNode = {
@@ -2763,14 +2763,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
-  addBoundary(): void {
+  addBoundary(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - 35)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 35)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => n.nodeType === 'boundary').length + 1;
     const newNode: UmlClassNode = {
@@ -2791,14 +2791,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
-  addControl(): void {
+  addControl(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - 35)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 35)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => n.nodeType === 'control').length + 1;
     const newNode: UmlClassNode = {
@@ -2819,14 +2819,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
-  addEntity(): void {
+  addEntity(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - 35)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 35)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => n.nodeType === 'entity').length + 1;
     const newNode: UmlClassNode = {
@@ -2847,7 +2847,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
-  addLifeline(): void {
+  addLifeline(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
@@ -2855,10 +2855,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
 
-    let posX = Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    let posY = isSequence ? 50 : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    let posX = position ? Math.max(20, Math.round(position.x - 80)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    let posY = isSequence ? 50 : (position ? Math.max(20, Math.round(position.y - 24)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60)));
 
-    if (isSequence) {
+    if (isSequence && !position) {
       posY = 50;
       const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
       if (topNodes.length > 0) {
@@ -3058,9 +3058,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.showQuickToast(toast);
   }
 
-  handleCopyNodeFromExplorer(event: { node: any; sourceDiagramId: string; sourceDiagramType?: DiagramType }): void {
+  handleCopyNodeFromExplorer(event: { node: any; sourceDiagramId: string; sourceDiagramType?: DiagramType; position?: { x: number; y: number } }): void {
     if (this.isReadOnly()) return;
     const node = event.node;
+    if (!node) return;
     const isCurrentDiag = event.sourceDiagramId === this.currentDiagramId();
 
     const currentType = this.activeDiagramType();
@@ -3096,21 +3097,35 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
 
-    let posX = isCurrentDiag && node.position?.x
-      ? node.position.x + 40
-      : Math.max(60, Math.round(scrollLeft + 150 + Math.random() * 50));
-    let posY = isCurrentDiag && node.position?.y
-      ? node.position.y + 40
-      : Math.max(60, Math.round(scrollTop + 100 + Math.random() * 50));
+    const isBce = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
+    const width = node.width || (node.nodeType === 'actor' ? 65 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (isBce ? 90 : 220))));
+    const height = node.height || (node.nodeType === 'actor' ? 95 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (isBce ? 95 : null))));
 
-    if (currentType === DiagramType.SEQUENCE && (node.nodeType === 'actor' || node.nodeType === 'lifeline')) {
-      posY = 50;
-      const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
-      if (topNodes.length > 0) {
-        const maxRight = Math.max(...topNodes.map((n) => (n.position?.x || 0) + (n.width || 120)));
-        posX = maxRight + 60;
-      } else {
-        posX = 80;
+    let posX: number;
+    let posY: number;
+
+    if (event.position) {
+      posX = Math.max(20, Math.round(event.position.x - width / 2));
+      posY = (currentType === DiagramType.SEQUENCE && (node.nodeType === 'actor' || node.nodeType === 'lifeline'))
+        ? 50
+        : Math.max(20, Math.round(event.position.y - (height || 80) / 2));
+    } else {
+      posX = isCurrentDiag && node.position?.x
+        ? node.position.x + 40
+        : Math.max(60, Math.round(scrollLeft + 150 + Math.random() * 50));
+      posY = isCurrentDiag && node.position?.y
+        ? node.position.y + 40
+        : Math.max(60, Math.round(scrollTop + 100 + Math.random() * 50));
+
+      if (currentType === DiagramType.SEQUENCE && (node.nodeType === 'actor' || node.nodeType === 'lifeline')) {
+        posY = 50;
+        const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
+        if (topNodes.length > 0) {
+          const maxRight = Math.max(...topNodes.map((n) => (n.position?.x || 0) + (n.width || 120)));
+          posX = maxRight + 60;
+        } else {
+          posX = 80;
+        }
       }
     }
 
@@ -3122,14 +3137,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const newNodeId = `${node.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    const isBce = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
     const newNode: UmlClassNode = {
       id: newNodeId,
       name: newName,
       nodeType: node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : (currentType === DiagramType.PACKAGE ? 'package' : (currentType === DiagramType.COMMUNICATION ? 'boundary' : 'class'))),
       position: { x: posX, y: posY },
-      width: node.width || (node.nodeType === 'actor' ? 65 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (isBce ? 90 : 220)))),
-      height: node.height || (node.nodeType === 'actor' ? 95 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (isBce ? 95 : null)))),
+      width,
+      height,
       color: node.color || (isBce ? '#D2EEF3' : '#FFFDDD'),
       attributes: (node.attributes || []).map((a: any) => ({ ...a })),
       methods: (node.methods || []).map((m: any) => ({ ...m })),
@@ -3143,6 +3157,49 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const typeLabel = newNode.nodeType === 'actor' ? 'Actor' : (newNode.nodeType === 'use_case' ? 'Caso de Uso' : (newNode.nodeType === 'package' ? 'Paquete' : (newNode.nodeType === 'boundary' ? 'Boundary' : (newNode.nodeType === 'control' ? 'Control' : (newNode.nodeType === 'entity' ? 'Entidad' : 'Clase')))));
     this.showQuickToast(`${typeLabel} "${newNode.name}" copiado al lienzo`);
+  }
+
+  onNodeDropped(event: { payload: any; position: { x: number; y: number } }): void {
+    if (this.isReadOnly() || !event.payload) return;
+    const { payload, position } = event;
+
+    if (payload.type === 'toolbox_node') {
+      const nodeType = payload.nodeType;
+      switch (nodeType) {
+        case 'class':
+          this.addClass(position);
+          break;
+        case 'actor':
+          this.addActor(position);
+          break;
+        case 'use_case':
+          this.addUseCase(position);
+          break;
+        case 'package':
+          this.addPackage(position);
+          break;
+        case 'boundary':
+          this.addBoundary(position);
+          break;
+        case 'control':
+          this.addControl(position);
+          break;
+        case 'entity':
+          this.addEntity(position);
+          break;
+        case 'lifeline':
+          this.addLifeline(position);
+          break;
+      }
+    } else if (payload.type === 'explorer_node') {
+      const node = payload.nodeData || payload.node;
+      this.handleCopyNodeFromExplorer({
+        node,
+        sourceDiagramId: payload.sourceDiagramId,
+        sourceDiagramType: payload.sourceDiagramType,
+        position,
+      });
+    }
   }
 
   handleSelectNodeFromExplorer(nodeId: string): void {
