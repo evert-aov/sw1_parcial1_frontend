@@ -3424,8 +3424,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       let defaultWidth = 220;
       let defaultHeight: number | undefined = undefined;
       if (nodeType === 'actor') {
-        defaultWidth = 90;
-        defaultHeight = 100;
+        defaultWidth = 65;
+        defaultHeight = 95;
       } else if (nodeType === 'use_case') {
         defaultWidth = 150;
         defaultHeight = 65;
