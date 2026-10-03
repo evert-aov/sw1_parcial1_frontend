@@ -614,28 +614,28 @@
 /* =========================================================================
    DIAGRAMAS DE SECUENCIA UML 2.5 (ENTERPRISE ARCHITECT)
    ========================================================================= */
-::ng-deep .uml-relation-sync path,
-::ng-deep .uml-relation-reply path,
-::ng-deep .uml-relation-async path,
-::ng-deep .uml-relation-create path {
+::ng-deep .uml-relation-sync path[f-connection-path],
+::ng-deep .uml-relation-reply path[f-connection-path],
+::ng-deep .uml-relation-async path[f-connection-path],
+::ng-deep .uml-relation-create path[f-connection-path] {
   stroke: var(--seq-conn-color, #2D3748) !important;
 }
 
 ::ng-deep .uml-relation-reply .f-connection-drag-handle,
-::ng-deep .uml-relation-reply path,
+::ng-deep .uml-relation-reply path[f-connection-path],
 ::ng-deep .uml-relation-create .f-connection-drag-handle,
-::ng-deep .uml-relation-create path {
+::ng-deep .uml-relation-create path[f-connection-path] {
   stroke-dasharray: 6, 4 !important;
 }
 
-:host-context(.dark) ::ng-deep .uml-relation-sync path,
-:host-context(.dark) ::ng-deep .uml-relation-reply path,
-:host-context(.dark) ::ng-deep .uml-relation-async path,
-:host-context(.dark) ::ng-deep .uml-relation-create path,
-.dark ::ng-deep .uml-relation-sync path,
-.dark ::ng-deep .uml-relation-reply path,
-.dark ::ng-deep .uml-relation-async path,
-.dark ::ng-deep .uml-relation-create path {
+:host-context(.dark) ::ng-deep .uml-relation-sync path[f-connection-path],
+:host-context(.dark) ::ng-deep .uml-relation-reply path[f-connection-path],
+:host-context(.dark) ::ng-deep .uml-relation-async path[f-connection-path],
+:host-context(.dark) ::ng-deep .uml-relation-create path[f-connection-path],
+.dark ::ng-deep .uml-relation-sync path[f-connection-path],
+.dark ::ng-deep .uml-relation-reply path[f-connection-path],
+.dark ::ng-deep .uml-relation-async path[f-connection-path],
+.dark ::ng-deep .uml-relation-create path[f-connection-path] {
   stroke: var(--seq-conn-color, #CBD5E1) !important;
 }
 

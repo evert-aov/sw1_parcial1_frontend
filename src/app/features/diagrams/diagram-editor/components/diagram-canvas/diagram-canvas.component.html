@@ -93,7 +93,8 @@
                   fConnectionContent
                   [position]="0.15"
                   [offset]="-12"
-                  (dblclick)="onConnectionDblClick(conn, $event)"
+                  (click)="$event.stopPropagation(); onConnectionClick(conn.id, $event)"
+                  (dblclick)="$event.stopPropagation(); onConnectionDblClick(conn, $event)"
                   title="Multiplicidad Origen (doble clic para editar)"
                   class="uml-multiplicity-badge">
                   {{ conn.sourceMultiplicity }}
@@ -105,7 +106,8 @@
                   fConnectionContent
                   [position]="0.5"
                   [offset]="-14"
-                  (dblclick)="onConnectionDblClick(conn, $event)"
+                  (click)="$event.stopPropagation(); onConnectionClick(conn.id, $event)"
+                  (dblclick)="$event.stopPropagation(); onConnectionDblClick(conn, $event)"
                   title="Nombre / Estereotipo de Relación (doble clic para editar)"
                   class="uml-relation-name-badge">
                   {{ conn.name || (conn.type === 'include' ? '«include»' : (conn.type === 'extend' ? '«extend»' : (conn.type === 'import' ? '«import»' : (conn.type === 'access' ? '«access»' : (conn.type === 'merge' ? '«merge»' : (conn.type === 'trace' ? '«trace»' : '')))))) }}
@@ -179,7 +181,8 @@
                   [align]="'along'"
                   class="uml-comm-messages-anchor-above">
                   <div
-                    (dblclick)="onConnectionDblClick(conn, $event)"
+                    (click)="$event.stopPropagation(); onConnectionClick(conn.id, $event)"
+                    (dblclick)="$event.stopPropagation(); onConnectionDblClick(conn, $event)"
                     title="Mensajes de Comunicación UML 2.5 (doble clic para editar)"
                     class="uml-communication-messages-badge-above">
                     @for (msg of getForwardMessages(conn); track msg.id || $index) {
@@ -204,7 +207,8 @@
                   [align]="'along'"
                   class="uml-comm-messages-anchor-below">
                   <div
-                    (dblclick)="onConnectionDblClick(conn, $event)"
+                    (click)="$event.stopPropagation(); onConnectionClick(conn.id, $event)"
+                    (dblclick)="$event.stopPropagation(); onConnectionDblClick(conn, $event)"
                     title="Mensajes de Comunicación UML 2.5 (doble clic para editar)"
                     class="uml-communication-messages-badge-below">
                     @for (msg of getReverseMessages(conn); track msg.id || $index) {
@@ -225,7 +229,8 @@
                   fConnectionContent
                   [position]="0.85"
                   [offset]="-12"
-                  (dblclick)="onConnectionDblClick(conn, $event)"
+                  (click)="$event.stopPropagation(); onConnectionClick(conn.id, $event)"
+                  (dblclick)="$event.stopPropagation(); onConnectionDblClick(conn, $event)"
                   title="Multiplicidad Destino (doble clic para editar)"
                   class="uml-multiplicity-badge">
                   {{ conn.targetMultiplicity }}
