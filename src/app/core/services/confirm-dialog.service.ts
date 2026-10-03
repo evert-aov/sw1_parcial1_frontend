@@ -11,6 +11,7 @@ export interface ConfirmDialogOptions {
   cancelText?: string;
   type?: ConfirmDialogType;
   icon?: string;
+  showCancelButton?: boolean;
 }
 
 @Injectable({
@@ -37,11 +38,21 @@ export class ConfirmDialogService {
       cancelText: options.cancelText,
       type: options.type || 'danger',
       icon: options.icon,
+      showCancelButton: options.showCancelButton ?? true,
     });
     this.isOpen.set(true);
 
     return new Promise<boolean>((resolve) => {
       this.resolver = resolve;
+    });
+  }
+
+  alert(options: ConfirmDialogOptions): Promise<boolean> {
+    return this.confirm({
+      ...options,
+      type: options.type || 'warning',
+      showCancelButton: options.showCancelButton ?? false,
+      confirmText: options.confirmText || 'common.confirmModal.understood',
     });
   }
 

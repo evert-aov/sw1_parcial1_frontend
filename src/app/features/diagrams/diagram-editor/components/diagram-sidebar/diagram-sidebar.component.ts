@@ -343,9 +343,6 @@ export class DiagramSidebarComponent {
     if (diag.id === this.currentDiagramId()) {
       this.selectNode.emit(node.id);
     } else {
-      if (!this.isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type)) {
-        return;
-      }
       this.onCopyNode(diag, node);
     }
   }

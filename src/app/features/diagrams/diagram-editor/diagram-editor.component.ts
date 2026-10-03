@@ -2944,36 +2944,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const currentType = this.activeDiagramType();
     // Validar compatibilidad de tipo de diagrama
+    let isInvalidPaste = false;
     if (currentType === DiagramType.USE_CASE) {
-      const invalid = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'use_case');
-      if (invalid) {
-        alert('Solo se pueden pegar actores y casos de uso en diagramas de Casos de Uso.');
-        return;
-      }
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'use_case');
     } else if (currentType === DiagramType.PACKAGE) {
-      const invalid = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case' && n.nodeType !== 'actor');
-      if (invalid) {
-        alert('Solo se pueden pegar paquetes, casos de uso y actores en diagramas de Paquetes.');
-        return;
-      }
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case' && n.nodeType !== 'actor');
     } else if (currentType === DiagramType.COMMUNICATION) {
-      const invalid = clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor' && n.nodeType !== 'class');
-      if (invalid) {
-        alert('Solo se pueden pegar actores, boundaries, controles y entidades en diagramas de Comunicación.');
-        return;
-      }
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor' && n.nodeType !== 'class');
     } else if (currentType === DiagramType.SEQUENCE) {
-      const invalid = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'lifeline' && n.nodeType !== 'class' && n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity');
-      if (invalid) {
-        alert('Solo se pueden pegar actores, líneas de vida o participantes en diagramas de Secuencia.');
-        return;
-      }
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'lifeline' && n.nodeType !== 'class' && n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity');
     } else if (currentType === DiagramType.CLASS) {
-      const invalid = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'package' || n.nodeType === 'boundary' || n.nodeType === 'control' || n.nodeType === 'entity' || n.nodeType === 'lifeline');
-      if (invalid) {
-        alert('Solo se pueden pegar clases en diagramas de Clases.');
-        return;
-      }
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'package' || n.nodeType === 'boundary' || n.nodeType === 'control' || n.nodeType === 'entity' || n.nodeType === 'lifeline');
+    }
+
+    if (isInvalidPaste) {
+      this.showIncompatibleElementModal(currentType);
+      return;
     }
 
     this.pushSnapshot();
@@ -3058,6 +3044,28 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.showQuickToast(toast);
   }
 
+  private showIncompatibleElementModal(diagType: DiagramType): void {
+    let msgKey = 'editor.incompatible.class';
+    if (diagType === DiagramType.USE_CASE) {
+      msgKey = 'editor.incompatible.useCase';
+    } else if (diagType === DiagramType.PACKAGE) {
+      msgKey = 'editor.incompatible.package';
+    } else if (diagType === DiagramType.COMMUNICATION) {
+      msgKey = 'editor.incompatible.communication';
+    } else if (diagType === DiagramType.SEQUENCE) {
+      msgKey = 'editor.incompatible.sequence';
+    } else if (diagType === DiagramType.CLASS) {
+      msgKey = 'editor.incompatible.class';
+    }
+
+    this.confirmDialogService.alert({
+      title: 'editor.incompatible.title',
+      message: msgKey,
+      type: 'warning',
+      confirmText: 'common.confirmModal.understood',
+    });
+  }
+
   handleCopyNodeFromExplorer(event: { node: any; sourceDiagramId: string; sourceDiagramType?: DiagramType; position?: { x: number; y: number } }): void {
     if (this.isReadOnly()) return;
     const node = event.node;
@@ -3065,31 +3073,32 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const isCurrentDiag = event.sourceDiagramId === this.currentDiagramId();
 
     const currentType = this.activeDiagramType();
+    let isInvalidCopy = false;
     if (currentType === DiagramType.USE_CASE) {
       if (node.nodeType !== 'actor' && node.nodeType !== 'use_case') {
-        alert('Solo se pueden copiar actores y casos de uso en diagramas de Casos de Uso.');
-        return;
+        isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.PACKAGE) {
       if (node.nodeType !== 'package' && node.nodeType !== 'use_case' && node.nodeType !== 'actor') {
-        alert('Solo se pueden copiar paquetes, casos de uso y actores en diagramas de Paquetes.');
-        return;
+        isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.COMMUNICATION) {
       if (node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity' && node.nodeType !== 'actor' && node.nodeType !== 'class') {
-        alert('Solo se pueden copiar actores, boundaries, controles y entidades en diagramas de Comunicación.');
-        return;
+        isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.SEQUENCE) {
       if (node.nodeType !== 'actor' && node.nodeType !== 'lifeline' && node.nodeType !== 'class' && node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity') {
-        alert('Solo se pueden copiar actores, líneas de vida o participantes en diagramas de Secuencia.');
-        return;
+        isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.CLASS) {
       if (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' || node.nodeType === 'lifeline') {
-        alert('Solo se pueden copiar clases en diagramas de Clases.');
-        return;
+        isInvalidCopy = true;
       }
+    }
+
+    if (isInvalidCopy) {
+      this.showIncompatibleElementModal(currentType);
+      return;
     }
 
     this.pushSnapshot();

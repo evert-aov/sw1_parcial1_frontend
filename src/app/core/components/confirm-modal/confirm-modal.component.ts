@@ -38,6 +38,7 @@ export class ConfirmModalComponent {
   readonly confirmText = input<string | null>(null);
   readonly cancelText = input<string | null>(null);
   readonly icon = input<string | null>(null);
+  readonly showCancelButton = input<boolean | null>(null);
 
   // Outputs para uso declarativo
   readonly confirm = output<void>();
@@ -46,6 +47,12 @@ export class ConfirmModalComponent {
   // Computados que priorizan inputs directos o fallback al servicio
   readonly isModalOpen = computed(() => {
     return this.isOpen() !== null ? !!this.isOpen() : this.confirmService.isOpen();
+  });
+
+  readonly displayShowCancelButton = computed(() => {
+    if (this.showCancelButton() !== null) return !!this.showCancelButton();
+    const optVal = this.confirmService.options()?.showCancelButton;
+    return optVal !== undefined ? optVal : true;
   });
 
   readonly displayTitle = computed(() => {
@@ -71,6 +78,7 @@ export class ConfirmModalComponent {
     this.translationService.currentLang();
     const raw = this.confirmText() || this.confirmService.options()?.confirmText;
     if (raw) return this.translationService.translate(raw);
+    if (!this.displayShowCancelButton()) return this.translationService.translate('common.confirmModal.understood');
     const type = this.displayType();
     if (type === 'danger') return this.translationService.translate('common.confirmModal.defaultDangerConfirm');
     if (type === 'warning') return this.translationService.translate('common.confirmModal.defaultWarningConfirm');

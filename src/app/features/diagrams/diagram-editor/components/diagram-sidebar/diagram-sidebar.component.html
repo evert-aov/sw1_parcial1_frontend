@@ -1160,8 +1160,8 @@
                                         type="button"
                                         (click)="onCopyNode(diag, node, $event)"
                                         [title]="getCopyTooltip(diag, node)"
-                                        [disabled]="!isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type)"
-                                        class="opacity-0 group-hover/nodeitem:opacity-100 p-1 rounded hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/50 dark:hover:text-blue-300 text-slate-400 dark:text-slate-500 transition-all cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed">
+                                        [class.opacity-40]="!isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type)"
+                                        class="opacity-0 group-hover/nodeitem:opacity-100 p-1 rounded hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/50 dark:hover:text-blue-300 text-slate-400 dark:text-slate-500 transition-all cursor-pointer">
                                         <ng-icon name="heroDocumentDuplicate" class="text-[11px]"></ng-icon>
                                       </button>
                                     }

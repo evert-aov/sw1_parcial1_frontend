@@ -49,13 +49,15 @@
 
       <!-- Footer / Acciones -->
       <div class="px-5 py-3.5 bg-slate-50/70 dark:bg-[#0c0f1d] border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-end gap-2.5">
-        <button
-          type="button"
-          (click)="onCancel()"
-          class="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-[#161b33] border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer shadow-xs"
-        >
-          {{ displayCancelText() }}
-        </button>
+        @if (displayShowCancelButton()) {
+          <button
+            type="button"
+            (click)="onCancel()"
+            class="px-4 py-2 font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-[#161b33] border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer shadow-xs"
+          >
+            {{ displayCancelText() }}
+          </button>
+        }
 
         @if (displayType() === 'danger') {
           <button
