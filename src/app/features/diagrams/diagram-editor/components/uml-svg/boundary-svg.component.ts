@@ -12,21 +12,27 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   styles: [`
     :host {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 100%;
-      height: 100%;
       overflow: visible;
     }
   `],
+  host: {
+    '[style.width]': 'computedWidth',
+    '[style.height]': 'computedHeight',
+    '[style.display]': "width === '100%' ? 'flex' : 'inline-flex'",
+    'class': 'shrink-0'
+  },
   template: `
     <svg
       [attr.viewBox]="showLabel && label ? '1 4 44 56' : '1 4 44 40'"
       [attr.width]="width"
       [attr.height]="height"
+      [style.width]="computedWidth"
+      [style.height]="computedHeight"
       fill="none"
-      [class]="className"
+      [class]="className || (isCustomSize ? '' : 'w-full h-full')"
       preserveAspectRatio="xMidYMid meet"
       xmlns="http://www.w3.org/2000/svg">
       <!-- Línea vertical del borde/frontera -->
@@ -87,5 +93,19 @@ export class BoundarySvgComponent {
   @Input() label?: string;
   @Input() showLabel: boolean = false;
   @Input() labelColor?: string;
-  @Input() className: string = 'w-full h-full';
+  @Input() className: string = '';
+
+  get isCustomSize(): boolean {
+    return this.width !== '100%' || this.height !== '100%';
+  }
+
+  get computedWidth(): string {
+    if (typeof this.width === 'number') return `${this.width}px`;
+    return this.width;
+  }
+
+  get computedHeight(): string {
+    if (typeof this.height === 'number') return `${this.height}px`;
+    return this.height;
+  }
 }

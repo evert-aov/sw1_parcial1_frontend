@@ -11,13 +11,21 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[style.width]': 'computedWidth',
+    '[style.height]': 'computedHeight',
+    '[style.display]': "width === '100%' ? 'flex' : 'inline-flex'",
+    'class': 'shrink-0 items-center justify-center'
+  },
   template: `
     <svg
       viewBox="0 0 90 54"
       [attr.width]="width"
       [attr.height]="height"
+      [style.width]="computedWidth"
+      [style.height]="computedHeight"
       fill="none"
-      [class]="className"
+      [class]="className || (isCustomSize ? '' : 'w-full h-full')"
       preserveAspectRatio="xMidYMid meet"
       xmlns="http://www.w3.org/2000/svg">
       <!-- Elipse principal del Caso de Uso -->
@@ -56,5 +64,19 @@ export class UseCaseSvgComponent {
   @Input() textColor: string = '#241C18';
   @Input() label: string = '';
   @Input() name: string = '';
-  @Input() className: string = 'w-full h-full';
+  @Input() className: string = '';
+
+  get isCustomSize(): boolean {
+    return this.width !== '100%' || this.height !== '100%';
+  }
+
+  get computedWidth(): string {
+    if (typeof this.width === 'number') return `${this.width}px`;
+    return this.width;
+  }
+
+  get computedHeight(): string {
+    if (typeof this.height === 'number') return `${this.height}px`;
+    return this.height;
+  }
 }

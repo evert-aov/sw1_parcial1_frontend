@@ -86,7 +86,7 @@
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
             <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
-              <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
+              <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" className="w-[18px] h-[22px] shrink-0" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
@@ -101,7 +101,7 @@
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-amber-300 dark:hover:border-amber-700">
             <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform p-1">
-              <app-use-case-svg width="24" height="15" strokeColor="currentColor" fillColor="currentColor" [strokeWidth]="1.5" />
+              <app-use-case-svg width="24" height="15" strokeColor="currentColor" fillColor="currentColor" [strokeWidth]="1.5" className="w-[24px] h-[15px] shrink-0" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Caso de Uso</div>
@@ -324,7 +324,7 @@
             [disabled]="isReadOnly()"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-pointer group hover:border-blue-300 dark:hover:border-blue-700">
             <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
-              <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" />
+              <app-actor-svg width="18" height="22" strokeColor="currentColor" [strokeWidth]="1.8" className="w-[18px] h-[22px] shrink-0" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Actor</div>
@@ -677,7 +677,9 @@
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
             class="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-            <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" />
+            <span class="w-3.5 h-4 shrink-0 flex items-center justify-center">
+              <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" className="w-[13px] h-[15px] shrink-0" />
+            </span>
             <span>+ ACTOR</span>
           </button>
           <button
@@ -694,7 +696,9 @@
             (click)="addActor.emit()"
             [disabled]="isReadOnly()"
             class="py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-            <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" />
+            <span class="w-3.5 h-4 shrink-0 flex items-center justify-center">
+              <app-actor-svg width="13" height="15" strokeColor="white" fillColor="transparent" [strokeWidth]="2" className="w-[13px] h-[15px] shrink-0" />
+            </span>
             <span>+ ACTOR</span>
           </button>
           <button
@@ -754,7 +758,7 @@
           [title]="isReadOnly() ? ('toolbar.readOnlyMode' | translate) : ('toolbar.addClassTooltip' | translate)"
           class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
           <ng-icon name="heroPlus" class="text-xs"></ng-icon>
-          <span>+ NUEVA CLASE UML</span>
+          <span>NUEVA CLASE UML</span>
         </button>
       }
     </div>
