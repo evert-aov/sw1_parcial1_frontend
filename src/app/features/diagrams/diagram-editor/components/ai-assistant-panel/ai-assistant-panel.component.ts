@@ -93,6 +93,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   readonly roomCode = input<string | null>(null);
   readonly currentNodes = input<UmlClassNode[]>([]);
   readonly currentConnections = input<UmlConnection[]>([]);
+  readonly diagramType = input<string | null>(null);
 
   // Outputs
   readonly closePanel = output<void>();
@@ -259,6 +260,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
     const rCode = this.roomCode() || undefined;
     const provider = this.selectedProvider();
     const model = this.selectedModelId();
+    const dType = this.diagramType() || undefined;
 
     if (audioBase64) {
       this.aiService
@@ -271,7 +273,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
           this.currentNodes(),
           this.currentConnections(),
           [],
-          { provider: 'vertex', model: 'gemini-2.5-flash' },
+          { provider: 'vertex', model: 'gemini-2.5-flash', diagramType: dType },
         )
         .subscribe({
           next: (res) => this.handleAiResponse(res, '🎙️ Comando de Voz (Gemini Multimodal)'),
@@ -288,7 +290,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
           this.currentNodes(),
           this.currentConnections(),
           [],
-          { provider: 'vertex', model: 'gemini-2.5-flash' },
+          { provider: 'vertex', model: 'gemini-2.5-flash', diagramType: dType },
         )
         .subscribe({
           next: (res) => this.handleAiResponse(res, '📸 Reconocimiento de Boceto / Imagen'),
@@ -303,7 +305,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
           this.currentNodes(),
           this.currentConnections(),
           [],
-          { provider, model },
+          { provider, model, diagramType: dType },
         )
         .subscribe({
           next: (res) => this.handleAiResponse(res, '✨ Copilot IA (Prompt)'),

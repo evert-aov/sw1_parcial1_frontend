@@ -31,6 +31,7 @@ export interface AiResponse {
   changesSummary: string;
   providerUsed?: 'vertex';
   modelUsed?: string;
+  diagramType?: string;
 }
 
 @Injectable({
@@ -53,7 +54,7 @@ export class AiAssistantService {
     currentNodes: UmlClassNode[] = [],
     currentConnections: UmlConnection[] = [],
     sessionHistory: any[] = [],
-    options?: { provider?: string; model?: string },
+    options?: { provider?: string; model?: string; diagramType?: string },
   ): Observable<AiResponse> {
     return this.http.post<any>(`${this.apiUrl}/prompt`, {
       prompt,
@@ -64,6 +65,7 @@ export class AiAssistantService {
       sessionHistory,
       provider: options?.provider || 'vertex',
       model: options?.model || 'gemini-2.5-flash',
+      diagramType: options?.diagramType,
     }).pipe(
       map((res) => (res && res.data ? res.data : res) as AiResponse),
     );
@@ -78,7 +80,7 @@ export class AiAssistantService {
     currentNodes: UmlClassNode[] = [],
     currentConnections: UmlConnection[] = [],
     sessionHistory: any[] = [],
-    options?: { provider?: string; model?: string },
+    options?: { provider?: string; model?: string; diagramType?: string },
   ): Observable<AiResponse> {
     return this.http.post<any>(`${this.apiUrl}/vision-diagram`, {
       imageBase64,
@@ -91,6 +93,7 @@ export class AiAssistantService {
       sessionHistory,
       provider: options?.provider || 'vertex',
       model: options?.model || 'gemini-2.5-flash',
+      diagramType: options?.diagramType,
     }).pipe(
       map((res) => (res && res.data ? res.data : res) as AiResponse),
     );
@@ -105,7 +108,7 @@ export class AiAssistantService {
     currentNodes: UmlClassNode[] = [],
     currentConnections: UmlConnection[] = [],
     sessionHistory: any[] = [],
-    options?: { provider?: string; model?: string },
+    options?: { provider?: string; model?: string; diagramType?: string },
   ): Observable<AiResponse> {
     return this.http.post<any>(`${this.apiUrl}/audio-prompt`, {
       audioBase64,
@@ -118,6 +121,7 @@ export class AiAssistantService {
       sessionHistory,
       provider: options?.provider || 'vertex',
       model: options?.model || 'gemini-2.5-flash',
+      diagramType: options?.diagramType,
     }).pipe(
       map((res) => (res && res.data ? res.data : res) as AiResponse),
     );
