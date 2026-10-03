@@ -10,10 +10,19 @@ import { CommonModule } from '@angular/common';
   selector: 'app-boundary-svg',
   standalone: true,
   imports: [CommonModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [`
+    :host {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+  `],
   template: `
     <svg
-      [attr.viewBox]="showLabel && label ? '0 8 58 48' : '6 10 48 36'"
+      [attr.viewBox]="showLabel && label ? '1 4 44 56' : '1 4 44 40'"
       [attr.width]="width"
       [attr.height]="height"
       fill="none"
@@ -22,37 +31,41 @@ import { CommonModule } from '@angular/common';
       xmlns="http://www.w3.org/2000/svg">
       <!-- Línea vertical del borde/frontera -->
       <line
-        x1="8"
-        y1="12"
-        x2="8"
-        y2="44"
+        x1="3"
+        y1="8"
+        x2="3"
+        y2="40"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
         stroke-linecap="round"
       />
       <!-- Enlace horizontal entre la línea y el círculo -->
       <line
-        x1="8"
-        y1="28"
-        x2="20"
-        y2="28"
+        x1="3"
+        y1="24"
+        x2="7"
+        y2="24"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
       />
-      <!-- Círculo principal del Boundary -->
+      <!-- Círculo principal del Boundary (mismo radio que Entity: r=18) -->
       <circle
-        cx="36"
-        cy="28"
-        r="16"
+        cx="25"
+        cy="24"
+        r="18"
         [attr.fill]="fillColor"
+        [style.fill]="fillColor"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
       />
 
       <!-- Etiqueta opcional -->
       @if (showLabel && label) {
         <text
-          x="30"
+          x="25"
           y="54"
           text-anchor="middle"
           [attr.fill]="labelColor || strokeColor"

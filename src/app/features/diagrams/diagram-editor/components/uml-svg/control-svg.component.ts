@@ -10,29 +10,41 @@ import { CommonModule } from '@angular/common';
   selector: 'app-control-svg',
   standalone: true,
   imports: [CommonModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [`
+    :host {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+  `],
   template: `
     <svg
-      [attr.viewBox]="showLabel && label ? '4 0 48 58' : '8 2 40 46'"
+      [attr.viewBox]="showLabel && label ? '2 0 44 60' : '2 0 44 44'"
       [attr.width]="width"
       [attr.height]="height"
       fill="none"
       [class]="className"
       preserveAspectRatio="xMidYMid meet"
       xmlns="http://www.w3.org/2000/svg">
-      <!-- Círculo principal del Control -->
+      <!-- Círculo principal del Control (mismo radio que Entity: r=18) -->
       <circle
-        cx="28"
-        cy="28"
+        cx="24"
+        cy="24"
         r="18"
         [attr.fill]="fillColor"
+        [style.fill]="fillColor"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
       />
       <!-- Flecha angular superior indicando control cíclico / coordinación -->
       <polyline
-        points="36,3.5 26,10.2 36,17"
+        points="31,1.8 21,6.4 29,12.5"
         [attr.stroke]="strokeColor"
+        [style.stroke]="strokeColor"
         [attr.stroke-width]="strokeWidth"
         stroke-linecap="round"
         stroke-linejoin="round"
@@ -41,8 +53,8 @@ import { CommonModule } from '@angular/common';
       <!-- Etiqueta opcional -->
       @if (showLabel && label) {
         <text
-          x="28"
-          y="56"
+          x="24"
+          y="58"
           text-anchor="middle"
           [attr.fill]="labelColor || strokeColor"
           font-family="system-ui, -apple-system, sans-serif"

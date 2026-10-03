@@ -10,7 +10,16 @@ import { CommonModule } from '@angular/common';
   selector: 'app-entity-svg',
   standalone: true,
   imports: [CommonModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [`
+    :host {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+  `],
   template: `
     <svg
       [attr.viewBox]="showLabel && label ? '4 2 48 54' : '6 4 44 40'"
