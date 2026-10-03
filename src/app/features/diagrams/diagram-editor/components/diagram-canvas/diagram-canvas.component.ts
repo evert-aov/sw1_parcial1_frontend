@@ -329,12 +329,68 @@ export class DiagramCanvasComponent {
     this.nodeDblClick.emit({ node, event });
   }
 
+  private lastConnClickTime = 0;
+  private lastConnClickId: string | null = null;
+  private lastModalOpenTime = 0;
+
   onConnectionClick(connId: string, event: MouseEvent): void {
+    const now = Date.now();
+    const timeDiff = now - this.lastConnClickTime;
+    if (this.lastConnClickId === connId && timeDiff < 450) {
+      // Doble clic detectado directamente por cadencia de clics
+      this.lastConnClickTime = 0;
+      this.lastConnClickId = null;
+      const conn = this.connections().find((c) => c.id === connId);
+      if (conn) {
+        if (event) {
+          event.stopPropagation();
+          event.preventDefault();
+        }
+        this.onConnectionDblClick(conn, event);
+        return;
+      }
+    }
+    this.lastConnClickTime = now;
+    this.lastConnClickId = connId;
     this.connectionClick.emit({ connId, event });
   }
 
   onConnectionDblClick(conn: UmlConnection, event: MouseEvent): void {
+    const now = Date.now();
+    if (now - this.lastModalOpenTime < 450) {
+      return; // Prevenir apertura duplicada si tanto la cadencia como el evento nativo se disparan
+    }
+    this.lastModalOpenTime = now;
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     this.connectionDblClick.emit({ conn, event });
+  }
+
+  onFlowDblClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | SVGElement | null;
+    if (!target) return;
+
+    // Si el doble clic ocurrió sobre un nodo o su contenido, dejar que el nodo lo maneje
+    if (target.closest('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+      return;
+    }
+
+    // Buscar si el doble clic ocurrió sobre una conexión o su área de selección / grupo
+    const connEl = target.closest('f-connection, .f-connection');
+    if (connEl) {
+      const connId = connEl.getAttribute('id') || connEl.getAttribute('fconnectionid') || (connEl as any).id;
+      if (connId) {
+        const conn = this.connections().find((c) => c.id === connId);
+        if (conn) {
+          event.stopPropagation();
+          event.preventDefault();
+          this.onConnectionDblClick(conn, event);
+          return;
+        }
+      }
+    }
   }
 
   isGroupInitiator(conn: UmlConnection): boolean {

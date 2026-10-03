@@ -327,10 +327,14 @@ f-flow f-connection:hover .f-connection-selection,
 /* Cursor pointer para toda la conexión al pasar por el área ampliada */
 f-flow .f-connection,
 f-flow f-connection,
-f-flow .f-connection-group,
+f-flow .f-connection-group {
+  cursor: pointer !important;
+}
+
+/* La línea visual interna no intercepta eventos para que toda el área pertenezca a f-connection-selection */
 f-flow .f-connection-path,
 f-flow path[f-connection-path] {
-  cursor: pointer !important;
+  pointer-events: none !important;
 }
 
 /* Feedback visual sutil al hacer hover sobre la línea (stroke-width no cambia) */
