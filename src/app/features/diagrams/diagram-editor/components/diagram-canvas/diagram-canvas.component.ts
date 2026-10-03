@@ -334,6 +334,9 @@ export class DiagramCanvasComponent {
   private lastModalOpenTime = 0;
 
   onConnectionClick(connId: string, event: MouseEvent): void {
+    if ((event as any)._connHandled) return;
+    (event as any)._connHandled = true;
+
     const now = Date.now();
     const timeDiff = now - this.lastConnClickTime;
     if (this.lastConnClickId === connId && timeDiff < 450) {
@@ -368,6 +371,22 @@ export class DiagramCanvasComponent {
     this.connectionDblClick.emit({ conn, event });
   }
 
+  onFlowClick(event: MouseEvent): void {
+    if ((event as any)._connHandled) return;
+    const target = event.target as HTMLElement | SVGElement | null;
+    if (!target) return;
+
+    // Si se hizo clic en un nodo o control, ignorar
+    if (target.closest('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
+      return;
+    }
+
+    const connId = this.findConnectionIdFromEventTarget(target);
+    if (connId) {
+      this.onConnectionClick(connId, event);
+    }
+  }
+
   onFlowDblClick(event: MouseEvent): void {
     const target = event.target as HTMLElement | SVGElement | null;
     if (!target) return;
@@ -377,20 +396,44 @@ export class DiagramCanvasComponent {
       return;
     }
 
-    // Buscar si el doble clic ocurrió sobre una conexión o su área de selección / grupo
-    const connEl = target.closest('f-connection, .f-connection');
-    if (connEl) {
-      const connId = connEl.getAttribute('id') || connEl.getAttribute('fconnectionid') || (connEl as any).id;
-      if (connId) {
-        const conn = this.connections().find((c) => c.id === connId);
-        if (conn) {
-          event.stopPropagation();
-          event.preventDefault();
-          this.onConnectionDblClick(conn, event);
-          return;
-        }
+    const connId = this.findConnectionIdFromEventTarget(target);
+    if (connId) {
+      const conn = this.connections().find((c) => c.id === connId);
+      if (conn) {
+        event.stopPropagation();
+        event.preventDefault();
+        this.onConnectionDblClick(conn, event);
       }
     }
+  }
+
+  private findConnectionIdFromEventTarget(target: HTMLElement | SVGElement): string | null {
+    let curr: Element | null = target;
+    while (curr && curr !== document.body) {
+      const tagName = curr.tagName ? curr.tagName.toLowerCase() : '';
+      if (tagName === 'f-connection' || curr.classList.contains('f-connection')) {
+        const dataId = curr.getAttribute('data-connection-id');
+        if (dataId && this.connections().some((c) => c.id === dataId)) {
+          return dataId;
+        }
+        const rawId = curr.getAttribute('id') || curr.getAttribute('fconnectionid') || (curr as any).id || '';
+        for (const c of this.connections()) {
+          if (c.id === rawId || rawId === `_${c.id}` || rawId.endsWith(c.id)) {
+            return c.id;
+          }
+        }
+      }
+      const idAttr = curr.getAttribute('id') || '';
+      if (idAttr) {
+        for (const c of this.connections()) {
+          if (idAttr.includes(c.id) || (c.id.length > 3 && idAttr.includes(c.id.substring(1)))) {
+            return c.id;
+          }
+        }
+      }
+      curr = curr.parentElement;
+    }
+    return null;
   }
 
   isGroupInitiator(conn: UmlConnection): boolean {

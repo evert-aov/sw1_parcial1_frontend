@@ -7,8 +7,8 @@
 
 /* Quitar contenedor/marco y sockets azules por defecto de foblex flow */
 :root {
-  --ff-connection-hit-width: 34px !important;
-  --ff-connection-hover-color: transparent !important;
+  --ff-connection-hit-width: 40px !important;
+  --ff-connection-hover-color: rgba(0, 0, 0, 0.001) !important;
   --ff-connection-drag-handle-stroke: transparent;
   --ff-connection-drag-handle-fill: transparent;
   --ff-node-padding: 0px !important;
@@ -23,8 +23,8 @@
 }
 
 .dark {
-  --ff-connection-hit-width: 34px !important;
-  --ff-connection-hover-color: transparent !important;
+  --ff-connection-hit-width: 40px !important;
+  --ff-connection-hover-color: rgba(255, 255, 255, 0.001) !important;
   --ff-connection-drag-handle-stroke: transparent;
   --ff-connection-drag-handle-fill: transparent;
   --ff-node-padding: 0px !important;
@@ -224,9 +224,9 @@ f-flow input::-webkit-calendar-picker-indicator {
 }
 
 /* Estilos UML 2.5 para líneas de conexión */
-f-flow f-connection path,
-f-flow f-connection-for-create path,
-f-flow .f-connection path,
+f-flow f-connection path[f-connection-path],
+f-flow f-connection-for-create path[f-connection-path],
+f-flow .f-connection path[f-connection-path],
 f-flow path[f-connection-path],
 f-flow .f-connection-path {
   fill: none !important;
@@ -234,9 +234,9 @@ f-flow .f-connection-path {
   stroke-width: 1.3px !important;
 }
 
-.dark f-flow f-connection path,
-.dark f-flow f-connection-for-create path,
-.dark f-flow .f-connection path,
+.dark f-flow f-connection path[f-connection-path],
+.dark f-flow f-connection-for-create path[f-connection-path],
+.dark f-flow .f-connection path[f-connection-path],
 .dark f-flow path[f-connection-path],
 .dark f-flow .f-connection-path {
   stroke: #43352B !important;
@@ -245,16 +245,14 @@ f-flow .f-connection-path {
 /* ==========================================================================
    ESTILOS DE SELECCIÓN PARA CONEXIONES / RELACIONES UML (CLICK O MARQUEE)
    ========================================================================== */
-f-flow f-connection.f-selected path,
-f-flow f-connection.f-connection-selected path,
-f-flow .f-connection.f-selected path,
-f-flow .f-connection.f-connection-selected path,
 f-flow f-connection.f-selected path[f-connection-path],
 f-flow f-connection.f-connection-selected path[f-connection-path],
-.dark f-flow f-connection.f-selected path,
-.dark f-flow f-connection.f-connection-selected path,
-.dark f-flow .f-connection.f-selected path,
-.dark f-flow .f-connection.f-connection-selected path {
+f-flow .f-connection.f-selected path[f-connection-path],
+f-flow .f-connection.f-connection-selected path[f-connection-path],
+.dark f-flow f-connection.f-selected path[f-connection-path],
+.dark f-flow f-connection.f-connection-selected path[f-connection-path],
+.dark f-flow .f-connection.f-selected path[f-connection-path],
+.dark f-flow .f-connection.f-connection-selected path[f-connection-path] {
   stroke: #2563EB !important;
   stroke-width: 2.5px !important;
   filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.7)) !important;
@@ -312,16 +310,32 @@ f-flow f-connection path[fConnectionSelection],
 path[fConnectionSelection],
 .f-connection-selection {
   fill: none !important;
-  stroke: transparent !important;
-  stroke-width: 34px !important;
+  stroke: rgba(0, 0, 0, 0.001) !important;
+  stroke-width: 40px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
   pointer-events: stroke !important;
   cursor: pointer !important;
+}
+
+.dark f-flow .f-connection .f-connection-selection,
+.dark f-flow f-connection .f-connection-selection,
+.dark f-flow f-connection path[fConnectionSelection],
+.dark path[fConnectionSelection],
+.dark .f-connection-selection {
+  stroke: rgba(255, 255, 255, 0.001) !important;
 }
 
 f-flow .f-connection:hover .f-connection-selection,
 f-flow f-connection:hover .f-connection-selection,
 .f-connection:hover .f-connection-selection {
-  stroke: transparent !important;
+  stroke: rgba(0, 0, 0, 0.001) !important;
+}
+
+.dark f-flow .f-connection:hover .f-connection-selection,
+.dark f-flow f-connection:hover .f-connection-selection,
+.dark .f-connection:hover .f-connection-selection {
+  stroke: rgba(255, 255, 255, 0.001) !important;
 }
 
 /* Cursor pointer para toda la conexión al pasar por el área ampliada */
@@ -331,10 +345,11 @@ f-flow .f-connection-group {
   cursor: pointer !important;
 }
 
-/* La línea visual interna no intercepta eventos para que toda el área pertenezca a f-connection-selection */
+/* La línea visual interna también responde a pointer events */
 f-flow .f-connection-path,
 f-flow path[f-connection-path] {
-  pointer-events: none !important;
+  pointer-events: stroke !important;
+  cursor: pointer !important;
 }
 
 /* Feedback visual sutil al hacer hover sobre la línea (stroke-width no cambia) */

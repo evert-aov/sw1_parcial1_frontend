@@ -40,6 +40,7 @@
       (fReassignConnection)="onConnectionReassigned($event)"
       (fMoveNodes)="onMoveNodes($event)"
       (fSelectionChange)="onSelectionChange($event)"
+      (click)="onFlowClick($event)"
       (dblclick)="onFlowDblClick($event)"
       class="w-full h-full block">
 
@@ -54,6 +55,7 @@
           @for (conn of connections(); track conn.id) {
             <f-connection
               [fConnectionId]="conn.id"
+              [attr.data-connection-id]="conn.id"
               [fOutputId]="conn.sourceId"
               [fInputId]="conn.targetId"
               [fType]="isSequenceConnection(conn) && !isRecursiveConn(conn) ? 'straight' : (conn.lineStyle || defaultLineStyle())"
