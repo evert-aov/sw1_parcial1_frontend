@@ -11,6 +11,7 @@ import {
   UML_RELATION_TYPES,
   UML_USE_CASE_RELATION_TYPES,
   UML_PACKAGE_RELATION_TYPES,
+  UML_COMPONENT_RELATION_TYPES,
   UML_COMMUNICATION_RELATION_TYPES,
   UML_DEPLOYMENT_RELATION_TYPES,
   UML_SEQUENCE_RELATION_TYPES,
@@ -58,6 +59,8 @@ export class EditConnectionModalComponent {
       case DiagramType.PACKAGE:
       case DiagramType.LAYERED:
         return UML_PACKAGE_RELATION_TYPES;
+      case DiagramType.COMPONENT:
+        return UML_COMPONENT_RELATION_TYPES;
       case DiagramType.DEPLOYMENT:
         return UML_DEPLOYMENT_RELATION_TYPES;
       case DiagramType.CLASS:

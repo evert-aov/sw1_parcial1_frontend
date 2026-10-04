@@ -249,6 +249,7 @@ export const en = {
       realization: 'Realization',
       dependency: 'Dependency',
       associationClass: 'Association Class',
+      assembly: 'Assembly',
     },
     canvas: {
       zoomIn: 'Zoom In',
@@ -328,6 +329,7 @@ export const en = {
       classAnalysis: 'Only classes and actors can be added or copied to Class Analysis diagrams.',
       deployment: 'Only physical nodes («device»), execution environments («executionEnvironment»), components, and grouping boundaries can be added or copied to Deployment diagrams.',
       layered: 'Only packages and grouping boundary boxes can be added or copied to Layered diagrams.',
+      component: 'Only components and grouping boundary boxes can be added or copied to Component diagrams.',
     },
     canvas: {
       connectTop: 'Connect from top',
@@ -372,6 +374,8 @@ export const en = {
       deploymentGroupingBoxDesc: 'Network boundary, AWS Cloud, VPC or cluster',
       layerGroupingBox: 'Layer / Boundary Box',
       layerGroupingBoxDesc: 'Architectural layer boundary or subsystem grouping box',
+      assembly: 'Assembly',
+      assemblyDesc: 'Assembly connector between required and provided interfaces',
       deploymentRelations: 'Deployment Relationships',
       componentElements: 'Component Elements',
       layerElements: 'Architectural Layer Elements',

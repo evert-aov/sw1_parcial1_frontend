@@ -108,6 +108,7 @@ export function getUmlMarkerConfig(
         type: 'end-all-states'
       };
 
+    case 'assembly':
     default:
       return {
         hasMarker: false,

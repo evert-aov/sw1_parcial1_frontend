@@ -2973,8 +2973,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
     const isLayered = this.activeDiagramType() === DiagramType.LAYERED;
-    const defaultWidth = isLayered ? 420 : 280;
-    const defaultHeight = isLayered ? 220 : 200;
+    const isComponent = this.activeDiagramType() === DiagramType.COMPONENT;
+    const defaultWidth = (isLayered || isComponent) ? 420 : 280;
+    const defaultHeight = (isLayered || isComponent) ? 220 : 200;
+    const defaultName = isLayered ? 'Capa' : (isComponent ? 'Agrupación' : '.');
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
@@ -2983,7 +2985,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const newNode: UmlClassNode = {
       id: `boundary_box_${Date.now()}`,
-      name: isLayered ? 'Capa' : '.',
+      name: defaultName,
       nodeType: 'boundary_box',
       stereotype: null,
       position: { x: posX, y: posY },
@@ -3290,7 +3292,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'class' && n.nodeType !== 'actor');
     } else if (currentType === DiagramType.COMPONENT) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'lifeline');
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'component' && n.nodeType !== 'boundary_box');
     } else if (currentType === DiagramType.DEPLOYMENT) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'lifeline');
     } else if (currentType === DiagramType.LAYERED) {
@@ -3401,6 +3403,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       msgKey = 'editor.incompatible.class';
     } else if (diagType === DiagramType.CLASS_ANALYSIS) {
       msgKey = 'editor.incompatible.classAnalysis';
+    } else if (diagType === DiagramType.COMPONENT) {
+      msgKey = 'editor.incompatible.component';
     } else if (diagType === DiagramType.DEPLOYMENT) {
       msgKey = 'editor.incompatible.deployment';
     } else if (diagType === DiagramType.LAYERED) {
@@ -3444,7 +3448,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.COMPONENT) {
-      if (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'lifeline') {
+      if (node.nodeType !== 'component' && node.nodeType !== 'boundary_box') {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.DEPLOYMENT) {

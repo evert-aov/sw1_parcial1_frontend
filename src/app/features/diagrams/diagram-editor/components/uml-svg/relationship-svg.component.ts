@@ -20,7 +20,8 @@ export type UmlRelationType =
   | 'reply'
   | 'async'
   | 'create'
-  | 'self';
+  | 'self'
+  | 'assembly';
 
 /**
  * UML 2.5 Relationship SVG Component
@@ -59,16 +60,23 @@ export type UmlRelationType =
           <polygon points="1,8 6,4 11,8 6,12" [attr.fill]="markerBgColor" [attr.stroke]="strokeColor" stroke-width="1.2" />
         }
 
-        <!-- Línea Central -->
-        <line
-          [attr.x1]="getLineStartX()"
-          y1="8"
-          [attr.x2]="getLineEndX()"
-          y2="8"
-          [attr.stroke]="strokeColor"
-          [attr.stroke-width]="strokeWidth"
-          [attr.stroke-dasharray]="isDashed ? '3,2' : null"
-        />
+        <!-- Línea Central o Conector Ensamble -->
+        @if (type === 'assembly') {
+          <line x1="2" y1="8" x2="16" y2="8" [attr.stroke]="strokeColor" [attr.stroke-width]="strokeWidth" />
+          <path d="M 21 3.5 A 5.5 5.5 0 0 0 21 12.5" fill="none" [attr.stroke]="strokeColor" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
+          <circle cx="25.5" cy="8" r="3.8" [attr.fill]="markerBgColor" [attr.stroke]="strokeColor" [attr.stroke-width]="strokeWidth" />
+          <line x1="29.3" y1="8" x2="44" y2="8" [attr.stroke]="strokeColor" [attr.stroke-width]="strokeWidth" />
+        } @else {
+          <line
+            [attr.x1]="getLineStartX()"
+            y1="8"
+            [attr.x2]="getLineEndX()"
+            y2="8"
+            [attr.stroke]="strokeColor"
+            [attr.stroke-width]="strokeWidth"
+            [attr.stroke-dasharray]="isDashed ? '3,2' : null"
+          />
+        }
 
         <!-- Marcador en Destino -->
         @if (type === 'generalization' || type === 'realization') {
@@ -120,16 +128,23 @@ export type UmlRelationType =
           <polygon points="8,24 16,19 24,24 16,29" [attr.fill]="markerBgColor" [attr.stroke]="strokeColor" stroke-width="1.2" />
         }
 
-        <!-- Línea de conexión -->
-        <line
-          [attr.x1]="getPreviewLineStartX()"
-          y1="24"
-          [attr.x2]="getPreviewLineEndX()"
-          y2="24"
-          [attr.stroke]="strokeColor"
-          [attr.stroke-width]="strokeWidth"
-          [attr.stroke-dasharray]="isDashed ? '4,3' : null"
-        />
+        <!-- Línea de conexión o Conector Ensamble -->
+        @if (type === 'assembly') {
+          <line x1="12" y1="24" x2="68" y2="24" [attr.stroke]="strokeColor" [attr.stroke-width]="strokeWidth" />
+          <path d="M 76 15 A 9 9 0 0 0 76 33" fill="none" [attr.stroke]="strokeColor" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
+          <circle cx="83" cy="24" r="6" [attr.fill]="markerBgColor" [attr.stroke]="strokeColor" [attr.stroke-width]="strokeWidth" />
+          <line x1="89" y1="24" x2="148" y2="24" [attr.stroke]="strokeColor" [attr.stroke-width]="strokeWidth" />
+        } @else {
+          <line
+            [attr.x1]="getPreviewLineStartX()"
+            y1="24"
+            [attr.x2]="getPreviewLineEndX()"
+            y2="24"
+            [attr.stroke]="strokeColor"
+            [attr.stroke-width]="strokeWidth"
+            [attr.stroke-dasharray]="isDashed ? '4,3' : null"
+          />
+        }
 
         <!-- Nombre / Estereotipo en el centro -->
         @if (name || stereotypeText) {

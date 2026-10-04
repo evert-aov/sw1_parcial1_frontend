@@ -97,7 +97,8 @@ export type UmlRelationshipType =
   | 'reply'
   | 'async'
   | 'create'
-  | 'self';
+  | 'self'
+  | 'assembly';
 
 export type UmlLineStyle = 'segment' | 'straight' | 'bezier' | 'adaptive-curve';
 
@@ -167,6 +168,13 @@ export const UML_DEPLOYMENT_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'realization', label: 'Realización / Manifestación', icon: '┄▷', description: 'Manifestación o despliegue de componentes y artefactos.' },
 ];
 
+export const UML_COMPONENT_RELATION_TYPES: UmlRelationTypeItem[] = [
+  { id: 'assembly', label: 'Ensamble (Assembly)', icon: '─(O─', description: 'Conector de ensamble entre interfaz requerida y provista.' },
+  { id: 'association', label: 'Asociación', icon: '───', description: 'Asociación o enlace estructural entre componentes.' },
+  { id: 'realization', label: 'Realización', icon: '┄▷', description: 'Realización de interfaz por un componente.' },
+  { id: 'generalization', label: 'Generalización', icon: '─▷', description: 'Especialización o herencia entre componentes.' },
+];
+
 export const UML_SEQUENCE_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'sync', label: 'Llamada Síncrona', icon: '──►', description: 'Mensaje síncrono que bloquea la ejecución hasta que retorna.' },
   { id: 'reply', label: 'Mensaje de Retorno', icon: '┄┄>', description: 'Retorno punteado del flujo de control o resultado.' },
@@ -177,6 +185,7 @@ export const UML_SEQUENCE_RELATION_TYPES: UmlRelationTypeItem[] = [
 
 export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [
   ...UML_RELATION_TYPES,
+  { id: 'assembly', label: 'Ensamble (Assembly)', icon: '─(O─', description: 'Conector de ensamble entre interfaz requerida y provista.' },
   { id: 'include', label: '«include»', icon: '┄«include»▷', description: 'Inclusión obligatoria del comportamiento de otro caso de uso.' },
   { id: 'extend', label: '«extend»', icon: '┄«extend»▷', description: 'Extensión opcional o condicional de un caso de uso.' },
   { id: 'import', label: '«import»', icon: '┄«import»▷', description: 'Importación pública del contenido de un paquete.' },

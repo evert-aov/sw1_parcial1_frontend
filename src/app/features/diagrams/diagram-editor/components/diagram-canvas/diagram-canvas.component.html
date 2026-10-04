@@ -110,6 +110,31 @@
                 </svg>
               }
 
+              <!-- Conector de Ensamble UML (Ball and Socket para Diagrama de Componentes) -->
+              @if (conn.type === 'assembly') {
+                <div
+                  fConnectionContent
+                  [position]="0.5"
+                  align="along"
+                  (click)="$event.stopPropagation(); onConnectionClick(conn.id, $event)"
+                  (dblclick)="$event.stopPropagation(); onConnectionDblClick(conn, $event)"
+                  title="Conector de Ensamble (Assembly / Ball and Socket)"
+                  class="cursor-pointer select-none pointer-events-auto flex items-center justify-center">
+                  <svg width="40" height="24" viewBox="0 0 40 24" fill="none" class="overflow-visible">
+                    <!-- Fondo para cubrir la línea subyacente de Foblex Flow -->
+                    <rect x="7" y="2" width="20" height="20" class="fill-white dark:fill-[#0B0E1E]" />
+                    <!-- Línea de llegada al socket -->
+                    <line x1="0" y1="12" x2="9.5" y2="12" [attr.stroke]="isConnectionSelected(conn.id) ? '#2563EB' : '#241C18'" class="dark:stroke-slate-200" stroke-width="1.5" />
+                    <!-- Socket (semicírculo / interfaz requerida) -->
+                    <path d="M 17 4.5 A 7.5 7.5 0 0 0 17 19.5" fill="none" [attr.stroke]="isConnectionSelected(conn.id) ? '#2563EB' : '#241C18'" class="dark:stroke-slate-200" stroke-width="1.6" stroke-linecap="round" />
+                    <!-- Ball / Lollipop (círculo / interfaz provista) -->
+                    <circle cx="20.5" cy="12" r="5" fill="#FAF5F0" class="dark:fill-slate-800" [attr.stroke]="isConnectionSelected(conn.id) ? '#2563EB' : '#241C18'" class="dark:stroke-slate-200" stroke-width="1.6" />
+                    <!-- Línea de salida desde la bola -->
+                    <line x1="25.5" y1="12" x2="40" y2="12" [attr.stroke]="isConnectionSelected(conn.id) ? '#2563EB' : '#241C18'" class="dark:stroke-slate-200" stroke-width="1.5" />
+                  </svg>
+                </div>
+              }
+
               <!-- Etiquetas de Multiplicidad y Nombre -->
               @if (conn.sourceMultiplicity && shouldShowMultiplicity(conn)) {
                 <div
@@ -281,6 +306,21 @@
               markerUnits="userSpaceOnUse"
               [type]="getMarkerConfig(selectedRelationType(), true).type">
             </svg>
+          }
+          @if (selectedRelationType() === 'assembly') {
+            <div
+              fConnectionContent
+              [position]="0.5"
+              align="along"
+              class="pointer-events-none select-none flex items-center justify-center">
+              <svg width="40" height="24" viewBox="0 0 40 24" fill="none" class="overflow-visible">
+                <rect x="7" y="2" width="20" height="20" class="fill-white dark:fill-[#0B0E1E]" />
+                <line x1="0" y1="12" x2="9.5" y2="12" stroke="#241C18" class="dark:stroke-slate-200" stroke-width="1.5" />
+                <path d="M 17 4.5 A 7.5 7.5 0 0 0 17 19.5" fill="none" stroke="#241C18" class="dark:stroke-slate-200" stroke-width="1.6" stroke-linecap="round" />
+                <circle cx="20.5" cy="12" r="5" fill="#FAF5F0" class="dark:fill-slate-800" stroke="#241C18" class="dark:stroke-slate-200" stroke-width="1.6" />
+                <line x1="25.5" y1="12" x2="40" y2="12" stroke="#241C18" class="dark:stroke-slate-200" stroke-width="1.5" />
+              </svg>
+            </div>
           }
         </f-connection-for-create>
 

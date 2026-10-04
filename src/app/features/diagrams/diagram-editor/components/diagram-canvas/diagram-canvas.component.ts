@@ -1446,6 +1446,7 @@ export class DiagramCanvasComponent {
       this.activeDiagramType() === DiagramType.USE_CASE ||
       this.activeDiagramType() === DiagramType.PACKAGE ||
       this.activeDiagramType() === DiagramType.LAYERED ||
+      this.activeDiagramType() === DiagramType.COMPONENT ||
       this.activeDiagramType() === DiagramType.COMMUNICATION ||
       this.activeDiagramType() === DiagramType.SEQUENCE ||
       ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as any)
@@ -1453,6 +1454,7 @@ export class DiagramCanvasComponent {
     if (
       conn.type === 'generalization' ||
       conn.type === 'realization' ||
+      conn.type === 'assembly' ||
       conn.type === 'include' ||
       conn.type === 'extend' ||
       conn.type === 'import' ||

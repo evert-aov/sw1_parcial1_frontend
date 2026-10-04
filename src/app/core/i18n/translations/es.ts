@@ -249,6 +249,7 @@ export const es = {
       realization: 'Realization',
       dependency: 'Dependency',
       associationClass: 'Association Class',
+      assembly: 'Ensamble (Assembly)',
     },
     canvas: {
       zoomIn: 'Acercar',
@@ -328,6 +329,7 @@ export const es = {
       classAnalysis: 'Solo se pueden agregar o copiar clases y actores en diagramas de Análisis de Clases.',
       deployment: 'Solo se pueden agregar o copiar nodos físicos («device»), entornos de ejecución («executionEnvironment»), componentes y recuadros agrupadores en diagramas de Despliegue.',
       layered: 'Solo se pueden agregar o copiar paquetes y recuadros agrupadores en diagramas de Capas.',
+      component: 'Solo se pueden agregar o copiar componentes y recuadros de agrupación en diagramas de Componentes.',
     },
     canvas: {
       connectTop: 'Conectar por arriba',
@@ -372,6 +374,8 @@ export const es = {
       deploymentGroupingBoxDesc: 'Límite de red, AWS Cloud, VPC o clúster',
       layerGroupingBox: 'Recuadro Agrupador (Capa)',
       layerGroupingBoxDesc: 'Límite de capa de software o subsistema arquitectónico',
+      assembly: 'Ensamble (Assembly)',
+      assemblyDesc: 'Conector de ensamble entre interfaz requerida y provista',
       deploymentRelations: 'Relaciones de Despliegue',
       componentElements: 'Elementos de Componentes',
       layerElements: 'Elementos de Capas',

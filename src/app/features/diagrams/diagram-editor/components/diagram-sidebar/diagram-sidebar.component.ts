@@ -49,6 +49,7 @@ import {
   UML_RELATION_TYPES,
   UML_USE_CASE_RELATION_TYPES,
   UML_PACKAGE_RELATION_TYPES,
+  UML_COMPONENT_RELATION_TYPES,
   UML_COMMUNICATION_RELATION_TYPES,
   UML_DEPLOYMENT_RELATION_TYPES,
   UML_SEQUENCE_RELATION_TYPES,
@@ -228,6 +229,9 @@ export class DiagramSidebarComponent {
     }
     if (this.activeDiagramType() === DiagramType.PACKAGE || this.activeDiagramType() === DiagramType.LAYERED) {
       return UML_PACKAGE_RELATION_TYPES;
+    }
+    if (this.activeDiagramType() === DiagramType.COMPONENT) {
+      return UML_COMPONENT_RELATION_TYPES;
     }
     if (this.activeDiagramType() === DiagramType.COMMUNICATION) {
       return UML_COMMUNICATION_RELATION_TYPES;
