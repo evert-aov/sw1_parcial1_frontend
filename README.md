@@ -287,42 +287,74 @@ La aplicación cuenta con soporte nativo de escritorio mediante **Electron**, pe
 ### ❄️ NixOS (Linux Declarativo)
 
 > [!NOTE]
-> En NixOS, los binarios FHS estándar precompilados de Electron descargados por `npm` no encuentran las librerías dinámicas del sistema (como `libnspr4.so`, `libnss3.so`, etc.) debido al aislamiento del *Nix store*.
+> En NixOS, los binarios FHS estándar precompilados de Electron descargados por `npm` en `node_modules` no encuentran librerías dinámicas del sistema (`libnspr4.so`, `libnss3.so`, etc.). El proyecto ya incluye un [`shell.nix`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/shell.nix) configurado para resolver esto automáticamente.
 
-Para ejecutar el modo de escritorio en NixOS, utiliza cualquiera de las siguientes alternativas según tu preferencia:
-
-* **Opción A: Ejecutar el AppImage generado con `appimage-run` (Recomendada para producción):**
+#### Flujo Recomendado en NixOS:
+Simplemente entra al entorno interactivo de Nix:
+```bash
+nix-shell
+```
+Una vez dentro de `nix-shell`, `ELECTRON_OVERRIDE_DIST_PATH` estará activo y todos los comandos estándar funcionarán con el Electron nativo de NixOS:
+* **Modo desarrollo en caliente (Live Reload & DevTools):**
   ```bash
-  # 1. Generar el paquete
-  npm run dist:linux
+  # Terminal 1: Iniciar frontend web
+  npm start
 
-  # 2. Ejecutar mediante appimage-run
-  nix-shell -p appimage-run --run "appimage-run 'release/Diagramador UML-1.0.0.AppImage'"
+  # Terminal 2: Abrir ventana de Electron
+  npm run electron:dev
   ```
-
-* **Opción B: Entorno FHS temporal con `steam-run` (Ideal para desarrollo rápido):**
-  `steam-run` provee un entorno FHS completo con todas las librerías gráficas necesarias:
-  ```bash
-  # Para desarrollo local con Electron:
-  steam-run npm run electron:start
-
-  # O para ejecutar el AppImage:
-  steam-run ./release/"Diagramador UML-1.0.0.AppImage"
-  ```
-
-* **Opción C: Nix-Shell con Electron nativo del sistema:**
-  Puedes usar el binario de Electron provisto directamente por nixpkgs:
-  ```bash
-  nix-shell -p electron nodejs --run "npm run build:electron && electron ."
-  ```
-
-* **Opción D: `nix-ld` en tu configuración del sistema:**
-  Si tienes habilitado `programs.nix-ld.enable = true;` en tu `/etc/nixos/configuration.nix`, puedes ejecutar directamente los comandos estándar:
+* **Compilar y abrir la app de escritorio (conectada al backend local):**
   ```bash
   npm run electron:start
   ```
+* **Generar el AppImage para Linux (Local):**
+  ```bash
+  npm run dist:linux
+  ```
+* **Ejecutar el AppImage generado:**
+  ```bash
+  npm run appimage:run
+  ```
+
+#### Ejecución Directa en 1 Línea (Sin entrar a nix-shell interactivo):
+Si no deseas abrir un sub-shell, puedes usar los scripts directos `:nix`:
+* **Desarrollo:** `npm run electron:dev:nix`
+* **Compilar y abrir:** `npm run electron:start:nix`
+* **Empaquetar AppImage:** `npm run dist:linux:nix`
+* **Correr AppImage:** `npm run appimage:run`
 
 ---
+
+### 🚀 Instrucciones para Pasar a Producción (PROD)
+
+Cuando tu backend esté desplegado en un servidor o dominio accesible:
+
+1. **Configurar la URL de tu backend de producción:**
+   Edita [`src/environments/environment.prod.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/environments/environment.prod.ts) con las URLs reales de tu API y WebSockets:
+   ```typescript
+   export const environment = {
+     production: true,
+     apiUrl: 'https://tu-dominio.com/api',
+     socketUrl: 'https://tu-dominio.com/collaboration',
+   };
+   ```
+
+2. **Compilar y empaquetar para producción:**
+   * **Modo Web:**
+     ```bash
+     npm run build
+     ```
+   * **Modo Escritorio Linux (AppImage conectado a Producción):**
+     ```bash
+     npm run dist:linux:prod
+     # O en NixOS:
+     npm run dist:linux:prod:nix
+     ```
+   * **Modo Escritorio Windows / macOS (Producción):**
+     ```bash
+     npm run dist:win
+     npm run dist:mac
+     ```
 
 ### 🪟 Windows (Windows 10 / 11)
 
@@ -381,9 +413,14 @@ Para ejecutar el modo de escritorio en NixOS, utiliza cualquiera de las siguient
 | `npm run build` | Compila la aplicación web optimizada para producción en `dist/frontend`. |
 | `npm run watch` | Compila y escucha cambios continuos en Angular en modo desarrollo. |
 | `npm test` | Ejecuta las pruebas unitarias del proyecto con Vitest. |
-| `npm run build:electron` | Compila la aplicación con base de ruta relativa (`--base-href ./`) para Electron. |
-| `npm run electron:start` | Compila y ejecuta la aplicación en modo escritorio nativo. |
+| `npm run build:electron` | Compila la aplicación para Electron apuntando al backend local (`http://localhost:4000/api`). |
+| `npm run build:electron:prod` | Compila la aplicación para Electron apuntando al backend de producción. |
+| `npm run electron:start` | Compila y ejecuta la aplicación de escritorio nativa conectada a local. |
 | `npm run electron:dev` | Abre Electron conectado a `http://localhost:4200` con DevTools para desarrollo en caliente. |
-| `npm run dist:linux` | Genera el binario ejecutable `AppImage` para Linux en la carpeta `release/`. |
+| `npm run electron:dev:nix` | Abre Electron en modo desarrollo en caliente directamente usando NixOS nix-shell. |
+| `npm run electron:start:nix` | Compila y abre Electron local directamente usando NixOS nix-shell. |
+| `npm run dist:linux` | Genera el binario ejecutable `AppImage` para Linux conectado al backend local. |
+| `npm run dist:linux:prod` | Genera el binario `AppImage` para Linux conectado al backend de producción. |
+| `npm run appimage:run` | Ejecuta el AppImage generado en `release/` usando `appimage-run` en NixOS. |
 | `npm run dist:win` | Genera el instalador NSIS `.exe` y la versión portable para Windows en `release/`. |
 | `npm run dist:mac` | Genera el instalador `.dmg` para macOS en `release/`. |

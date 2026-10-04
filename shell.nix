@@ -11,9 +11,11 @@ pkgs.mkShell {
     export ELECTRON_OVERRIDE_DIST_PATH="${pkgs.electron}/bin"
     echo "========================================="
     echo " Entorno NixOS listo para Diagramador UML"
-    echo " - Modo desarrollo:  npm run electron:dev"
-    echo " - Compilar y abrir: npm run electron:start"
-    echo " - Correr AppImage:  appimage-run release/'Diagramador UML-1.0.0.AppImage'"
+    echo " - Modo desarrollo en caliente: npm run electron:dev"
+    echo " - Compilar y abrir (Local):    npm run electron:start"
+    echo " - Generar AppImage (Local):    npm run dist:linux"
+    echo " - Generar AppImage (Prod):     npm run dist:linux:prod"
+    echo " - Ejecutar AppImage:           npm run appimage:run"
     echo "========================================="
   '';
 }

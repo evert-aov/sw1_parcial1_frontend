@@ -15,11 +15,20 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
+      webSecurity: false, // Permite peticiones HTTP/WS a localhost/backend desde el protocolo file://
     },
   });
 
-  // Quitar el menú por defecto del navegador para que no interfieran atajos como Ctrl+R, Ctrl+W, etc.
+  // Quitar el menú por defecto del navegador
   Menu.setApplicationMenu(null);
+
+  // Permitir abrir DevTools con F12 o Ctrl+Shift+I en cualquier entorno
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
 
   const isDev = process.argv.includes('--dev') || process.env.ELECTRON_DEV === 'true';
 
