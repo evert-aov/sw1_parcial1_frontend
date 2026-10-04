@@ -303,6 +303,7 @@
               [style.minWidth.px]="node.isAnchor ? 0 : (node.nodeType === 'package' || node.nodeType === 'boundary_box' ? 120 : (node.nodeType === 'use_case' ? 80 : (node.nodeType === 'actor' ? 50 : (node.nodeType === 'lifeline' ? 100 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 140 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 160 : getNodeWidth(node))))))))"
               [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 70 : (node.nodeType === 'boundary_box' ? 80 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 65 : (node.nodeType === 'lifeline' ? 40 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 50 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 90 : null))))))))"
               [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'boundary_box' ? 200 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 95 : (node.nodeType === 'lifeline' ? 48 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : (node.nodeType === 'component' ? 70 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 140 : null)))))))))"
+              [style.zIndex]="getNodeZIndex(node)"
               [style.--node-bg]="node.color || null"
               [style.background]="(node.nodeType && node.nodeType !== 'class') || ['device', 'node', 'executionEnvironment', 'component'].includes(node.stereotype || '') ? 'transparent' : null"
               [style.border]="(node.nodeType && node.nodeType !== 'class') || ['device', 'node', 'executionEnvironment', 'component'].includes(node.stereotype || '') ? 'none' : null"
@@ -326,11 +327,8 @@
                 'rounded-none': !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
                 'overflow-visible': isNodeSelected(node.id) || (!node.isAnchor && (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' || node.nodeType === 'lifeline' || node.nodeType === 'component' || node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' || node.nodeType === 'boundary_box')),
                 'overflow-hidden': !isNodeSelected(node.id) && !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
-                'z-0': !node.isAnchor && !isNodeSelected(node.id) && (node.nodeType === 'package' || node.nodeType === 'boundary_box'),
-                'z-[5]': !node.isAnchor && !isNodeSelected(node.id) && (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment'),
-                'z-10': !node.isAnchor && !isNodeSelected(node.id) && node.nodeType === 'component',
-                'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)] z-30': !node.isAnchor && isNodeSelected(node.id) && (!node.nodeType || node.nodeType === 'class'),
-                'ring-2 ring-indigo-400 z-20': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id) && (!node.nodeType || node.nodeType === 'class'),
+                'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)]': !node.isAnchor && isNodeSelected(node.id) && (!node.nodeType || node.nodeType === 'class'),
+                'ring-2 ring-indigo-400': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id) && (!node.nodeType || node.nodeType === 'class'),
                 'ring-2 ring-[#796354] shadow-md': !node.isAnchor && selectedSourceNodeId() === node.id && !isNodeSelected(node.id) && (!node.nodeType || node.nodeType === 'class'),
                 'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                 'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),

@@ -347,6 +347,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private isDraggingNode = false;
   private hasMovedDuringPointerDown = false;
   private lastNodeDragPos = new Map<string, { x: number; y: number }>();
+  private currentDragDescendantIds = new Set<string>();
 
   historyUndoCount = signal<number>(0);
   historyRedoCount = signal<number>(0);
@@ -483,6 +484,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodeDragEnd$.pipe(debounceTime(600)).subscribe(() => {
       this.isDraggingNode = false;
       this.lastNodeDragPos.clear();
+      this.currentDragDescendantIds.clear();
       if (!this.isReadOnly() && this.currentDiagramId()) {
         this.collaborationService.sendDiagramSync(
           this.nodes(),
@@ -840,6 +842,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onWindowMouseUp(): void {
     this.isDraggingNode = false;
     this.lastNodeDragPos.clear();
+    this.currentDragDescendantIds.clear();
     setTimeout(() => {
       this.hasMovedDuringPointerDown = false;
     }, 50);
@@ -1064,6 +1067,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (!this.isDraggingNode) {
       this.isDraggingNode = true;
       this.pushSnapshot();
+      this.currentDragDescendantIds.clear();
+
+      // Recopilar todos los nodos hijos/descendientes del nodo arrastrado y de la selección actual
+      const rootsToTrace = new Set<string>([node.id]);
+      if (this.selectedNodeIds().has(node.id)) {
+        for (const id of this.selectedNodeIds()) {
+          rootsToTrace.add(id);
+        }
+      }
+      for (const rootId of rootsToTrace) {
+        const desc = this.getDescendantNodeIds(rootId);
+        for (const dId of desc) {
+          this.currentDragDescendantIds.add(dId);
+        }
+      }
     }
 
     if (!this.selectedNodeIds().has(node.id) && this.selectedNodeId() !== node.id) {
@@ -1076,16 +1094,42 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       const dx = newPosition.x - last.x;
       const dy = isSequenceNode ? 0 : newPosition.y - last.y;
 
-      if ((dx !== 0 || dy !== 0) && this.selectedNodeIds().size > 1 && this.selectedNodeIds().has(node.id)) {
-        for (const other of this.nodes()) {
-          if (other.id !== node.id && this.selectedNodeIds().has(other.id) && !other.isAnchor) {
-            const otherIsSeq = this.activeDiagramType() === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
-            const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
-            other.position = { x: Math.round(other.position.x + dx), y: otherY };
-            this.collaborationService.sendNodeDrag(other.id, other.position);
+      if (dx !== 0 || dy !== 0) {
+        // 1. Mover nodos seleccionados explícitamente (selección múltiple)
+        if (this.selectedNodeIds().size > 1 && this.selectedNodeIds().has(node.id)) {
+          for (const other of this.nodes()) {
+            if (other.id !== node.id && this.selectedNodeIds().has(other.id) && !other.isAnchor) {
+              const otherIsSeq = this.activeDiagramType() === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
+              const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
+              other.position = { x: Math.round(other.position.x + dx), y: otherY };
+              this.collaborationService.sendNodeDrag(other.id, other.position);
+            }
           }
         }
-        this.diagramCanvas?.redraw();
+
+        // 2. Mover nodos descendientes jerárquicos contenidos (agrupación visual padre-hijo)
+        if (this.currentDragDescendantIds.size > 0) {
+          for (const other of this.nodes()) {
+            if (
+              this.currentDragDescendantIds.has(other.id) &&
+              other.id !== node.id &&
+              !this.selectedNodeIds().has(other.id) &&
+              !other.isAnchor
+            ) {
+              const otherIsSeq = this.activeDiagramType() === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
+              const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
+              other.position = { x: Math.round(other.position.x + dx), y: otherY };
+              this.collaborationService.sendNodeDrag(other.id, other.position);
+            }
+          }
+        }
+
+        if (
+          (this.selectedNodeIds().size > 1 && this.selectedNodeIds().has(node.id)) ||
+          this.currentDragDescendantIds.size > 0
+        ) {
+          this.diagramCanvas?.redraw();
+        }
       }
     }
     this.lastNodeDragPos.set(node.id, { x: newPosition.x, y: newPosition.y });
@@ -1114,9 +1158,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (!this.isDraggingNode) {
       this.isDraggingNode = true;
       this.pushSnapshot();
+      this.currentDragDescendantIds.clear();
+      for (const item of event.nodes) {
+        const desc = this.getDescendantNodeIds(item.id);
+        for (const dId of desc) {
+          this.currentDragDescendantIds.add(dId);
+        }
+      }
     }
 
     const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
+    const eventNodeIds = new Set(event.nodes.map((n) => n.id));
     let anyMoved = false;
 
     for (const item of event.nodes) {
@@ -1125,10 +1177,28 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const isSequenceNode = this.activeDiagramType() === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
         const targetX = Math.round(item.position.x);
         const targetY = isSequenceNode ? 50 : Math.round(item.position.y);
-        if (node.position.x !== targetX || node.position.y !== targetY) {
+        const dx = targetX - node.position.x;
+        const dy = isSequenceNode ? 0 : targetY - node.position.y;
+        if (dx !== 0 || dy !== 0) {
           node.position = { x: targetX, y: targetY };
           anyMoved = true;
           this.collaborationService.sendNodeDrag(node.id, node.position);
+
+          if (this.currentDragDescendantIds.size > 0) {
+            const descendantsOfThisNode = this.getDescendantNodeIds(node.id);
+            for (const descId of descendantsOfThisNode) {
+              if (!eventNodeIds.has(descId)) {
+                const descNode = nodeMap.get(descId);
+                if (descNode && !descNode.isAnchor) {
+                  const dY = (this.activeDiagramType() === DiagramType.SEQUENCE || descNode.nodeType === 'lifeline')
+                    ? 50
+                    : Math.round(descNode.position.y + dy);
+                  descNode.position = { x: Math.round(descNode.position.x + dx), y: dY };
+                  this.collaborationService.sendNodeDrag(descNode.id, descNode.position);
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -1136,6 +1206,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (anyMoved) {
       this.markAsUnsaved();
       this.updateConnectionEndpoints();
+      this.diagramCanvas?.redraw();
       this.nodeDragEnd$.next();
     }
   }
@@ -1211,6 +1282,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
       return 65;
     }
+    if (node.nodeType === 'lifeline') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(130, manualW);
+      }
+      const nameLen = (node.name || '').length;
+      return Math.max(160, Math.round(nameLen * 8.5 + 44));
+    }
     if (node.nodeType === 'package') {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
       if (manualW && manualW > 0) {
@@ -1225,6 +1304,29 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
       return 70;
     }
+    if (node.nodeType === 'component') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(140, manualW);
+      }
+      const nameLen = (node.name || '').length;
+      return Math.max(180, Math.round(nameLen * 8.5 + 50));
+    }
+    if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(160, manualW);
+      }
+      const nameLen = (node.name || '').length;
+      return Math.max(230, Math.round(nameLen * 8.5 + 50));
+    }
+    if (node.nodeType === 'boundary_box') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(120, manualW);
+      }
+      return 280;
+    }
     const dynamicW = this.getDynamicNodeWidth(node);
     const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
     return Math.max(dynamicW, manualW);
@@ -1237,6 +1339,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (node.nodeType === 'actor') return node.customHeight || (node.isCustomSize ? node.height : null) || 95;
     if (node.nodeType === 'lifeline') return node.customHeight || node.height || 48;
     if (node.nodeType === 'package') return node.customHeight || node.height || 120;
+    if (node.nodeType === 'boundary_box') {
+      return node.customHeight || (node.isCustomSize ? node.height : null) || 200;
+    }
+    if (node.nodeType === 'component') {
+      return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
+    }
+    if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+      return node.customHeight || (node.isCustomSize ? node.height : null) || (node.nodeType === 'executionEnvironment' ? 160 : 140);
+    }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
       return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
     }
@@ -1256,6 +1367,50 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const attrH = attrCount > 0 ? attrCount * 22 + 12 : 28;
     const methodH = methodCount > 0 ? methodCount * 22 + 12 : 0;
     return headerH + attrH + methodH;
+  }
+
+  isNodeInsideParent(child: UmlClassNode, parent: UmlClassNode): boolean {
+    if (child.id === parent.id || child.isAnchor || parent.isAnchor) return false;
+    const parentW = this.getNodeWidth(parent);
+    const parentH = this.getNodeHeight(parent) || 60;
+    const childW = this.getNodeWidth(child);
+    const childH = this.getNodeHeight(child) || 60;
+
+    const parentArea = parentW * parentH;
+    const childArea = childW * childH;
+    if (parentArea <= childArea * 1.05) return false;
+
+    const childCenterX = child.position.x + childW / 2;
+    const childCenterY = child.position.y + childH / 2;
+
+    return (
+      childCenterX >= parent.position.x &&
+      childCenterX <= parent.position.x + parentW &&
+      childCenterY >= parent.position.y &&
+      childCenterY <= parent.position.y + parentH
+    );
+  }
+
+  getDescendantNodeIds(parentNodeId: string): Set<string> {
+    const descendants = new Set<string>();
+    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
+    const parent = nodeMap.get(parentNodeId);
+    if (!parent) return descendants;
+
+    const queue: UmlClassNode[] = [parent];
+    const visited = new Set<string>([parentNodeId]);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const candidate of this.nodes()) {
+        if (!visited.has(candidate.id) && this.isNodeInsideParent(candidate, current)) {
+          visited.add(candidate.id);
+          descendants.add(candidate.id);
+          queue.push(candidate);
+        }
+      }
+    }
+    return descendants;
   }
 
   onNodeSizeChanged(event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }): void {

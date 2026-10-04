@@ -1060,6 +1060,7 @@ export class DiagramCanvasComponent {
   }
 
   redraw(): void {
+    this.cdr.detectChanges();
     this.fFlow?.redraw();
     this.canvas?.redraw();
   }
@@ -1468,6 +1469,65 @@ export class DiagramCanvasComponent {
 
   isNodeSelected(nodeId: string): boolean {
     return this.selectedNodeIds().includes(nodeId);
+  }
+
+  isNodeInsideParent(child: UmlClassNode, parent: UmlClassNode): boolean {
+    if (child.id === parent.id || child.isAnchor || parent.isAnchor) return false;
+    const parentW = this.getNodeWidth(parent);
+    const parentH = this.getNodeHeight(parent) || 60;
+    const childW = this.getNodeWidth(child);
+    const childH = this.getNodeHeight(child) || 60;
+
+    const parentArea = parentW * parentH;
+    const childArea = childW * childH;
+    if (parentArea <= childArea * 1.05) return false;
+
+    const childCenterX = child.position.x + childW / 2;
+    const childCenterY = child.position.y + childH / 2;
+
+    return (
+      childCenterX >= parent.position.x &&
+      childCenterX <= parent.position.x + parentW &&
+      childCenterY >= parent.position.y &&
+      childCenterY <= parent.position.y + parentH
+    );
+  }
+
+  isNodeOrAncestorSelected(node: UmlClassNode): boolean {
+    if (this.isNodeSelected(node.id)) return true;
+    const all = this.nodes();
+    for (const p of all) {
+      if (this.isNodeInsideParent(node, p) && this.isNodeSelected(p.id)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Mapa reactivo de z-index: el elemento con mayor área va al fondo (menor z-index)
+  // y los más pequeños sucesivamente al frente (mayor z-index).
+  readonly nodeZIndexMap = computed(() => {
+    const list = this.nodes().filter((n) => !n.isAnchor);
+    const sorted = [...list].sort((a, b) => {
+      const areaA = this.getNodeWidth(a) * (this.getNodeHeight(a) || 60);
+      const areaB = this.getNodeWidth(b) * (this.getNodeHeight(b) || 60);
+      if (areaB !== areaA) return areaB - areaA;
+      return a.id.localeCompare(b.id);
+    });
+    const map = new Map<string, number>();
+    sorted.forEach((n, idx) => {
+      map.set(n.id, Math.min(25, 1 + idx));
+    });
+    return map;
+  });
+
+  getNodeZIndex(node: UmlClassNode): number {
+    if (node.isAnchor) return 0;
+    const baseRank = this.nodeZIndexMap().get(node.id) ?? 1;
+    if (this.isNodeOrAncestorSelected(node)) {
+      return 30 + baseRank;
+    }
+    return baseRank;
   }
 
   hasMultipleSelected(): boolean {
