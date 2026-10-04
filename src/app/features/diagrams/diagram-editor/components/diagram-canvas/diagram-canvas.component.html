@@ -64,6 +64,7 @@
 
       <f-canvas
         fZoom
+        [fLayers]="canvasLayers"
         [fWheelTrigger]="canvasWheelTrigger"
         [fDblClickTrigger]="dblClickZoomTrigger"
         (fCanvasChange)="onCanvasChange($any($event))">
@@ -734,7 +735,7 @@
                           appAutofocusInput
                           type="text"
                           [attr.data-rename-node-id]="node.id"
-                          [value]="node.name"
+                          [value]="node.name === 'ClassName' ? '' : node.name"
                           [placeholder]="'editor.canvas.nodes.boundaryBoxPlaceholder' | translate"
                           (keydown.enter)="commitNodeRename(node.id, renameBoundaryInput.value)"
                           (keydown.escape)="cancelNodeRename()"
@@ -751,7 +752,7 @@
                             «{{ node.stereotype }}»
                           </span>
                         }
-                        @if (node.name && node.name.trim().length > 0) {
+                        @if (node.name && node.name.trim().length > 0 && node.name !== 'ClassName') {
                           <span class="font-bold text-[12px] font-sans leading-snug text-[#241C18] block text-left truncate max-w-full" [title]="node.name">
                             {{ node.name }}
                           </span>

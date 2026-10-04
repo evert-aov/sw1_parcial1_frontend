@@ -612,7 +612,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                 else if (n.id?.startsWith('exec_env_')) nodeType = 'executionEnvironment';
                 else if (n.id?.startsWith('lifeline_') || isSequence) nodeType = 'lifeline';
               }
-              return { ...n, nodeType };
+              let name = n.name || '';
+              if (nodeType === 'boundary_box' && (name === 'ClassName' || !name.trim())) {
+                name = '';
+              }
+              return { ...n, nodeType, name };
             });
             this.nodes.set(sanitizedDraftNodes);
             this.connections.set(this.recalculateSequenceNumbers(draft.connections || []));
@@ -658,9 +662,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const isManuallyResized = !!(n.height && n.height > 0);
         const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
         const isLifeline = nodeType === 'lifeline';
+        let nodeName = n.name || '';
+        if (nodeType === 'boundary_box' && (nodeName === 'ClassName' || !nodeName.trim())) {
+          nodeName = '';
+        }
         return {
           id: n.id,
-          name: n.name,
+          name: nodeName,
           position: { x: n.positionX, y: n.positionY },
           width: n.width || (nodeType === 'actor' ? 65 : (nodeType === 'use_case' ? 140 : (nodeType === 'boundary_box' ? 280 : (nodeType === 'package' ? 200 : (nodeType === 'component' ? 190 : (nodeType === 'device' ? 230 : (nodeType === 'executionEnvironment' ? 240 : (isBce ? 90 : (isLifeline ? 140 : 220))))))))),
           height: n.height || (isBce ? 95 : (isLifeline ? 48 : (nodeType === 'actor' ? 95 : (nodeType === 'boundary_box' ? 200 : (nodeType === 'component' ? 70 : (nodeType === 'device' ? 140 : (nodeType === 'executionEnvironment' ? 160 : undefined))))))),
@@ -938,42 +946,55 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     return {
       type: this.activeDiagramType(),
       defaultLineStyle: this.defaultLineStyle(),
-      nodes: this.nodes().map((n) => ({
-        id: n.id,
-        name: n.name?.trim() ? n.name : (n.isAnchor ? 'Anchor' : (isSequence ? (n.nodeType === 'actor' || n.id.startsWith('actor_') ? 'actor_1' : 'lifeline_1') : 'ClassName')),
-        positionX: n.position.x,
-        positionY: n.position.y,
-        width: this.getNodeWidth(n),
-        height: n.customHeight || (n.isCustomSize ? n.height : null) || (n.nodeType === 'lifeline' ? 48 : null),
-        color: n.color || null,
-        isAnchor: n.isAnchor,
-        assocMainConnId: n.assocMainConnId,
-        nodeType:
-          n.nodeType && n.nodeType !== 'class'
-            ? n.nodeType
-            : n.id.startsWith('actor_')
-            ? 'actor'
-            : n.id.startsWith('use_case_')
-            ? 'use_case'
-            : n.id.startsWith('package_')
-            ? 'package'
-            : n.id.startsWith('boundary_')
-            ? 'boundary'
-            : n.id.startsWith('control_')
-            ? 'control'
-            : n.id.startsWith('entity_')
-            ? 'entity'
-            : n.id.startsWith('lifeline_')
-            ? 'lifeline'
-            : isSequence
-            ? 'lifeline'
-            : this.activeDiagramType() === DiagramType.PACKAGE
-            ? 'package'
-            : n.nodeType || 'class',
-        activations: (n as any).activations || [],
-        attributes: n.attributes,
-        methods: n.methods,
-      })),
+      nodes: this.nodes().map((n) => {
+        const cleanName = (n.name || '').trim();
+        const fallbackName = n.isAnchor
+          ? 'Anchor'
+          : n.nodeType === 'boundary_box'
+            ? ''
+            : (isSequence
+              ? (n.nodeType === 'actor' || n.id.startsWith('actor_') ? 'actor_1' : 'lifeline_1')
+              : 'ClassName');
+        const finalName = (n.nodeType === 'boundary_box' && cleanName === 'ClassName') ? '' : (cleanName || fallbackName);
+        return {
+          id: n.id,
+          name: finalName,
+          positionX: n.position.x,
+          positionY: n.position.y,
+          width: this.getNodeWidth(n),
+          height: n.customHeight || (n.isCustomSize ? n.height : null) || (n.nodeType === 'lifeline' ? 48 : null),
+          color: n.color || null,
+          isAnchor: n.isAnchor,
+          assocMainConnId: n.assocMainConnId,
+          nodeType:
+            n.nodeType && n.nodeType !== 'class'
+              ? n.nodeType
+              : n.id.startsWith('actor_')
+              ? 'actor'
+              : n.id.startsWith('use_case_')
+              ? 'use_case'
+              : n.id.startsWith('boundary_box_')
+              ? 'boundary_box'
+              : n.id.startsWith('package_')
+              ? 'package'
+              : n.id.startsWith('boundary_')
+              ? 'boundary'
+              : n.id.startsWith('control_')
+              ? 'control'
+              : n.id.startsWith('entity_')
+              ? 'entity'
+              : n.id.startsWith('lifeline_')
+              ? 'lifeline'
+              : isSequence
+              ? 'lifeline'
+              : this.activeDiagramType() === DiagramType.PACKAGE
+              ? 'package'
+              : n.nodeType || 'class',
+          activations: (n as any).activations || [],
+          attributes: n.attributes,
+          methods: n.methods,
+        };
+      }),
       connections: this.connections().map((c) => {
         const baseSourceId = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
         const baseTargetId = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
@@ -2343,8 +2364,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         type: activeRel,
         lineStyle: isSeqRel ? 'straight' : this.defaultLineStyle(),
         name: relName,
-        sourceMultiplicity: (isInheritance || isUseCaseRel || isPackageRel || isSeqRel) ? '' : '1',
-        targetMultiplicity: (isInheritance || isUseCaseRel || isPackageRel || isSeqRel) ? '' : '0..*',
+        sourceMultiplicity: '',
+        targetMultiplicity: '',
         messages,
       };
 
@@ -2524,8 +2545,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       type: relType,
       lineStyle: isSeqRel ? 'straight' : this.defaultLineStyle(),
       name: relName,
-      sourceMultiplicity: (isInheritance || isUseCaseRel || isPackageRel || isSeqRel) ? '' : '1',
-      targetMultiplicity: (isInheritance || isUseCaseRel || isPackageRel || isSeqRel) ? '' : '0..*',
+      sourceMultiplicity: '',
+      targetMultiplicity: '',
       messages,
     };
 

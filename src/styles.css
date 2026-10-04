@@ -348,6 +348,10 @@ f-flow f-connection:hover .f-connection-selection,
   stroke: rgba(255, 255, 255, 0.005) !important;
 }
 
+.f-connections-container {
+  pointer-events: none !important;
+}
+
 /* Deshabilitar eventos de puntero en los contenedores de conexión para que el área vacía / caja SVG no intercepte clics (ej. esquina superior izquierda 0,0) */
 f-flow .f-connection,
 f-flow f-connection,

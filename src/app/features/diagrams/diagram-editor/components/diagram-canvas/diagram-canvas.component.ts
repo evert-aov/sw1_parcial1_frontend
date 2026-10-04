@@ -26,6 +26,7 @@ import {
   FTriggerEvent,
   primaryButtonEventTrigger,
   isOnFlowBackground,
+  EFCanvasLayer,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { heroLockClosed, heroTrash, heroPlus, heroCpuChip, heroCube } from '@ng-icons/heroicons/outline';
@@ -136,6 +137,11 @@ export class DiagramCanvasComponent {
   readonly nodeDropped = output<{ payload: any; position: { x: number; y: number } }>();
 
   readonly zoomLevel = signal<number>(100);
+  readonly canvasLayers: EFCanvasLayer[] = [
+    EFCanvasLayer.GROUPS,
+    EFCanvasLayer.NODES,
+    EFCanvasLayer.CONNECTIONS,
+  ];
   readonly isDragOverCanvas = signal<boolean>(false);
   readonly hoveredNodeId = signal<string | null>(null);
   readonly renamingNodeId = signal<string | null>(null);
@@ -1462,8 +1468,8 @@ export class DiagramCanvasComponent {
     const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
     const sNode = nodeMap.get(sourceBase);
     const tNode = nodeMap.get(targetBase);
-    if (sNode && (sNode.nodeType === 'actor' || sNode.nodeType === 'use_case' || sNode.nodeType === 'package')) return false;
-    if (tNode && (tNode.nodeType === 'actor' || tNode.nodeType === 'use_case' || tNode.nodeType === 'package')) return false;
+    if (sNode && (sNode.nodeType === 'actor' || sNode.nodeType === 'use_case' || sNode.nodeType === 'package' || sNode.nodeType === 'boundary_box')) return false;
+    if (tNode && (tNode.nodeType === 'actor' || tNode.nodeType === 'use_case' || tNode.nodeType === 'package' || tNode.nodeType === 'boundary_box')) return false;
     return true;
   }
 
