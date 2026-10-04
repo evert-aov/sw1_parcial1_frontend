@@ -134,19 +134,27 @@ f-flow .f-connector-connectable {
 }
 
 /* Quitar círculo (drag handle) en el extremo de las conexiones */
-f-connection circle,
-f-connection-for-create circle,
-f-flow f-connection circle,
 f-flow .f-connection-drag-handle,
 f-flow circle[f-connection-drag-handle-end],
 f-flow circle[f-connection-drag-handle-start],
-f-flow circle.f-connection-drag-handle {
+f-flow circle.f-connection-drag-handle,
+f-flow f-connection circle[f-connection-drag-handle-end],
+f-flow f-connection circle[f-connection-drag-handle-start],
+f-flow f-connection-for-create circle[f-connection-drag-handle-end],
+f-flow f-connection-for-create circle[f-connection-drag-handle-start] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   stroke: transparent !important;
   fill: none !important;
   pointer-events: none !important;
+}
+
+f-flow f-connection .f-connection-content circle,
+f-flow f-connection-for-create .f-connection-content circle {
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* Badges de Multiplicidad y Nombre de Relación UML - Enterprise Architect Style */
@@ -438,6 +446,65 @@ f-flow f-connection.uml-relation-generalization path[f-connection-path],
 f-flow f-connection.uml-relation-composition path[f-connection-path],
 f-flow f-connection.uml-relation-aggregation path[f-connection-path] {
   stroke-dasharray: none !important;
+}
+
+f-flow f-connection.uml-relation-assembly path[f-connection-path],
+f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
+f-flow .uml-relation-assembly path[f-connection-path] {
+  stroke: #687186 !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: none !important;
+}
+
+.dark f-flow f-connection.uml-relation-assembly path[f-connection-path],
+.dark f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
+.dark f-flow .uml-relation-assembly path[f-connection-path] {
+  stroke: #94a3b8 !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: none !important;
+}
+
+/* Símbolo de Ensamble (Arco y Círculo) con el mismo grosor (2px) que la línea */
+f-flow .uml-relation-assembly .f-connection-content path,
+f-flow f-connection.uml-relation-assembly .f-connection-content path,
+f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
+  fill: none !important;
+  stroke: #687186 !important;
+  stroke-width: 2px !important;
+}
+
+f-flow .uml-relation-assembly .f-connection-content circle,
+f-flow f-connection.uml-relation-assembly .f-connection-content circle,
+f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle {
+  fill: #fcf3ee !important;
+  stroke: #687186 !important;
+  stroke-width: 2px !important;
+}
+
+.dark f-flow .uml-relation-assembly .f-connection-content path,
+.dark f-flow f-connection.uml-relation-assembly .f-connection-content path,
+.dark f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
+  stroke: #94a3b8 !important;
+  stroke-width: 2px !important;
+}
+
+.dark f-flow .uml-relation-assembly .f-connection-content circle,
+.dark f-flow f-connection.uml-relation-assembly .f-connection-content circle,
+.dark f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle {
+  fill: #1e293b !important;
+  stroke: #94a3b8 !important;
+  stroke-width: 2px !important;
+}
+
+/* Estado seleccionado para Assembly */
+f-flow f-connection.uml-relation-assembly.f-selected path[f-connection-path],
+f-flow f-connection.uml-relation-assembly.f-connection-selected path[f-connection-path],
+f-flow f-connection.uml-relation-assembly.f-selected .f-connection-content path,
+f-flow f-connection.uml-relation-assembly.f-selected .f-connection-content circle,
+f-flow f-connection.uml-relation-assembly.f-connection-selected .f-connection-content path,
+f-flow f-connection.uml-relation-assembly.f-connection-selected .f-connection-content circle {
+  stroke: #2563eb !important;
+  stroke-width: 2.5px !important;
 }
 
 /* Forzar que los marcadores SVG no se recorten en los bordes */

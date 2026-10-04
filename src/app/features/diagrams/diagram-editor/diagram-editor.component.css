@@ -126,8 +126,12 @@
   pointer-events: auto !important;
 }
 
-::ng-deep f-flow f-connection circle,
-::ng-deep f-flow f-connection-for-create circle,
+::ng-deep f-flow f-connection circle[f-connection-drag-handle-end],
+::ng-deep f-flow f-connection circle[f-connection-drag-handle-start],
+::ng-deep f-flow f-connection circle.f-connection-drag-handle,
+::ng-deep f-flow f-connection-for-create circle[f-connection-drag-handle-end],
+::ng-deep f-flow f-connection-for-create circle[f-connection-drag-handle-start],
+::ng-deep f-flow f-connection-for-create circle.f-connection-drag-handle,
 ::ng-deep f-flow .f-connection-drag-handle {
   display: none !important;
   visibility: hidden !important;
@@ -136,14 +140,90 @@
   stroke: transparent !important;
 }
 
-::ng-deep f-flow f-connection path,
-::ng-deep f-flow f-connection-for-create path,
-::ng-deep f-flow .f-connection path,
+::ng-deep f-flow f-connection .f-connection-content circle,
+::ng-deep f-flow f-connection-for-create .f-connection-content circle {
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+::ng-deep f-flow f-connection path[f-connection-path],
+::ng-deep f-flow f-connection-for-create path[f-connection-path],
+::ng-deep f-flow .f-connection path[f-connection-path],
 ::ng-deep f-flow path[f-connection-path],
 ::ng-deep f-flow .f-connection-path {
   fill: none !important;
   stroke: #43352B !important;
   stroke-width: 1.3px !important;
+}
+
+/* Conexión de Ensamble UML (Assembly / Ball and Socket) */
+::ng-deep f-flow f-connection.uml-relation-assembly path[f-connection-path],
+::ng-deep f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
+::ng-deep f-flow .uml-relation-assembly path[f-connection-path] {
+  stroke: #687186 !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: none !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow f-connection.uml-relation-assembly path[f-connection-path],
+:host-context(.dark) ::ng-deep f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
+:host-context(.dark) ::ng-deep f-flow .uml-relation-assembly path[f-connection-path],
+.dark ::ng-deep f-flow f-connection.uml-relation-assembly path[f-connection-path],
+.dark ::ng-deep f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
+.dark ::ng-deep f-flow .uml-relation-assembly path[f-connection-path] {
+  stroke: #94a3b8 !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: none !important;
+}
+
+/* Símbolo de Ensamble (Arco y Círculo) con el mismo grosor (2px) que la línea */
+::ng-deep f-flow .uml-relation-assembly .f-connection-content path,
+::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content path,
+::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
+  fill: none !important;
+  stroke: #687186 !important;
+  stroke-width: 2px !important;
+}
+
+::ng-deep f-flow .uml-relation-assembly .f-connection-content circle,
+::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content circle,
+::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle {
+  fill: #fcf3ee !important;
+  stroke: #687186 !important;
+  stroke-width: 2px !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow .uml-relation-assembly .f-connection-content path,
+:host-context(.dark) ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content path,
+:host-context(.dark) ::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path,
+.dark ::ng-deep f-flow .uml-relation-assembly .f-connection-content path,
+.dark ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content path,
+.dark ::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
+  stroke: #94a3b8 !important;
+  stroke-width: 2px !important;
+}
+
+:host-context(.dark) ::ng-deep f-flow .uml-relation-assembly .f-connection-content circle,
+:host-context(.dark) ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content circle,
+:host-context(.dark) ::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle,
+.dark ::ng-deep f-flow .uml-relation-assembly .f-connection-content circle,
+.dark ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content circle,
+.dark ::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle {
+  fill: #1e293b !important;
+  stroke: #94a3b8 !important;
+  stroke-width: 2px !important;
+}
+
+/* Estado seleccionado para Assembly */
+::ng-deep f-flow f-connection.uml-relation-assembly.f-selected path[f-connection-path],
+::ng-deep f-flow f-connection.uml-relation-assembly.f-connection-selected path[f-connection-path],
+::ng-deep f-flow f-connection.uml-relation-assembly.f-selected .f-connection-content path,
+::ng-deep f-flow f-connection.uml-relation-assembly.f-selected .f-connection-content circle,
+::ng-deep f-flow f-connection.uml-relation-assembly.f-connection-selected .f-connection-content path,
+::ng-deep f-flow f-connection.uml-relation-assembly.f-connection-selected .f-connection-content circle {
+  stroke: #2563eb !important;
+  stroke-width: 2.5px !important;
 }
 
 ::ng-deep f-flow f-connection.uml-relation-realization path[f-connection-path],

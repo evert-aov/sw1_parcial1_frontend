@@ -35,6 +35,23 @@
           </div>
         }
 
+        @if (editingConnection()?.type === 'assembly') {
+          <div class="p-3 bg-slate-50 dark:bg-[#151A33] border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between">
+            <div>
+              <div class="font-semibold text-slate-700 dark:text-slate-300 text-[11px] uppercase">Orientación del Ensamble</div>
+              <div class="text-[10px] text-slate-400">Alternar interfaz provista (Ball) y requerida (Socket)</div>
+            </div>
+            <button
+              type="button"
+              (click)="onSwapDirection()"
+              title="Invertir Socket ⇄ Ball"
+              class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold text-[11px] rounded-lg border border-blue-200/60 dark:border-blue-800/50 cursor-pointer transition-colors flex items-center gap-1.5">
+              <ng-icon name="heroArrowsRightLeft" class="text-xs"></ng-icon>
+              <span>Invertir Socket ⇄ Ball</span>
+            </button>
+          </div>
+        }
+
         @if (canHaveMultiplicity()) {
           <div>
             <div class="flex items-center justify-between mb-1.5">

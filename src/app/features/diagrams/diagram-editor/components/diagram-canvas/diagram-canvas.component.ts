@@ -1634,6 +1634,72 @@ export class DiagramCanvasComponent {
     return defaultSide;
   }
 
+  getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
+    const w = node.isAnchor ? 0 : this.getNodeWidth(node);
+    const h = this.getNodeHeight(node) || 60;
+    const bottomExtra =
+      node.nodeType === 'actor' ||
+      node.nodeType === 'boundary' ||
+      node.nodeType === 'control' ||
+      node.nodeType === 'entity'
+        ? 38 + Math.max(0, node.labelOffset?.y || 0)
+        : 0;
+    switch (side) {
+      case 'left':
+        return { x: node.position.x, y: node.position.y + h / 2 };
+      case 'right':
+        return { x: node.position.x + w, y: node.position.y + h / 2 };
+      case 'top':
+        return { x: node.position.x + w / 2, y: node.position.y };
+      case 'bottom':
+        return { x: node.position.x + w / 2, y: node.position.y + h + bottomExtra };
+      default:
+        return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
+    }
+  }
+
+  getAssemblyAngle(conn: UmlConnection): number {
+    try {
+      const container = this.flowContainerRef?.nativeElement;
+      if (container) {
+        const pathEl = container.querySelector(
+          `[data-connection-id="${conn.id}"] path[f-connection-path]`,
+        ) as SVGPathElement | null;
+        if (pathEl && typeof pathEl.getTotalLength === 'function') {
+          const len = pathEl.getTotalLength();
+          if (len > 0) {
+            const p1 = pathEl.getPointAtLength(Math.max(0, len * 0.5 - 2));
+            const p2 = pathEl.getPointAtLength(Math.min(len, len * 0.5 + 2));
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            if (dx !== 0 || dy !== 0) {
+              return Math.round((Math.atan2(dy, dx) * 180) / Math.PI);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
+    const sId = conn.sourceNodeId || conn.sourceId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
+    const tId = conn.targetNodeId || conn.targetId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
+    const sNode = nodeMap.get(sId);
+    const tNode = nodeMap.get(tId);
+    if (!sNode || !tNode) return 0;
+
+    const sWidth = this.getNodeWidth(sNode);
+    const sHeight = this.getNodeHeight(sNode) || 60;
+    const tWidth = this.getNodeWidth(tNode);
+    const tHeight = this.getNodeHeight(tNode) || 60;
+
+    const sCenter = { x: sNode.position.x + sWidth / 2, y: sNode.position.y + sHeight / 2 };
+    const tCenter = { x: tNode.position.x + tWidth / 2, y: tNode.position.y + tHeight / 2 };
+
+    const dx = tCenter.x - sCenter.x;
+    const dy = tCenter.y - sCenter.y;
+    return Math.round((Math.atan2(dy, dx) * 180) / Math.PI);
+  }
+
   hasForwardMessages(conn: UmlConnection): boolean {
     return !!conn.messages && conn.messages.some((m) => m.direction !== 'reverse');
   }

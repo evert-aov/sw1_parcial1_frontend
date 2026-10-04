@@ -165,6 +165,9 @@ export class EditConnectionModalComponent {
     const tempSource = conn.sourceId;
     conn.sourceId = conn.targetId;
     conn.targetId = tempSource;
+    const tempSourceNode = conn.sourceNodeId;
+    conn.sourceNodeId = conn.targetNodeId;
+    conn.targetNodeId = tempSourceNode;
     const tempMultiplicity = conn.sourceMultiplicity;
     conn.sourceMultiplicity = conn.targetMultiplicity;
     conn.targetMultiplicity = tempMultiplicity;
