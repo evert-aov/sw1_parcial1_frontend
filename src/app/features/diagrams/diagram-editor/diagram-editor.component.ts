@@ -2801,7 +2801,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       width: 280,
       height: 200,
       isCustomSize: true,
-      color: '#FAF8F5',
+      color: '#FFFFFF',
       attributes: [],
       methods: [],
     };

@@ -713,10 +713,9 @@
                     (click)="onNodeClick(node.id, $event)"
                     [ngClass]="{
                       'border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id),
-                      'border-[#796354] shadow-xs': !isNodeSelected(node.id)
+                      'border-[#1E293B] dark:border-slate-300 shadow-sm': !isNodeSelected(node.id)
                     }"
-                    [style.borderColor]="isNodeSelected(node.id) ? null : (node.color || '#796354')"
-                    [style.backgroundColor]="node.color && node.color !== '#796354' ? (node.color + '15') : 'rgba(255, 255, 255, 0.7)'"
+                    [style.backgroundColor]="node.color || 'rgba(255, 255, 255, 0.75)'"
                     class="w-full h-full border-2 rounded-none p-3 flex flex-col justify-start relative select-none cursor-pointer backdrop-blur-[1px]">
                     
                     <!-- Botón Eliminar en hover -->

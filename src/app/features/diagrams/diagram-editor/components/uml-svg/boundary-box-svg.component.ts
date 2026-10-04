@@ -62,7 +62,7 @@ export class BoundaryBoxSvgComponent {
   @Input() width: number | string = '100%';
   @Input() height: number | string = '100%';
   @Input() fillColor: string = 'transparent';
-  @Input() strokeColor: string = '#796354';
+  @Input() strokeColor: string = '#1E293B';
   @Input() strokeWidth: number = 1.5;
   @Input() textColor: string = '#241C18';
   @Input() name: string = '';
