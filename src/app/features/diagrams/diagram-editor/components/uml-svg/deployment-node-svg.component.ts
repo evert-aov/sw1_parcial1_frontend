@@ -12,10 +12,18 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '[style.width]': 'computedWidth',
-    '[style.height]': 'computedHeight',
-    '[style.display]': "width === '100%' ? 'flex' : 'inline-flex'",
-    'class': 'shrink-0 items-center justify-center'
+    '[style.width]': "mode === '3d-faces' ? '100%' : computedWidth",
+    '[style.height]': "mode === '3d-faces' ? '100%' : computedHeight",
+    '[style.display]': "mode === '3d-faces' ? 'block' : (width === '100%' ? 'flex' : 'inline-flex')",
+    '[style.position]': "mode === '3d-faces' ? 'absolute' : null",
+    '[style.top]': "mode === '3d-faces' ? '0' : null",
+    '[style.left]': "mode === '3d-faces' ? '0' : null",
+    '[style.pointer-events]': "mode === '3d-faces' ? 'none' : null",
+    '[class.absolute]': "mode === '3d-faces'",
+    '[class.inset-0]': "mode === '3d-faces'",
+    '[class.pointer-events-none]': "mode === '3d-faces'",
+    '[class.overflow-visible]': "mode === '3d-faces'",
+    'class': 'shrink-0'
   },
   template: `
     @if (mode === '3d-faces') {

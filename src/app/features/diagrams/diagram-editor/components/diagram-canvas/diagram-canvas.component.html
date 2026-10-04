@@ -1135,6 +1135,7 @@
                     <!-- Caras 3D Superior y Lateral Derecha mediante Componente SVG Reutilizable -->
                     <app-deployment-node-svg
                       mode="3d-faces"
+                      class="absolute inset-0 pointer-events-none overflow-visible"
                       [nodeWidth]="getNodeWidth(node)"
                       [nodeHeight]="getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140)"
                       [topColor]="getDeploymentColors(node).top"

@@ -75,7 +75,7 @@
   background: transparent !important;
 }
 
-::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.f-node-lifeline):not(.w-0):not(.opacity-0) {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.f-node-lifeline):not(.f-node-component):not(.f-node-deployment):not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: var(--node-bg, #FFFDDD) !important;
@@ -98,6 +98,8 @@
 ::ng-deep f-flow .f-node.f-node-control,
 ::ng-deep f-flow .f-node.f-node-entity,
 ::ng-deep f-flow .f-node.f-node-lifeline,
+::ng-deep f-flow .f-node.f-node-component,
+::ng-deep f-flow .f-node.f-node-deployment,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-package,
@@ -105,13 +107,17 @@
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-control,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-lifeline,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-component,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-deployment,
 .dark ::ng-deep f-flow .f-node.f-node-actor,
 .dark ::ng-deep f-flow .f-node.f-node-use-case,
 .dark ::ng-deep f-flow .f-node.f-node-package,
 .dark ::ng-deep f-flow .f-node.f-node-boundary,
 .dark ::ng-deep f-flow .f-node.f-node-control,
 .dark ::ng-deep f-flow .f-node.f-node-entity,
-.dark ::ng-deep f-flow .f-node.f-node-lifeline {
+.dark ::ng-deep f-flow .f-node.f-node-lifeline,
+.dark ::ng-deep f-flow .f-node.f-node-component,
+.dark ::ng-deep f-flow .f-node.f-node-deployment {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -133,6 +139,8 @@
 ::ng-deep f-flow .f-node.f-node-control.f-selected,
 ::ng-deep f-flow .f-node.f-node-entity.f-selected,
 ::ng-deep f-flow .f-node.f-node-lifeline.f-selected,
+::ng-deep f-flow .f-node.f-node-component.f-selected,
+::ng-deep f-flow .f-node.f-node-deployment.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-package.f-selected,
@@ -140,13 +148,17 @@
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-control.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity.f-selected,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-lifeline.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-component.f-selected,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-deployment.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-actor.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-package.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-boundary.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-control.f-selected,
 .dark ::ng-deep f-flow .f-node.f-node-entity.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-lifeline.f-selected {
+.dark ::ng-deep f-flow .f-node.f-node-lifeline.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-component.f-selected,
+.dark ::ng-deep f-flow .f-node.f-node-deployment.f-selected {
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
@@ -162,7 +174,7 @@
 }
 
 ::ng-deep f-flow .f-node.f-node-class.f-selected,
-::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.f-node-lifeline).f-selected {
+::ng-deep f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.f-node-lifeline):not(.f-node-component):not(.f-node-deployment).f-selected {
   outline: 2px solid #2563eb !important;
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
   z-index: 30 !important;
