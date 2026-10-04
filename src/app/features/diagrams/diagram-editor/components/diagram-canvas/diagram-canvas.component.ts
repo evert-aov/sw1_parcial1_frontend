@@ -1504,26 +1504,32 @@ export class DiagramCanvasComponent {
     return false;
   }
 
-  // Mapa reactivo de z-index: el elemento con mayor área va al fondo (menor z-index)
-  // y los más pequeños sucesivamente al frente (mayor z-index).
-  readonly nodeZIndexMap = computed(() => {
-    const list = this.nodes().filter((n) => !n.isAnchor);
-    const sorted = [...list].sort((a, b) => {
-      const areaA = this.getNodeWidth(a) * (this.getNodeHeight(a) || 60);
-      const areaB = this.getNodeWidth(b) * (this.getNodeHeight(b) || 60);
-      if (areaB !== areaA) return areaB - areaA;
-      return a.id.localeCompare(b.id);
-    });
-    const map = new Map<string, number>();
-    sorted.forEach((n, idx) => {
-      map.set(n.id, Math.min(25, 1 + idx));
-    });
-    return map;
-  });
+  getNodeArea(node: UmlClassNode): number {
+    if (node.isAnchor) return 0;
+    return this.getNodeWidth(node) * (this.getNodeHeight(node) || 60);
+  }
+
+  // Rango base de z-index calculado dinámicamente según área efectiva:
+  // El elemento con mayor área va al fondo (rank 1) y los más pequeños sucesivamente al frente (2, 3, ...).
+  getNodeBaseRank(node: UmlClassNode): number {
+    if (node.isAnchor) return 0;
+    const myArea = this.getNodeArea(node);
+    let rank = 1;
+    for (const other of this.nodes()) {
+      if (other.id === node.id || other.isAnchor) continue;
+      const otherArea = this.getNodeArea(other);
+      if (otherArea > myArea) {
+        rank++;
+      } else if (otherArea === myArea && other.id.localeCompare(node.id) < 0) {
+        rank++;
+      }
+    }
+    return Math.min(25, rank);
+  }
 
   getNodeZIndex(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
-    const baseRank = this.nodeZIndexMap().get(node.id) ?? 1;
+    const baseRank = this.getNodeBaseRank(node);
     if (this.isNodeOrAncestorSelected(node)) {
       return 30 + baseRank;
     }

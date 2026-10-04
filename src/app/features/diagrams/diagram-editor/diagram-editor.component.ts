@@ -1416,15 +1416,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onNodeSizeChanged(event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(event.node.id)) return;
     this.pushSnapshot();
-    const targetNode = this.nodes().find((n) => n.id === event.node.id);
-    if (targetNode) {
-      targetNode.customWidth = event.width;
-      targetNode.customHeight = event.height;
-      targetNode.isCustomSize = true;
-      targetNode.width = event.width;
-      targetNode.height = event.height;
-      targetNode.position = event.position;
-    }
+    this.nodes.update((list) =>
+      list.map((n) =>
+        n.id === event.node.id
+          ? {
+              ...n,
+              customWidth: event.width,
+              customHeight: event.height,
+              isCustomSize: true,
+              width: event.width,
+              height: event.height,
+              position: event.position,
+            }
+          : n
+      )
+    );
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.collaborationService.sendDiagramSync(
