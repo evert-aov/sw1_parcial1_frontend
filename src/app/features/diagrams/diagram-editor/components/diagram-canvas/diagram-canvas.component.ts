@@ -1486,11 +1486,30 @@ export class DiagramCanvasComponent {
     const childCenterY = child.position.y + childH / 2;
 
     return (
-      childCenterX >= parent.position.x &&
-      childCenterX <= parent.position.x + parentW &&
-      childCenterY >= parent.position.y &&
-      childCenterY <= parent.position.y + parentH
+      childCenterX >= parent.position.x - 5 &&
+      childCenterX <= parent.position.x + parentW + 5 &&
+      childCenterY >= parent.position.y - 5 &&
+      childCenterY <= parent.position.y + parentH + 5
     );
+  }
+
+  getNodeParentId(node: UmlClassNode): string | null {
+    if (node.isAnchor || this.activeDiagramType() === DiagramType.SEQUENCE) return null;
+    let bestParent: UmlClassNode | null = null;
+    let minArea = Infinity;
+
+    for (const candidate of this.nodes()) {
+      if (candidate.id === node.id || candidate.isAnchor) continue;
+      if (this.isNodeInsideParent(node, candidate)) {
+        const area = this.getNodeArea(candidate);
+        if (area < minArea) {
+          minArea = area;
+          bestParent = candidate;
+        }
+      }
+    }
+
+    return bestParent ? bestParent.id : null;
   }
 
   isNodeOrAncestorSelected(node: UmlClassNode): boolean {

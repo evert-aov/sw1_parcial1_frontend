@@ -1204,6 +1204,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     if (anyMoved) {
+      this.nodes.set([...this.nodes()]);
       this.markAsUnsaved();
       this.updateConnectionEndpoints();
       this.diagramCanvas?.redraw();
@@ -1384,10 +1385,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const childCenterY = child.position.y + childH / 2;
 
     return (
-      childCenterX >= parent.position.x &&
-      childCenterX <= parent.position.x + parentW &&
-      childCenterY >= parent.position.y &&
-      childCenterY <= parent.position.y + parentH
+      childCenterX >= parent.position.x - 5 &&
+      childCenterX <= parent.position.x + parentW + 5 &&
+      childCenterY >= parent.position.y - 5 &&
+      childCenterY <= parent.position.y + parentH + 5
     );
   }
 
