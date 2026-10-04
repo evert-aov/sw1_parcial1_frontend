@@ -24,6 +24,9 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
     * Clases, interfaces, enumeraciones, paquetes y clases de asociación.
     * Gestión granular de atributos y operaciones con visibilidades (`+`, `-`, `#`, `~`), tipos de datos de base de datos/Java, modificadores (`PK`, `AutoIncrement`, `Nullable`, `Unique`) y parámetros de métodos tipados.
     * Relaciones semánticas: Asociación, Agregación, Composición, Herencia/Generalización, Realización y Dependencia con marcadores conformes al estándar UML.
+  * **Diagrama de Análisis de Clases (Class Analysis Diagram)**:
+    * Entorno especializado para análisis preliminar y diseño de dominio que combina la expresividad del diagrama de clases con la presencia directa de **Actores**.
+    * Permite vincular actores del sistema con clases de análisis y entidades para modelar responsabilidades y trazabilidad de requerimientos.
   * **Diagrama de Casos de Uso (Use Case Diagram)**:
     * Actores modelados mediante SVG vectorial calibrado con encuadre de cabeza y cuerpo balanceado sin recortes visuales.
     * Casos de uso elípticos con soporte para estereotipos (`«include»`, `«extend»`).
@@ -38,7 +41,27 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
     * Conexiones con etiquetas de mensajes, orden de secuencia numérico jerárquico y flechas direccionales de llamada.
   * **Diagrama de Paquetes (Package Diagram)**:
     * Contenedores de paquetes con pestaña (*tab*) superior estilizada.
-    * Relaciones de dependencia y estereotipos de importación/acceso (`«import»`, `«access»`, `«merge»`).
+    * Relaciones de dependencia y estereotipos de importación/acceso (`«import»`, `«access»`, `«merge»`, `«trace»`).
+  * **Diagrama de Capas (Layered Architecture Diagram)**:
+    * Modelado de arquitecturas por niveles (Presentación, Negocio/Dominio, Datos/Persistencia, etc.).
+    * Elementos: Paquetes y Nodos de Agrupación de Capa (*Boundary Box*) con etiqueta de nombre centrada en la parte superior.
+    * Relaciones de dependencia e importación entre paquetes de distintos niveles de abstracción.
+  * **Diagrama de Componentes (Component Diagram)**:
+    * Modelado modular de subsistemas y ejecutables mediante nodos de **Componentes UML** (icono clásico de dos rectángulos incrustados y estereotipo `«component»`).
+    * Cajas de agrupación (*Boundary Box*) para delinear límites de módulos y subsistemas.
+    * Relaciones de componentes: **Ensamble / Ball-and-Socket** (`assembly`), **Asociación** (`association`), **Realización** (`realize`) y **Generalización** (`generalize`).
+  * **Diagrama de Despliegue (Deployment Diagram)**:
+    * Representación de infraestructura física y virtual mediante nodos vectoriales en **perspectiva 3D isométrica**:
+      * **Nodo de Computación (`node`)**: Servidores de cómputo general.
+      * **Dispositivo de Hardware (`device`)**: Dispositivos periféricos, sensores y routers.
+      * **Entorno de Ejecución (`executionEnvironment`)**: Servidores de aplicaciones, JVMs, contenedores y bases de datos.
+    * Cajas de delimitación de red y servidores (*Boundary Box*) con contención de nodos internos.
+    * Relaciones de despliegue: Rutas de comunicación (`communication_path`), Despliegue de artefactos (`deploy`), Manifestación (`manifest`) y Dependencias de red.
+
+* **Agrupación Jerárquica y Arrastre Recursivo de Contenedores (`boundary_box`)**:
+  * **Detección Geométrica de Contención**: El motor calcula en tiempo real si un nodo se encuentra espacialmente delimitado dentro de una caja de agrupación.
+  * **Arrastre Coordinado Nativo con `fNodeParentId`**: Las cajas vinculan dinámicamente sus nodos hijos mediante la directiva `fNodeParentId` de `@foblex/flow`, permitiendo desplazar la caja contenedora y arrastrar automáticamente todos los componentes y nodos contenidos de forma fluida.
+  * **Apilamiento Inteligente de `z-index` por Área Efectiva**: Los contenedores más amplios se posicionan automáticamente en capas inferiores y los elementos contenidos al frente, evitando oclusiones visuales y facilitando la interacción.
 
 * **Motor de Interacción y Relaciones UML de Alta Precisión**:
   * **Hit Target Expandido de 40px**: Facilita la selección y edición de cualquier relación sin importar su delgadez visual (trazo elegante de 1.3px a 2.5px), ofreciendo un área de impacto invisible de 40px (±20px a cada lado) que previene clics fallidos a través de la línea hacia el lienzo.
@@ -47,12 +70,19 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
   * **Modal de Edición de Conexión en Caliente**: Configuración reactiva de nombre, tipo de relación, multiplicidad de origen/destino, estereotipos y estilos de línea.
 
 * **Espacio de Trabajo Multi-Pestaña (Multi-Tab Workspace)**:
-  * Barra de pestañas integrada en el editor que permite mantener múltiples diagramas abiertos simultáneamente (Clases, Casos de Uso, Secuencia, Comunicación, Paquetes).
+  * Barra de pestañas integrada en el editor que permite mantener múltiples diagramas abiertos simultáneamente (Clases, Análisis, Casos de Uso, Secuencia, Comunicación, Paquetes, Capas, Componentes, Despliegue).
   * Conmutación instantánea entre diagramas dentro del mismo proyecto sin recargar el estado, conservando el nivel de zoom y posición del viewport en cada pestaña.
 
-* **Toolbox Responsivo y Consistente**:
-  * Barra de herramientas lateral con ancho adaptativo e iconos SVG de escala fija que conservan su nitidez y proporción sin agrandamientos desmedidos al expandir la barra.
-  * Formularios y modales de edición limpios y consistentes para atributos, operaciones y miembros sin duplicación de indicadores visuales.
+* **Arrastre Directo desde la Paleta y Explorador (Drag and Drop al Lienzo)**:
+  * Permite arrastrar elementos tanto desde la barra de herramientas lateral (*Toolbox*) como desde el explorador del proyecto (*Explorer*) directamente a las coordenadas exactas deseadas en el lienzo, clonando o posicionando nodos sin clics intermediarios.
+
+* **Toolbox Inteligente y Sin Redundancias**:
+  * Paleta contextual que filtra los elementos disponibles según el tipo de diagrama activo (Clases, Análisis, Capas, Componentes, Despliegue, etc.).
+  * Eliminación de botones redundantes en la parte inferior para ofrecer una experiencia limpia, despejada y enfocada.
+
+* **Internacionalización Integral (i18n Bilingüe Español / Inglés)**:
+  * Sistema de traducción reactivo con cambio dinámico de idioma en tiempo real sin recargar la página.
+  * Cobertura completa en lienzos, tooltips de acciones, botones flotantes de nodos, modales de confirmación y advertencias de incompatibilidad de elementos.
 
 * **Colaboración Multiusuario en Tiempo Real**:
   * Sincronización instantánea mediante **Socket.io**.
@@ -328,9 +358,13 @@ Para ejecutar el modo de escritorio en NixOS, utiliza cualquiera de las siguient
 
 ## 🧩 Módulos y Componentes Clave
 
-* **`DiagramEditorComponent`**: Orquestador principal del editor, gestión de pestañas multidiagrama, atajos de teclado, persistencia y control de sincronización en tiempo real.
-* **`DiagramCanvasComponent`**: Lienzo visual interactivo con `@foblex/flow` que renderiza nodos de Clases, Casos de Uso, Secuencia, Comunicación y Paquetes, barras de activación, líneas de vida y relaciones con hit target expandido de 40px y captura de eventos SVG.
-* **`DiagramToolboxComponent`**: Barra de herramientas responsiva y consistente con iconos vectoriales fijos para añadir entidades, actores, casos de uso, paquetes y objetos de Jacobson a cada diagrama.
+* **`DiagramEditorComponent`**: Orquestador principal del editor, gestión de pestañas multidiagrama, atajos de teclado, persistencia, cálculo dinámico de jerarquía de contención y control de sincronización en tiempo real.
+* **`DiagramCanvasComponent`**: Lienzo visual interactivo con `@foblex/flow` que renderiza nodos de 9 tipos de diagramas (Clases, Análisis, Casos de Uso, Secuencia, Comunicación, Paquetes, Capas, Componentes y Despliegue), cajas de agrupación (`boundary_box`), barras de activación, líneas de vida y relaciones con hit target expandido de 40px y captura de eventos SVG.
+* **`ComponentSvgComponent`**: Componente visual standalone para la representación gráfica precisa de componentes UML conforme al estándar.
+* **`DeploymentNodeSvgComponent`**: Componente visual standalone para nodos tridimensionales isométricos de despliegue (`node`, `device`, `executionEnvironment`).
+* **`GroupingBoundaryComponent`**: Componente standalone para cajas de delimitación y agrupación de sistemas, capas y redes con etiquetas centradas superiores y jerarquía de contención reactiva.
+* **`DiagramToolboxComponent`**: Barra de herramientas contextual que filtra automáticamente los elementos y relaciones válidas para el diagrama activo (Clases, Casos de Uso, Componentes, Capas, Despliegue, etc.) y admite arrastrar elementos directamente al lienzo.
+* **`DiagramTreeExplorerComponent`**: Explorador jerárquico del proyecto organizado por carpetas con soporte para arrastrar elementos directamente al canvas.
 * **`EditConnectionModalComponent`**: Modal flotante reactivo activado por doble clic sobre cualquier relación para editar nombres, multiplicidades ($0..1$, $1..*$, etc.), estereotipos y tipo de relación UML.
 * **`UserGuideChatbotComponent`**: Manual de usuario interactivo global tipo chatbot con tour guiado en 7 etapas, búsqueda semántica en lenguaje natural, renderizado Markdown enriquecido, bloques con copia de comandos y carrusel de temas con scroll y flechas.
 * **`AiAssistantPanelComponent`**: Asistente inteligente lateral con integración de cámara web para captura en vivo y prompts en lenguaje natural.
