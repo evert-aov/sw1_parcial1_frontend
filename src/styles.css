@@ -14,7 +14,7 @@
   --ff-node-padding: 0px !important;
   --ff-node-border-radius: 0px !important;
   --ff-node-border-color: transparent !important;
-  --ff-node-background-color: #FFFDF9 !important;
+  --ff-node-background-color: transparent !important;
   --ff-node-shadow: none !important;
   --ff-canvas-background-color: #FFFFFF !important;
   --ff-flow-background-color: #FFFFFF !important;
@@ -30,7 +30,7 @@
   --ff-node-padding: 0px !important;
   --ff-node-border-radius: 0px !important;
   --ff-node-border-color: transparent !important;
-  --ff-node-background-color: #FFFDF9 !important;
+  --ff-node-background-color: transparent !important;
   --ff-node-shadow: none !important;
   --ff-canvas-background-color: #FFFFFF !important;
   --ff-flow-background-color: #FFFFFF !important;
@@ -81,7 +81,7 @@ f-flow {
 }
 
 /* Nodos UML 2.5 estilo Enterprise Architect (EA) */
-f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not(.f-node-boundary):not(.f-node-control):not(.f-node-entity):not(.w-0):not(.opacity-0) {
+f-flow .f-node.f-node-class:not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: #FFFDF9 !important;
@@ -90,18 +90,26 @@ f-flow .f-node:not(.f-node-actor):not(.f-node-use-case):not(.f-node-package):not
   box-sizing: border-box !important;
 }
 
+f-flow .f-node:not(.f-node-class),
 f-flow .f-node.f-node-actor,
 f-flow .f-node.f-node-use-case,
 f-flow .f-node.f-node-package,
 f-flow .f-node.f-node-boundary,
 f-flow .f-node.f-node-control,
 f-flow .f-node.f-node-entity,
+f-flow .f-node.f-node-lifeline,
+f-flow .f-node.f-node-component,
+f-flow .f-node.f-node-deployment,
+.dark f-flow .f-node:not(.f-node-class),
 .dark f-flow .f-node.f-node-actor,
 .dark f-flow .f-node.f-node-use-case,
 .dark f-flow .f-node.f-node-package,
 .dark f-flow .f-node.f-node-boundary,
 .dark f-flow .f-node.f-node-control,
-.dark f-flow .f-node.f-node-entity {
+.dark f-flow .f-node.f-node-entity,
+.dark f-flow .f-node.f-node-lifeline,
+.dark f-flow .f-node.f-node-component,
+.dark f-flow .f-node.f-node-deployment {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
