@@ -733,8 +733,8 @@
             (dragstart)="onToolboxDragStart('device', $event)"
             [title]="'editor.toolbox.dragHint' | translate"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-amber-300 dark:hover:border-amber-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-700 dark:text-amber-400 group-hover:scale-105 transition-transform p-0.5">
-              <ng-icon name="heroComputerDesktop" class="text-base"></ng-icon>
+            <div class="w-9 h-8 flex items-center justify-center bg-amber-50/60 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 group-hover:scale-105 transition-transform p-0.5">
+              <app-deployment-node-svg mode="icon" width="22" height="19" fillColor="#FFFDF8" topColor="#FFFFFF" rightColor="#E8DFD3" strokeColor="#796354" [strokeWidth]="1.2" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Dispositivo («device»)</div>
@@ -751,8 +751,8 @@
             (dragstart)="onToolboxDragStart('executionEnvironment', $event)"
             [title]="'editor.toolbox.dragHint' | translate"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-sky-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-sky-300 dark:hover:border-sky-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-sky-50 dark:bg-sky-950/60 border border-sky-200/80 dark:border-sky-800/60 rounded-md shrink-0 text-sky-600 dark:text-sky-400 group-hover:scale-105 transition-transform p-0.5">
-              <ng-icon name="heroServer" class="text-base"></ng-icon>
+            <div class="w-9 h-8 flex items-center justify-center bg-sky-50/60 dark:bg-sky-950/60 border border-sky-200/80 dark:border-sky-800/60 rounded-md shrink-0 group-hover:scale-105 transition-transform p-0.5">
+              <app-deployment-node-svg mode="icon" width="22" height="19" fillColor="#CDE6F7" topColor="#E4F2FD" rightColor="#AFD4EE" strokeColor="#1E3A5F" [strokeWidth]="1.2" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Entorno («executionEnvironment»)</div>
@@ -769,8 +769,8 @@
             (dragstart)="onToolboxDragStart('component', $event)"
             [title]="'editor.toolbox.dragHint' | translate"
             class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-rose-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-rose-300 dark:hover:border-rose-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-800/60 rounded-md shrink-0 text-rose-600 dark:text-rose-400 group-hover:scale-105 transition-transform p-0.5">
-              <ng-icon name="heroCpuChip" class="text-base"></ng-icon>
+            <div class="w-9 h-8 flex items-center justify-center bg-rose-50/60 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-800/60 rounded-md shrink-0 group-hover:scale-105 transition-transform p-0.5">
+              <app-component-svg mode="icon" width="22" height="16" fillColor="#F8E5E5" strokeColor="#796354" [strokeWidth]="1.2" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Componente UML</div>
@@ -1066,7 +1066,7 @@
           (dragstart)="onToolboxDragStart('component', $event)"
           [title]="'editor.toolbox.dragHint' | translate"
           class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-          <ng-icon name="heroCpuChip" class="text-xs"></ng-icon>
+          <app-component-svg mode="icon" width="16" height="13" fillColor="rgba(255,255,255,0.85)" strokeColor="#ffffff" [strokeWidth]="1.4" />
           <span>+ COMPONENTE UML</span>
         </button>
       } @else if (activeDiagramType() === DiagramType.DEPLOYMENT) {
@@ -1077,8 +1077,8 @@
             [draggable]="!isReadOnly()"
             (dragstart)="onToolboxDragStart('executionEnvironment', $event)"
             [title]="'editor.toolbox.dragHint' | translate"
-            class="py-2.5 px-2 bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
-            <ng-icon name="heroServer" class="text-xs"></ng-icon>
+            class="py-2.5 px-2 bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            <app-deployment-node-svg mode="icon" width="15" height="13" fillColor="#CDE6F7" topColor="#E4F2FD" rightColor="#AFD4EE" strokeColor="#ffffff" [strokeWidth]="1.2" />
             <span class="truncate">+ ENTORNO</span>
           </button>
           <button
@@ -1087,8 +1087,8 @@
             [draggable]="!isReadOnly()"
             (dragstart)="onToolboxDragStart('device', $event)"
             [title]="'editor.toolbox.dragHint' | translate"
-            class="py-2.5 px-2 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
-            <ng-icon name="heroComputerDesktop" class="text-xs"></ng-icon>
+            class="py-2.5 px-2 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+            <app-deployment-node-svg mode="icon" width="15" height="13" fillColor="#FFFDF8" topColor="#FFFFFF" rightColor="#E8DFD3" strokeColor="#ffffff" [strokeWidth]="1.2" />
             <span class="truncate">+ DISPOSITIVO</span>
           </button>
         </div>

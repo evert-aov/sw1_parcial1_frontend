@@ -1086,11 +1086,14 @@
 
                     <!-- Icono UML de Componente en la esquina superior derecha (Estándar UML 2.5) -->
                     <div class="absolute top-2 right-2.5 pointer-events-none">
-                      <svg width="22" height="20" viewBox="0 0 22 20" class="text-[#796354]">
-                        <rect x="5" y="1" width="16" height="18" [attr.fill]="node.color || '#F8E5E5'" stroke="currentColor" stroke-width="1.5" />
-                        <rect x="1" y="4" width="8" height="4.5" [attr.fill]="node.color || '#F8E5E5'" stroke="currentColor" stroke-width="1.5" />
-                        <rect x="1" y="11.5" width="8" height="4.5" [attr.fill]="node.color || '#F8E5E5'" stroke="currentColor" stroke-width="1.5" />
-                      </svg>
+                      <app-component-svg
+                        mode="glyph"
+                        width="22"
+                        height="20"
+                        [fillColor]="node.color || '#F8E5E5'"
+                        strokeColor="#796354"
+                        [strokeWidth]="1.5"
+                      />
                     </div>
 
                     <!-- Nombre del Componente y Estereotipo -->
@@ -1129,30 +1132,16 @@
                     (click)="onNodeClick(node.id, $event)"
                     class="w-full h-full relative select-none cursor-pointer">
 
-                    <!-- Caras 3D Superior y Lateral Derecha en SVG -->
-                    <svg
-                      class="absolute inset-0 pointer-events-none overflow-visible"
-                      [attr.width]="getNodeWidth(node)"
-                      [attr.height]="getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140)"
-                      [style.width.px]="getNodeWidth(node)"
-                      [style.height.px]="getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140)">
-                      <!-- Cara Superior -->
-                      <polygon
-                        [attr.points]="getDeploymentTopPoints(node)"
-                        [attr.fill]="getDeploymentColors(node).top"
-                        [attr.stroke]="getDeploymentColors(node).border"
-                        stroke-width="1.5"
-                        stroke-linejoin="round"
-                      />
-                      <!-- Cara Lateral Derecha -->
-                      <polygon
-                        [attr.points]="getDeploymentRightPoints(node)"
-                        [attr.fill]="getDeploymentColors(node).right"
-                        [attr.stroke]="getDeploymentColors(node).border"
-                        stroke-width="1.5"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
+                    <!-- Caras 3D Superior y Lateral Derecha mediante Componente SVG Reutilizable -->
+                    <app-deployment-node-svg
+                      mode="3d-faces"
+                      [nodeWidth]="getNodeWidth(node)"
+                      [nodeHeight]="getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140)"
+                      [topColor]="getDeploymentColors(node).top"
+                      [rightColor]="getDeploymentColors(node).right"
+                      [strokeColor]="getDeploymentColors(node).border"
+                      [strokeWidth]="1.5"
+                    />
 
                     <!-- Cara Frontal Principal -->
                     <div
