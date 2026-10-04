@@ -281,6 +281,10 @@ export const es = {
         sequence: 'Diagramas de Secuencia',
         communication: 'Diagramas de Comunicación',
         package: 'Diagramas de Paquetes',
+        component: 'Diagramas de Componentes',
+        deployment: 'Diagramas de Despliegue',
+        layered: 'Diagramas de Capas',
+        class_analysis: 'Análisis de Clases',
       },
       currentProject: 'Proyecto Actual',
       diagram: 'diagrama',
@@ -321,6 +325,7 @@ export const es = {
       communication: 'Solo se pueden agregar o copiar actores, boundaries, controles y entidades en diagramas de Comunicación.',
       sequence: 'Solo se pueden agregar o copiar actores, líneas de vida o participantes en diagramas de Secuencia.',
       class: 'Solo se pueden agregar o copiar clases en diagramas de Clases.',
+      classAnalysis: 'Solo se pueden agregar o copiar clases y actores en diagramas de Análisis de Clases.',
       deployment: 'Solo se pueden agregar o copiar nodos físicos («device»), entornos de ejecución («executionEnvironment»), componentes y recuadros agrupadores en diagramas de Despliegue.',
     },
     canvas: {

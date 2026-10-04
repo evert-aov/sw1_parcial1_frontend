@@ -3283,7 +3283,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if (currentType === DiagramType.SEQUENCE) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'lifeline' && n.nodeType !== 'class' && n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity');
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor' && n.nodeType !== 'class');
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'class' && n.nodeType !== 'actor');
     } else if (currentType === DiagramType.COMPONENT) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'lifeline');
     } else if (currentType === DiagramType.DEPLOYMENT) {
@@ -3394,6 +3394,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       msgKey = 'editor.incompatible.sequence';
     } else if (diagType === DiagramType.CLASS) {
       msgKey = 'editor.incompatible.class';
+    } else if (diagType === DiagramType.CLASS_ANALYSIS) {
+      msgKey = 'editor.incompatible.classAnalysis';
     } else if (diagType === DiagramType.DEPLOYMENT) {
       msgKey = 'editor.incompatible.deployment';
     }
@@ -3431,7 +3433,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      if (node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity' && node.nodeType !== 'actor' && node.nodeType !== 'class') {
+      if (node.nodeType !== 'class' && node.nodeType !== 'actor') {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.COMPONENT) {

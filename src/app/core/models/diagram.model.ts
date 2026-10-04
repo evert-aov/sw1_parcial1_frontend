@@ -29,7 +29,7 @@ export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
   { id: DiagramType.COMPONENT, label: 'Componentes', shortLabel: 'Componentes', folderName: 'Diagramas de Componentes', icon: 'heroCpuChip', description: 'Componentes de software, subsistemas, puertos e interfaces', supported: true },
   { id: DiagramType.DEPLOYMENT, label: 'Despliegue', shortLabel: 'Despliegue', folderName: 'Diagramas de Despliegue', icon: 'heroCube', description: 'Nodos físicos, servidores, dispositivos y artefactos en la nube', supported: true },
   { id: DiagramType.LAYERED, label: 'Capas', shortLabel: 'Capas', folderName: 'Diagramas de Capas', icon: 'heroSquares2x2', description: 'Arquitectura jerárquica por capas (Presentación, Negocio, Datos)', supported: true },
-  { id: DiagramType.CLASS_ANALYSIS, label: 'Análisis de Clases', shortLabel: 'Análisis Clases', folderName: 'Análisis de Clases', icon: 'heroSparkles', description: 'Análisis de robustez BCE (Boundary, Control, Entity) para casos de uso', supported: true },
+  { id: DiagramType.CLASS_ANALYSIS, label: 'Análisis de Clases', shortLabel: 'Análisis Clases', folderName: 'Análisis de Clases', icon: 'heroSparkles', description: 'Diagrama de clases UML con inclusión de actores', supported: true },
 ];
 
 export type UmlStereotype =

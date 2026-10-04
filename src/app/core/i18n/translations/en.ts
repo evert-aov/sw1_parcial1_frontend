@@ -281,6 +281,10 @@ export const en = {
         sequence: 'Sequence Diagrams',
         communication: 'Communication Diagrams',
         package: 'Package Diagrams',
+        component: 'Component Diagrams',
+        deployment: 'Deployment Diagrams',
+        layered: 'Layered Diagrams',
+        class_analysis: 'Class Analysis',
       },
       currentProject: 'Current Project',
       diagram: 'diagram',
@@ -321,6 +325,7 @@ export const en = {
       communication: 'Only actors, boundaries, controls, and entities can be added or copied to Communication diagrams.',
       sequence: 'Only actors, lifelines, or participants can be added or copied to Sequence diagrams.',
       class: 'Only classes can be added or copied to Class diagrams.',
+      classAnalysis: 'Only classes and actors can be added or copied to Class Analysis diagrams.',
       deployment: 'Only physical nodes («device»), execution environments («executionEnvironment»), components, and grouping boundaries can be added or copied to Deployment diagrams.',
     },
     canvas: {
