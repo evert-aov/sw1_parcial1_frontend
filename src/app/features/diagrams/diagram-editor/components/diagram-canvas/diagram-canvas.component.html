@@ -304,6 +304,9 @@
               [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 70 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 65 : (node.nodeType === 'lifeline' ? 40 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 50 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 90 : null)))))))"
               [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 95 : (node.nodeType === 'lifeline' ? 48 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : (node.nodeType === 'component' ? 70 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 140 : null))))))))"
               [style.--node-bg]="node.color || null"
+              [style.background]="(node.nodeType && node.nodeType !== 'class') || ['device', 'node', 'executionEnvironment', 'component'].includes(node.stereotype || '') ? 'transparent' : null"
+              [style.border]="(node.nodeType && node.nodeType !== 'class') || ['device', 'node', 'executionEnvironment', 'component'].includes(node.stereotype || '') ? 'none' : null"
+              [style.boxShadow]="(node.nodeType && node.nodeType !== 'class') || ['device', 'node', 'executionEnvironment', 'component'].includes(node.stereotype || '') ? 'none' : null"
               [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
               [class.f-selected]="isNodeSelected(node.id)"
               [class.f-node-actor]="node.nodeType === 'actor'"
@@ -314,8 +317,8 @@
               [class.f-node-entity]="node.nodeType === 'entity'"
               [class.f-node-lifeline]="node.nodeType === 'lifeline'"
               [class.f-node-component]="node.nodeType === 'component'"
-              [class.f-node-deployment]="node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment'"
-              [class.f-node-class]="!node.nodeType || node.nodeType === 'class'"
+              [class.f-node-deployment]="node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' || ['device', 'node', 'executionEnvironment'].includes(node.stereotype || '')"
+              [class.f-node-class]="(!node.nodeType || node.nodeType === 'class') && !['device', 'node', 'executionEnvironment', 'component', 'actor', 'use_case', 'package', 'boundary', 'control', 'entity', 'lifeline'].includes(node.nodeType || '') && !['device', 'node', 'executionEnvironment', 'component'].includes(node.stereotype || '')"
               [ngClass]="{
                 'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
                 'font-sans text-[#241C18] select-none relative group/node transition-shadow flex flex-col': !node.isAnchor,
