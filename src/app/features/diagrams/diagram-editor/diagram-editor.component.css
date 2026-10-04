@@ -83,6 +83,7 @@
 ::ng-deep f-flow .f-node.f-node-lifeline,
 ::ng-deep f-flow .f-node.f-node-component,
 ::ng-deep f-flow .f-node.f-node-deployment,
+::ng-deep f-flow .f-node.f-node-boundary-box,
 :host-context(.dark) ::ng-deep f-flow .f-node:not(.f-node-class),
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
@@ -93,6 +94,7 @@
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-lifeline,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-component,
 :host-context(.dark) ::ng-deep f-flow .f-node.f-node-deployment,
+:host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary-box,
 .dark ::ng-deep f-flow .f-node:not(.f-node-class),
 .dark ::ng-deep f-flow .f-node.f-node-actor,
 .dark ::ng-deep f-flow .f-node.f-node-use-case,
@@ -102,7 +104,8 @@
 .dark ::ng-deep f-flow .f-node.f-node-entity,
 .dark ::ng-deep f-flow .f-node.f-node-lifeline,
 .dark ::ng-deep f-flow .f-node.f-node-component,
-.dark ::ng-deep f-flow .f-node.f-node-deployment {
+.dark ::ng-deep f-flow .f-node.f-node-deployment,
+.dark ::ng-deep f-flow .f-node.f-node-boundary-box {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;

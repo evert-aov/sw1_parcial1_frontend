@@ -262,6 +262,7 @@ export class DiagramSidebarComponent {
   readonly addDevice = output<void>();
   readonly addExecutionEnvironment = output<void>();
   readonly addComponent = output<void>();
+  readonly addBoundaryBox = output<void>();
 
   // Eventos del Explorador
   readonly selectDiagram = output<string>();
@@ -332,6 +333,7 @@ export class DiagramSidebarComponent {
         type === 'node' ||
         type === 'executionEnvironment' ||
         type === 'component' ||
+        type === 'boundary_box' ||
         type === 'package' ||
         type === 'class'
       );

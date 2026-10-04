@@ -75,7 +75,8 @@ export type UmlNodeType =
   | 'component'
   | 'node'
   | 'device'
-  | 'executionEnvironment';
+  | 'executionEnvironment'
+  | 'boundary_box';
 
 export type UmlRelationshipType =
   | 'association'

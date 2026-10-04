@@ -720,7 +720,7 @@
         <div class="px-3.5 py-2.5 flex items-center justify-between">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon name="heroCube" class="text-xs text-sky-600 dark:text-sky-400"></ng-icon>
-            <span>{{ 'editor.toolbox.elements' | translate }} <span class="font-normal text-slate-500">de Despliegue</span></span>
+            <span>{{ 'editor.toolbox.deploymentElements' | translate }}</span>
           </span>
         </div>
 
@@ -737,8 +737,8 @@
               <app-deployment-node-svg mode="icon" width="22" height="19" fillColor="#FFFDF8" topColor="#FFFFFF" rightColor="#E8DFD3" strokeColor="#796354" [strokeWidth]="1.2" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Dispositivo («device»)</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Cliente web, PC o hardware móvil</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.deploymentDevice' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.deploymentDeviceDesc' | translate }}</div>
             </div>
             <span class="text-xs text-amber-600 dark:text-amber-400 font-bold px-1">+</span>
           </button>
@@ -755,8 +755,8 @@
               <app-deployment-node-svg mode="icon" width="22" height="19" fillColor="#CDE6F7" topColor="#E4F2FD" rightColor="#AFD4EE" strokeColor="#1E3A5F" [strokeWidth]="1.2" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Entorno («executionEnvironment»)</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Servidor, SO, contenedor o VM en la nube</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.deploymentExecutionEnv' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.deploymentExecutionEnvDesc' | translate }}</div>
             </div>
             <span class="text-xs text-sky-600 dark:text-sky-400 font-bold px-1">+</span>
           </button>
@@ -773,28 +773,28 @@
               <app-component-svg mode="icon" width="22" height="16" fillColor="#F8E5E5" strokeColor="#796354" [strokeWidth]="1.2" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Componente UML</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Artefacto de software desplegable</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.deploymentComponent' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.deploymentComponentDesc' | translate }}</div>
             </div>
             <span class="text-xs text-rose-600 dark:text-rose-400 font-bold px-1">+</span>
           </button>
 
-          <!-- Botón Agrupador / Límite de Red -->
+          <!-- Botón Recuadro Agrupador (UN SOLO RECUADRO) -->
           <button
-            (click)="addPackage.emit()"
+            (click)="addBoundaryBox.emit()"
             [disabled]="isReadOnly()"
             [draggable]="!isReadOnly()"
-            (dragstart)="onToolboxDragStart('package', $event)"
+            (dragstart)="onToolboxDragStart('boundary_box', $event)"
             [title]="'editor.toolbox.dragHint' | translate"
-            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-slate-300 dark:hover:border-slate-700">
-            <div class="w-9 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md shrink-0 text-slate-600 dark:text-slate-400 group-hover:scale-105 transition-transform p-0.5">
-              <ng-icon name="heroCloud" class="text-base"></ng-icon>
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-stone-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-stone-300 dark:hover:border-stone-700">
+            <div class="w-9 h-8 flex items-center justify-center bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-md shrink-0 group-hover:scale-105 transition-transform p-0.5">
+              <app-boundary-box-svg mode="icon" width="22" height="18" fillColor="#FAF8F5" strokeColor="#796354" [strokeWidth]="1.2" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Agrupador / Nube (Límite)</div>
-              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Límite de red, AWS Cloud, VPC o clúster</div>
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.deploymentGroupingBox' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.deploymentGroupingBoxDesc' | translate }}</div>
             </div>
-            <span class="text-xs text-slate-600 dark:text-slate-400 font-bold px-1">+</span>
+            <span class="text-xs text-stone-600 dark:text-stone-400 font-bold px-1">+</span>
           </button>
         </div>
       </div>
@@ -806,7 +806,7 @@
           class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
           <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
             <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
-            <span>Relaciones <span class="font-normal text-slate-500">de Despliegue</span></span>
+            <span>{{ 'editor.toolbox.deploymentRelations' | translate }}</span>
           </span>
           @if (selectedRelationType()) {
             <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-blue-600 hover:text-red-600 dark:text-blue-400 dark:hover:text-red-400 font-normal cursor-pointer">
@@ -1067,19 +1067,19 @@
           [title]="'editor.toolbox.dragHint' | translate"
           class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
           <app-component-svg mode="icon" width="16" height="13" fillColor="rgba(255,255,255,0.85)" strokeColor="#ffffff" [strokeWidth]="1.4" />
-          <span>+ COMPONENTE UML</span>
+          <span>{{ 'editor.toolbox.newUmlComponent' | translate }}</span>
         </button>
       } @else if (activeDiagramType() === DiagramType.DEPLOYMENT) {
-        <div class="grid grid-cols-2 gap-1.5 w-full">
+        <div class="grid grid-cols-3 gap-1 w-full">
           <button
             (click)="addExecutionEnvironment.emit()"
             [disabled]="isReadOnly()"
             [draggable]="!isReadOnly()"
             (dragstart)="onToolboxDragStart('executionEnvironment', $event)"
             [title]="'editor.toolbox.dragHint' | translate"
-            class="py-2.5 px-2 bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-            <app-deployment-node-svg mode="icon" width="15" height="13" fillColor="#CDE6F7" topColor="#E4F2FD" rightColor="#AFD4EE" strokeColor="#ffffff" [strokeWidth]="1.2" />
-            <span class="truncate">+ ENTORNO</span>
+            class="py-2.5 px-1 bg-sky-700 hover:bg-sky-600 active:bg-sky-800 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            <app-deployment-node-svg mode="icon" width="13" height="11" fillColor="#CDE6F7" topColor="#E4F2FD" rightColor="#AFD4EE" strokeColor="#ffffff" [strokeWidth]="1.2" />
+            <span class="truncate">{{ 'editor.toolbox.newExecutionEnv' | translate }}</span>
           </button>
           <button
             (click)="addDevice.emit()"
@@ -1087,9 +1087,19 @@
             [draggable]="!isReadOnly()"
             (dragstart)="onToolboxDragStart('device', $event)"
             [title]="'editor.toolbox.dragHint' | translate"
-            class="py-2.5 px-2 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-bold rounded-lg shadow-sm text-[11px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-            <app-deployment-node-svg mode="icon" width="15" height="13" fillColor="#FFFDF8" topColor="#FFFFFF" rightColor="#E8DFD3" strokeColor="#ffffff" [strokeWidth]="1.2" />
-            <span class="truncate">+ DISPOSITIVO</span>
+            class="py-2.5 px-1 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            <app-deployment-node-svg mode="icon" width="13" height="11" fillColor="#FFFDF8" topColor="#FFFFFF" rightColor="#E8DFD3" strokeColor="#ffffff" [strokeWidth]="1.2" />
+            <span class="truncate">{{ 'editor.toolbox.newDevice' | translate }}</span>
+          </button>
+          <button
+            (click)="addBoundaryBox.emit()"
+            [disabled]="isReadOnly()"
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('boundary_box', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="py-2.5 px-1 bg-stone-700 hover:bg-stone-600 active:bg-stone-800 text-white font-bold rounded-lg shadow-sm text-[10px] tracking-wide uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+            <app-boundary-box-svg mode="icon" width="13" height="11" fillColor="#FAF8F5" strokeColor="#ffffff" [strokeWidth]="1.2" />
+            <span class="truncate">{{ 'editor.toolbox.newBoundaryBox' | translate }}</span>
           </button>
         </div>
       } @else if (activeDiagramType() === DiagramType.LAYERED) {
@@ -1101,7 +1111,7 @@
           [title]="'editor.toolbox.dragHint' | translate"
           class="w-full py-2.5 bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white font-bold rounded-lg shadow-sm text-xs tracking-wider uppercase transition-all cursor-grab active:cursor-grabbing flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
           <ng-icon name="heroFolder" class="text-xs"></ng-icon>
-          <span>+ CAPA ARQUITECTÓNICA</span>
+          <span>{{ 'editor.toolbox.newLayer' | translate }}</span>
         </button>
       } @else {
         <button

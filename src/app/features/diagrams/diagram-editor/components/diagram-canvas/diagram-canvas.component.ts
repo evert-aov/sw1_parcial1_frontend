@@ -1176,6 +1176,13 @@ export class DiagramCanvasComponent {
       const nameLen = (node.name || '').length;
       return Math.max(230, Math.round(nameLen * 8.5 + 50));
     }
+    if (node.nodeType === 'boundary_box') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(120, manualW);
+      }
+      return 280;
+    }
     const dynamicW = this.getDynamicNodeWidth(node);
     const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
     return Math.max(dynamicW, manualW);
@@ -1198,6 +1205,9 @@ export class DiagramCanvasComponent {
     }
     if (node.nodeType === 'package') {
       return node.customHeight || node.height || 120;
+    }
+    if (node.nodeType === 'boundary_box') {
+      return node.customHeight || (node.isCustomSize ? node.height : null) || 200;
     }
     if (node.nodeType === 'component') {
       return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
@@ -1265,7 +1275,7 @@ export class DiagramCanvasComponent {
     } else if (node.nodeType === 'use_case') {
       minW = 80;
       minH = 45;
-    } else if (node.nodeType === 'package') {
+    } else if (node.nodeType === 'package' || node.nodeType === 'boundary_box') {
       minW = 120;
       minH = 70;
     } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
@@ -1322,7 +1332,7 @@ export class DiagramCanvasComponent {
     } else if (node.nodeType === 'use_case') {
       minW = 80;
       minH = 45;
-    } else if (node.nodeType === 'package') {
+    } else if (node.nodeType === 'package' || node.nodeType === 'boundary_box') {
       minW = 120;
       minH = 70;
     } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {

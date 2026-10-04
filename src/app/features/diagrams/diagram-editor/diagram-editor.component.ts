@@ -600,10 +600,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               if (nodeType === 'class') {
                 if (n.id?.startsWith('actor_')) nodeType = 'actor';
                 else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
+                else if (n.id?.startsWith('boundary_box_')) nodeType = 'boundary_box';
                 else if (n.id?.startsWith('package_')) nodeType = 'package';
                 else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
                 else if (n.id?.startsWith('control_')) nodeType = 'control';
                 else if (n.id?.startsWith('entity_')) nodeType = 'entity';
+                else if (n.id?.startsWith('component_')) nodeType = 'component';
+                else if (n.id?.startsWith('device_')) nodeType = 'device';
+                else if (n.id?.startsWith('exec_env_')) nodeType = 'executionEnvironment';
                 else if (n.id?.startsWith('lifeline_') || isSequence) nodeType = 'lifeline';
               }
               return { ...n, nodeType };
@@ -627,6 +631,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             nodeType = 'actor';
           } else if (n.id.startsWith('use_case_')) {
             nodeType = 'use_case';
+          } else if (n.id.startsWith('boundary_box_')) {
+            nodeType = 'boundary_box';
           } else if (n.id.startsWith('package_')) {
             nodeType = 'package';
           } else if (n.id.startsWith('boundary_')) {
@@ -635,6 +641,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             nodeType = 'control';
           } else if (n.id.startsWith('entity_')) {
             nodeType = 'entity';
+          } else if (n.id.startsWith('component_')) {
+            nodeType = 'component';
+          } else if (n.id.startsWith('device_')) {
+            nodeType = 'device';
+          } else if (n.id.startsWith('exec_env_')) {
+            nodeType = 'executionEnvironment';
           } else if (n.id.startsWith('lifeline_')) {
             nodeType = 'lifeline';
           } else if (isSequence) {
@@ -648,8 +660,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           id: n.id,
           name: n.name,
           position: { x: n.positionX, y: n.positionY },
-          width: n.width || (nodeType === 'actor' ? 65 : (nodeType === 'use_case' ? 140 : (nodeType === 'package' ? 200 : (isBce ? 90 : (isLifeline ? 140 : 220))))),
-          height: n.height || (isBce ? 95 : (isLifeline ? 48 : (nodeType === 'actor' ? 95 : undefined))),
+          width: n.width || (nodeType === 'actor' ? 65 : (nodeType === 'use_case' ? 140 : (nodeType === 'boundary_box' ? 280 : (nodeType === 'package' ? 200 : (nodeType === 'component' ? 190 : (nodeType === 'device' ? 230 : (nodeType === 'executionEnvironment' ? 240 : (isBce ? 90 : (isLifeline ? 140 : 220))))))))),
+          height: n.height || (isBce ? 95 : (isLifeline ? 48 : (nodeType === 'actor' ? 95 : (nodeType === 'boundary_box' ? 200 : (nodeType === 'component' ? 70 : (nodeType === 'device' ? 140 : (nodeType === 'executionEnvironment' ? 160 : undefined))))))),
           customWidth: isManuallyResized ? n.width : undefined,
           customHeight: isManuallyResized ? n.height! : undefined,
           isCustomSize: isManuallyResized,
@@ -2770,6 +2782,36 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
+  addBoundaryBox(position?: { x: number; y: number }): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+    const posX = position ? Math.max(20, Math.round(position.x - 140)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 100)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    const count = this.nodes().filter((n) => n.nodeType === 'boundary_box').length + 1;
+    const newNode: UmlClassNode = {
+      id: `boundary_box_${Date.now()}`,
+      name: `Agrupador_${count}`,
+      nodeType: 'boundary_box',
+      stereotype: null,
+      position: { x: posX, y: posY },
+      width: 280,
+      height: 200,
+      isCustomSize: true,
+      color: '#FAF8F5',
+      attributes: [],
+      methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+  }
+
   addActor(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
@@ -3219,6 +3261,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         node.nodeType !== 'node' &&
         node.nodeType !== 'executionEnvironment' &&
         node.nodeType !== 'component' &&
+        node.nodeType !== 'boundary_box' &&
         node.nodeType !== 'package' &&
         node.nodeType !== 'class'
       ) {
@@ -3336,6 +3379,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           break;
         case 'package':
           this.addPackage(position);
+          break;
+        case 'boundary_box':
+          this.addBoundaryBox(position);
           break;
         case 'boundary':
           this.addBoundary(position);

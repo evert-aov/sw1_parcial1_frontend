@@ -100,6 +100,7 @@ f-flow .f-node.f-node-entity,
 f-flow .f-node.f-node-lifeline,
 f-flow .f-node.f-node-component,
 f-flow .f-node.f-node-deployment,
+f-flow .f-node.f-node-boundary-box,
 .dark f-flow .f-node:not(.f-node-class),
 .dark f-flow .f-node.f-node-actor,
 .dark f-flow .f-node.f-node-use-case,
@@ -109,7 +110,8 @@ f-flow .f-node.f-node-deployment,
 .dark f-flow .f-node.f-node-entity,
 .dark f-flow .f-node.f-node-lifeline,
 .dark f-flow .f-node.f-node-component,
-.dark f-flow .f-node.f-node-deployment {
+.dark f-flow .f-node.f-node-deployment,
+.dark f-flow .f-node.f-node-boundary-box {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
