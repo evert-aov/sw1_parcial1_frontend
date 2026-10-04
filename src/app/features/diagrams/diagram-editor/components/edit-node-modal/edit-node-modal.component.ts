@@ -6,6 +6,7 @@ import {
   UmlClassNode,
   UML_PREDEFINED_TYPES,
   UML_PREDEFINED_RETURN_TYPES,
+  UML_PREDEFINED_STEREOTYPES,
   hexToRgb,
   rgbToHex,
 } from '../../../../../core/models/diagram.model';
@@ -25,8 +26,16 @@ export class EditNodeModalComponent {
 
   readonly predefinedTypes = UML_PREDEFINED_TYPES;
   readonly predefinedReturnTypes = UML_PREDEFINED_RETURN_TYPES;
+  readonly predefinedStereotypes = UML_PREDEFINED_STEREOTYPES;
 
   readonly editingNode = signal<UmlClassNode | null>(null);
+
+  onStereotypeSelect(val: string): void {
+    const curr = this.editingNode();
+    if (curr) {
+      curr.stereotype = val && val.trim() ? val.trim() : null;
+    }
+  }
 
   constructor() {
     effect(

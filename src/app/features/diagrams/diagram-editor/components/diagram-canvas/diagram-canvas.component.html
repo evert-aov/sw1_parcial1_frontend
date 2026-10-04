@@ -686,7 +686,12 @@
                       </button>
 
                       <!-- Contenido / Descripción del Paquete (Alineado a la izquierda según referencia UML) -->
-                      <div class="text-left w-full flex items-start justify-start pt-0.5">
+                      <div class="text-left w-full flex flex-col items-start justify-start pt-0.5">
+                        @if (node.stereotype) {
+                          <span class="text-[9.5px] italic font-serif leading-none tracking-tight opacity-75 select-none block mb-1">
+                            «{{ node.stereotype }}»
+                          </span>
+                        }
                         <span class="font-normal text-[12px] font-sans leading-relaxed text-[#241C18] block text-left break-words select-none max-w-full whitespace-pre-line" [title]="getPackageBodyText(node) || getPackageTabTitle(node)">
                           {{ getPackageBodyText(node) || getPackageTabTitle(node) }}
                         </span>
@@ -1084,12 +1089,24 @@
                         class="uml-rename-input w-full text-center font-bold text-[12px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
                       />
                     } @else {
-                      <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" [title]="'editor.canvas.nodes.classHeaderTooltip' | translate">
-                        @if (isNodeLockedByOther(node.id)) {
-                          <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
+                      <div class="flex flex-col items-center justify-center w-full min-w-0">
+                        @if (node.stereotype) {
+                          <span class="text-[9.5px] italic font-serif leading-none tracking-tight opacity-75 select-none truncate">
+                            «{{ node.stereotype }}»
+                          </span>
                         }
-                        {{ node.name }}
-                      </span>
+                        <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" [title]="'editor.canvas.nodes.classHeaderTooltip' | translate">
+                          @if (isNodeLockedByOther(node.id)) {
+                            <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
+                          }
+                          @if (node.nodeType === 'component') {
+                            <ng-icon name="heroCpuChip" class="text-xs text-indigo-700 shrink-0"></ng-icon>
+                          } @else if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+                            <ng-icon name="heroCube" class="text-xs text-blue-700 shrink-0"></ng-icon>
+                          }
+                          {{ node.name }}
+                        </span>
+                      </div>
                     }
                     <button
                       (click)="onDeleteNode(node.id, $event)"

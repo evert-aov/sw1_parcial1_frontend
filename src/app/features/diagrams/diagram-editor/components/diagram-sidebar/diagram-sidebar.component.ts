@@ -27,6 +27,10 @@ import {
   heroTrash,
   heroXMark,
   heroDocumentDuplicate,
+  heroCpuChip,
+  heroCube,
+  heroSquares2x2,
+  heroSparkles,
 } from '@ng-icons/heroicons/outline';
 import { HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -80,6 +84,10 @@ import { UML_SVG_COMPONENTS } from '../uml-svg';
       heroTrash,
       heroXMark,
       heroDocumentDuplicate,
+      heroCpuChip,
+      heroCube,
+      heroSquares2x2,
+      heroSparkles,
     }),
   ],
   templateUrl: './diagram-sidebar.component.html',
@@ -185,6 +193,10 @@ export class DiagramSidebarComponent {
     [DiagramType.SEQUENCE]: true,
     [DiagramType.COMMUNICATION]: true,
     [DiagramType.PACKAGE]: true,
+    [DiagramType.COMPONENT]: true,
+    [DiagramType.DEPLOYMENT]: true,
+    [DiagramType.LAYERED]: true,
+    [DiagramType.CLASS_ANALYSIS]: true,
   });
 
   // Agrupamiento estricto de diagramas por su DiagramType

@@ -25,6 +25,40 @@
           />
         </div>
 
+        <!-- Estereotipo UML (Opcional - null por defecto) -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]">
+              Estereotipo UML (Opcional)
+            </label>
+            @if (editingNode()!.stereotype) {
+              <button
+                type="button"
+                (click)="editingNode()!.stereotype = null"
+                class="text-[10px] text-red-500 hover:underline cursor-pointer font-medium">
+                Quitar estereotipo
+              </button>
+            }
+          </div>
+          <div class="flex items-center gap-2">
+            <select
+              [ngModel]="editingNode()!.stereotype || ''"
+              (ngModelChange)="onStereotypeSelect($event)"
+              class="flex-1 px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all">
+              <option value="">(Sin estereotipo / null)</option>
+              @for (st of predefinedStereotypes; track st.value) {
+                <option [value]="st.value">{{ st.label }}</option>
+              }
+            </select>
+            <input
+              type="text"
+              [(ngModel)]="editingNode()!.stereotype"
+              placeholder="Personalizado (e.g. database)"
+              class="w-44 px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-mono"
+            />
+          </div>
+        </div>
+
         @if (editingNode()!.nodeType === 'package') {
           <div>
             <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">

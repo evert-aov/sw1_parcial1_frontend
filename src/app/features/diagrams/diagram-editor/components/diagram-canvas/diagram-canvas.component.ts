@@ -28,7 +28,7 @@ import {
   isOnFlowBackground,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroLockClosed, heroTrash, heroPlus } from '@ng-icons/heroicons/outline';
+import { heroLockClosed, heroTrash, heroPlus, heroCpuChip, heroCube } from '@ng-icons/heroicons/outline';
 import {
   UmlClassNode,
   UmlConnection,
@@ -79,6 +79,8 @@ export class AutofocusInputDirective implements AfterViewInit {
       heroLockClosed,
       heroTrash,
       heroPlus,
+      heroCpuChip,
+      heroCube,
     }),
   ],
   templateUrl: './diagram-canvas.component.html',

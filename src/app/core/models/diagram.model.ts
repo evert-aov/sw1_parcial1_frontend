@@ -4,6 +4,10 @@ export enum DiagramType {
   SEQUENCE = 'sequence',
   COMMUNICATION = 'communication',
   PACKAGE = 'package',
+  COMPONENT = 'component',
+  DEPLOYMENT = 'deployment',
+  LAYERED = 'layered',
+  CLASS_ANALYSIS = 'class_analysis',
 }
 
 export interface DiagramTypeItem {
@@ -21,7 +25,42 @@ export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
   { id: DiagramType.USE_CASE, label: 'Casos de Uso', shortLabel: 'Casos Uso', folderName: 'Casos de Uso', icon: 'heroUserGroup', description: 'Actores, casos de uso, relaciones include/extend y límites del sistema', supported: true },
   { id: DiagramType.SEQUENCE, label: 'Secuencia', shortLabel: 'Secuencia', folderName: 'Diagramas de Secuencia', icon: 'heroArrowsUpDown', description: 'Líneas de vida temporales, mensajes y activación de procesos', supported: true },
   { id: DiagramType.COMMUNICATION, label: 'Comunicación', shortLabel: 'Comunicación', folderName: 'Diagramas de Comunicación', icon: 'heroChatBubbleLeftRight', description: 'Interacción entre objetos con mensajes numerados secuenciales', supported: true },
-  { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', folderName: 'Diagramas de Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos, capas y dependencias arquitectónicas', supported: true },
+  { id: DiagramType.PACKAGE, label: 'Paquetes', shortLabel: 'Paquetes', folderName: 'Diagramas de Paquetes', icon: 'heroFolderOpen', description: 'Organización de módulos y dependencias arquitectónicas', supported: true },
+  { id: DiagramType.COMPONENT, label: 'Componentes', shortLabel: 'Componentes', folderName: 'Diagramas de Componentes', icon: 'heroCpuChip', description: 'Componentes de software, subsistemas, puertos e interfaces', supported: true },
+  { id: DiagramType.DEPLOYMENT, label: 'Despliegue', shortLabel: 'Despliegue', folderName: 'Diagramas de Despliegue', icon: 'heroCube', description: 'Nodos físicos, servidores, dispositivos y artefactos en la nube', supported: true },
+  { id: DiagramType.LAYERED, label: 'Capas', shortLabel: 'Capas', folderName: 'Diagramas de Capas', icon: 'heroSquares2x2', description: 'Arquitectura jerárquica por capas (Presentación, Negocio, Datos)', supported: true },
+  { id: DiagramType.CLASS_ANALYSIS, label: 'Análisis de Clases', shortLabel: 'Análisis Clases', folderName: 'Análisis de Clases', icon: 'heroSparkles', description: 'Análisis de robustez BCE (Boundary, Control, Entity) para casos de uso', supported: true },
+];
+
+export type UmlStereotype =
+  | 'class'
+  | 'entity'
+  | 'control'
+  | 'view'
+  | 'implement'
+  | 'process'
+  | 'realization'
+  | 'service'
+  | 'specification'
+  | 'subsystem'
+  | 'node'
+  | 'device'
+  | 'executionEnvironment';
+
+export const UML_PREDEFINED_STEREOTYPES: { value: UmlStereotype; label: string }[] = [
+  { value: 'class', label: '«class»' },
+  { value: 'entity', label: '«entity»' },
+  { value: 'control', label: '«control»' },
+  { value: 'view', label: '«view»' },
+  { value: 'implement', label: '«implement»' },
+  { value: 'process', label: '«process»' },
+  { value: 'realization', label: '«realization»' },
+  { value: 'service', label: '«service»' },
+  { value: 'specification', label: '«specification»' },
+  { value: 'subsystem', label: '«subsystem»' },
+  { value: 'node', label: '«node»' },
+  { value: 'device', label: '«device»' },
+  { value: 'executionEnvironment', label: '«executionEnvironment»' },
 ];
 
 export type UmlNodeType =
@@ -32,7 +71,11 @@ export type UmlNodeType =
   | 'boundary'
   | 'control'
   | 'entity'
-  | 'lifeline';
+  | 'lifeline'
+  | 'component'
+  | 'node'
+  | 'device'
+  | 'executionEnvironment';
 
 export type UmlRelationshipType =
   | 'association'
@@ -189,6 +232,7 @@ export interface UmlClassNode {
   isAnchor?: boolean;
   assocMainConnId?: string;
   nodeType?: UmlNodeType;
+  stereotype?: string | null;
   activations?: any[];
   labelOffset?: { x: number; y: number };
 }
@@ -228,6 +272,7 @@ export interface DiagramDto {
     isAnchor?: boolean;
     assocMainConnId?: string | null;
     nodeType?: UmlNodeType | string;
+    stereotype?: string | null;
     activations?: any[];
     attributes?: UmlAttribute[];
     methods?: UmlMethod[];
@@ -264,6 +309,7 @@ export interface SaveDiagramAstRequest {
     isAnchor?: boolean;
     assocMainConnId?: string | null;
     nodeType?: UmlNodeType | string;
+    stereotype?: string | null;
     activations?: any[];
     attributes?: UmlAttribute[];
     methods?: UmlMethod[];
