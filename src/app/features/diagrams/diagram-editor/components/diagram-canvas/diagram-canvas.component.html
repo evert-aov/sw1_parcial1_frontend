@@ -367,7 +367,7 @@
                   [fConnectorSelfConnectable]="true"
                   [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
                   (click)="onTableClick(node.id, $event)"
-                  title="Conectar por arriba"
+                  [title]="'editor.canvas.connectTop' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                     'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
@@ -383,7 +383,7 @@
                   [fConnectorSelfConnectable]="true"
                   [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
                   (click)="onTableClick(node.id, $event)"
-                  title="Conectar por la derecha"
+                  [title]="'editor.canvas.connectRight' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                     'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
@@ -399,7 +399,7 @@
                   [fConnectorSelfConnectable]="true"
                   [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
                   (click)="onTableClick(node.id, $event)"
-                  title="Conectar por abajo"
+                  [title]="'editor.canvas.connectBottom' | translate"
                   [style.bottom.px]="getBottomConnectorOffset(node)"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -416,7 +416,7 @@
                   [fConnectorSelfConnectable]="true"
                   [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
                   (click)="onTableClick(node.id, $event)"
-                  title="Conectar por la izquierda"
+                  [title]="'editor.canvas.connectLeft' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                     'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
@@ -450,7 +450,7 @@
                     <button
                       (click)="onDeleteNode(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
-                      title="Eliminar actor"
+                      [title]="'editor.canvas.nodes.deleteActor' | translate"
                       class="absolute -top-1 -right-1 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
@@ -520,7 +520,7 @@
                               type="button"
                               (click)="resetLabelOffset(node, $event)"
                               (pointerdown)="$event.stopPropagation()"
-                              title="Restablecer posición de texto al centro"
+                              [title]="'editor.canvas.nodes.resetLabelPosition' | translate"
                               class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer">
                               ✕
                             </button>
@@ -558,7 +558,7 @@
                             [style.height.px]="act.height"
                             [style.backgroundColor]="node.color || '#FFFDDD'"
                             style="border-color: #796354;"
-                            title="Foco de control / Activación">
+                            [title]="'editor.canvas.nodes.focusActivation' | translate">
                           </div>
                         }
                       </div>
@@ -600,7 +600,7 @@
                     <button
                       (click)="onDeleteNode(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
-                      title="Eliminar caso de uso"
+                      [title]="'editor.canvas.nodes.deleteUseCase' | translate"
                       class="absolute top-1 right-3 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
@@ -680,7 +680,7 @@
                       <button
                         (click)="onDeleteNode(node.id, $event)"
                         [disabled]="isNodeLockedByOther(node.id)"
-                        title="Eliminar paquete"
+                        [title]="'editor.canvas.nodes.deletePackage' | translate"
                         class="absolute top-1.5 right-1.5 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
                         <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                       </button>
@@ -706,7 +706,7 @@
                     <button
                       (click)="onDeleteNode(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
-                      title="Eliminar boundary"
+                      [title]="'editor.canvas.nodes.deleteBoundary' | translate"
                       class="absolute -top-1 -right-1 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
@@ -761,7 +761,7 @@
                               type="button"
                               (click)="resetLabelOffset(node, $event)"
                               (pointerdown)="$event.stopPropagation()"
-                              title="Restablecer posición de texto al centro"
+                              [title]="'editor.canvas.nodes.resetLabelPosition' | translate"
                               class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer">
                               ✕
                             </button>
@@ -783,7 +783,7 @@
                     <button
                       (click)="onDeleteNode(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
-                      title="Eliminar control"
+                      [title]="'editor.canvas.nodes.deleteControl' | translate"
                       class="absolute -top-1 -right-1 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
@@ -804,7 +804,7 @@
                       [style.transform]="getLabelTransform(node)"
                       (pointerdown)="onLabelPointerDown(node, $event)"
                       (dblclick)="onLabelDblClick(node, $event)"
-                      [title]="'Arrastrar para reposicionar el texto (Doble clic para editar)'">
+                      [title]="'editor.canvas.nodes.dragLabelHint' | translate">
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameControlInput
@@ -838,7 +838,7 @@
                               type="button"
                               (click)="resetLabelOffset(node, $event)"
                               (pointerdown)="$event.stopPropagation()"
-                              title="Restablecer posición de texto al centro"
+                              [title]="'editor.canvas.nodes.resetLabelPosition' | translate"
                               class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer">
                               ✕
                             </button>
@@ -860,7 +860,7 @@
                     <button
                       (click)="onDeleteNode(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
-                      title="Eliminar entidad"
+                      [title]="'editor.canvas.nodes.deleteEntity' | translate"
                       class="absolute -top-1 -right-1 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
@@ -915,7 +915,7 @@
                               type="button"
                               (click)="resetLabelOffset(node, $event)"
                               (pointerdown)="$event.stopPropagation()"
-                              title="Restablecer posición de texto al centro"
+                              [title]="'editor.canvas.nodes.resetLabelPosition' | translate"
                               class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer">
                               ✕
                             </button>
@@ -934,7 +934,7 @@
                     <button
                       (click)="onDeleteNode(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
-                      title="Eliminar línea de vida"
+                      [title]="'editor.canvas.nodes.deleteLifeline' | translate"
                       class="absolute -top-2 -right-2 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-30 disabled:opacity-0 bg-white dark:bg-slate-800 rounded-full shadow-xs border border-slate-200">
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
@@ -1022,14 +1022,14 @@
 
                       <!-- Focos de Activación (Activation Bars) -->
                       @for (act of getNodeActivations(node); track act.id) {
-                        <div
-                          class="absolute left-1/2 -translate-x-1/2 w-3.5 border shadow-2xs pointer-events-none z-20 rounded-none"
-                          [style.top.px]="act.top"
-                          [style.height.px]="act.height"
-                          [style.backgroundColor]="node.color || '#D2EEF3'"
-                          style="border-color: #796354;"
-                          title="Foco de control / Activación">
-                        </div>
+                          <div
+                            class="absolute left-1/2 -translate-x-1/2 w-3.5 border shadow-2xs pointer-events-none z-20 rounded-none"
+                            [style.top.px]="act.top"
+                            [style.height.px]="act.height"
+                            [style.backgroundColor]="node.color || '#D2EEF3'"
+                            style="border-color: #796354;"
+                            [title]="'editor.canvas.nodes.focusActivation' | translate">
+                          </div>
                       }
                     </div>
 
@@ -1084,7 +1084,7 @@
                         class="uml-rename-input w-full text-center font-bold text-[12px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
                       />
                     } @else {
-                      <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" title="Clic para resaltar relaciones / Doble clic para editar">
+                      <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" [title]="'editor.canvas.nodes.classHeaderTooltip' | translate">
                         @if (isNodeLockedByOther(node.id)) {
                           <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
                         }
@@ -1094,7 +1094,7 @@
                     <button
                       (click)="onDeleteNode(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
-                      title="Eliminar clase"
+                      [title]="'editor.canvas.nodes.deleteClass' | translate"
                       class="opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-500 p-0.5 cursor-pointer transition-opacity disabled:opacity-0">
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
