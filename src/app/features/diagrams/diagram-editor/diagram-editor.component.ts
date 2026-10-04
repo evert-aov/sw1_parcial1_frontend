@@ -614,7 +614,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               }
               let name = n.name || '';
               if (nodeType === 'boundary_box' && (name === 'ClassName' || !name.trim())) {
-                name = '';
+                name = '.';
               }
               return { ...n, nodeType, name };
             });
@@ -664,7 +664,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const isLifeline = nodeType === 'lifeline';
         let nodeName = n.name || '';
         if (nodeType === 'boundary_box' && (nodeName === 'ClassName' || !nodeName.trim())) {
-          nodeName = '';
+          nodeName = '.';
         }
         return {
           id: n.id,
@@ -951,11 +951,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const fallbackName = n.isAnchor
           ? 'Anchor'
           : n.nodeType === 'boundary_box'
-            ? ''
+            ? '.'
             : (isSequence
               ? (n.nodeType === 'actor' || n.id.startsWith('actor_') ? 'actor_1' : 'lifeline_1')
               : 'ClassName');
-        const finalName = (n.nodeType === 'boundary_box' && cleanName === 'ClassName') ? '' : (cleanName || fallbackName);
+        const finalName = (n.nodeType === 'boundary_box' && (cleanName === 'ClassName' || !cleanName))
+          ? '.'
+          : (cleanName || fallbackName);
         return {
           id: n.id,
           name: finalName,
@@ -2976,7 +2978,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const newNode: UmlClassNode = {
       id: `boundary_box_${Date.now()}`,
-      name: '',
+      name: '.',
       nodeType: 'boundary_box',
       stereotype: null,
       position: { x: posX, y: posY },
@@ -4706,11 +4708,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onNodeRename(event: { nodeId: string; newName: string }): void {
     if (this.isReadOnly()) return;
     const node = this.nodes().find((n) => n.id === event.nodeId);
-    if (!node || node.name === event.newName) return;
+    if (!node) return;
+    let newName = event.newName ?? '';
+    if (node.nodeType === 'boundary_box' && (!newName.trim() || newName === 'ClassName')) {
+      newName = '.';
+    }
+    if (node.name === newName) return;
 
     this.pushSnapshot();
     this.nodes.update((list) =>
-      list.map((n) => (n.id === event.nodeId ? { ...n, name: event.newName } : n))
+      list.map((n) => (n.id === event.nodeId ? { ...n, name: newName } : n))
     );
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(

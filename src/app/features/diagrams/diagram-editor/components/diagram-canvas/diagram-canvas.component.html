@@ -735,7 +735,7 @@
                           appAutofocusInput
                           type="text"
                           [attr.data-rename-node-id]="node.id"
-                          [value]="node.name === 'ClassName' ? '' : node.name"
+                          [value]="node.name === 'ClassName' ? '.' : node.name"
                           [placeholder]="'editor.canvas.nodes.boundaryBoxPlaceholder' | translate"
                           (keydown.enter)="commitNodeRename(node.id, renameBoundaryInput.value)"
                           (keydown.escape)="cancelNodeRename()"
