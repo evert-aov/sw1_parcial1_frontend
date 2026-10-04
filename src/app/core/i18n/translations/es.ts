@@ -341,6 +341,7 @@ export const es = {
         deleteDevice: 'Eliminar dispositivo',
         deleteNode: 'Eliminar nodo',
         deleteBoundaryBox: 'Eliminar recuadro agrupador',
+        boundaryBoxPlaceholder: 'Nombre o etiqueta (opcional)...',
         deleteMessage: 'Eliminar mensaje',
         resetLabelPosition: 'Restablecer posición de texto al centro',
         dragLabelHint: 'Arrastrar para reposicionar el texto (Doble clic para editar)',

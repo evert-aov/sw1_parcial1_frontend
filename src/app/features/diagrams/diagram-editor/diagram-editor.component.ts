@@ -2953,10 +2953,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const posX = position ? Math.max(20, Math.round(position.x - 140)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
     const posY = position ? Math.max(20, Math.round(position.y - 100)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
-    const count = this.nodes().filter((n) => n.nodeType === 'boundary_box').length + 1;
     const newNode: UmlClassNode = {
       id: `boundary_box_${Date.now()}`,
-      name: `Agrupador_${count}`,
+      name: '',
       nodeType: 'boundary_box',
       stereotype: null,
       position: { x: posX, y: posY },
@@ -2971,7 +2970,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.nodes.update((list) => [...list, newNode]);
     this.markAsUnsaved();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
   }
 
   addActor(position?: { x: number; y: number }): void {

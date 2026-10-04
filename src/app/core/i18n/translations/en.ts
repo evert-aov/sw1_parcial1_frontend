@@ -341,6 +341,7 @@ export const en = {
         deleteDevice: 'Delete device',
         deleteNode: 'Delete node',
         deleteBoundaryBox: 'Delete grouping boundary',
+        boundaryBoxPlaceholder: 'Name or label (optional)...',
         deleteMessage: 'Delete message',
         resetLabelPosition: 'Reset text position to center',
         dragLabelHint: 'Drag to reposition text (Double-click to edit)',

@@ -735,6 +735,7 @@
                           type="text"
                           [attr.data-rename-node-id]="node.id"
                           [value]="node.name"
+                          [placeholder]="'editor.canvas.nodes.boundaryBoxPlaceholder' | translate"
                           (keydown.enter)="commitNodeRename(node.id, renameBoundaryInput.value)"
                           (keydown.escape)="cancelNodeRename()"
                           (blur)="commitNodeRename(node.id, renameBoundaryInput.value)"
@@ -750,9 +751,11 @@
                             «{{ node.stereotype }}»
                           </span>
                         }
-                        <span class="font-bold text-[12px] font-sans leading-snug text-[#241C18] block text-left truncate max-w-full" [title]="node.name">
-                          {{ node.name }}
-                        </span>
+                        @if (node.name && node.name.trim().length > 0) {
+                          <span class="font-bold text-[12px] font-sans leading-snug text-[#241C18] block text-left truncate max-w-full" [title]="node.name">
+                            {{ node.name }}
+                          </span>
+                        }
                       }
                     </div>
 
