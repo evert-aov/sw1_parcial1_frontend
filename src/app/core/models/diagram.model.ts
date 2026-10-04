@@ -160,6 +160,12 @@ export const UML_COMMUNICATION_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'association', label: 'Enlace de Comunicación', icon: '───', description: 'Enlace entre objetos que transporta mensajes numerados secuenciales.' },
 ];
 
+export const UML_DEPLOYMENT_RELATION_TYPES: UmlRelationTypeItem[] = [
+  { id: 'association', label: 'Asociación / Enlace', icon: '───', description: 'Canal de comunicación o enlace físico/lógico entre nodos y componentes.' },
+  { id: 'generalization', label: 'Generalización', icon: '─▷', description: 'Especialización o herencia entre nodos o componentes.' },
+  { id: 'realization', label: 'Realización / Manifestación', icon: '┄▷', description: 'Manifestación o despliegue de componentes y artefactos.' },
+];
+
 export const UML_SEQUENCE_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'sync', label: 'Llamada Síncrona', icon: '──►', description: 'Mensaje síncrono que bloquea la ejecución hasta que retorna.' },
   { id: 'reply', label: 'Mensaje de Retorno', icon: '┄┄>', description: 'Retorno punteado del flujo de control o resultado.' },

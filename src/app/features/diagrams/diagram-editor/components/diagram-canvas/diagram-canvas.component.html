@@ -300,9 +300,9 @@
               (mouseenter)="hoveredNodeId.set(node.id)"
               (mouseleave)="onNodeMouseLeave(node.id)"
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
-              [style.minWidth.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 80 : (node.nodeType === 'actor' ? 50 : (node.nodeType === 'lifeline' ? 100 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : getNodeWidth(node))))))"
-              [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 70 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 65 : (node.nodeType === 'lifeline' ? 40 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : null)))))"
-              [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 95 : (node.nodeType === 'lifeline' ? 48 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : null))))))"
+              [style.minWidth.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 80 : (node.nodeType === 'actor' ? 50 : (node.nodeType === 'lifeline' ? 100 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 140 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 160 : getNodeWidth(node))))))))"
+              [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 70 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 65 : (node.nodeType === 'lifeline' ? 40 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 50 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 90 : null)))))))"
+              [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 95 : (node.nodeType === 'lifeline' ? 48 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : (node.nodeType === 'component' ? 70 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 140 : null))))))))"
               [style.--node-bg]="node.color || null"
               [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
               [class.f-selected]="isNodeSelected(node.id)"
@@ -313,13 +313,17 @@
               [class.f-node-control]="node.nodeType === 'control'"
               [class.f-node-entity]="node.nodeType === 'entity'"
               [class.f-node-lifeline]="node.nodeType === 'lifeline'"
+              [class.f-node-component]="node.nodeType === 'component'"
+              [class.f-node-deployment]="node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment'"
               [class.f-node-class]="!node.nodeType || node.nodeType === 'class'"
               [ngClass]="{
                 'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
                 'font-sans text-[#241C18] select-none relative group/node transition-shadow flex flex-col': !node.isAnchor,
                 'rounded-none': !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
-                'overflow-visible': isNodeSelected(node.id) || (!node.isAnchor && (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' || node.nodeType === 'lifeline')),
+                'overflow-visible': isNodeSelected(node.id) || (!node.isAnchor && (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' || node.nodeType === 'lifeline' || node.nodeType === 'component' || node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment')),
                 'overflow-hidden': !isNodeSelected(node.id) && !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
+                'z-0': !node.isAnchor && !isNodeSelected(node.id) && (node.nodeType === 'package' || node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment'),
+                'z-10': !node.isAnchor && !isNodeSelected(node.id) && node.nodeType === 'component',
                 'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)] z-30': !node.isAnchor && isNodeSelected(node.id) && (!node.nodeType || node.nodeType === 'class'),
                 'ring-2 ring-indigo-400 z-20': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id) && (!node.nodeType || node.nodeType === 'class'),
                 'ring-2 ring-[#796354] shadow-md': !node.isAnchor && selectedSourceNodeId() === node.id && !isNodeSelected(node.id) && (!node.nodeType || node.nodeType === 'class'),
@@ -1060,6 +1064,160 @@
                       </div>
                     }
                   </div>
+                } @else if (node.nodeType === 'component') {
+                  <!-- COMPONENTE UML (RECTÁNGULO CON ICONO DE COMPONENTE EN ESQUINA SUPERIOR DERECHA - ESTÁNDAR UML 2.5) -->
+                  <div
+                    (click)="onNodeClick(node.id, $event)"
+                    [ngClass]="{
+                      'ring-2 ring-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id),
+                      'shadow-[3px_3px_0px_rgba(0,0,0,0.12)]': !isNodeSelected(node.id)
+                    }"
+                    [style.backgroundColor]="node.color || '#F8E5E5'"
+                    class="w-full h-full flex flex-col justify-center px-4 py-2 relative border-2 border-[#796354] select-none cursor-pointer rounded-none">
+
+                    <!-- Botón Eliminar en hover -->
+                    <button
+                      (click)="onDeleteNode(node.id, $event)"
+                      [disabled]="isNodeLockedByOther(node.id)"
+                      [title]="'editor.canvas.nodes.deleteComponent' | translate"
+                      class="absolute top-1 left-1 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-500 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
+                      <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                    </button>
+
+                    <!-- Icono UML de Componente en la esquina superior derecha (Estándar UML 2.5) -->
+                    <div class="absolute top-2 right-2.5 pointer-events-none">
+                      <svg width="22" height="20" viewBox="0 0 22 20" class="text-[#796354]">
+                        <rect x="5" y="1" width="16" height="18" [attr.fill]="node.color || '#F8E5E5'" stroke="currentColor" stroke-width="1.5" />
+                        <rect x="1" y="4" width="8" height="4.5" [attr.fill]="node.color || '#F8E5E5'" stroke="currentColor" stroke-width="1.5" />
+                        <rect x="1" y="11.5" width="8" height="4.5" [attr.fill]="node.color || '#F8E5E5'" stroke="currentColor" stroke-width="1.5" />
+                      </svg>
+                    </div>
+
+                    <!-- Nombre del Componente y Estereotipo -->
+                    <div class="pr-6 flex flex-col items-start justify-center">
+                      @if (node.stereotype && node.stereotype !== 'component') {
+                        <span class="text-[9.5px] italic font-serif leading-none tracking-tight opacity-75 select-none block mb-0.5">
+                          «{{ node.stereotype }}»
+                        </span>
+                      }
+                      @if (renamingNodeId() === node.id) {
+                        <input
+                          #renameCompInput
+                          appAutofocusInput
+                          type="text"
+                          [attr.data-rename-node-id]="node.id"
+                          [value]="node.name"
+                          (keydown.enter)="commitNodeRename(node.id, renameCompInput.value)"
+                          (keydown.escape)="cancelNodeRename()"
+                          (blur)="commitNodeRename(node.id, renameCompInput.value)"
+                          (keydown)="$event.stopPropagation()"
+                          (pointerdown)="$event.stopPropagation()"
+                          (mousedown)="$event.stopPropagation()"
+                          (click)="$event.stopPropagation()"
+                          class="uml-rename-input w-full font-bold text-[12px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
+                        />
+                      } @else {
+                        <span class="font-bold text-[12.5px] font-sans leading-tight text-[#241C18] select-none truncate max-w-full" [title]="node.name">
+                          {{ node.name }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                } @else if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+                  <!-- NODO DE DESPLIEGUE 3D (CUBO / PRISMA OBLICUO UML) -->
+                  <div
+                    (click)="onNodeClick(node.id, $event)"
+                    class="w-full h-full relative select-none cursor-pointer">
+
+                    <!-- Caras 3D Superior y Lateral Derecha en SVG -->
+                    <svg
+                      class="absolute inset-0 pointer-events-none overflow-visible"
+                      [attr.width]="getNodeWidth(node)"
+                      [attr.height]="getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140)"
+                      [style.width.px]="getNodeWidth(node)"
+                      [style.height.px]="getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140)">
+                      <!-- Cara Superior -->
+                      <polygon
+                        [attr.points]="getDeploymentTopPoints(node)"
+                        [attr.fill]="getDeploymentColors(node).top"
+                        [attr.stroke]="getDeploymentColors(node).border"
+                        stroke-width="1.5"
+                        stroke-linejoin="round"
+                      />
+                      <!-- Cara Lateral Derecha -->
+                      <polygon
+                        [attr.points]="getDeploymentRightPoints(node)"
+                        [attr.fill]="getDeploymentColors(node).right"
+                        [attr.stroke]="getDeploymentColors(node).border"
+                        stroke-width="1.5"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+
+                    <!-- Cara Frontal Principal -->
+                    <div
+                      class="flex flex-col relative z-10"
+                      [ngClass]="{
+                        'ring-2 ring-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id)
+                      }"
+                      [style.width.px]="getDeploymentFrontWidth(node)"
+                      [style.height.px]="getDeploymentFrontHeight(node)"
+                      [style.marginTop.px]="14"
+                      [style.backgroundColor]="getDeploymentColors(node).front"
+                      [style.borderColor]="getDeploymentColors(node).border"
+                      style="border-width: 1.5px; border-style: solid;">
+
+                      <!-- Botón Eliminar en hover -->
+                      <button
+                        (click)="onDeleteNode(node.id, $event)"
+                        [disabled]="isNodeLockedByOther(node.id)"
+                        [title]="'editor.canvas.nodes.deleteNode' | translate"
+                        class="absolute top-1 right-1 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-500 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
+                        <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                      </button>
+
+                      <!-- Cabecera del Nodo: Estereotipo + Nombre -->
+                      <div
+                        class="px-2.5 py-1.5 flex flex-col items-center justify-center text-center border-b transition-colors cursor-pointer"
+                        [style.borderColor]="getDeploymentColors(node).border">
+                        @if (renamingNodeId() === node.id) {
+                          <input
+                            #renameDeploymentInput
+                            appAutofocusInput
+                            type="text"
+                            [attr.data-rename-node-id]="node.id"
+                            [value]="node.name"
+                            (keydown.enter)="commitNodeRename(node.id, renameDeploymentInput.value)"
+                            (keydown.escape)="cancelNodeRename()"
+                            (blur)="commitNodeRename(node.id, renameDeploymentInput.value)"
+                            (keydown)="$event.stopPropagation()"
+                            (pointerdown)="$event.stopPropagation()"
+                            (mousedown)="$event.stopPropagation()"
+                            (click)="$event.stopPropagation()"
+                            class="uml-rename-input w-full text-center font-bold text-[12px] font-sans tracking-tight text-[#241C18] bg-white border border-blue-500 rounded px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
+                          />
+                        } @else {
+                          <span class="text-[9.5px] font-normal font-sans leading-tight text-[#241C18] select-none block">
+                            «{{ node.stereotype || node.nodeType || 'node' }}»
+                          </span>
+                          <span class="font-bold text-[12px] font-sans leading-snug text-[#241C18] block text-center truncate max-w-full" [title]="node.name">
+                            {{ node.name }}
+                          </span>
+                        }
+                      </div>
+
+                      <!-- Cuerpo del Nodo (Espacio de Contenido / Componentes) -->
+                      <div class="flex-1 p-2 flex flex-col justify-start overflow-hidden">
+                        @if (node.attributes && node.attributes.length > 0) {
+                          @for (attr of node.attributes; track attr.name) {
+                            <div class="text-[11px] font-sans text-[#241C18] truncate">
+                              {{ attr.name }}
+                            </div>
+                          }
+                        }
+                      </div>
+                    </div>
+                  </div>
                 } @else {
                   <!-- CLASE UML 2.5 ESTÁNDAR (CABECERA + ATRIBUTOS + MÉTODOS) -->
                   <div
@@ -1098,11 +1256,6 @@
                         <span class="font-bold text-[12px] font-sans text-center w-full tracking-tight truncate flex items-center justify-center gap-1" [title]="'editor.canvas.nodes.classHeaderTooltip' | translate">
                           @if (isNodeLockedByOther(node.id)) {
                             <ng-icon name="heroLockClosed" class="text-xs text-red-600 shrink-0"></ng-icon>
-                          }
-                          @if (node.nodeType === 'component') {
-                            <ng-icon name="heroCpuChip" class="text-xs text-indigo-700 shrink-0"></ng-icon>
-                          } @else if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
-                            <ng-icon name="heroCube" class="text-xs text-blue-700 shrink-0"></ng-icon>
                           }
                           {{ node.name }}
                         </span>

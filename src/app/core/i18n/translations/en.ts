@@ -308,6 +308,10 @@ export const en = {
         entity: 'entity',
         lifeline: 'lifeline',
         class: 'class',
+        device: 'device',
+        executionEnvironment: 'execution-environment',
+        component: 'component',
+        node: 'node',
       },
     },
     incompatible: {
@@ -317,6 +321,7 @@ export const en = {
       communication: 'Only actors, boundaries, controls, and entities can be added or copied to Communication diagrams.',
       sequence: 'Only actors, lifelines, or participants can be added or copied to Sequence diagrams.',
       class: 'Only classes can be added or copied to Class diagrams.',
+      deployment: 'Only physical nodes («device»), execution environments («executionEnvironment»), components, and packages can be added or copied to Deployment diagrams.',
     },
     canvas: {
       connectTop: 'Connect from top',
@@ -332,6 +337,9 @@ export const en = {
         deleteEntity: 'Delete entity',
         deleteLifeline: 'Delete lifeline',
         deleteClass: 'Delete class',
+        deleteComponent: 'Delete component',
+        deleteDevice: 'Delete device',
+        deleteNode: 'Delete node',
         deleteMessage: 'Delete message',
         resetLabelPosition: 'Reset text position to center',
         dragLabelHint: 'Drag to reposition text (Double-click to edit)',

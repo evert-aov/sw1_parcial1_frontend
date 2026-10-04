@@ -2648,7 +2648,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
     if (currentType === DiagramType.DEPLOYMENT) {
-      this.addDevice(position);
+      this.addExecutionEnvironment(position);
       return;
     }
     if (currentType === DiagramType.LAYERED) {
@@ -2686,18 +2686,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 100)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 45)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - 95)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 35)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => n.nodeType === 'component').length + 1;
     const newNode: UmlClassNode = {
       id: `component_${Date.now()}`,
-      name: `Componente_${count}`,
+      name: `Component_${count}`,
       nodeType: 'component',
       stereotype: 'component',
       position: { x: posX, y: posY },
-      width: 210,
-      color: '#EEF2FF',
+      width: 190,
+      height: 70,
+      isCustomSize: true,
+      color: '#F8E5E5',
       attributes: [],
       methods: [],
     };
@@ -2714,18 +2716,50 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 110)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 60)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - 115)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 70)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
-    const count = this.nodes().filter((n) => n.nodeType === 'device' || n.nodeType === 'node').length + 1;
+    const count = this.nodes().filter((n) => n.nodeType === 'device').length + 1;
     const newNode: UmlClassNode = {
       id: `device_${Date.now()}`,
-      name: `Nodo_${count}`,
+      name: `Dispositivo_${count}`,
       nodeType: 'device',
       stereotype: 'device',
       position: { x: posX, y: posY },
       width: 230,
-      color: '#F0F9FF',
+      height: 140,
+      isCustomSize: true,
+      color: '#FFFDF8',
+      attributes: [],
+      methods: [],
+    };
+
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+  }
+
+  addExecutionEnvironment(position?: { x: number; y: number }): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+    const posX = position ? Math.max(20, Math.round(position.x - 120)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - 80)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+
+    const count = this.nodes().filter((n) => n.nodeType === 'executionEnvironment').length + 1;
+    const newNode: UmlClassNode = {
+      id: `exec_env_${Date.now()}`,
+      name: `Servidor_${count}`,
+      nodeType: 'executionEnvironment',
+      stereotype: 'executionEnvironment',
+      position: { x: posX, y: posY },
+      width: 240,
+      height: 160,
+      isCustomSize: true,
+      color: '#CDE6F7',
       attributes: [],
       methods: [],
     };
@@ -3135,6 +3169,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       msgKey = 'editor.incompatible.sequence';
     } else if (diagType === DiagramType.CLASS) {
       msgKey = 'editor.incompatible.class';
+    } else if (diagType === DiagramType.DEPLOYMENT) {
+      msgKey = 'editor.incompatible.deployment';
     }
 
     this.confirmDialogService.alert({
@@ -3178,7 +3214,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.DEPLOYMENT) {
-      if (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'lifeline') {
+      if (
+        node.nodeType !== 'device' &&
+        node.nodeType !== 'node' &&
+        node.nodeType !== 'executionEnvironment' &&
+        node.nodeType !== 'component' &&
+        node.nodeType !== 'package' &&
+        node.nodeType !== 'class'
+      ) {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.LAYERED) {
@@ -3202,8 +3245,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollTop = scrollEl?.scrollTop || 0;
 
     const isBce = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
-    const width = node.width || (node.nodeType === 'actor' ? 65 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (isBce ? 90 : 220))));
-    const height = node.height || (node.nodeType === 'actor' ? 95 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (isBce ? 95 : null))));
+    const isDeploymentNode = node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment';
+    const width = node.width || (node.nodeType === 'actor' ? 65 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (node.nodeType === 'component' ? 190 : (isDeploymentNode ? 240 : (isBce ? 90 : 220))))));
+    const height = node.height || (node.nodeType === 'actor' ? 95 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'component' ? 70 : (isDeploymentNode ? 150 : (isBce ? 95 : null))))));
 
     let posX: number;
     let posY: number;
@@ -3249,7 +3293,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width,
       height,
-      color: node.color || (isBce ? '#D2EEF3' : '#FFFDDD'),
+      color: node.color || (isBce ? '#D2EEF3' : (node.nodeType === 'device' ? '#FFFDF8' : (node.nodeType === 'executionEnvironment' ? '#CDE6F7' : (node.nodeType === 'component' ? '#F8E5E5' : '#FFFDDD')))),
       attributes: (node.attributes || []).map((a: any) => ({ ...a })),
       methods: (node.methods || []).map((m: any) => ({ ...m })),
     };
@@ -3278,9 +3322,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           this.addComponent(position);
           break;
         case 'device':
-        case 'node':
-        case 'executionEnvironment':
           this.addDevice(position);
+          break;
+        case 'executionEnvironment':
+        case 'node':
+          this.addExecutionEnvironment(position);
           break;
         case 'actor':
           this.addActor(position);

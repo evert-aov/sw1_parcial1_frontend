@@ -1160,6 +1160,22 @@ export class DiagramCanvasComponent {
       }
       return 70;
     }
+    if (node.nodeType === 'component') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(140, manualW);
+      }
+      const nameLen = (node.name || '').length;
+      return Math.max(180, Math.round(nameLen * 8.5 + 50));
+    }
+    if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+      if (manualW && manualW > 0) {
+        return Math.max(160, manualW);
+      }
+      const nameLen = (node.name || '').length;
+      return Math.max(230, Math.round(nameLen * 8.5 + 50));
+    }
     const dynamicW = this.getDynamicNodeWidth(node);
     const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
     return Math.max(dynamicW, manualW);
@@ -1182,6 +1198,12 @@ export class DiagramCanvasComponent {
     }
     if (node.nodeType === 'package') {
       return node.customHeight || node.height || 120;
+    }
+    if (node.nodeType === 'component') {
+      return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
+    }
+    if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+      return node.customHeight || (node.isCustomSize ? node.height : null) || (node.nodeType === 'executionEnvironment' ? 160 : 140);
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
       return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
@@ -1306,6 +1328,12 @@ export class DiagramCanvasComponent {
     } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
       minW = 50;
       minH = 50;
+    } else if (node.nodeType === 'component') {
+      minW = 140;
+      minH = 50;
+    } else if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+      minW = 160;
+      minH = 90;
     } else {
       minW = Math.max(120, this.getDynamicNodeWidth(node));
     }
@@ -1837,5 +1865,86 @@ export class DiagramCanvasComponent {
   formatLifelineName(name?: string): string {
     if (!name || !name.trim()) return '';
     return name;
+  }
+
+  getDeploymentTopPoints(node: UmlClassNode): string {
+    const w = this.getNodeWidth(node);
+    const d = 14;
+    return `0,${d} ${d},0 ${w},0 ${w - d},${d}`;
+  }
+
+  getDeploymentRightPoints(node: UmlClassNode): string {
+    const w = this.getNodeWidth(node);
+    const h = this.getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140);
+    const d = 14;
+    return `${w - d},${d} ${w},0 ${w},${h - d} ${w - d},${h}`;
+  }
+
+  getDeploymentFrontWidth(node: UmlClassNode): number {
+    return Math.max(80, this.getNodeWidth(node) - 14);
+  }
+
+  getDeploymentFrontHeight(node: UmlClassNode): number {
+    const h = this.getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140);
+    return Math.max(60, h - 14);
+  }
+
+  getDeploymentColors(node: UmlClassNode): { front: string; top: string; right: string; border: string } {
+    const isDevice = node.nodeType === 'device' || node.stereotype === 'device';
+    const isExec = node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment';
+
+    let front = node.color;
+    if (!front) {
+      if (isDevice) {
+        front = '#FFFDF8';
+      } else if (isExec) {
+        front = '#CDE6F7';
+      } else {
+        front = '#D2E8F9';
+      }
+    }
+
+    if (isDevice || front === '#FFFDF8' || front === '#FFF9F2' || front === '#FFFFFF') {
+      return {
+        front,
+        top: '#FFFFFF',
+        right: '#E8DFD3',
+        border: '#333333',
+      };
+    }
+
+    if (front === '#CDE6F7' || front === '#D2E8F9' || front === '#C6E2F7') {
+      return {
+        front,
+        top: '#E4F2FD',
+        right: '#AFD4EE',
+        border: '#1E3A5F',
+      };
+    }
+
+    return {
+      front,
+      top: this.adjustBrightness(front, 20),
+      right: this.adjustBrightness(front, -20),
+      border: '#241C18',
+    };
+  }
+
+  private adjustBrightness(col: string, percent: number): string {
+    if (!col || !col.startsWith('#') || (col.length !== 7 && col.length !== 4)) {
+      return col || '#CDE6F7';
+    }
+    let hex = col.slice(1);
+    if (hex.length === 3) {
+      hex = hex.split('').map((c) => c + c).join('');
+    }
+    const num = parseInt(hex, 16);
+    let r = (num >> 16) + Math.round(255 * (percent / 100));
+    let g = ((num >> 8) & 0x00ff) + Math.round(255 * (percent / 100));
+    let b = (num & 0x0000ff) + Math.round(255 * (percent / 100));
+    r = Math.min(255, Math.max(0, r));
+    g = Math.min(255, Math.max(0, g));
+    b = Math.min(255, Math.max(0, b));
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
   }
 }

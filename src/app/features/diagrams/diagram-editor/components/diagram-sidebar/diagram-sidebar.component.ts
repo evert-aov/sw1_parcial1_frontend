@@ -31,6 +31,9 @@ import {
   heroCube,
   heroSquares2x2,
   heroSparkles,
+  heroServer,
+  heroComputerDesktop,
+  heroCloud,
 } from '@ng-icons/heroicons/outline';
 import { HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -47,6 +50,7 @@ import {
   UML_USE_CASE_RELATION_TYPES,
   UML_PACKAGE_RELATION_TYPES,
   UML_COMMUNICATION_RELATION_TYPES,
+  UML_DEPLOYMENT_RELATION_TYPES,
   UML_SEQUENCE_RELATION_TYPES,
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
@@ -88,6 +92,9 @@ import { UML_SVG_COMPONENTS } from '../uml-svg';
       heroCube,
       heroSquares2x2,
       heroSparkles,
+      heroServer,
+      heroComputerDesktop,
+      heroCloud,
     }),
   ],
   templateUrl: './diagram-sidebar.component.html',
@@ -188,15 +195,15 @@ export class DiagramSidebarComponent {
 
   // Estados de carpetas en el Explorador
   readonly expandedFolders = signal<Record<string, boolean>>({
-    [DiagramType.CLASS]: true,
-    [DiagramType.USE_CASE]: true,
-    [DiagramType.SEQUENCE]: true,
-    [DiagramType.COMMUNICATION]: true,
-    [DiagramType.PACKAGE]: true,
-    [DiagramType.COMPONENT]: true,
-    [DiagramType.DEPLOYMENT]: true,
-    [DiagramType.LAYERED]: true,
-    [DiagramType.CLASS_ANALYSIS]: true,
+    [DiagramType.CLASS]: false,
+    [DiagramType.USE_CASE]: false,
+    [DiagramType.SEQUENCE]: false,
+    [DiagramType.COMMUNICATION]: false,
+    [DiagramType.PACKAGE]: false,
+    [DiagramType.COMPONENT]: false,
+    [DiagramType.DEPLOYMENT]: false,
+    [DiagramType.LAYERED]: false,
+    [DiagramType.CLASS_ANALYSIS]: false,
   });
 
   // Agrupamiento estricto de diagramas por su DiagramType
@@ -225,6 +232,9 @@ export class DiagramSidebarComponent {
     if (this.activeDiagramType() === DiagramType.COMMUNICATION) {
       return UML_COMMUNICATION_RELATION_TYPES;
     }
+    if (this.activeDiagramType() === DiagramType.DEPLOYMENT) {
+      return UML_DEPLOYMENT_RELATION_TYPES;
+    }
     if (this.activeDiagramType() === DiagramType.SEQUENCE) {
       return UML_SEQUENCE_RELATION_TYPES;
     }
@@ -249,6 +259,9 @@ export class DiagramSidebarComponent {
   readonly addControl = output<void>();
   readonly addEntity = output<void>();
   readonly addLifeline = output<void>();
+  readonly addDevice = output<void>();
+  readonly addExecutionEnvironment = output<void>();
+  readonly addComponent = output<void>();
 
   // Eventos del Explorador
   readonly selectDiagram = output<string>();
@@ -312,6 +325,19 @@ export class DiagramSidebarComponent {
         type === 'control' ||
         type === 'entity'
       );
+    }
+    if (currentType === DiagramType.DEPLOYMENT) {
+      return (
+        type === 'device' ||
+        type === 'node' ||
+        type === 'executionEnvironment' ||
+        type === 'component' ||
+        type === 'package' ||
+        type === 'class'
+      );
+    }
+    if (currentType === DiagramType.COMPONENT) {
+      return type === 'component' || type === 'package' || type === 'class';
     }
     if (currentType === DiagramType.CLASS) {
       return type === 'class';

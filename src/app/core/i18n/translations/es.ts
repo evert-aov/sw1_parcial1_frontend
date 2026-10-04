@@ -308,6 +308,10 @@ export const es = {
         entity: 'entidad',
         lifeline: 'línea-vida',
         class: 'clase',
+        device: 'dispositivo',
+        executionEnvironment: 'entorno-ejecución',
+        component: 'componente',
+        node: 'nodo',
       },
     },
     incompatible: {
@@ -317,6 +321,7 @@ export const es = {
       communication: 'Solo se pueden agregar o copiar actores, boundaries, controles y entidades en diagramas de Comunicación.',
       sequence: 'Solo se pueden agregar o copiar actores, líneas de vida o participantes en diagramas de Secuencia.',
       class: 'Solo se pueden agregar o copiar clases en diagramas de Clases.',
+      deployment: 'Solo se pueden agregar o copiar nodos físicos («device»), entornos de ejecución («executionEnvironment»), componentes y paquetes en diagramas de Despliegue.',
     },
     canvas: {
       connectTop: 'Conectar por arriba',
@@ -332,6 +337,9 @@ export const es = {
         deleteEntity: 'Eliminar entidad',
         deleteLifeline: 'Eliminar línea de vida',
         deleteClass: 'Eliminar clase',
+        deleteComponent: 'Eliminar componente',
+        deleteDevice: 'Eliminar dispositivo',
+        deleteNode: 'Eliminar nodo',
         deleteMessage: 'Eliminar mensaje',
         resetLabelPosition: 'Restablecer posición de texto al centro',
         dragLabelHint: 'Arrastrar para reposicionar el texto (Doble clic para editar)',
