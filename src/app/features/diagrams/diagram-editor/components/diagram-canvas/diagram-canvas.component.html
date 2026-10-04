@@ -727,15 +727,15 @@
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
 
-                    <!-- Cabecera / Etiqueta del Recuadro Agrupador (Alineado arriba a la izquierda) -->
-                    <div class="text-left w-full flex flex-col items-start justify-start">
+                    <!-- Cabecera / Etiqueta del Recuadro Agrupador (Alineado arriba al centro) -->
+                    <div class="text-center w-full flex flex-col items-center justify-center">
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renameBoundaryInput
                           appAutofocusInput
                           type="text"
                           [attr.data-rename-node-id]="node.id"
-                          [value]="node.name === 'ClassName' ? '.' : node.name"
+                          [value]="node.name === 'ClassName' || node.name === '.' ? '' : node.name"
                           [placeholder]="'editor.canvas.nodes.boundaryBoxPlaceholder' | translate"
                           (keydown.enter)="commitNodeRename(node.id, renameBoundaryInput.value)"
                           (keydown.escape)="cancelNodeRename()"
@@ -744,16 +744,16 @@
                           (pointerdown)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
                           (click)="$event.stopPropagation()"
-                          class="uml-rename-input w-full font-bold text-[12px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded-none px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
+                          class="uml-rename-input w-full max-w-[280px] font-bold text-[12px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded-none px-2 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs text-center"
                         />
                       } @else {
                         @if (node.stereotype) {
-                          <span class="text-[9.5px] italic font-serif leading-none tracking-tight opacity-75 select-none block mb-0.5">
+                          <span class="text-[9.5px] italic font-serif leading-none tracking-tight opacity-75 select-none block mb-0.5 text-center">
                             «{{ node.stereotype }}»
                           </span>
                         }
-                        @if (node.name && node.name.trim().length > 0 && node.name !== 'ClassName') {
-                          <span class="font-bold text-[12px] font-sans leading-snug text-[#241C18] block text-left truncate max-w-full" [title]="node.name">
+                        @if (node.name && node.name.trim().length > 0 && node.name !== 'ClassName' && node.name !== '.') {
+                          <span class="font-bold text-[12px] font-sans leading-snug text-[#241C18] block text-center truncate max-w-full" [title]="node.name">
                             {{ node.name }}
                           </span>
                         }

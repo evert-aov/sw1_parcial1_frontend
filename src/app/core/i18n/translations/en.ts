@@ -327,6 +327,7 @@ export const en = {
       class: 'Only classes can be added or copied to Class diagrams.',
       classAnalysis: 'Only classes and actors can be added or copied to Class Analysis diagrams.',
       deployment: 'Only physical nodes («device»), execution environments («executionEnvironment»), components, and grouping boundaries can be added or copied to Deployment diagrams.',
+      layered: 'Only packages and grouping boundary boxes can be added or copied to Layered diagrams.',
     },
     canvas: {
       connectTop: 'Connect from top',
@@ -369,6 +370,8 @@ export const en = {
       deploymentComponentDesc: 'Deployable software artifact',
       deploymentGroupingBox: 'Grouping Boundary',
       deploymentGroupingBoxDesc: 'Network boundary, AWS Cloud, VPC or cluster',
+      layerGroupingBox: 'Layer / Boundary Box',
+      layerGroupingBoxDesc: 'Architectural layer boundary or subsystem grouping box',
       deploymentRelations: 'Deployment Relationships',
       componentElements: 'Component Elements',
       layerElements: 'Architectural Layer Elements',

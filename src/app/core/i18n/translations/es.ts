@@ -327,6 +327,7 @@ export const es = {
       class: 'Solo se pueden agregar o copiar clases en diagramas de Clases.',
       classAnalysis: 'Solo se pueden agregar o copiar clases y actores en diagramas de Análisis de Clases.',
       deployment: 'Solo se pueden agregar o copiar nodos físicos («device»), entornos de ejecución («executionEnvironment»), componentes y recuadros agrupadores en diagramas de Despliegue.',
+      layered: 'Solo se pueden agregar o copiar paquetes y recuadros agrupadores en diagramas de Capas.',
     },
     canvas: {
       connectTop: 'Conectar por arriba',
@@ -369,6 +370,8 @@ export const es = {
       deploymentComponentDesc: 'Artefacto de software desplegable',
       deploymentGroupingBox: 'Recuadro Agrupador',
       deploymentGroupingBoxDesc: 'Límite de red, AWS Cloud, VPC o clúster',
+      layerGroupingBox: 'Recuadro Agrupador (Capa)',
+      layerGroupingBoxDesc: 'Límite de capa de software o subsistema arquitectónico',
       deploymentRelations: 'Relaciones de Despliegue',
       componentElements: 'Elementos de Componentes',
       layerElements: 'Elementos de Capas',

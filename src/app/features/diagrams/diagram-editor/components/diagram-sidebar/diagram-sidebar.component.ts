@@ -226,7 +226,7 @@ export class DiagramSidebarComponent {
     if (this.activeDiagramType() === DiagramType.USE_CASE) {
       return UML_USE_CASE_RELATION_TYPES;
     }
-    if (this.activeDiagramType() === DiagramType.PACKAGE) {
+    if (this.activeDiagramType() === DiagramType.PACKAGE || this.activeDiagramType() === DiagramType.LAYERED) {
       return UML_PACKAGE_RELATION_TYPES;
     }
     if (this.activeDiagramType() === DiagramType.COMMUNICATION) {

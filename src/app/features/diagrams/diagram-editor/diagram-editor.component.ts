@@ -2326,6 +2326,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         activeRel === 'merge' ||
         activeRel === 'trace' ||
         this.activeDiagramType() === DiagramType.PACKAGE ||
+        this.activeDiagramType() === DiagramType.LAYERED ||
         sourceNode.nodeType === 'package' ||
         targetNode.nodeType === 'package';
       const isUseCaseRel =
@@ -2509,6 +2510,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       relType === 'merge' ||
       relType === 'trace' ||
       this.activeDiagramType() === DiagramType.PACKAGE ||
+      this.activeDiagramType() === DiagramType.LAYERED ||
       (sourceNode && sourceNode.nodeType === 'package') ||
       (targetNode && targetNode.nodeType === 'package');
     const isUseCaseRel =
@@ -2970,20 +2972,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   addBoundaryBox(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
+    const isLayered = this.activeDiagramType() === DiagramType.LAYERED;
+    const defaultWidth = isLayered ? 420 : 280;
+    const defaultHeight = isLayered ? 220 : 200;
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 140)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 100)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const newNode: UmlClassNode = {
       id: `boundary_box_${Date.now()}`,
-      name: '.',
+      name: isLayered ? 'Capa' : '.',
       nodeType: 'boundary_box',
       stereotype: null,
       position: { x: posX, y: posY },
-      width: 280,
-      height: 200,
+      width: defaultWidth,
+      height: defaultHeight,
       isCustomSize: true,
       color: '#FFFFFF',
       attributes: [],
@@ -3289,7 +3294,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if (currentType === DiagramType.DEPLOYMENT) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'lifeline');
     } else if (currentType === DiagramType.LAYERED) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'lifeline');
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'boundary_box');
     } else if (currentType === DiagramType.CLASS) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'package' || n.nodeType === 'boundary' || n.nodeType === 'control' || n.nodeType === 'entity' || n.nodeType === 'lifeline');
     }
@@ -3398,6 +3403,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       msgKey = 'editor.incompatible.classAnalysis';
     } else if (diagType === DiagramType.DEPLOYMENT) {
       msgKey = 'editor.incompatible.deployment';
+    } else if (diagType === DiagramType.LAYERED) {
+      msgKey = 'editor.incompatible.layered';
     }
 
     this.confirmDialogService.alert({
@@ -3453,7 +3460,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.LAYERED) {
-      if (node.nodeType === 'actor' || node.nodeType === 'lifeline') {
+      if (node.nodeType !== 'package' && node.nodeType !== 'boundary_box') {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.CLASS) {

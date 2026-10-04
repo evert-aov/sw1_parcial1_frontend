@@ -1445,6 +1445,7 @@ export class DiagramCanvasComponent {
     if (
       this.activeDiagramType() === DiagramType.USE_CASE ||
       this.activeDiagramType() === DiagramType.PACKAGE ||
+      this.activeDiagramType() === DiagramType.LAYERED ||
       this.activeDiagramType() === DiagramType.COMMUNICATION ||
       this.activeDiagramType() === DiagramType.SEQUENCE ||
       ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as any)

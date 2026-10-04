@@ -899,6 +899,137 @@
           </div>
         }
       </div>
+    } @else if (activeDiagramType() === DiagramType.LAYERED) {
+      <!-- Sección: Elementos y Relaciones para DIAGRAMA DE CAPAS -->
+
+      <!-- Elementos Básicos de Capas: Paquete y Recuadro Agrupador -->
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
+        <div class="px-3.5 py-2.5 flex items-center justify-between">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon name="heroSquares2x2" class="text-xs text-indigo-500"></ng-icon>
+            <span>{{ 'editor.toolbox.elements' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.layered' | translate }}</span></span>
+          </span>
+        </div>
+
+        <div class="p-2 space-y-1.5">
+          <!-- Botón Paquete UML -->
+          <button
+            (click)="addPackage.emit()"
+            [disabled]="isReadOnly()"
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('package', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-amber-300 dark:hover:border-amber-700">
+            <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
+              <ng-icon name="heroFolder" class="text-base"></ng-icon>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.package' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.packageDesc' | translate }}</div>
+            </div>
+            <span class="text-xs text-amber-600 dark:text-amber-400 font-bold px-1">+</span>
+          </button>
+
+          <!-- Botón Recuadro Agrupador (Capa Arquitectónica) -->
+          <button
+            (click)="addBoundaryBox.emit()"
+            [disabled]="isReadOnly()"
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('boundary_box', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-stone-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-stone-300 dark:hover:border-stone-700">
+            <div class="w-9 h-8 flex items-center justify-center bg-stone-50 dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-md shrink-0 group-hover:scale-105 transition-transform p-0.5">
+              <app-boundary-box-svg mode="icon" width="22" height="18" fillColor="#FAF8F5" strokeColor="#1E293B" [strokeWidth]="1.5" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.layerGroupingBox' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.layerGroupingBoxDesc' | translate }}</div>
+            </div>
+            <span class="text-xs text-stone-600 dark:text-stone-400 font-bold px-1">+</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Relaciones de Paquetes para Diagrama de Capas -->
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
+        <div
+          (click)="isRelationshipsOpen.set(!isRelationshipsOpen())"
+          class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
+            <span>{{ 'editor.toolbox.relationships' | translate }} <span class="font-normal text-slate-500">{{ 'editor.explorer.folders.layered' | translate }}</span></span>
+          </span>
+          @if (selectedRelationType()) {
+            <span (click)="$event.stopPropagation(); onSelectPointer()" [title]="'toolbar.relationships.deselect' | translate" class="text-[10px] text-blue-600 hover:text-red-600 dark:text-blue-400 dark:hover:text-red-400 font-normal cursor-pointer">
+              {{ 'toolbar.relationships.deselect' | translate }}
+            </span>
+          }
+        </div>
+
+        @if (isRelationshipsOpen()) {
+          <div class="p-2 space-y-1">
+            @for (rel of currentRelations(); track rel.id) {
+              <button
+                (click)="onSelectRelation(rel.id)"
+                [ngClass]="{
+                  'bg-amber-50 dark:bg-amber-950/70 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100 shadow-2xs': selectedRelationType() === rel.id,
+                  'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent': selectedRelationType() !== rel.id
+                }"
+                class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group">
+                <div class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5">
+                  <app-relationship-svg [type]="$any(rel.id)" mode="icon" width="28" height="14" strokeColor="currentColor" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100">{{ getRelationLabel(rel) }}</div>
+                  <div class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5" [title]="getRelationDescription(rel)">{{ getRelationDescription(rel) }}</div>
+                </div>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Enrutamiento de Líneas para Capas -->
+      <div class="border-b border-slate-100 dark:border-slate-800/80">
+        <div
+          (click)="isLineStylesOpen.set(!isLineStylesOpen())"
+          class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-[#131830] transition-colors">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <ng-icon [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'" class="text-xs text-slate-400"></ng-icon>
+            <span>{{ 'editor.toolbox.routingStyle' | translate }}</span>
+          </span>
+          <ng-icon name="heroArrowsPointingOut" class="text-xs text-slate-400"></ng-icon>
+        </div>
+
+        @if (isLineStylesOpen()) {
+          <div class="p-3 space-y-2.5">
+            <select
+              [value]="defaultLineStyle()"
+              (change)="onSetLineStyle($any($event.target).value)"
+              class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
+              <option value="segment">{{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}</option>
+              <option value="straight">{{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}</option>
+              <option value="bezier">{{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}</option>
+              <option value="adaptive-curve">{{ getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)') }}</option>
+            </select>
+
+            <div class="grid grid-cols-4 gap-1.5 pt-0.5">
+              <button (click)="zoomOut.emit()" [title]="'toolbar.canvas.zoomOut' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
+              </button>
+              <button (click)="zoomIn.emit()" [title]="'toolbar.canvas.zoomIn' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
+              </button>
+              <button (click)="resetView.emit()" [title]="'toolbar.canvas.oneToOne' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors">
+                1:1
+              </button>
+              <button (click)="fitView.emit()" [title]="'toolbar.canvas.fitView' | translate" class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
     } @else {
       <!-- Placeholder para los otros diagramas -->
       <div class="p-4 text-center text-slate-500 dark:text-slate-400 space-y-2">
