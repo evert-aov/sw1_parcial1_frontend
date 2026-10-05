@@ -95,16 +95,22 @@
           <div class="space-y-2.5">
             <div class="flex items-center justify-between">
               <span class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] flex items-center gap-1.5">
-                <span>Mensajes UML (Llamadas / Retornos)</span>
-                <span class="text-[10px] text-slate-400 font-normal">({{ editingConnection()!.messages?.length || 0 }})</span>
+                @if (isSequenceDiagram()) {
+                  <span>Mensaje UML (Llamada / Retorno)</span>
+                } @else {
+                  <span>Mensajes UML (Llamadas / Retornos)</span>
+                  <span class="text-[10px] text-slate-400 font-normal">({{ editingConnection()!.messages?.length || 0 }})</span>
+                }
               </span>
-              <button
-                type="button"
-                (click)="addMessage()"
-                class="px-2.5 py-1 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/60 dark:hover:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 font-semibold text-[11px] rounded-lg border border-cyan-200/60 dark:border-cyan-800/50 cursor-pointer transition-colors flex items-center gap-1">
-                <ng-icon name="heroPlus" class="text-xs"></ng-icon>
-                <span>Agregar Mensaje</span>
-              </button>
+              @if (canAddMessage()) {
+                <button
+                  type="button"
+                  (click)="addMessage()"
+                  class="px-2.5 py-1 bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/60 dark:hover:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 font-semibold text-[11px] rounded-lg border border-cyan-200/60 dark:border-cyan-800/50 cursor-pointer transition-colors flex items-center gap-1">
+                  <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+                  <span>Agregar Mensaje</span>
+                </button>
+              }
             </div>
 
             @if (!editingConnection()!.messages || editingConnection()!.messages!.length === 0) {
@@ -123,8 +129,10 @@
                           <input
                             type="text"
                             [(ngModel)]="msg.sequenceNumber"
+                            [readonly]="isSequenceDiagram()"
+                            [title]="isSequenceDiagram() ? 'Calculada automáticamente según el flujo temporal del diagrama' : ''"
                             placeholder="1"
-                            class="w-full px-2 py-1 bg-white dark:bg-[#0F1326] border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-slate-800 dark:text-slate-100"
+                            class="w-full px-2 py-1 bg-white dark:bg-[#0F1326] border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-slate-800 dark:text-slate-100 disabled:opacity-60"
                           />
                         </div>
 
@@ -140,32 +148,34 @@
                         </div>
                       </div>
 
-                      <!-- Acciones: subir, bajar, eliminar -->
-                      <div class="flex items-center gap-0.5 pt-3 shrink-0">
-                        <button
-                          type="button"
-                          (click)="moveMessageUp(idx)"
-                          [disabled]="idx === 0"
-                          [title]="'editor.explorer.moveUp' | translate"
-                          class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-20 cursor-pointer">
-                          <ng-icon name="heroChevronUp" class="text-xs"></ng-icon>
-                        </button>
-                        <button
-                          type="button"
-                          (click)="moveMessageDown(idx)"
-                          [disabled]="idx === totalMsgs - 1"
-                          [title]="'editor.explorer.moveDown' | translate"
-                          class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-20 cursor-pointer">
-                          <ng-icon name="heroChevronDown" class="text-xs"></ng-icon>
-                        </button>
-                        <button
-                          type="button"
-                          (click)="removeMessage(idx)"
-                          [title]="'editor.canvas.nodes.deleteMessage' | translate"
-                          class="p-1 text-red-500 hover:text-red-700 cursor-pointer">
-                          <ng-icon name="heroTrash" class="text-xs"></ng-icon>
-                        </button>
-                      </div>
+                      <!-- Acciones: subir, bajar, eliminar (solo en comunicación con múltiples mensajes) -->
+                      @if (!isSequenceDiagram()) {
+                        <div class="flex items-center gap-0.5 pt-3 shrink-0">
+                          <button
+                            type="button"
+                            (click)="moveMessageUp(idx)"
+                            [disabled]="idx === 0"
+                            [title]="'editor.explorer.moveUp' | translate"
+                            class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-20 cursor-pointer">
+                            <ng-icon name="heroChevronUp" class="text-xs"></ng-icon>
+                          </button>
+                          <button
+                            type="button"
+                            (click)="moveMessageDown(idx)"
+                            [disabled]="idx === totalMsgs - 1"
+                            [title]="'editor.explorer.moveDown' | translate"
+                            class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-20 cursor-pointer">
+                            <ng-icon name="heroChevronDown" class="text-xs"></ng-icon>
+                          </button>
+                          <button
+                            type="button"
+                            (click)="removeMessage(idx)"
+                            [title]="'editor.canvas.nodes.deleteMessage' | translate"
+                            class="p-1 text-red-500 hover:text-red-700 cursor-pointer">
+                            <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                          </button>
+                        </div>
+                      }
                     </div>
 
                     <!-- Fila 2: Parámetros, Dirección y Color -->

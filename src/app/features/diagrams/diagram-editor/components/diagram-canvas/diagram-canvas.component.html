@@ -196,9 +196,13 @@
                     @if (conn.messages && conn.messages.length > 0) {
                       @for (msg of conn.messages; track msg.id || $index) {
                         <div class="uml-seq-msg-item flex items-center gap-1 font-mono text-[11px] font-semibold" [style.color]="getSequenceConnColor(conn)">
-                          <span class="font-bold">{{ msg.sequenceNumber }}</span>
+                          <span class="font-bold">{{ msg.sequenceNumber }}{{ msg.functionName ? ':' : '' }}</span>
                           @if (msg.functionName) {
-                            <span>{{ msg.functionName }}({{ msg.parameters || '' }})</span>
+                            @if (conn.type === 'reply' || msg.isReturn || msg.type === 'reply') {
+                              <span>{{ msg.functionName }}{{ msg.parameters ? '(' + msg.parameters + ')' : '' }}</span>
+                            } @else {
+                              <span>{{ msg.functionName }}({{ msg.parameters || '' }})</span>
+                            }
                           }
                           @if (msg.returnType) {
                             <span class="opacity-75 font-normal">: {{ msg.returnType }}</span>

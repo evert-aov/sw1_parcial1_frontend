@@ -159,6 +159,23 @@ export class EditConnectionModalComponent {
     );
   }
 
+  isSequenceDiagram(): boolean {
+    const conn = this.editingConnection();
+    return (
+      this.activeDiagramType() === DiagramType.SEQUENCE ||
+      Boolean(conn && ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as string))
+    );
+  }
+
+  canAddMessage(): boolean {
+    const conn = this.editingConnection();
+    if (!conn) return false;
+    if (this.isSequenceDiagram()) {
+      return !conn.messages || conn.messages.length === 0;
+    }
+    return true;
+  }
+
   onSwapDirection(): void {
     const conn = this.editingConnection();
     if (!conn) return;
@@ -179,9 +196,10 @@ export class EditConnectionModalComponent {
     const conn = this.editingConnection();
     if (!conn) return;
     if (!conn.messages) conn.messages = [];
-    const isSeq =
-      this.activeDiagramType() === DiagramType.SEQUENCE ||
-      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as string);
+    if (this.isSequenceDiagram() && conn.messages.length >= 1) {
+      return;
+    }
+    const isSeq = this.isSequenceDiagram();
     const nextSeq = isSeq ? `1.${conn.messages.length}` : `${conn.messages.length + 1}`;
     const defaultColor = this.sequenceColorPalette[conn.messages.length % this.sequenceColorPalette.length];
     const newMsg: UmlMessage = {
@@ -191,8 +209,8 @@ export class EditConnectionModalComponent {
       parameters: '',
       returnType: '',
       isReturn: isSeq && conn.type === 'reply',
-      direction: 'forward',
-      orderIndex: conn.messages.length,
+      direction: isSeq && conn.type === 'reply' ? 'reverse' : 'forward',
+      orderIndex: 0,
       color: defaultColor,
     };
     conn.messages.push(newMsg);
@@ -227,13 +245,36 @@ export class EditConnectionModalComponent {
   onSave(): void {
     const conn = this.editingConnection();
     if (!conn) return;
-    const isSeq =
-      this.activeDiagramType() === DiagramType.SEQUENCE ||
-      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as string);
+    const isSeq = this.isSequenceDiagram();
     if (isSeq) {
       conn.sourceMultiplicity = '';
       conn.targetMultiplicity = '';
       conn.lineStyle = 'straight';
+      if (conn.messages && conn.messages.length > 0) {
+        const firstMsg = conn.messages[0];
+        firstMsg.orderIndex = 0;
+        firstMsg.direction = conn.type === 'reply' || firstMsg.isReturn ? 'reverse' : 'forward';
+        firstMsg.type = conn.type === 'reply' ? 'reply' : (firstMsg.type || 'sync');
+        firstMsg.isReturn = conn.type === 'reply' || !!firstMsg.isReturn;
+
+        let fn = String(firstMsg.functionName || '').trim();
+        let params = String(firstMsg.parameters || '').trim();
+        const fnSeqMatch = fn.match(/^(\d+(?:\.\d+)*)\s*[:.\s-]\s*(.*)$/);
+        if (fnSeqMatch) {
+          fn = fnSeqMatch[2].trim();
+        }
+        const fnParenMatch = fn.match(/^(.*?)\((.*?)\)$/);
+        if (fnParenMatch) {
+          fn = fnParenMatch[1].trim();
+          if (!params && fnParenMatch[2] !== undefined) {
+            params = fnParenMatch[2].trim();
+          }
+        }
+        firstMsg.functionName = fn.replace(/\(\)/g, '').trim();
+        firstMsg.parameters = params;
+
+        conn.messages = [firstMsg];
+      }
     }
     this.save.emit(conn);
     this.close.emit();
