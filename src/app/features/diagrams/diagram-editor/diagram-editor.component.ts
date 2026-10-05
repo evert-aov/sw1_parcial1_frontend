@@ -3947,10 +3947,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private applyAiNodesMutation(targetNodes: any[]): UmlClassNode[] {
     return targetNodes.map((n, i) => {
       let nodeType: UmlNodeType = n.nodeType || 'class';
-      if (nodeType === 'class') {
+      if (/^cu[-_ \d]/i.test(n.name || '') || (typeof n.name === 'string' && /caso\s+de\s+uso/i.test(n.name))) {
+        nodeType = 'use_case';
+      } else if (nodeType === 'class' || (nodeType === 'package' && (n.id?.startsWith('uc_') || n.id?.startsWith('use_case_')))) {
         if (n.id?.startsWith('actor_')) nodeType = 'actor';
-        else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
-        else if (n.id?.startsWith('package_')) nodeType = 'package';
+        else if (n.id?.startsWith('use_case_') || n.id?.startsWith('uc_')) nodeType = 'use_case';
+        else if (n.id?.startsWith('package_') || n.id?.startsWith('pkg_')) nodeType = 'package';
         else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
         else if (n.id?.startsWith('control_')) nodeType = 'control';
         else if (n.id?.startsWith('entity_')) nodeType = 'entity';
