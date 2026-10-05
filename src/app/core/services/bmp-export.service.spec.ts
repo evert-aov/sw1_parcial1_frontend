@@ -13,10 +13,60 @@ describe('BmpExportService', () => {
     expect(service).toBeTruthy();
   });
 
+  describe('getDiagramPrefix', () => {
+    it('debe retornar el prefijo canónico correcto para todos los tipos de diagramas UML', () => {
+      // Clases
+      expect(service.getDiagramPrefix('class')).toBe('class');
+      expect(service.getDiagramPrefix('clase')).toBe('class');
+      expect(service.getDiagramPrefix()).toBe('class');
+
+      // Casos de uso
+      expect(service.getDiagramPrefix('use_case')).toBe('uc');
+      expect(service.getDiagramPrefix('use-case')).toBe('uc');
+      expect(service.getDiagramPrefix('uc')).toBe('uc');
+      expect(service.getDiagramPrefix('casos_de_uso')).toBe('uc');
+
+      // Secuencia
+      expect(service.getDiagramPrefix('sequence')).toBe('sd');
+      expect(service.getDiagramPrefix('secuencia')).toBe('sd');
+      expect(service.getDiagramPrefix('sd')).toBe('sd');
+
+      // Comunicación
+      expect(service.getDiagramPrefix('communication')).toBe('comm');
+      expect(service.getDiagramPrefix('comunicacion')).toBe('comm');
+      expect(service.getDiagramPrefix('comm')).toBe('comm');
+
+      // Paquetes
+      expect(service.getDiagramPrefix('package')).toBe('pkg');
+      expect(service.getDiagramPrefix('paquetes')).toBe('pkg');
+      expect(service.getDiagramPrefix('pkg')).toBe('pkg');
+
+      // Componentes
+      expect(service.getDiagramPrefix('component')).toBe('cmp');
+      expect(service.getDiagramPrefix('componente')).toBe('cmp');
+      expect(service.getDiagramPrefix('cmp')).toBe('cmp');
+
+      // Despliegue
+      expect(service.getDiagramPrefix('deployment')).toBe('dep');
+      expect(service.getDiagramPrefix('despliegue')).toBe('dep');
+      expect(service.getDiagramPrefix('dep')).toBe('dep');
+
+      // Capas
+      expect(service.getDiagramPrefix('layered')).toBe('layered');
+      expect(service.getDiagramPrefix('capas')).toBe('layered');
+      expect(service.getDiagramPrefix('arch')).toBe('layered');
+
+      // Análisis de Clases
+      expect(service.getDiagramPrefix('class_analysis')).toBe('analysis');
+      expect(service.getDiagramPrefix('analysis')).toBe('analysis');
+      expect(service.getDiagramPrefix('analisis')).toBe('analysis');
+    });
+  });
+
   it('debe alertar si no hay nodos válidos', () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     service.exportToBmp([], [], 'test');
-    expect(alertSpy).toHaveBeenCalledWith('No hay clases en el diagrama para exportar.');
+    expect(alertSpy).toHaveBeenCalledWith('No hay elementos en el diagrama para exportar.');
     alertSpy.mockRestore();
   });
 
@@ -106,6 +156,8 @@ describe('BmpExportService', () => {
         dummyCanvas.getContext = vi.fn().mockReturnValue({
           scale: vi.fn(),
           fillRect: vi.fn(),
+          strokeRect: vi.fn(),
+          rect: vi.fn(),
           beginPath: vi.fn(),
           moveTo: vi.fn(),
           lineTo: vi.fn(),

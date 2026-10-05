@@ -290,7 +290,7 @@ export class BmpExportService {
     // 4. Formatear título con prefijo UML estándar
     const prefix = this.getDiagramPrefix(diagramType);
     let cleanName = diagramName.trim().replace(new RegExp(`^${prefix}\\s*[:\\-]?\\s*`, 'i'), '');
-    cleanName = cleanName.replace(/^(uc|class|sd|comm|pkg)\s*[:\-]?\s*/i, '');
+    cleanName = cleanName.replace(/^(uc|class|cd|sd|comm|pkg|cmp|dep|layered|arch|analysis)\s*[:\-]?\s*/i, '');
     const fullTitle = `${prefix} ${cleanName || diagramName.trim() || 'Diagram'}`;
 
     // Calcular ancho necesario para la pestaña
@@ -428,19 +428,31 @@ export class BmpExportService {
   /**
    * Mapea el tipo de diagrama a su prefijo canónico UML 2.5 estilo Enterprise Architect.
    */
-  private getDiagramPrefix(diagramType?: string): string {
-    const type = (diagramType || '').toLowerCase();
-    if (type.includes('use_case') || type === 'use-case' || type === 'uc') {
+  getDiagramPrefix(diagramType?: string): string {
+    const type = (diagramType || '').toLowerCase().trim();
+    if (type.includes('use_case') || type.includes('use-case') || type === 'uc' || type.includes('caso')) {
       return 'uc';
     }
-    if (type.includes('sequence') || type === 'sd') {
+    if (type.includes('sequence') || type.includes('secuencia') || type === 'sd') {
       return 'sd';
     }
-    if (type.includes('communication') || type === 'comm') {
+    if (type.includes('communication') || type.includes('comunic') || type === 'comm') {
       return 'comm';
     }
-    if (type.includes('package') || type === 'pkg') {
+    if (type.includes('package') || type.includes('paquete') || type === 'pkg') {
       return 'pkg';
+    }
+    if (type.includes('component') || type.includes('componente') || type === 'cmp') {
+      return 'cmp';
+    }
+    if (type.includes('deployment') || type.includes('despliegue') || type === 'dep') {
+      return 'dep';
+    }
+    if (type.includes('layered') || type.includes('capa') || type === 'arch') {
+      return 'layered';
+    }
+    if (type.includes('analysis') || type.includes('analisis') || type.includes('análisis')) {
+      return 'analysis';
     }
     return 'class';
   }
@@ -543,7 +555,7 @@ export class BmpExportService {
 
     const prefix = this.getDiagramPrefix(diagramType);
     let cleanName = diagramName.trim().replace(new RegExp(`^${prefix}\\s*[:\\-]?\\s*`, 'i'), '');
-    cleanName = cleanName.replace(/^(uc|class|sd|comm|pkg)\s*[:\-]?\s*/i, '');
+    cleanName = cleanName.replace(/^(uc|class|cd|sd|comm|pkg|cmp|dep|layered|arch|analysis)\s*[:\-]?\s*/i, '');
     const fullTitle = `${prefix} ${cleanName || diagramName.trim() || 'Diagram'}`;
 
     const tempCanvas = document.createElement('canvas');
