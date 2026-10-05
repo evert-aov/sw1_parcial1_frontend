@@ -3949,10 +3949,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       let nodeType: UmlNodeType = n.nodeType || 'class';
       if (/^cu[-_ \d]/i.test(n.name || '') || (typeof n.name === 'string' && /caso\s+de\s+uso/i.test(n.name))) {
         nodeType = 'use_case';
+      } else if (nodeType === 'boundary_box' || n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) {
+        nodeType = 'boundary_box';
       } else if (nodeType === 'class' || (nodeType === 'package' && (n.id?.startsWith('uc_') || n.id?.startsWith('use_case_')))) {
         if (n.id?.startsWith('actor_')) nodeType = 'actor';
         else if (n.id?.startsWith('use_case_') || n.id?.startsWith('uc_')) nodeType = 'use_case';
         else if (n.id?.startsWith('package_') || n.id?.startsWith('pkg_')) nodeType = 'package';
+        else if (n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) nodeType = 'boundary_box';
         else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
         else if (n.id?.startsWith('control_')) nodeType = 'control';
         else if (n.id?.startsWith('entity_')) nodeType = 'entity';
@@ -3979,6 +3982,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       } else if (nodeType === 'node' || nodeType === 'device' || nodeType === 'executionEnvironment') {
         defaultWidth = 220;
         defaultHeight = 120;
+      } else if (nodeType === 'boundary_box') {
+        defaultWidth = 280;
+        defaultHeight = 200;
       } else if (['boundary', 'control', 'entity'].includes(nodeType)) {
         defaultWidth = 90;
         defaultHeight = 95;
@@ -3989,7 +3995,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
       return {
         id: n.id || `class_ai_${Date.now()}_${i}`,
-        name: n.name || (n.isAnchor ? '' : `Clase_${i + 1}`),
+        name: n.name || (n.isAnchor ? '' : (nodeType === 'boundary_box' ? 'BoundaryBox' : `Clase_${i + 1}`)),
         position: {
           x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
           y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
@@ -3999,7 +4005,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         customWidth: n.customWidth,
         customHeight: n.customHeight,
         isCustomSize: isManuallyResized,
-        color: n.color || (nodeType === 'use_case' || nodeType === 'actor' ? '#FFFDDD' : null),
+        color: n.color || (nodeType === 'use_case' || nodeType === 'actor' ? '#FFFDDD' : nodeType === 'boundary_box' ? '#F8F9FA' : null),
         nodeType,
         stereotype: n.stereotype || null,
         activations: n.activations || [],
@@ -4101,8 +4107,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           name: c.name || undefined,
           sourceMultiplicity: c.sourceMultiplicity || (sourceNodeId === targetNodeId ? '1' : ''),
           targetMultiplicity: c.targetMultiplicity || (sourceNodeId === targetNodeId ? '0..*' : ''),
-          assocAnchorNodeId: c.assocAnchorNodeId || undefined,
-          messages: c.messages && c.messages.length > 0 ? c.messages : undefined,
+          messages: c.messages && c.messages.length > 0 ? c.messages.map((m: any, mIdx: number) => ({
+            id: m.id || `msg_${Date.now()}_${mIdx}`,
+            sequenceNumber: m.sequenceNumber || `${mIdx + 1}`,
+            name: m.name || m.text || m.label || 'mensaje()',
+            direction: (m.direction === 'reverse' || m.type === 'reply' || m.isReturn) ? 'reverse' : 'forward',
+            type: m.type || ((m.direction === 'reverse' || m.isReturn) ? 'reply' : 'call'),
+          })) : undefined,
         };
       });
   }
