@@ -1016,15 +1016,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           messages: (c.messages || []).map((m, mIdx) => {
             const norm = this.normalizeUmlMessage(m, `${mIdx + 1}`);
             return {
-              ...m,
+              id: norm.id,
               sequenceNumber: norm.sequenceNumber,
               functionName: norm.functionName,
-              parameters: norm.parameters,
-              returnType: norm.returnType,
+              parameters: norm.parameters ?? '',
+              returnType: norm.returnType || undefined,
               direction: norm.direction,
               type: norm.type,
               isReturn: norm.isReturn,
-              color: norm.color,
+              orderIndex: typeof m.orderIndex === 'number' ? m.orderIndex : mIdx,
+              positionY: typeof m.positionY === 'number' ? m.positionY : undefined,
+              color: norm.color || undefined,
             };
           }),
         };
@@ -4081,8 +4083,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (!fn || fn.toLowerCase() === 'msj') {
-      fn = m.name && m.name !== 'msj' && m.name !== 'mensaje()' ? m.name.replace(/\(\)/, '') : 'msj';
+    if (!fn || fn.toLowerCase() === 'msj' || fn.toLowerCase() === 'mensaje') {
+      fn = m.name && m.name !== 'msj' && m.name !== 'mensaje()' && m.name !== 'mensaje' ? m.name.replace(/\(\)/, '') : 'msj';
     }
     if (!seq) seq = defaultSeq;
 
