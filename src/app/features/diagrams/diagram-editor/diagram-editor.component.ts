@@ -328,11 +328,27 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (single) result.add(single);
     return Array.from(result);
   });
+
+  getDefaultColorForNodeType(nodeType?: string | null, stereotype?: string | null): string {
+    const nt = nodeType || 'class';
+    const st = stereotype || '';
+
+    if (nt === 'device' || st === 'device') return '#FFFDF8';
+    if (nt === 'executionEnvironment' || st === 'executionEnvironment') return '#CDE6F7';
+    if (nt === 'component' || st === 'component') return '#F8E5E5';
+    if (nt === 'boundary_box') return '#F8F9FA';
+    if (nt === 'boundary' || nt === 'control' || nt === 'entity') return '#D2EEF3';
+    if (nt === 'lifeline') return '#D2EEF3';
+    if (nt === 'use_case' || nt === 'actor') return '#FFFDDD';
+    if (nt === 'node') return '#D2E8F9';
+    return '#FFFDDD';
+  }
+
   readonly selectedNodeColor = computed(() => {
     const single = this.selectedNodeId();
     if (!single) return null;
     const node = this.nodes().find((n) => n.id === single);
-    return node?.color || '#FFFDDD';
+    return node?.color || this.getDefaultColorForNodeType(node?.nodeType, node?.stereotype);
   });
   defaultLineStyle = signal<UmlLineStyle>('segment');
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -610,14 +626,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                 else if (n.id?.startsWith('entity_')) nodeType = 'entity';
                 else if (n.id?.startsWith('component_')) nodeType = 'component';
                 else if (n.id?.startsWith('device_')) nodeType = 'device';
-                else if (n.id?.startsWith('exec_env_')) nodeType = 'executionEnvironment';
+                else if (n.id?.startsWith('exec_env_') || n.id?.startsWith('exec_')) nodeType = 'executionEnvironment';
                 else if (n.id?.startsWith('lifeline_') || isSequence) nodeType = 'lifeline';
               }
               let name = n.name || '';
               if (nodeType === 'boundary_box' && (name === 'ClassName' || !name.trim())) {
                 name = '.';
               }
-              return { ...n, nodeType, name };
+              let nodeColor = n.color;
+              if (!nodeColor || (nodeColor === '#FFFDDD' && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline'].includes(nodeType))) {
+                nodeColor = this.getDefaultColorForNodeType(nodeType, n.stereotype);
+              }
+              return { ...n, nodeType, name, color: nodeColor };
             });
             this.nodes.set(sanitizedDraftNodes);
             this.connections.set(this.recalculateSequenceNumbers(draft.connections || []));
@@ -652,7 +672,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             nodeType = 'component';
           } else if (n.id.startsWith('device_')) {
             nodeType = 'device';
-          } else if (n.id.startsWith('exec_env_')) {
+          } else if (n.id.startsWith('exec_env_') || n.id.startsWith('exec_')) {
             nodeType = 'executionEnvironment';
           } else if (n.id.startsWith('lifeline_')) {
             nodeType = 'lifeline';
@@ -667,6 +687,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         if (nodeType === 'boundary_box' && (nodeName === 'ClassName' || !nodeName.trim())) {
           nodeName = '.';
         }
+
+        let nodeColor = n.color;
+        if (!nodeColor || (nodeColor === '#FFFDDD' && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline'].includes(nodeType))) {
+          nodeColor = this.getDefaultColorForNodeType(nodeType, (n as any).stereotype);
+        }
+
         return {
           id: n.id,
           name: nodeName,
@@ -676,7 +702,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           customWidth: isManuallyResized ? n.width : undefined,
           customHeight: isManuallyResized ? n.height! : undefined,
           isCustomSize: isManuallyResized,
-          color: n.color || (isBce || isLifeline ? '#D2EEF3' : '#FFFDDD'),
+          color: nodeColor,
           isAnchor: n.isAnchor,
           nodeType,
           assocMainConnId: n.assocMainConnId || undefined,
@@ -959,6 +985,43 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const finalName = (n.nodeType === 'boundary_box' && (cleanName === 'ClassName' || !cleanName))
           ? '.'
           : (cleanName || fallbackName);
+
+        const resolvedNodeType =
+          n.nodeType && n.nodeType !== 'class'
+            ? n.nodeType
+            : n.id.startsWith('actor_')
+            ? 'actor'
+            : n.id.startsWith('use_case_')
+            ? 'use_case'
+            : n.id.startsWith('boundary_box_')
+            ? 'boundary_box'
+            : n.id.startsWith('package_')
+            ? 'package'
+            : n.id.startsWith('boundary_')
+            ? 'boundary'
+            : n.id.startsWith('control_')
+            ? 'control'
+            : n.id.startsWith('entity_')
+            ? 'entity'
+            : n.id.startsWith('component_')
+            ? 'component'
+            : n.id.startsWith('device_')
+            ? 'device'
+            : n.id.startsWith('exec_env_') || n.id.startsWith('exec_')
+            ? 'executionEnvironment'
+            : n.id.startsWith('lifeline_')
+            ? 'lifeline'
+            : isSequence
+            ? 'lifeline'
+            : this.activeDiagramType() === DiagramType.PACKAGE
+            ? 'package'
+            : n.nodeType || 'class';
+
+        let nodeColor = n.color;
+        if (!nodeColor || (nodeColor === '#FFFDDD' && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline'].includes(resolvedNodeType))) {
+          nodeColor = this.getDefaultColorForNodeType(resolvedNodeType, n.stereotype);
+        }
+
         return {
           id: n.id,
           name: finalName,
@@ -966,33 +1029,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           positionY: n.position.y,
           width: this.getNodeWidth(n),
           height: n.customHeight || (n.isCustomSize ? n.height : null) || (n.nodeType === 'lifeline' ? 48 : null),
-          color: n.color || null,
+          color: nodeColor,
           isAnchor: n.isAnchor,
           assocMainConnId: n.assocMainConnId,
-          nodeType:
-            n.nodeType && n.nodeType !== 'class'
-              ? n.nodeType
-              : n.id.startsWith('actor_')
-              ? 'actor'
-              : n.id.startsWith('use_case_')
-              ? 'use_case'
-              : n.id.startsWith('boundary_box_')
-              ? 'boundary_box'
-              : n.id.startsWith('package_')
-              ? 'package'
-              : n.id.startsWith('boundary_')
-              ? 'boundary'
-              : n.id.startsWith('control_')
-              ? 'control'
-              : n.id.startsWith('entity_')
-              ? 'entity'
-              : n.id.startsWith('lifeline_')
-              ? 'lifeline'
-              : isSequence
-              ? 'lifeline'
-              : this.activeDiagramType() === DiagramType.PACKAGE
-              ? 'package'
-              : n.nodeType || 'class',
+          nodeType: resolvedNodeType,
+          stereotype: n.stereotype || null,
           activations: (n as any).activations || [],
           attributes: n.attributes,
           methods: n.methods,
@@ -4020,7 +4061,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         customWidth: n.customWidth,
         customHeight: n.customHeight,
         isCustomSize: isManuallyResized,
-        color: n.color || (nodeType === 'use_case' || nodeType === 'actor' ? '#FFFDDD' : isBce ? '#D2EEF3' : nodeType === 'boundary_box' ? '#F8F9FA' : null),
+        color: (!n.color || (n.color === '#FFFDDD' && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline'].includes(nodeType)))
+          ? this.getDefaultColorForNodeType(nodeType, n.stereotype)
+          : n.color,
         nodeType,
         stereotype: n.stereotype || null,
         activations: n.activations || [],

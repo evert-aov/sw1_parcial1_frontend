@@ -2064,7 +2064,7 @@ export class DiagramCanvasComponent {
     const isExec = node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment';
 
     let front = node.color;
-    if (!front) {
+    if (!front || (front === '#FFFDDD' && (isDevice || isExec || node.nodeType === 'node'))) {
       if (isDevice) {
         front = '#FFFDF8';
       } else if (isExec) {

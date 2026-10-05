@@ -764,7 +764,7 @@
                       'border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id),
                       'border-[#1E293B] dark:border-slate-300 shadow-sm': !isNodeSelected(node.id)
                     }"
-                    [style.backgroundColor]="node.color || 'rgba(255, 255, 255, 0.75)'"
+                    [style.backgroundColor]="(!node.color || node.color === '#FFFDDD') ? 'rgba(255, 255, 255, 0.75)' : node.color"
                     class="w-full h-full border-2 rounded-none p-3 flex flex-col justify-start relative select-none cursor-pointer backdrop-blur-[1px]">
                     
                     <!-- Botón Eliminar en hover -->
@@ -1182,7 +1182,7 @@
                       'ring-2 ring-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id),
                       'shadow-[3px_3px_0px_rgba(0,0,0,0.12)]': !isNodeSelected(node.id)
                     }"
-                    [style.backgroundColor]="node.color || '#F8E5E5'"
+                    [style.backgroundColor]="(!node.color || node.color === '#FFFDDD') ? '#F8E5E5' : node.color"
                     class="w-full h-full flex flex-col justify-center px-4 py-2 relative border-2 border-[#796354] select-none cursor-pointer rounded-none">
 
                     <!-- Botón Eliminar en hover -->
@@ -1200,7 +1200,7 @@
                         mode="glyph"
                         width="22"
                         height="20"
-                        [fillColor]="node.color || '#F8E5E5'"
+                        [fillColor]="(!node.color || node.color === '#FFFDDD') ? '#F8E5E5' : node.color"
                         strokeColor="#796354"
                         [strokeWidth]="1.5"
                       />
