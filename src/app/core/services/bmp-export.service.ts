@@ -83,6 +83,17 @@ export class BmpExportService {
       'f-connection circle, f-connection-for-create circle, [f-connection-drag-handle-end], [f-connection-drag-handle-start], .f-connection-drag-handle'
     );
     handleCircles.forEach((circle) => {
+      // Proteger círculos legítimos que forman parte del conector visual (ej. el círculo "Ball" de la relación Assembly)
+      if (
+        circle.closest('[fConnectionContent]') ||
+        circle.closest('[fconnectioncontent]') ||
+        circle.closest('.f-connection-content') ||
+        circle.closest('.uml-assembly-connector') ||
+        circle.classList.contains('uml-assembly-circle')
+      ) {
+        return;
+      }
+
       const origDisplay = circle.style.display;
       const origVisibility = circle.style.visibility;
       const origR = circle.getAttribute('r');
@@ -104,6 +115,91 @@ export class BmpExportService {
         else circle.removeAttribute('fill');
         circle.removeAttribute('display');
         circle.removeAttribute('visibility');
+      });
+    });
+
+    // Asegurar atributos explícitos en conectores de Ensamble UML (Assembly / Ball and Socket)
+    const assemblyContainers = element.querySelectorAll<HTMLElement>(
+      '.uml-assembly-connector, [fConnectionContent] .uml-assembly-connector, .uml-relation-assembly [fConnectionContent]'
+    );
+    assemblyContainers.forEach((conn) => {
+      // Círculo central (Ball): exclusivamente el círculo dentro del contenido de ensamble, ignorando drag-handles
+      const circles = conn.querySelectorAll<SVGCircleElement>('circle');
+      circles.forEach((circle) => {
+        if (
+          circle.classList.contains('f-connection-drag-handle') ||
+          circle.hasAttribute('f-connection-drag-handle-start') ||
+          circle.hasAttribute('f-connection-drag-handle-end')
+        ) {
+          return;
+        }
+        const origFill = circle.getAttribute('fill');
+        const origStroke = circle.getAttribute('stroke');
+        const origStrokeWidth = circle.getAttribute('stroke-width');
+        const origR = circle.getAttribute('r');
+        const origDisplay = circle.style.display;
+        const origVisibility = circle.style.visibility;
+
+        circle.setAttribute('fill', '#FFFFFF');
+        circle.setAttribute('stroke', '#94A3B8');
+        circle.setAttribute('stroke-width', '2');
+        circle.setAttribute('r', '10');
+        circle.style.display = 'inline';
+        circle.style.visibility = 'visible';
+
+        cleanupFns.push(() => {
+          if (origFill !== null) circle.setAttribute('fill', origFill);
+          else circle.removeAttribute('fill');
+          if (origStroke !== null) circle.setAttribute('stroke', origStroke);
+          else circle.removeAttribute('stroke');
+          if (origStrokeWidth !== null) circle.setAttribute('stroke-width', origStrokeWidth);
+          else circle.removeAttribute('stroke-width');
+          if (origR !== null) circle.setAttribute('r', origR);
+          else circle.removeAttribute('r');
+          circle.style.display = origDisplay;
+          circle.style.visibility = origVisibility;
+        });
+      });
+
+      // Arco semicircular (Socket)
+      const socketPaths = conn.querySelectorAll<SVGPathElement>('path.uml-assembly-socket, svg path:not([f-connection-path])');
+      socketPaths.forEach((path) => {
+        if (path.hasAttribute('f-connection-path') || path.hasAttribute('fConnectionPath')) {
+          return;
+        }
+        const origFill = path.getAttribute('fill');
+        const origStroke = path.getAttribute('stroke');
+        const origStrokeWidth = path.getAttribute('stroke-width');
+
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', '#94A3B8');
+        path.setAttribute('stroke-width', '2');
+
+        cleanupFns.push(() => {
+          if (origFill !== null) path.setAttribute('fill', origFill);
+          else path.removeAttribute('fill');
+          if (origStroke !== null) path.setAttribute('stroke', origStroke);
+          else path.removeAttribute('stroke');
+          if (origStrokeWidth !== null) path.setAttribute('stroke-width', origStrokeWidth);
+          else path.removeAttribute('stroke-width');
+        });
+      });
+
+      // Línea de conexión principal
+      const connPaths = conn.querySelectorAll<SVGPathElement>('path[f-connection-path], path[fConnectionPath]');
+      connPaths.forEach((path) => {
+        const origStroke = path.getAttribute('stroke');
+        const origStrokeWidth = path.getAttribute('stroke-width');
+
+        path.setAttribute('stroke', '#94A3B8');
+        path.setAttribute('stroke-width', '2');
+
+        cleanupFns.push(() => {
+          if (origStroke !== null) path.setAttribute('stroke', origStroke);
+          else path.removeAttribute('stroke');
+          if (origStrokeWidth !== null) path.setAttribute('stroke-width', origStrokeWidth);
+          else path.removeAttribute('stroke-width');
+        });
       });
     });
 
@@ -789,6 +885,27 @@ export class BmpExportService {
         end.y - arrowLength * Math.sin(angle + arrowAngle),
       );
       ctx.stroke();
+    } else if (type === 'assembly') {
+      const mid = this.interpolatePoint(start, end, 0.5);
+      const normalAngle = angle + Math.PI / 2;
+
+      ctx.save();
+      // 1. Círculo interno (Ball)
+      ctx.beginPath();
+      ctx.arc(mid.x, mid.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 2. Semicírculo exterior (Socket)
+      ctx.beginPath();
+      ctx.arc(mid.x, mid.y, 11, normalAngle, normalAngle + Math.PI);
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
