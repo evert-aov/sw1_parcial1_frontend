@@ -343,7 +343,6 @@
             <div
               fNode
               [fNodeId]="node.id"
-              [fNodeParentId]="getNodeParentId(node)"
               fDragHandle
               [fNodeDraggingDisabled]="node.isAnchor || selectedRelationType() !== null || isNodeLockedByOther(node.id)"
               [(fNodePosition)]="node.position"

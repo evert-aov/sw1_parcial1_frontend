@@ -1167,6 +1167,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     const last = this.lastNodeDragPos.get(node.id);
+    if (last && last.x === newPosition.x && last.y === newPosition.y) {
+      return;
+    }
     if (last) {
       const dx = newPosition.x - last.x;
       const dy = isSequenceNode ? 0 : newPosition.y - last.y;
@@ -1258,6 +1261,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const dy = isSequenceNode ? 0 : targetY - node.position.y;
         if (dx !== 0 || dy !== 0) {
           node.position = { x: targetX, y: targetY };
+          this.lastNodeDragPos.set(node.id, { x: targetX, y: targetY });
           anyMoved = true;
           this.collaborationService.sendNodeDrag(node.id, node.position);
 
