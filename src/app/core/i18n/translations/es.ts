@@ -315,8 +315,11 @@ export const es = {
         class: 'clase',
         device: 'dispositivo',
         executionEnvironment: 'entorno-ejecución',
+        'execution-environment': 'entorno-ejecución',
         component: 'componente',
         node: 'nodo',
+        boundary_box: 'recuadro-agrupador',
+        'boundary-box': 'recuadro-agrupador',
       },
     },
     incompatible: {

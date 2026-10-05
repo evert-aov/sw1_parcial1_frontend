@@ -343,7 +343,10 @@ export class DiagramSidebarComponent {
       );
     }
     if (currentType === DiagramType.COMPONENT) {
-      return type === 'component' || type === 'package' || type === 'class';
+      return type === 'component' || type === 'boundary_box' || type === 'package' || type === 'class';
+    }
+    if (currentType === DiagramType.LAYERED) {
+      return type === 'package' || type === 'boundary_box' || type === 'class';
     }
     if (currentType === DiagramType.CLASS) {
       return type === 'class';

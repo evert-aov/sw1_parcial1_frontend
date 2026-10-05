@@ -1449,6 +1449,26 @@
                                       <div class="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('lifeline')">
                                         <app-lifeline-svg mode="icon" width="12" height="12" strokeColor="currentColor" />
                                       </div>
+                                    } @else if (node.nodeType === 'component' || node.stereotype === 'component') {
+                                      <div class="w-4 h-4 rounded bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('component')">
+                                        <app-component-svg mode="glyph" width="12" height="12" fillColor="#F8E5E5" strokeColor="currentColor" [strokeWidth]="1.4" />
+                                      </div>
+                                    } @else if (node.nodeType === 'boundary_box') {
+                                      <div class="w-4 h-4 rounded bg-stone-100 dark:bg-stone-900 text-stone-700 dark:text-stone-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('boundary_box')">
+                                        <app-boundary-box-svg mode="icon" width="13" height="11" strokeColor="currentColor" [strokeWidth]="1.4" />
+                                      </div>
+                                    } @else if (node.nodeType === 'device' || node.stereotype === 'device') {
+                                      <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('device')">
+                                        <app-deployment-node-svg mode="icon" width="13" height="11" fillColor="#FFFDF8" topColor="#FFFFFF" rightColor="#E8DFD3" strokeColor="#796354" [strokeWidth]="1.2" />
+                                      </div>
+                                    } @else if (node.nodeType === 'executionEnvironment' || node.nodeType === 'execution-environment' || node.stereotype === 'executionEnvironment') {
+                                      <div class="w-4 h-4 rounded bg-sky-100 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('executionEnvironment')">
+                                        <app-deployment-node-svg mode="icon" width="13" height="11" fillColor="#CDE6F7" topColor="#E4F2FD" rightColor="#AFD4EE" strokeColor="#1E3A5F" [strokeWidth]="1.2" />
+                                      </div>
+                                    } @else if (node.nodeType === 'node' || node.stereotype === 'node') {
+                                      <div class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('node')">
+                                        <app-deployment-node-svg mode="icon" width="13" height="11" fillColor="#D2E8F9" topColor="#E8F4FD" rightColor="#B6DBF7" strokeColor="#1E3A5F" [strokeWidth]="1.2" />
+                                      </div>
                                     } @else {
                                       <div class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 p-0.5" [title]="getNodeTypeLabel('class')">
                                         <app-table-svg mode="icon" width="13" height="11" strokeColor="currentColor" />
@@ -1462,7 +1482,7 @@
 
                                     <!-- Tag sutil de Tipo -->
                                     <span class="text-[8.5px] px-1 py-0.2 rounded font-mono text-slate-400 dark:text-slate-500 shrink-0">
-                                      {{ getNodeTypeLabel(node.nodeType) }}
+                                      {{ getNodeTypeLabel(node.nodeType || node.stereotype || 'class') }}
                                     </span>
                                   </div>
 
