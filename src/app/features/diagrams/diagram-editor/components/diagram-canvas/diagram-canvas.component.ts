@@ -135,6 +135,9 @@ export class DiagramCanvasComponent {
   readonly nodeLabelOffsetChange = output<{ node: UmlClassNode; offset: { x: number; y: number } }>();
   readonly sequenceMessageMove = output<{ connectionId: string; targetSlot: number }>();
   readonly nodeDropped = output<{ payload: any; position: { x: number; y: number } }>();
+  readonly nodeContextMenu = output<{ node: UmlClassNode; event: MouseEvent }>();
+  readonly connectionContextMenu = output<{ conn: UmlConnection; event: MouseEvent }>();
+  readonly canvasContextMenu = output<{ event: MouseEvent; canvasPos: { x: number; y: number } }>();
 
   readonly zoomLevel = signal<number>(100);
   readonly canvasLayers: EFCanvasLayer[] = [
@@ -409,6 +412,50 @@ export class DiagramCanvasComponent {
 
   onNodeDblClick(node: UmlClassNode, event: MouseEvent): void {
     this.nodeDblClick.emit({ node, event });
+  }
+
+  onNodeContextMenu(node: UmlClassNode, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.nodeContextMenu.emit({ node, event });
+  }
+
+  onConnectionContextMenu(conn: UmlConnection, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.connectionContextMenu.emit({ conn, event });
+  }
+
+  onCanvasContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const target = event.target as HTMLElement | SVGElement | null;
+    // Si el clic derecho fue sobre un nodo o elemento interno del nodo
+    if (target?.closest?.('[fNode], .f-node, .uml-class-node')) {
+      const nodeEl = target.closest('[fNode], .f-node, .uml-class-node');
+      const fNodeId = nodeEl?.getAttribute('fnodeid') || nodeEl?.getAttribute('data-node-id') || nodeEl?.id;
+      const node = this.nodes().find((n) => n.id === fNodeId);
+      if (node) {
+        this.nodeContextMenu.emit({ node, event });
+        return;
+      }
+    }
+
+    // Si el clic derecho fue sobre una relación o marcador
+    if (target && this.isValidConnectionTarget(target)) {
+      const connId = this.findConnectionIdFromEventTarget(target);
+      if (connId) {
+        const conn = this.connections().find((c) => c.id === connId);
+        if (conn) {
+          this.connectionContextMenu.emit({ conn, event });
+          return;
+        }
+      }
+    }
+
+    const canvasPos = this.clientToCanvasCoordinates(event.clientX, event.clientY);
+    this.canvasContextMenu.emit({ event, canvasPos });
   }
 
   private lastConnClickTime = 0;

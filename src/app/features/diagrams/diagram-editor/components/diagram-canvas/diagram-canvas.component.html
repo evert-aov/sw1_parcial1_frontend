@@ -5,6 +5,7 @@
   (mousedown)="onCanvasMouseDown($event)"
   (mousemove)="onCanvasMouseMove($event)"
   (click)="onCanvasBackgroundClick($event)"
+  (contextmenu)="onCanvasContextMenu($event)"
   (dragover)="onCanvasDragOver($event)"
   (dragleave)="onCanvasDragLeave($event)"
   (drop)="onCanvasDrop($event)"
@@ -60,6 +61,7 @@
       (pointerdown)="onFlowPointerDown($event)"
       (click)="onFlowClick($event)"
       (dblclick)="onFlowDblClick($event)"
+      (contextmenu)="onCanvasContextMenu($event)"
       class="w-full h-full block">
 
       <f-canvas
@@ -84,6 +86,7 @@
               (pointerdown)="onConnectionPointerDown(conn.id, $event)"
               (click)="onConnectionClick(conn.id, $event)"
               (dblclick)="onConnectionDblClick(conn, $event)"
+              (contextmenu)="onConnectionContextMenu(conn, $event)"
               [class]="'uml-relation-' + (conn.type || 'association')"
               [class.uml-relation-reply]="isReplyConnection(conn)"
               [class.f-selected]="isConnectionSelected(conn.id)"
@@ -351,6 +354,7 @@
               (fNodePositionChange)="onNodePositionChange(node, $event)"
               (click)="onNodeClick(node.id, $event)"
               (dblclick)="onNodeDblClick(node, $event)"
+              (contextmenu)="onNodeContextMenu(node, $event)"
               (mouseenter)="hoveredNodeId.set(node.id)"
               (mouseleave)="onNodeMouseLeave(node.id)"
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"

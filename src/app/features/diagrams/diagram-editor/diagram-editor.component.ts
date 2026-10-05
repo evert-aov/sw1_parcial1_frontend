@@ -53,6 +53,11 @@ import {
   heroBars3,
   heroBars3CenterLeft,
   heroChevronLeft,
+  heroScissors,
+  heroSquare2Stack,
+  heroPencilSquare,
+  heroSwatch,
+  heroDocumentDuplicate,
 } from '@ng-icons/heroicons/outline';
 
 import { AuthService } from '../../../core/services/auth.service';
@@ -118,6 +123,16 @@ export interface DiagramTab {
   type: DiagramType;
 }
 
+export interface DiagramContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+  type: 'node' | 'connection' | 'canvas';
+  node?: UmlClassNode;
+  connection?: UmlConnection;
+  canvasPos?: { x: number; y: number };
+}
+
 @Component({
   standalone: true,
   selector: 'app-diagram-editor',
@@ -173,6 +188,11 @@ export interface DiagramTab {
       heroBars3,
       heroBars3CenterLeft,
       heroChevronLeft,
+      heroScissors,
+      heroSquare2Stack,
+      heroPencilSquare,
+      heroSwatch,
+      heroDocumentDuplicate,
     }),
   ],
   templateUrl: './diagram-editor.component.html',
@@ -229,6 +249,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     nodes: UmlClassNode[];
     connections?: UmlConnection[];
   } | null = null;
+
+  // Menú contextual flotante (clic derecho)
+  readonly contextMenu = signal<DiagramContextMenuState | null>(null);
+
+  hasClipboardContent(): boolean {
+    if (this.clipboardNodes?.nodes && this.clipboardNodes.nodes.length > 0) return true;
+    try {
+      const saved = sessionStorage.getItem('uml_clipboard_nodes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return !!(parsed?.nodes?.length > 0);
+      }
+    } catch (_) {}
+    return false;
+  }
 
   // Tipos de Diagrama & Paneles (Arquitectura Extensible para Casos de Uso, Secuencia, etc.)
   readonly activeDiagramType = signal<DiagramType>(DiagramType.CLASS);
@@ -933,6 +968,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         event.preventDefault();
         this.copySelectedNodes();
       }
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'x') {
+      if (!isInputActive) {
+        event.preventDefault();
+        this.cutSelectedNodes();
+      }
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
       if (!isInputActive) {
         event.preventDefault();
@@ -941,13 +981,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
       if (!isInputActive) {
         event.preventDefault();
-        this.copySelectedNodes();
-        this.pasteNodes();
+        this.duplicateSelected();
+      }
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+      if (!isInputActive) {
+        event.preventDefault();
+        this.selectAllClasses();
       }
     } else if (event.key === 'Delete' && !this.isReadOnly()) {
       if (!isInputActive) {
         event.preventDefault();
         this.deleteSelected();
+      }
+    } else if (event.key === 'Escape') {
+      if (this.contextMenu()) {
+        this.closeContextMenu();
+        event.preventDefault();
+        return;
       }
     } else if (event.key === 'F2') {
       if (!isInputActive && !event.defaultPrevented) {
@@ -1869,10 +1919,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onCanvasMouseDown(event: MouseEvent): void {
+    if (this.contextMenu()) {
+      this.closeContextMenu();
+    }
     this.canvasMouseDownPos = { x: event.clientX, y: event.clientY };
   }
 
   onCanvasBackgroundClick(event?: MouseEvent): void {
+    if (this.contextMenu()) {
+      this.closeContextMenu();
+    }
     if (event) {
       const dist = Math.hypot(
         event.clientX - this.canvasMouseDownPos.x,
@@ -1889,6 +1945,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.selectedConnId.set(null);
     this.selectedConnIds.set(new Set());
     this.diagramCanvas?.clearSelection();
+  }
+
+  deselectAll(): void {
+    this.selectedSourceNodeId.set(null);
+    this.selectedNodeId.set(null);
+    this.selectedNodeIds.set(new Set());
+    this.selectedConnId.set(null);
+    this.selectedConnIds.set(new Set());
+    this.diagramCanvas?.clearSelection();
+    this.closeContextMenu();
   }
 
   onSelectionChange(event: FSelectionChangeEvent): void {
@@ -1970,6 +2036,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onConnectionSelect(connId: string, event: MouseEvent): void {
+    if (this.contextMenu()) {
+      this.closeContextMenu();
+    }
     if (this.selectedRelationType() !== null) return;
     event.stopPropagation();
 
@@ -1994,6 +2063,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onNodeSelect(nodeId: string, event: MouseEvent): void {
+    if (this.contextMenu()) {
+      this.closeContextMenu();
+    }
     if (this.selectedRelationType() !== null) return;
     event.stopPropagation();
 
@@ -2024,13 +2096,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
 
       this.selectedNodeIds.set(new Set([nodeId]));
-      this.selectedNodeId.update((curr) => (curr === nodeId ? null : nodeId));
-      if (!this.selectedNodeId()) {
-        this.selectedNodeIds.set(new Set());
-        this.diagramCanvas?.clearSelection();
-      } else {
-        this.diagramCanvas?.select([nodeId], []);
-      }
+      this.selectedNodeId.set(nodeId);
+      this.selectedConnId.set(null);
+      this.selectedConnIds.set(new Set());
+      this.diagramCanvas?.select([nodeId], []);
     }
   }
 
@@ -3321,7 +3390,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.showQuickToast(toast);
   }
 
-  pasteNodes(): void {
+  pasteNodes(targetPos?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
 
     let clip = this.clipboardNodes;
@@ -3373,6 +3442,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const newNodes: UmlClassNode[] = [];
     const oldToNewIdMap = new Map<string, string>();
 
+    const minClipX = clip.nodes.reduce((min, n) => Math.min(min, n.position?.x ?? 0), Infinity);
+    const minClipY = clip.nodes.reduce((min, n) => Math.min(min, n.position?.y ?? 0), Infinity);
+
     for (let i = 0; i < clip.nodes.length; i++) {
       const src = clip.nodes[i];
       const newId = `${src.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000) + i}`;
@@ -3382,8 +3454,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       const isSameDiagram = clip.diagramType === currentType && this.nodes().some((n) => n.name === src.name);
       const newName = isSameDiagram ? `${src.name}_Copia` : src.name;
 
-      const posX = src.position ? src.position.x + 35 : Math.max(60, scrollLeft + 150 + i * 30);
-      const posY = src.position ? src.position.y + 35 : Math.max(60, scrollTop + 100 + i * 30);
+      let posX: number;
+      let posY: number;
+      if (targetPos) {
+        const deltaX = (src.position?.x ?? 0) - minClipX;
+        const deltaY = (src.position?.y ?? 0) - minClipY;
+        posX = Math.max(20, Math.round(targetPos.x + deltaX));
+        posY = currentType === DiagramType.SEQUENCE ? 50 : Math.max(20, Math.round(targetPos.y + deltaY));
+      } else {
+        posX = src.position ? src.position.x + 35 : Math.max(60, scrollLeft + 150 + i * 30);
+        posY = currentType === DiagramType.SEQUENCE ? 50 : (src.position ? src.position.y + 35 : Math.max(60, scrollTop + 100 + i * 30));
+      }
 
       newNodes.push({
         id: newId,
@@ -3436,15 +3517,154 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
     this.selectedNodeIds.set(new Set(newPastedIds));
     this.selectedNodeId.set(newPastedIds[0]);
+    this.diagramCanvas?.select(newPastedIds, []);
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    this.closeContextMenu();
 
     let toast = newNodes.length === 1 ? `"${newNodes[0].name}" pegado en el lienzo` : `${newNodes.length} elementos pegados`;
     if (newConnections.length > 0) {
       toast += ` con ${newConnections.length} ${newConnections.length === 1 ? 'relación' : 'relaciones'}`;
     }
     this.showQuickToast(toast);
+  }
+
+  cutSelectedNodes(): void {
+    if (this.isReadOnly()) return;
+    this.copySelectedNodes();
+    this.deleteSelected();
+    this.closeContextMenu();
+  }
+
+  duplicateSelected(): void {
+    if (this.isReadOnly()) return;
+    this.copySelectedNodes();
+    this.pasteNodes();
+    this.closeContextMenu();
+  }
+
+  closeContextMenu(): void {
+    this.contextMenu.set(null);
+  }
+
+  onNodeContextMenu(data: { node: UmlClassNode; event: MouseEvent }): void {
+    if (this.isReadOnly()) return;
+    const { node, event } = data;
+
+    // Si el nodo no forma parte de la selección actual
+    if (!this.selectedNodeIds().has(node.id) && this.selectedNodeId() !== node.id) {
+      if (event.ctrlKey || event.metaKey || event.shiftKey) {
+        const current = new Set(this.selectedNodeIds());
+        current.add(node.id);
+        this.selectedNodeIds.set(current);
+        this.selectedNodeId.set(node.id);
+        this.diagramCanvas?.select(Array.from(current), []);
+      } else {
+        this.selectedNodeIds.set(new Set([node.id]));
+        this.selectedNodeId.set(node.id);
+        this.selectedConnId.set(null);
+        this.selectedConnIds.set(new Set());
+        this.diagramCanvas?.select([node.id], []);
+      }
+    }
+
+    const menuWidth = 240;
+    const menuHeight = 350;
+    const x = Math.min(event.clientX, Math.max(10, window.innerWidth - menuWidth - 10));
+    const y = Math.min(event.clientY, Math.max(10, window.innerHeight - menuHeight - 10));
+
+    this.contextMenu.set({
+      visible: true,
+      x,
+      y,
+      type: 'node',
+      node,
+      canvasPos: this.diagramCanvas?.clientToCanvasCoordinates(event.clientX, event.clientY),
+    });
+  }
+
+  onConnectionContextMenu(data: { conn: UmlConnection; event: MouseEvent }): void {
+    if (this.isReadOnly()) return;
+    const { conn, event } = data;
+
+    this.selectedConnIds.set(new Set([conn.id]));
+    this.selectedConnId.set(conn.id);
+    this.selectedNodeId.set(null);
+    this.selectedNodeIds.set(new Set());
+    this.diagramCanvas?.select([], [conn.id]);
+
+    const menuWidth = 240;
+    const menuHeight = 280;
+    const x = Math.min(event.clientX, Math.max(10, window.innerWidth - menuWidth - 10));
+    const y = Math.min(event.clientY, Math.max(10, window.innerHeight - menuHeight - 10));
+
+    this.contextMenu.set({
+      visible: true,
+      x,
+      y,
+      type: 'connection',
+      connection: conn,
+      canvasPos: this.diagramCanvas?.clientToCanvasCoordinates(event.clientX, event.clientY),
+    });
+  }
+
+  onCanvasContextMenu(data: { event: MouseEvent; canvasPos: { x: number; y: number } }): void {
+    if (this.isReadOnly()) return;
+    const { event, canvasPos } = data;
+
+    const menuWidth = 240;
+    const menuHeight = 260;
+    const x = Math.min(event.clientX, Math.max(10, window.innerWidth - menuWidth - 10));
+    const y = Math.min(event.clientY, Math.max(10, window.innerHeight - menuHeight - 10));
+
+    this.contextMenu.set({
+      visible: true,
+      x,
+      y,
+      type: 'canvas',
+      canvasPos,
+    });
+  }
+
+  reverseConnection(conn: UmlConnection): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const currentS = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const currentT = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const sSideMatch = conn.sourceId?.match(/_(top|bottom|left|right|slot_\d+)$/);
+    const tSideMatch = conn.targetId?.match(/_(top|bottom|left|right|slot_\d+)$/);
+    const sSide = sSideMatch ? sSideMatch[1] : 'right';
+    const tSide = tSideMatch ? tSideMatch[1] : 'left';
+
+    conn.sourceNodeId = currentT;
+    conn.targetNodeId = currentS;
+    conn.from = currentT;
+    conn.to = currentS;
+    conn.sourceId = `${currentT}_${tSide}`;
+    conn.targetId = `${currentS}_${sSide}`;
+
+    const tempMult = conn.sourceMultiplicity;
+    conn.sourceMultiplicity = conn.targetMultiplicity;
+    conn.targetMultiplicity = tempMult;
+
+    this.connections.update((conns) => [...conns]);
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
+    this.closeContextMenu();
+    this.showQuickToast('Dirección de relación invertida');
+  }
+
+  setConnectionLineStyle(conn: UmlConnection, style: UmlLineStyle): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    conn.lineStyle = style;
+    this.connections.update((conns) => [...conns]);
+    this.markAsUnsaved();
+    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
+    this.closeContextMenu();
+    this.showQuickToast(`Estilo de línea cambiado a ${style}`);
   }
 
   private showIncompatibleElementModal(diagType: DiagramType): void {
@@ -4767,6 +4987,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onZoomChanged(zoom: number): void {
+    if (this.contextMenu()) {
+      this.closeContextMenu();
+    }
     this.zoomLevel.set(zoom);
     const diagId = this.currentDiagramId();
     if (diagId) {
@@ -4783,6 +5006,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onViewportScroll(event: Event): void {
+    if (this.contextMenu()) {
+      this.closeContextMenu();
+    }
     const el = event.target as HTMLElement;
     if (!el) return;
     const diagramId = this.currentDiagramId();
