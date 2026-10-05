@@ -237,7 +237,7 @@
                 <div
                   fConnectionContent
                   [position]="0.5"
-                  [offset]="-8"
+                  [offset]="-14"
                   [align]="'along'"
                   class="uml-comm-messages-anchor-above">
                   <div
@@ -259,11 +259,11 @@
               }
 
               <!-- Mensajes hacia atrás (Debajo de la línea) -->
-              @if (hasReverseMessages(conn)) {
+              @if (!isSequenceConnection(conn) && hasReverseMessages(conn)) {
                 <div
                   fConnectionContent
                   [position]="0.5"
-                  [offset]="8"
+                  [offset]="14"
                   [align]="'along'"
                   class="uml-comm-messages-anchor-below">
                   <div

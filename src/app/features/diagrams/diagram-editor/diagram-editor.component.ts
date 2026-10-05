@@ -75,6 +75,7 @@ import {
   UmlClassNode,
   UmlConnection,
   UmlMessage,
+  UmlMessageType,
   SaveDiagramAstRequest,
   UML_RELATION_TYPES,
   UML_LINE_STYLES,
@@ -1012,10 +1013,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
           targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
           assocAnchorNodeId: c.assocAnchorNodeId || null,
-          messages: (c.messages || []).map((m) => ({
-            ...m,
-            functionName: m.functionName?.trim() ? m.functionName : 'msj',
-          })),
+          messages: (c.messages || []).map((m, mIdx) => {
+            const norm = this.normalizeUmlMessage(m, `${mIdx + 1}`);
+            return {
+              ...m,
+              sequenceNumber: norm.sequenceNumber,
+              functionName: norm.functionName,
+              parameters: norm.parameters,
+              returnType: norm.returnType,
+              direction: norm.direction,
+              type: norm.type,
+              isReturn: norm.isReturn,
+              color: norm.color,
+            };
+          }),
         };
       }),
     };
@@ -3986,12 +3997,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         defaultWidth = 280;
         defaultHeight = 200;
       } else if (['boundary', 'control', 'entity'].includes(nodeType)) {
-        defaultWidth = 90;
-        defaultHeight = 95;
+        defaultWidth = 70;
+        defaultHeight = 70;
       } else if (nodeType === 'lifeline') {
         defaultWidth = 120;
         defaultHeight = 48;
       }
+
+      const isBce = ['boundary', 'control', 'entity'].includes(nodeType);
 
       return {
         id: n.id || `class_ai_${Date.now()}_${i}`,
@@ -4000,12 +4013,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
           y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
         },
-        width: n.isAnchor ? 0 : (n.width || defaultWidth),
-        height: n.isAnchor ? 0 : (n.height || defaultHeight),
+        width: n.isAnchor ? 0 : (isBce ? 70 : (n.width || defaultWidth)),
+        height: n.isAnchor ? 0 : (isBce ? 70 : (n.height || defaultHeight)),
         customWidth: n.customWidth,
         customHeight: n.customHeight,
         isCustomSize: isManuallyResized,
-        color: n.color || (nodeType === 'use_case' || nodeType === 'actor' ? '#FFFDDD' : nodeType === 'boundary_box' ? '#F8F9FA' : null),
+        color: n.color || (nodeType === 'use_case' || nodeType === 'actor' ? '#FFFDDD' : isBce ? '#D2EEF3' : nodeType === 'boundary_box' ? '#F8F9FA' : null),
         nodeType,
         stereotype: n.stereotype || null,
         activations: n.activations || [],
@@ -4030,6 +4043,64 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
+  public normalizeUmlMessage(m: any, defaultSeq = '1'): UmlMessage {
+    let seq = String(m.sequenceNumber || '').trim();
+    let fn = String(m.functionName || '').trim();
+    let params = String(m.parameters ?? '').trim();
+    let returnType = m.returnType ? String(m.returnType).trim() : undefined;
+    const rawText = String(m.name || m.text || m.label || '').trim();
+
+    if ((!fn || fn.toLowerCase() === 'msj') && rawText) {
+      const fullMatch = rawText.match(/^(?:(\d+(?:\.\d+)*)\s*:\s*)?([a-zA-Z0-9_]+)(?:\((.*?)\))?(?:\s*:\s*([a-zA-Z0-9_\[\]]+))?$/);
+      if (fullMatch) {
+        if (!seq && fullMatch[1]) seq = fullMatch[1];
+        if (fullMatch[2]) fn = fullMatch[2];
+        if (fullMatch[3] !== undefined && !params) params = fullMatch[3];
+        if (fullMatch[4] && !returnType) returnType = fullMatch[4];
+      } else {
+        const seqMatch = rawText.match(/^(\d+(?:\.\d+)*)\s*:\s*(.*)$/);
+        if (seqMatch) {
+          if (!seq) seq = seqMatch[1];
+          const rest = seqMatch[2].trim();
+          const parenMatch = rest.match(/^([a-zA-Z0-9_]+)(?:\((.*?)\))?$/);
+          if (parenMatch) {
+            fn = parenMatch[1];
+            if (parenMatch[2] !== undefined && !params) params = parenMatch[2];
+          } else {
+            fn = rest.replace(/\(\)/, '');
+          }
+        } else {
+          const parenMatch = rawText.match(/^([a-zA-Z0-9_]+)(?:\((.*?)\))?$/);
+          if (parenMatch) {
+            fn = parenMatch[1];
+            if (parenMatch[2] !== undefined && !params) params = parenMatch[2];
+          } else {
+            fn = rawText.replace(/\(\)/, '');
+          }
+        }
+      }
+    }
+
+    if (!fn || fn.toLowerCase() === 'msj') {
+      fn = m.name && m.name !== 'msj' && m.name !== 'mensaje()' ? m.name.replace(/\(\)/, '') : 'msj';
+    }
+    if (!seq) seq = defaultSeq;
+
+    const isReverse = m.direction === 'reverse' || m.type === 'reply' || !!m.isReturn;
+
+    return {
+      id: m.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      sequenceNumber: seq,
+      functionName: fn,
+      parameters: params,
+      returnType,
+      direction: isReverse ? 'reverse' : 'forward',
+      type: (m.type as UmlMessageType) || (isReverse ? 'reply' : 'sync'),
+      isReturn: isReverse,
+      color: m.color || undefined,
+    };
+  }
+
   private sanitizeClientConnections(conns: any[], validNodes: UmlClassNode[]): UmlConnection[] {
     const nodeMap = new Map(validNodes.map((n) => [n.id, n]));
     const nodeIds = new Set(validNodes.map((n) => n.id));
@@ -4040,82 +4111,138 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         .replace(/_slot_\d+$/, '');
     };
 
-    return conns
-      .filter((c) => {
-        const s = c.sourceNodeId || extractBaseNodeId(c.sourceId);
-        const t = c.targetNodeId || extractBaseNodeId(c.targetId);
-        return nodeIds.has(s) && nodeIds.has(t);
-      })
-      .map((c) => {
-        const sourceNodeId = c.sourceNodeId || extractBaseNodeId(c.sourceId);
-        const targetNodeId = c.targetNodeId || extractBaseNodeId(c.targetId);
-        const sourceNode = nodeMap.get(sourceNodeId);
-        const targetNode = nodeMap.get(targetNodeId);
+    // 1. Fusionar conexiones redundantes entre el mismo par de nodos para evitar sobreposición visual
+    const mergedConnMap = new Map<string, any>();
 
-        let sourceId = c.sourceId;
-        let targetId = c.targetId;
+    for (const c of conns) {
+      const s = c.sourceNodeId || extractBaseNodeId(c.sourceId);
+      const t = c.targetNodeId || extractBaseNodeId(c.targetId);
+      if (!nodeIds.has(s) || !nodeIds.has(t)) continue;
 
-        const isSeqConn =
-          this.activeDiagramType() === DiagramType.SEQUENCE ||
-          ['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ||
-          (c.sourceId && c.sourceId.includes('_slot_')) ||
-          (c.targetId && c.targetId.includes('_slot_'));
+      const hasMessages = (c.messages && c.messages.length > 0) || (typeof c.name === 'string' && c.name.includes('('));
+      const pairKey = [s, t].sort().join('___');
 
-        if (!isSeqConn && sourceNode && targetNode) {
-          if (sourceNodeId === targetNodeId) {
-            const validConnectors = [
-              `${sourceNodeId}_top`,
-              `${sourceNodeId}_right`,
-              `${sourceNodeId}_bottom`,
-              `${sourceNodeId}_left`,
-            ];
-            const hasDistinct =
-              validConnectors.includes(sourceId) &&
-              validConnectors.includes(targetId) &&
-              sourceId !== targetId;
-            sourceId = hasDistinct ? sourceId : `${sourceNodeId}_top`;
-            targetId = hasDistinct ? targetId : `${targetNodeId}_right`;
-          } else if (c.type === 'association_class') {
-            if (sourceNode.isAnchor) {
-              const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-              sourceId = sourceNode.id;
-              targetId = optimal.targetId;
-            } else if (targetNode.isAnchor) {
-              const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-              sourceId = optimal.sourceId;
-              targetId = targetNode.id;
-            } else {
-              const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-              sourceId = optimal.sourceId;
-              targetId = optimal.targetId;
-            }
-          } else if (!sourceNode.isAnchor && !targetNode.isAnchor) {
+      if (hasMessages && mergedConnMap.has(pairKey)) {
+        const existing = mergedConnMap.get(pairKey);
+        const isReversedPair = (existing.sourceNodeId || extractBaseNodeId(existing.sourceId)) !== s;
+
+        const rawMsgs = (c.messages && c.messages.length > 0)
+          ? c.messages
+          : (c.name ? [{ name: c.name }] : []);
+
+        const normalizedNewMsgs = rawMsgs.map((m: any, mIdx: number) => {
+          const norm = this.normalizeUmlMessage(m, `${(existing.messages || []).length + mIdx + 1}`);
+          if (isReversedPair) {
+            norm.direction = norm.direction === 'reverse' ? 'forward' : 'reverse';
+          }
+          return norm;
+        });
+
+        existing.messages = existing.messages || [];
+        for (const nm of normalizedNewMsgs) {
+          const exists = existing.messages.some(
+            (em: any) => em.sequenceNumber === nm.sequenceNumber && em.functionName === nm.functionName
+          );
+          if (!exists) {
+            existing.messages.push(nm);
+          }
+        }
+      } else {
+        const rawMsgs = (c.messages && c.messages.length > 0)
+          ? c.messages
+          : (c.name?.includes('(') ? [{ name: c.name }] : []);
+
+        const normalizedMsgs = rawMsgs.map((m: any, mIdx: number) =>
+          this.normalizeUmlMessage(m, `${mIdx + 1}`)
+        );
+
+        mergedConnMap.set(hasMessages ? pairKey : (c.id || `conn_ai_${Date.now()}_${Math.random()}`), {
+          ...c,
+          sourceNodeId: s,
+          targetNodeId: t,
+          messages: normalizedMsgs.length > 0 ? normalizedMsgs : undefined,
+        });
+      }
+    }
+
+    return Array.from(mergedConnMap.values()).map((c) => {
+      const sourceNodeId = c.sourceNodeId || extractBaseNodeId(c.sourceId);
+      const targetNodeId = c.targetNodeId || extractBaseNodeId(c.targetId);
+      const sourceNode = nodeMap.get(sourceNodeId);
+      const targetNode = nodeMap.get(targetNodeId);
+
+      let sourceId = c.sourceId;
+      let targetId = c.targetId;
+
+      const isSeqConn =
+        this.activeDiagramType() === DiagramType.SEQUENCE ||
+        ['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ||
+        (c.sourceId && c.sourceId.includes('_slot_')) ||
+        (c.targetId && c.targetId.includes('_slot_'));
+
+      if (!isSeqConn && sourceNode && targetNode) {
+        if (sourceNodeId === targetNodeId) {
+          const validConnectors = [
+            `${sourceNodeId}_top`,
+            `${sourceNodeId}_right`,
+            `${sourceNodeId}_bottom`,
+            `${sourceNodeId}_left`,
+          ];
+          const hasDistinct =
+            validConnectors.includes(sourceId) &&
+            validConnectors.includes(targetId) &&
+            sourceId !== targetId;
+          sourceId = hasDistinct ? sourceId : `${sourceNodeId}_top`;
+          targetId = hasDistinct ? targetId : `${targetNodeId}_right`;
+        } else if (c.type === 'association_class') {
+          if (sourceNode.isAnchor) {
+            const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+            sourceId = sourceNode.id;
+            targetId = optimal.targetId;
+          } else if (targetNode.isAnchor) {
+            const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+            sourceId = optimal.sourceId;
+            targetId = targetNode.id;
+          } else {
             const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
             sourceId = optimal.sourceId;
             targetId = optimal.targetId;
           }
+        } else if (!sourceNode.isAnchor && !targetNode.isAnchor) {
+          const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
+          sourceId = optimal.sourceId;
+          targetId = optimal.targetId;
         }
+      }
 
-        return {
-          id: c.id || `conn_ai_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          sourceNodeId,
-          targetNodeId,
-          sourceId: sourceId || (isSeqConn ? `${sourceNodeId}_slot_0` : `${sourceNodeId}_right`),
-          targetId: targetId || (isSeqConn ? `${targetNodeId}_slot_0` : `${targetNodeId}_left`),
-          type: (c.type as UmlRelationshipType) || (isSeqConn ? 'sync' : 'association'),
-          lineStyle: (c.lineStyle as UmlLineStyle) || this.defaultLineStyle(),
-          name: c.name || undefined,
-          sourceMultiplicity: c.sourceMultiplicity || (sourceNodeId === targetNodeId ? '1' : ''),
-          targetMultiplicity: c.targetMultiplicity || (sourceNodeId === targetNodeId ? '0..*' : ''),
-          messages: c.messages && c.messages.length > 0 ? c.messages.map((m: any, mIdx: number) => ({
-            id: m.id || `msg_${Date.now()}_${mIdx}`,
-            sequenceNumber: m.sequenceNumber || `${mIdx + 1}`,
-            name: m.name || m.text || m.label || 'mensaje()',
-            direction: (m.direction === 'reverse' || m.type === 'reply' || m.isReturn) ? 'reverse' : 'forward',
-            type: m.type || ((m.direction === 'reverse' || m.isReturn) ? 'reply' : 'call'),
-          })) : undefined,
-        };
+      // Ordenar mensajes naturalmente por sequenceNumber
+      const sortedMessages = (c.messages || []).slice().sort((a: any, b: any) => {
+        const parseSeq = (str: string) => String(str || '').split('.').map((n) => parseInt(n, 10) || 0);
+        const pa = parseSeq(a.sequenceNumber);
+        const pb = parseSeq(b.sequenceNumber);
+        for (let k = 0; k < Math.max(pa.length, pb.length); k++) {
+          const na = pa[k] || 0;
+          const nb = pb[k] || 0;
+          if (na !== nb) return na - nb;
+        }
+        return 0;
       });
+
+      return {
+        id: c.id || `conn_ai_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        sourceNodeId,
+        targetNodeId,
+        sourceId: sourceId || (isSeqConn ? `${sourceNodeId}_slot_0` : `${sourceNodeId}_right`),
+        targetId: targetId || (isSeqConn ? `${targetNodeId}_slot_0` : `${targetNodeId}_left`),
+        type: (c.type as UmlRelationshipType) || (isSeqConn ? 'sync' : 'association'),
+        lineStyle: (c.lineStyle as UmlLineStyle) || this.defaultLineStyle(),
+        name: sortedMessages.length > 0 ? undefined : (c.name || undefined),
+        sourceMultiplicity: c.sourceMultiplicity || (sourceNodeId === targetNodeId ? '1' : ''),
+        targetMultiplicity: c.targetMultiplicity || (sourceNodeId === targetNodeId ? '0..*' : ''),
+        assocAnchorNodeId: c.assocAnchorNodeId || undefined,
+        messages: sortedMessages.length > 0 ? sortedMessages : undefined,
+      };
+    });
   }
 
   async downloadBmpFile(): Promise<void> {

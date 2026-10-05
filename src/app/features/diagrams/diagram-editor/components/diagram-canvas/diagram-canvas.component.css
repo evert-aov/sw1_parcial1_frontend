@@ -349,7 +349,7 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 0 !important;
+  padding: 0 0 4px 0 !important;
   cursor: pointer;
   user-select: none;
   display: flex;
@@ -368,7 +368,7 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 0 !important;
+  padding: 4px 0 0 0 !important;
   cursor: pointer;
   user-select: none;
   display: flex;
