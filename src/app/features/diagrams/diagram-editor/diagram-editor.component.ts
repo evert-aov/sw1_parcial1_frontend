@@ -3346,7 +3346,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'class' && n.nodeType !== 'actor');
     } else if (currentType === DiagramType.COMPONENT) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'component' && n.nodeType !== 'boundary_box');
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'component' && n.nodeType !== 'boundary_box' && n.nodeType !== 'package');
     } else if (currentType === DiagramType.DEPLOYMENT) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'lifeline');
     } else if (currentType === DiagramType.LAYERED) {
@@ -3502,7 +3502,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.COMPONENT) {
-      if (node.nodeType !== 'component' && node.nodeType !== 'boundary_box') {
+      if (node.nodeType !== 'component' && node.nodeType !== 'boundary_box' && node.nodeType !== 'package') {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.DEPLOYMENT) {

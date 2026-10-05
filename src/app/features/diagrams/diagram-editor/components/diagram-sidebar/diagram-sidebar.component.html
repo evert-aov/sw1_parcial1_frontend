@@ -1078,6 +1078,24 @@
             </div>
             <span class="text-xs text-stone-600 dark:text-stone-400 font-bold px-1">+</span>
           </button>
+
+          <!-- Botón Paquete UML (Contenedor / Subsistema) -->
+          <button
+            (click)="addPackage.emit()"
+            [disabled]="isReadOnly()"
+            [draggable]="!isReadOnly()"
+            (dragstart)="onToolboxDragStart('package', $event)"
+            [title]="'editor.toolbox.dragHint' | translate"
+            class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-amber-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-amber-300 dark:hover:border-amber-700">
+            <div class="w-9 h-8 flex items-center justify-center bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 rounded-md shrink-0 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform">
+              <ng-icon name="heroFolder" class="text-base"></ng-icon>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">{{ 'editor.toolbox.package' | translate }}</div>
+              <div class="text-[9.5px] text-slate-400 truncate mt-0.5">{{ 'editor.toolbox.packageDesc' | translate }}</div>
+            </div>
+            <span class="text-xs text-amber-600 dark:text-amber-400 font-bold px-1">+</span>
+          </button>
         </div>
       </div>
 

@@ -170,6 +170,7 @@ export const UML_DEPLOYMENT_RELATION_TYPES: UmlRelationTypeItem[] = [
 
 export const UML_COMPONENT_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'assembly', label: 'Ensamble (Assembly)', icon: '─(O─', description: 'Conector de ensamble entre interfaz requerida y provista.' },
+  { id: 'dependency', label: 'Dependencia («use»)', icon: '┈>', description: 'Dependencia o uso entre componentes o paquetes.' },
   { id: 'association', label: 'Asociación', icon: '───', description: 'Asociación o enlace estructural entre componentes.' },
   { id: 'realization', label: 'Realización', icon: '┄▷', description: 'Realización de interfaz por un componente.' },
   { id: 'generalization', label: 'Generalización', icon: '─▷', description: 'Especialización o herencia entre componentes.' },
