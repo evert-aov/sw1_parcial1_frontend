@@ -365,6 +365,8 @@ export class DiagramCanvasComponent {
   readonly dblClickZoomTrigger = () => false;
   readonly selectionAreaTrigger = (event: FTriggerEvent) =>
     primaryButtonEventTrigger(event) && isOnFlowBackground(event);
+  readonly multiSelectTrigger = (event: FTriggerEvent) =>
+    (event as MouseEvent).ctrlKey || (event as MouseEvent).metaKey || (event as MouseEvent).shiftKey;
 
   onFlowLoaded(): void {
     this.flowLoaded.emit();
@@ -407,6 +409,8 @@ export class DiagramCanvasComponent {
   }
 
   onNodeClick(nodeId: string, event: MouseEvent): void {
+    if ((event as any)._nodeClickHandled) return;
+    (event as any)._nodeClickHandled = true;
     this.nodeClick.emit({ nodeId, event });
   }
 

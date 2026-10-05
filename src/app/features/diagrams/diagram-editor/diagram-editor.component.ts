@@ -400,6 +400,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private hasMovedDuringPointerDown = false;
   private lastNodeDragPos = new Map<string, { x: number; y: number }>();
   private currentDragDescendantIds = new Set<string>();
+  private lastSelectionChangeTime = 0;
 
   historyUndoCount = signal<number>(0);
   historyRedoCount = signal<number>(0);
@@ -1959,6 +1960,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onSelectionChange(event: FSelectionChangeEvent): void {
     if (this.selectedRelationType() !== null) return;
+    this.lastSelectionChangeTime = Date.now();
 
     const classNodeIds = (event.nodeIds || []).filter((id) => {
       const node = this.nodes().find((n) => n.id === id);
@@ -2069,7 +2071,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.selectedRelationType() !== null) return;
     event.stopPropagation();
 
-    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+    const isModifier = event.ctrlKey || event.metaKey || event.shiftKey;
+    const fSelectionRecent = (Date.now() - this.lastSelectionChangeTime) < 300;
+
+    if (isModifier) {
+      if (fSelectionRecent) {
+        // Foblex Flow ya emitió el cambio de selección en sus estructuras internas
+        if (!this.selectedNodeId() || !this.selectedNodeIds().has(this.selectedNodeId()!)) {
+          const first = Array.from(this.selectedNodeIds())[0] || null;
+          this.selectedNodeId.set(first);
+        }
+        return;
+      }
+
+      // Fallback manual si Foblex no procesó la pulsación
       const current = new Set(this.selectedNodeIds());
       if (this.selectedNodeId() && !current.has(this.selectedNodeId()!)) {
         current.add(this.selectedNodeId()!);
@@ -2089,18 +2104,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       } else {
         this.diagramCanvas?.clearSelection();
       }
-    } else {
-      // Si el usuario acaba de arrastrar una selección múltiple, conservar la selección de todas
-      if (this.hasMovedDuringPointerDown && this.selectedNodeIds().has(nodeId) && this.selectedNodeIds().size > 1) {
-        return;
-      }
-
-      this.selectedNodeIds.set(new Set([nodeId]));
-      this.selectedNodeId.set(nodeId);
-      this.selectedConnId.set(null);
-      this.selectedConnIds.set(new Set());
-      this.diagramCanvas?.select([nodeId], []);
+      return;
     }
+
+    // Clic normal sin modificadores
+    // Si el usuario acaba de arrastrar una selección múltiple, conservar la selección de todas
+    if (this.hasMovedDuringPointerDown && this.selectedNodeIds().has(nodeId) && this.selectedNodeIds().size > 1) {
+      return;
+    }
+
+    this.selectedNodeIds.set(new Set([nodeId]));
+    this.selectedNodeId.set(nodeId);
+    this.selectedConnId.set(null);
+    this.selectedConnIds.set(new Set());
+    this.diagramCanvas?.select([nodeId], []);
   }
 
   private cloneSnapshot(): DiagramHistorySnapshot {
