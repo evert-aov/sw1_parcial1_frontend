@@ -450,12 +450,7 @@ f-flow f-connection.uml-relation-aggregation path[f-connection-path] {
 
 f-flow f-connection.uml-relation-assembly path[f-connection-path],
 f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
-f-flow .uml-relation-assembly path[f-connection-path] {
-  stroke: #687186 !important;
-  stroke-width: 2px !important;
-  stroke-dasharray: none !important;
-}
-
+f-flow .uml-relation-assembly path[f-connection-path],
 .dark f-flow f-connection.uml-relation-assembly path[f-connection-path],
 .dark f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
 .dark f-flow .uml-relation-assembly path[f-connection-path] {
@@ -464,34 +459,25 @@ f-flow .uml-relation-assembly path[f-connection-path] {
   stroke-dasharray: none !important;
 }
 
-/* Símbolo de Ensamble (Arco y Círculo) con el mismo grosor (2px) que la línea */
+/* Símbolo de Ensamble (Arco y Círculo) con el mismo grosor (2px) que la línea y círculo blanco */
 f-flow .uml-relation-assembly .f-connection-content path,
 f-flow f-connection.uml-relation-assembly .f-connection-content path,
-f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
+f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path,
+.dark f-flow .uml-relation-assembly .f-connection-content path,
+.dark f-flow f-connection.uml-relation-assembly .f-connection-content path,
+.dark f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
   fill: none !important;
-  stroke: #687186 !important;
+  stroke: #94a3b8 !important;
   stroke-width: 2px !important;
 }
 
 f-flow .uml-relation-assembly .f-connection-content circle,
 f-flow f-connection.uml-relation-assembly .f-connection-content circle,
-f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle {
-  fill: #fcf3ee !important;
-  stroke: #687186 !important;
-  stroke-width: 2px !important;
-}
-
-.dark f-flow .uml-relation-assembly .f-connection-content path,
-.dark f-flow f-connection.uml-relation-assembly .f-connection-content path,
-.dark f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
-  stroke: #94a3b8 !important;
-  stroke-width: 2px !important;
-}
-
+f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle,
 .dark f-flow .uml-relation-assembly .f-connection-content circle,
 .dark f-flow f-connection.uml-relation-assembly .f-connection-content circle,
 .dark f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle {
-  fill: #1e293b !important;
+  fill: #ffffff !important;
   stroke: #94a3b8 !important;
   stroke-width: 2px !important;
 }

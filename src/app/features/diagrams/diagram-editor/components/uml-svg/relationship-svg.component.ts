@@ -62,10 +62,10 @@ export type UmlRelationType =
 
         <!-- Línea Central o Conector Ensamble -->
         @if (type === 'assembly') {
-          <line x1="2" y1="8" x2="17.8" y2="8" [attr.stroke]="strokeColor || '#687186'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
-          <path d="M 23 2.8 A 5.2 5.2 0 0 0 23 13.2" fill="none" [attr.stroke]="strokeColor || '#687186'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
-          <circle cx="23" cy="8" r="3.6" [attr.fill]="markerBgColor || '#fcf3ee'" [attr.stroke]="strokeColor || '#687186'" [attr.stroke-width]="strokeWidth" />
-          <line x1="26.6" y1="8" x2="44" y2="8" [attr.stroke]="strokeColor || '#687186'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
+          <line x1="2" y1="8" x2="17.8" y2="8" [attr.stroke]="strokeColor || '#94a3b8'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
+          <path d="M 23 2.8 A 5.2 5.2 0 0 0 23 13.2" fill="none" [attr.stroke]="strokeColor || '#94a3b8'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
+          <circle cx="23" cy="8" r="3.6" fill="#ffffff" [attr.stroke]="strokeColor || '#94a3b8'" [attr.stroke-width]="strokeWidth" />
+          <line x1="26.6" y1="8" x2="44" y2="8" [attr.stroke]="strokeColor || '#94a3b8'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
         } @else {
           <line
             [attr.x1]="getLineStartX()"
@@ -130,10 +130,10 @@ export type UmlRelationType =
 
         <!-- Línea de conexión o Conector Ensamble -->
         @if (type === 'assembly') {
-          <line x1="12" y1="24" x2="70.5" y2="24" [attr.stroke]="strokeColor || '#687186'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
-          <path d="M 80 14.5 A 9.5 9.5 0 0 0 80 33.5" fill="none" [attr.stroke]="strokeColor || '#687186'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
-          <circle cx="80" cy="24" r="6.8" [attr.fill]="markerBgColor || '#fcf3ee'" [attr.stroke]="strokeColor || '#687186'" [attr.stroke-width]="strokeWidth" />
-          <line x1="86.8" y1="24" x2="148" y2="24" [attr.stroke]="strokeColor || '#687186'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
+          <line x1="12" y1="24" x2="70.5" y2="24" [attr.stroke]="strokeColor || '#94a3b8'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
+          <path d="M 80 14.5 A 9.5 9.5 0 0 0 80 33.5" fill="none" [attr.stroke]="strokeColor || '#94a3b8'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
+          <circle cx="80" cy="24" r="6.8" fill="#ffffff" [attr.stroke]="strokeColor || '#94a3b8'" [attr.stroke-width]="strokeWidth" />
+          <line x1="86.8" y1="24" x2="148" y2="24" [attr.stroke]="strokeColor || '#94a3b8'" [attr.stroke-width]="strokeWidth" stroke-linecap="round" />
         } @else {
           <line
             [attr.x1]="getPreviewLineStartX()"
