@@ -1153,7 +1153,7 @@ export class DiagramCanvasComponent {
     }
     if (node.nodeType === 'use_case') {
       const nameLen = (node.name || '').length;
-      return Math.max(140, Math.round(nameLen * 7.5 + 40));
+      return Math.min(260, Math.max(140, Math.round(nameLen * 7.5 + 40)));
     }
     if (node.nodeType === 'package') {
       const tabTitle = this.getPackageTabTitle(node);
@@ -1173,11 +1173,9 @@ export class DiagramCanvasComponent {
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
     if (node.nodeType === 'use_case') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
-      if (manualW && manualW > 0) {
-        return Math.max(80, manualW);
-      }
-      return this.getDynamicNodeWidth(node);
+      const dynamicW = this.getDynamicNodeWidth(node);
+      const manualW = (node.isCustomSize && (node.customWidth || node.width)) ? (node.customWidth || node.width || 0) : (node.customWidth || 0);
+      return Math.max(dynamicW, manualW || 0);
     }
     if (node.nodeType === 'actor') {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
@@ -1267,19 +1265,14 @@ export class DiagramCanvasComponent {
       return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
     }
     if (node.nodeType === 'use_case') {
-      if (node.customHeight && node.customHeight > 0) {
-        return node.customHeight;
-      }
-      if (node.height && node.height > 0) {
-        return node.height;
-      }
-      // Cálculo adaptativo de alto para casos de uso según el ancho y las líneas que el texto ocupa
+      const manualH = (node.isCustomSize && (node.customHeight || node.height)) ? (node.customHeight || node.height || 0) : (node.customHeight || 0);
       const w = this.getNodeWidth(node);
       const nameLen = (node.name || '').length;
       const usableWidth = Math.max(50, w - 24);
       const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
       const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
-      return Math.max(60, 45 + (lines - 1) * 18);
+      const dynamicH = Math.max(60, 45 + (lines - 1) * 18);
+      return Math.max(dynamicH, manualH || 0);
     }
     // Para clases UML sin redimensión manual: el alto es 100% dinámico según el contenido
     return null;

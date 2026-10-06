@@ -1392,7 +1392,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
     if (node.nodeType === 'use_case') {
       const nameLen = (node.name || '').length;
-      return Math.max(140, Math.round(nameLen * 7.5 + 40));
+      return Math.min(260, Math.max(140, Math.round(nameLen * 7.5 + 40)));
     }
     if (node.nodeType === 'package') {
       const tabTitle = node.name ? node.name.split('\n')[0].trim() : 'Paquete';
@@ -1411,11 +1411,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
     if (node.nodeType === 'use_case') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
-      if (manualW && manualW > 0) {
-        return Math.max(80, manualW);
-      }
-      return this.getDynamicNodeWidth(node);
+      const dynamicW = this.getDynamicNodeWidth(node);
+      const manualW = (node.isCustomSize && (node.customWidth || node.width)) ? (node.customWidth || node.width || 0) : (node.customWidth || 0);
+      return Math.max(dynamicW, manualW || 0);
     }
     if (node.nodeType === 'actor') {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
@@ -1494,14 +1492,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
     }
     if (node.nodeType === 'use_case') {
-      if (node.customHeight && node.customHeight > 0) return node.customHeight;
-      if (node.height && node.height > 0) return node.height;
+      const manualH = (node.isCustomSize && (node.customHeight || node.height)) ? (node.customHeight || node.height || 0) : (node.customHeight || 0);
       const w = this.getNodeWidth(node);
       const nameLen = (node.name || '').length;
       const usableWidth = Math.max(50, w - 24);
       const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
       const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
-      return Math.max(60, 45 + (lines - 1) * 18);
+      const dynamicH = Math.max(60, 45 + (lines - 1) * 18);
+      return Math.max(dynamicH, manualH || 0);
     }
     const headerH = 34;
     const attrCount = (node.attributes || []).length;
@@ -4908,7 +4906,42 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const content = e.target?.result as string;
+        let content = '';
+        const buffer = e.target?.result;
+        if (buffer instanceof ArrayBuffer) {
+          const headerBytes = new Uint8Array(buffer.slice(0, Math.min(buffer.byteLength, 300)));
+          const asciiHeader = String.fromCharCode(...headerBytes);
+          const match = asciiHeader.match(/encoding=["']([^"']+)["']/i);
+          const declaredEncoding = match ? match[1].toLowerCase() : '';
+
+          if (declaredEncoding.includes('1252') || declaredEncoding.includes('ansi')) {
+            try {
+              content = new TextDecoder('windows-1252').decode(buffer);
+            } catch {
+              content = new TextDecoder('utf-8').decode(buffer);
+            }
+          } else if (declaredEncoding.includes('8859-1')) {
+            try {
+              content = new TextDecoder('iso-8859-1').decode(buffer);
+            } catch {
+              content = new TextDecoder('utf-8').decode(buffer);
+            }
+          } else {
+            try {
+              content = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+            } catch {
+              try {
+                content = new TextDecoder('windows-1252').decode(buffer);
+              } catch {
+                content = new TextDecoder('utf-8').decode(buffer);
+              }
+            }
+          }
+        } else {
+          content = (buffer as string) || '';
+        }
+
+        content = XmiClientParser.fixUtf8Mojibake(content);
 
         if (isXmiOrXml) {
           try {
@@ -5001,7 +5034,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         target.value = '';
       }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   }
 
   triggerSpringBootGeneration(): void {

@@ -18,10 +18,30 @@ export class XmiClientParser {
     trimValues: true,
   });
 
+  public static fixUtf8Mojibake(str: string): string {
+    if (!str || typeof str !== 'string') return str || '';
+    if (!/Ã[\x80-\xBF]|Â[\x80-\xBF]/.test(str)) return str;
+    try {
+      const bytes = new Uint8Array(str.length);
+      for (let i = 0; i < str.length; i++) {
+        bytes[i] = str.charCodeAt(i) & 0xff;
+      }
+      const decoded = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+      if (!decoded.includes('\uFFFD')) {
+        return decoded;
+      }
+    } catch {
+      // fallback
+    }
+    return str;
+  }
+
   public static parse(xmlContent: string): ParsedDiagramResult {
     if (!xmlContent || xmlContent.trim().length === 0) {
       throw new Error('El archivo XML/XMI está vacío.');
     }
+
+    xmlContent = this.fixUtf8Mojibake(xmlContent);
 
     const parsed = this.parser.parse(xmlContent);
     const xmiRoot = parsed['xmi:XMI'] || parsed['XMI'] || parsed;
@@ -32,7 +52,7 @@ export class XmiClientParser {
     let diagramName = 'Diagrama Importado';
     const umlModel = xmiRoot['uml:Model'] || xmiRoot['Model'];
     if (umlModel && umlModel['@_name']) {
-      diagramName = umlModel['@_name'];
+      diagramName = this.fixUtf8Mojibake(umlModel['@_name']);
     }
 
     // 1. Extraer geometrías y estilos de línea desde <xmi:Extension><diagrams><diagram><elements>
@@ -77,7 +97,7 @@ export class XmiClientParser {
         const customActorColor = geometryMap.get(id)?.color || eaElementMetaMap.get(id)?.color;
         const node: UmlClassNode = {
           id,
-          name: (name || `Actor_${gridIdx + 1}`).trim(),
+          name: this.fixUtf8Mojibake(name || `Actor_${gridIdx + 1}`).trim(),
           position: pos,
           width,
           height,
@@ -97,20 +117,28 @@ export class XmiClientParser {
       // B) Casos de Uso UML
       if (type === 'uml:UseCase' || type === 'UseCase') {
         let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
-        let width = 140;
-        let height = 60;
+        const cleanName = this.fixUtf8Mojibake(name || `CU_${gridIdx + 1}`).trim();
+        const nameLen = cleanName.length;
+        const dynamicWidth = Math.min(260, Math.max(140, Math.round(nameLen * 7.5 + 40)));
+        const usableWidth = Math.max(50, dynamicWidth - 24);
+        const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
+        const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
+        const dynamicHeight = Math.max(60, 45 + (lines - 1) * 18);
+
+        let width = dynamicWidth;
+        let height = dynamicHeight;
 
         if (geometryMap.has(id)) {
           const g = geometryMap.get(id)!;
           pos = { x: g.left, y: g.top };
-          if (g.width > 20) width = Math.min(200, g.width);
-          if (g.height > 20) height = Math.min(65, g.height);
+          if (g.width > 20) width = Math.max(width, g.width);
+          if (g.height > 20) height = Math.max(height, g.height);
         }
 
         const customUcColor = geometryMap.get(id)?.color || eaElementMetaMap.get(id)?.color;
         const node: UmlClassNode = {
           id,
-          name: (name || `CU_${gridIdx + 1}`).trim(),
+          name: cleanName,
           position: pos,
           width,
           height,
@@ -146,7 +174,7 @@ export class XmiClientParser {
           const customActorMetaColor = geometryMap.get(id)?.color || meta?.color;
           const node: UmlClassNode = {
             id,
-            name: (name || meta?.name || `Actor_${gridIdx + 1}`).trim(),
+            name: this.fixUtf8Mojibake(name || meta?.name || `Actor_${gridIdx + 1}`).trim(),
             position: pos,
             width,
             height,
@@ -165,20 +193,28 @@ export class XmiClientParser {
 
         if (meta?.sType === 'UseCase') {
           let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
-          let width = 140;
-          let height = 60;
+          const cleanName = this.fixUtf8Mojibake(name || meta?.name || `CU_${gridIdx + 1}`).trim();
+          const nameLen = cleanName.length;
+          const dynamicWidth = Math.min(260, Math.max(140, Math.round(nameLen * 7.5 + 40)));
+          const usableWidth = Math.max(50, dynamicWidth - 24);
+          const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
+          const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
+          const dynamicHeight = Math.max(60, 45 + (lines - 1) * 18);
+
+          let width = dynamicWidth;
+          let height = dynamicHeight;
 
           if (geometryMap.has(id)) {
             const g = geometryMap.get(id)!;
             pos = { x: g.left, y: g.top };
-            if (g.width > 20) width = Math.min(200, g.width);
-            if (g.height > 20) height = Math.min(65, g.height);
+            if (g.width > 20) width = Math.max(width, g.width);
+            if (g.height > 20) height = Math.max(height, g.height);
           }
 
           const customUcMetaColor = geometryMap.get(id)?.color || meta?.color;
           const node: UmlClassNode = {
             id,
-            name: (name || meta?.name || `CU_${gridIdx + 1}`).trim(),
+            name: cleanName,
             position: pos,
             width,
             height,
@@ -242,7 +278,7 @@ export class XmiClientParser {
         const defaultClassColor = (nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3';
         const node: UmlClassNode = {
           id,
-          name: (name || meta?.name || `Clase_${gridIdx + 1}`).trim(),
+          name: this.fixUtf8Mojibake(name || meta?.name || `Clase_${gridIdx + 1}`).trim(),
           position: pos,
           width,
           height,
@@ -265,14 +301,28 @@ export class XmiClientParser {
         const isActor = meta.sType === 'Actor';
         const isUseCase = meta.sType === 'UseCase';
         let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
-        let width = isActor ? 65 : isUseCase ? 140 : 220;
-        let height = isActor ? 95 : isUseCase ? 60 : 120;
+        const cleanName = this.fixUtf8Mojibake(meta.name || (isActor ? `Actor_${gridIdx + 1}` : isUseCase ? `CU_${gridIdx + 1}` : `Clase_${gridIdx + 1}`)).trim();
+
+        let width = 220;
+        let height = 120;
+        if (isActor) {
+          width = 65;
+          height = 95;
+        } else if (isUseCase) {
+          const nameLen = cleanName.length;
+          const dynamicWidth = Math.min(260, Math.max(140, Math.round(nameLen * 7.5 + 40)));
+          const usableWidth = Math.max(50, dynamicWidth - 24);
+          const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
+          const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
+          width = dynamicWidth;
+          height = Math.max(60, 45 + (lines - 1) * 18);
+        }
 
         if (geometryMap.has(eId)) {
           const g = geometryMap.get(eId)!;
           pos = { x: g.left, y: g.top };
-          if (g.width > 20) width = isUseCase ? Math.min(200, g.width) : g.width;
-          if (g.height > 20) height = isUseCase ? Math.min(65, g.height) : g.height;
+          if (g.width > 20) width = isUseCase ? Math.max(width, g.width) : g.width;
+          if (g.height > 20) height = isUseCase ? Math.max(height, g.height) : g.height;
         }
 
         let nodeType: any = isActor ? 'actor' : isUseCase ? 'use_case' : 'class';
@@ -310,7 +360,7 @@ export class XmiClientParser {
         const defaultExtColor = (isActor || isUseCase) ? '#FEF2DD' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3');
         nodeMap.set(eId, {
           id: eId,
-          name: (meta.name || (isActor ? `Actor_${gridIdx + 1}` : isUseCase ? `CU_${gridIdx + 1}` : `Clase_${gridIdx + 1}`)).trim(),
+          name: cleanName,
           position: pos,
           width,
           height,
@@ -439,7 +489,7 @@ export class XmiClientParser {
       }
 
       attrs.push({
-        name,
+        name: this.fixUtf8Mojibake(name),
         type: this.mapType(type),
         visibility: raw['@_visibility'] || 'private',
         isPk: (name.toLowerCase().endsWith('id') || name.toLowerCase() === 'id'),
@@ -480,13 +530,13 @@ export class XmiClientParser {
           if (pDirection === 'return' || pName === 'return') {
             returnType = pType;
           } else {
-            params.push(`${pName}: ${pType}`);
+            params.push(`${this.fixUtf8Mojibake(pName)}: ${pType}`);
           }
         }
       }
 
       methods.push({
-        name,
+        name: this.fixUtf8Mojibake(name),
         returnType,
         parameters: params.join(', '),
         visibility: raw['@_visibility'] || 'public',
@@ -498,7 +548,7 @@ export class XmiClientParser {
 
   private static parseAssociation(assocElem: any, nodeMap: Map<string, any>, labelsMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): UmlConnection | null {
     const id = assocElem['@_xmi:id'] || assocElem['@_id'] || `conn_${Date.now()}`;
-    const name = assocElem['@_name'] || '';
+    const name = this.fixUtf8Mojibake(assocElem['@_name'] || '');
 
     // Priorizar ownedEnd con definiciones de tipo
     let ends = assocElem['ownedEnd'];
@@ -743,7 +793,7 @@ export class XmiClientParser {
       const mbText = (labels['@_mb'] || '').toLowerCase();
 
       let type: any = 'association';
-      let name = labels['@_mb'] || undefined;
+      let name = labels['@_mb'] ? this.fixUtf8Mojibake(labels['@_mb']) : undefined;
 
       if (eaType === 'UseCase') {
         if (eaSubtype === 'extends' || eaStereo === 'extend' || mbText.includes('extend')) {
@@ -799,7 +849,7 @@ export class XmiClientParser {
         const props = el['properties'];
         const sType = props ? props['@_sType'] : undefined;
         const stereotype = props ? props['@_stereotype'] : undefined;
-        const name = el['@_name'];
+        const name = el['@_name'] ? this.fixUtf8Mojibake(el['@_name']) : undefined;
 
         let color: string | undefined;
         const styleElem = el['style'];
