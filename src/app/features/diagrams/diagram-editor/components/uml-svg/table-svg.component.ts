@@ -162,7 +162,7 @@ export interface UmlMethodItem {
 export class TableSvgComponent {
   @Input() width: number | string = '100%';
   @Input() height: number | string = '100%';
-  @Input() fillColor: string = '#FFFDDD';
+  @Input() fillColor: string = '#FDFAF3';
   @Input() strokeColor: string = '#796354';
   @Input() strokeWidth: number = 1.5;
   @Input() textColor: string = '#241C18';

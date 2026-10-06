@@ -101,6 +101,7 @@ import { EditConnectionModalComponent } from './components/edit-connection-modal
 import { JsonModalComponent } from './components/json-modal/json-modal.component';
 import { CreateDiagramModalComponent } from './components/create-diagram-modal/create-diagram-modal.component';
 import { TranslatePipe, TranslationService } from '../../../core/i18n';
+import { calculateClassDynamicWidth } from './utils/node-metrics.util';
 
 export interface UmlDiagramProject {
   version: string;
@@ -368,15 +369,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const nt = nodeType || 'class';
     const st = stereotype || '';
 
-    if (nt === 'device' || st === 'device') return '#FFFDF8';
-    if (nt === 'executionEnvironment' || st === 'executionEnvironment') return '#CDE6F7';
-    if (nt === 'component' || st === 'component') return '#F8E5E5';
-    if (nt === 'boundary_box') return '#F8F9FA';
-    if (nt === 'boundary' || nt === 'control' || nt === 'entity') return '#D2EEF3';
-    if (nt === 'lifeline') return '#D2EEF3';
-    if (nt === 'use_case' || nt === 'actor') return '#FFFDDD';
-    if (nt === 'node') return '#D2E8F9';
-    return '#FFFDDD';
+    if (nt === 'device' || st === 'device') return '#F3FAF7';
+    if (nt === 'executionEnvironment' || st === 'executionEnvironment') return '#CDE5F5';
+    if (nt === 'component' || st === 'component' || nt === 'package' || nt === 'boundary_box') return '#FAF1EC';
+    if (nt === 'boundary' || nt === 'control' || nt === 'entity' || nt === 'lifeline' || st === 'UI' || st === 'Entity.' || st === 'Controller.' || st === 'boundary' || st === 'control' || st === 'entity') return '#DDF4F5';
+    if (nt === 'use_case' || nt === 'actor') return '#FEF2DD';
+    if (nt === 'node') return '#F3FAF7';
+    return '#FDFAF3';
   }
 
   readonly selectedNodeColor = computed(() => {
@@ -651,7 +650,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           if (draft.timestamp && draft.timestamp > serverUpdated && draft.nodes?.length > 0) {
             console.log('Restaurando borrador local no guardado por desconexión previa...');
             const sanitizedDraftNodes: UmlClassNode[] = (draft.nodes || []).map((n: any) => {
-              let nodeType: UmlNodeType = n.nodeType || 'class';
+              let nodeType: UmlNodeType | string = n.nodeType || 'class';
               if (nodeType === 'class') {
                 if (n.id?.startsWith('actor_')) nodeType = 'actor';
                 else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
@@ -670,10 +669,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                 name = '.';
               }
               let nodeColor = n.color;
-              if (!nodeColor || (nodeColor === '#FFFDDD' && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline'].includes(nodeType))) {
+              if (!nodeColor || ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) {
                 nodeColor = this.getDefaultColorForNodeType(nodeType, n.stereotype);
               }
-              return { ...n, nodeType, name, color: nodeColor };
+              return { ...n, nodeType, name, color: nodeColor, stereotype: n.stereotype || null };
             });
             this.nodes.set(sanitizedDraftNodes);
             this.connections.set(this.recalculateSequenceNumbers(draft.connections || []));
@@ -688,7 +687,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
 
       const mappedNodes: UmlClassNode[] = (diagram.nodes || []).map((n) => {
-        let nodeType: UmlNodeType = (n.nodeType as any) || (diagram.type === 'package' ? 'package' : (isSequence ? 'lifeline' : 'class'));
+        let nodeType: UmlNodeType | string = (n.nodeType as any) || (diagram.type === 'package' ? 'package' : (isSequence ? 'lifeline' : 'class'));
         if (nodeType === 'class') {
           if (n.id.startsWith('actor_')) {
             nodeType = 'actor';
@@ -716,7 +715,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             nodeType = 'lifeline';
           }
         }
-        const isManuallyResized = !!(n.height && n.height > 0);
+        const isManuallyResized = !!(n as any).isCustomSize || (!!(n as any).customHeight && (n as any).customHeight > 0) || (!!(n as any).customWidth && (n as any).customWidth > 0);
         const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
         const isLifeline = nodeType === 'lifeline';
         let nodeName = n.name || '';
@@ -725,7 +724,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         }
 
         let nodeColor = n.color;
-        if (!nodeColor || (nodeColor === '#FFFDDD' && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline'].includes(nodeType))) {
+        if (!nodeColor || ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) {
           nodeColor = this.getDefaultColorForNodeType(nodeType, (n as any).stereotype);
         }
 
@@ -741,6 +740,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           color: nodeColor,
           isAnchor: n.isAnchor,
           nodeType,
+          stereotype: n.stereotype || null,
           assocMainConnId: n.assocMainConnId || undefined,
           activations: (n as any).activations || [],
           attributes: (n.attributes || []).map((a) => ({
@@ -1069,7 +1069,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             : n.nodeType || 'class';
 
         let nodeColor = n.color;
-        if (!nodeColor || (nodeColor === '#FFFDDD' && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline'].includes(resolvedNodeType))) {
+        if (!nodeColor || ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(resolvedNodeType))) {
           nodeColor = this.getDefaultColorForNodeType(resolvedNodeType, n.stereotype);
         }
 
@@ -1086,8 +1086,28 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           nodeType: resolvedNodeType,
           stereotype: n.stereotype || null,
           activations: (n as any).activations || [],
-          attributes: n.attributes,
-          methods: n.methods,
+          attributes: (n.attributes || []).map((a: any, aIdx: number) => ({
+            name: a.name,
+            type: a.type || 'String',
+            orderIndex: typeof a.orderIndex === 'number' ? a.orderIndex : aIdx,
+            nullable: a.nullable !== undefined ? a.nullable : (a.isNullable !== undefined ? a.isNullable : true),
+            unique: a.unique !== undefined ? a.unique : (a.isUnique !== undefined ? a.isUnique : false),
+            length: a.length !== undefined && a.length !== null ? Number(a.length) : 255,
+            defaultValue: a.defaultValue ?? a.default ?? null,
+            default: a.default ?? a.defaultValue ?? null,
+            visibility: a.visibility || undefined,
+            isPk: typeof a.isPk === 'boolean' ? a.isPk : undefined,
+            isFk: typeof a.isFk === 'boolean' ? a.isFk : undefined,
+            isNullable: typeof a.isNullable === 'boolean' ? a.isNullable : undefined,
+            isUnique: typeof a.isUnique === 'boolean' ? a.isUnique : undefined,
+          })),
+          methods: (n.methods || []).map((m: any, mIdx: number) => ({
+            name: m.name,
+            parameters: m.parameters || '',
+            returnType: m.returnType || 'void',
+            orderIndex: typeof m.orderIndex === 'number' ? m.orderIndex : mIdx,
+            visibility: m.visibility || undefined,
+          })),
         };
       }),
       connections: this.connections().map((c) => {
@@ -1385,18 +1405,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
       return 70;
     }
-    const CHAR_W = 7.2;
-    let maxLen = (node.name || '').length + 3;
-    for (const attr of node.attributes || []) {
-      const len = 2 + (attr.name || '').length + 2 + (attr.type || '').length;
-      if (len > maxLen) maxLen = len;
-    }
-    for (const m of node.methods || []) {
-      const len = 2 + (m.name || '').length + 1 + (m.parameters || '').length + 3 + (m.returnType || 'void').length;
-      if (len > maxLen) maxLen = len;
-    }
-    const computed = Math.round(maxLen * CHAR_W + 28);
-    return Math.max(130, computed);
+    return calculateClassDynamicWidth(node);
   }
 
   getNodeWidth(node: UmlClassNode): number {
@@ -1461,7 +1470,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return 280;
     }
     const dynamicW = this.getDynamicNodeWidth(node);
-    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+    const manualW = (node.isCustomSize && node.customWidth) ? node.customWidth : 0;
     return Math.max(dynamicW, manualW);
   }
 
@@ -2909,8 +2918,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       type: 'association',
       lineStyle: 'straight',
       name: assocName,
-      sourceMultiplicity: '*',
-      targetMultiplicity: '*',
+      sourceMultiplicity: '',
+      targetMultiplicity: '',
       assocAnchorNodeId: anchorId,
     };
 
@@ -3011,7 +3020,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       name: `Tabla_${count}`,
       position: { x: posX, y: posY },
       width: 220,
-      color: '#FFFDDD',
+      color: '#FDFAF3',
       attributes: [],
       methods: [],
       stereotype: null,
@@ -3042,7 +3051,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       width: 190,
       height: 70,
       isCustomSize: true,
-      color: '#F8E5E5',
+      color: '#FAF1EC',
       attributes: [],
       methods: [],
     };
@@ -3072,7 +3081,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       width: 230,
       height: 140,
       isCustomSize: true,
-      color: '#FFFDF8',
+      color: '#F3FAF7',
       attributes: [],
       methods: [],
     };
@@ -3102,7 +3111,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       width: 240,
       height: 160,
       isCustomSize: true,
-      color: '#CDE6F7',
+      color: '#CDE5F5',
       attributes: [],
       methods: [],
     };
@@ -3136,7 +3145,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       width: defaultWidth,
       height: defaultHeight,
       isCustomSize: true,
-      color: '#FFFFFF',
+      color: '#FAF1EC',
       attributes: [],
       methods: [],
     };
@@ -3175,7 +3184,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 65,
       height: 95,
-      color: '#FFFDDD',
+      color: '#FEF2DD',
       attributes: [],
       methods: [],
       activations: [],
@@ -3204,7 +3213,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 140,
       height: 60,
-      color: '#FFFDDD',
+      color: '#FEF2DD',
       attributes: [],
       methods: [],
     };
@@ -3232,7 +3241,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 200,
       height: 120,
-      color: '#FFFDDD',
+      color: '#FAF1EC',
       attributes: [{ name: `Contenido Paquete ${count}`, type: 'package' }],
       methods: [],
     };
@@ -3260,7 +3269,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 70,
       height: 70,
-      color: '#D2EEF3',
+      color: '#DDF4F5',
       attributes: [],
       methods: [],
     };
@@ -3288,7 +3297,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 70,
       height: 70,
-      color: '#D2EEF3',
+      color: '#DDF4F5',
       attributes: [],
       methods: [],
     };
@@ -3316,7 +3325,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 70,
       height: 70,
-      color: '#D2EEF3',
+      color: '#DDF4F5',
       attributes: [],
       methods: [],
     };
@@ -3359,7 +3368,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 160,
       height: 48,
-      color: '#D2EEF3',
+      color: '#DDF4F5',
       attributes: [],
       methods: [],
       activations: [],
@@ -3827,7 +3836,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width,
       height,
-      color: node.color || (isBce ? '#D2EEF3' : (node.nodeType === 'device' ? '#FFFDF8' : (node.nodeType === 'executionEnvironment' ? '#CDE6F7' : (node.nodeType === 'component' ? '#F8E5E5' : '#FFFDDD')))),
+      color: node.color || this.getDefaultColorForNodeType(node.nodeType, node.stereotype),
       attributes: (node.attributes || []).map((a: any) => ({ ...a })),
       methods: (node.methods || []).map((m: any) => ({ ...m })),
     };
@@ -4241,7 +4250,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   private applyAiNodesMutation(targetNodes: any[]): UmlClassNode[] {
     return targetNodes.map((n, i) => {
-      let nodeType: UmlNodeType = n.nodeType || 'class';
+      let nodeType: UmlNodeType | string = n.nodeType || 'class';
       if (/^cu[-_ \d]/i.test(n.name || '') || (typeof n.name === 'string' && /caso\s+de\s+uso/i.test(n.name))) {
         nodeType = 'use_case';
       } else if (nodeType === 'boundary_box' || n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) {
@@ -4302,7 +4311,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         customWidth: n.customWidth,
         customHeight: n.customHeight,
         isCustomSize: isManuallyResized,
-        color: (!n.color || (n.color === '#FFFDDD' && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline'].includes(nodeType)))
+        color: (!n.color || ((n.color === '#FFFDDD' || n.color === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType)))
           ? this.getDefaultColorForNodeType(nodeType, n.stereotype)
           : n.color,
         nodeType,
@@ -4659,8 +4668,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         type: (c.type as UmlRelationshipType) || 'association',
         lineStyle: (c.lineStyle as UmlLineStyle) || this.defaultLineStyle(),
         name: c.name || undefined,
-        sourceMultiplicity: c.sourceMultiplicity || (sourceNodeId === targetNodeId ? '1' : ''),
-        targetMultiplicity: c.targetMultiplicity || (sourceNodeId === targetNodeId ? '0..*' : ''),
+        sourceMultiplicity: c.sourceMultiplicity || '',
+        targetMultiplicity: c.targetMultiplicity || '',
         assocAnchorNodeId: c.assocAnchorNodeId || undefined,
         messages: c.messages,
       };
@@ -5114,9 +5123,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       : (this.selectedNodeId() ? [this.selectedNodeId()!] : []);
     if (targetIds.length === 0) return;
 
-    const newColor = color || '#FFFDDD';
+    const newColor = color || '#FDFAF3';
     const anyChanged = this.nodes().some(
-      (node) => targetIds.includes(node.id) && !node.isAnchor && (node.color || '#FFFDDD') !== newColor,
+      (node) => targetIds.includes(node.id) && !node.isAnchor && (node.color || '#FDFAF3') !== newColor,
     );
     if (!anyChanged) return;
 

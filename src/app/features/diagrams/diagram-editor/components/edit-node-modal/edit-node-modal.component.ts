@@ -34,6 +34,15 @@ export class EditNodeModalComponent {
     const curr = this.editingNode();
     if (curr) {
       curr.stereotype = val && val.trim() ? val.trim() : null;
+      this.editingNode.set({ ...curr });
+    }
+  }
+
+  clearStereotype(): void {
+    const curr = this.editingNode();
+    if (curr) {
+      curr.stereotype = null;
+      this.editingNode.set({ ...curr });
     }
   }
 
@@ -56,7 +65,7 @@ export class EditNodeModalComponent {
           this.editingNode.set(cloned);
           setTimeout(() => {
             if (this.modalColorInputRef?.nativeElement && !this.isModalPickerOpen) {
-              this.modalColorInputRef.nativeElement.value = cloned.color || '#FFFDDD';
+              this.modalColorInputRef.nativeElement.value = cloned.color || '#FDFAF3';
             }
           }, 0);
         } else if (!this.isOpen()) {
@@ -87,7 +96,7 @@ export class EditNodeModalComponent {
   onColorPickerBlur(): void {
     this.isModalPickerOpen = false;
     if (this.modalColorInputRef?.nativeElement && this.editingNode()) {
-      this.modalColorInputRef.nativeElement.value = this.editingNode()!.color || '#FFFDDD';
+      this.modalColorInputRef.nativeElement.value = this.editingNode()!.color || '#FDFAF3';
     }
   }
 

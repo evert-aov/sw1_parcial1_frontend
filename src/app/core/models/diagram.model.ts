@@ -32,51 +32,93 @@ export const UML_DIAGRAM_TYPES: DiagramTypeItem[] = [
   { id: DiagramType.CLASS_ANALYSIS, label: 'Análisis de Clases', shortLabel: 'Análisis Clases', folderName: 'Análisis de Clases', icon: 'heroSparkles', description: 'Diagrama de clases UML con inclusión de actores', supported: true },
 ];
 
-export type UmlStereotype =
-  | 'class'
-  | 'entity'
-  | 'control'
-  | 'view'
-  | 'implement'
-  | 'process'
-  | 'realization'
-  | 'service'
-  | 'specification'
-  | 'subsystem'
-  | 'node'
-  | 'device'
-  | 'executionEnvironment';
+export enum UmlStereotype {
+  UI = 'UI',
+  ENTITY_DOT = 'Entity.',
+  CONTROLLER_DOT = 'Controller.',
+  BOUNDARY = 'boundary',
+  CONTROL = 'control',
+  ENTITY = 'entity',
+  CLASS = 'class',
+  VIEW = 'view',
+  IMPLEMENT = 'implement',
+  PROCESS = 'process',
+  REALIZATION = 'realization',
+  SERVICE = 'service',
+  SPECIFICATION = 'specification',
+  SUBSYSTEM = 'subsystem',
+  NODE = 'node',
+  DEVICE = 'device',
+  EXECUTION_ENVIRONMENT = 'executionEnvironment',
+  COMPONENT = 'component',
+  ARTIFACT = 'artifact',
+  FILE = 'file',
+  LIBRARY = 'library',
+  TABLE = 'table',
+  SCRIPT = 'script',
+  REPORT = 'report',
+  DATABASE = 'database',
+}
 
-export const UML_PREDEFINED_STEREOTYPES: { value: UmlStereotype; label: string }[] = [
-  { value: 'class', label: '«class»' },
-  { value: 'entity', label: '«entity»' },
-  { value: 'control', label: '«control»' },
-  { value: 'view', label: '«view»' },
-  { value: 'implement', label: '«implement»' },
-  { value: 'process', label: '«process»' },
-  { value: 'realization', label: '«realization»' },
-  { value: 'service', label: '«service»' },
-  { value: 'specification', label: '«specification»' },
-  { value: 'subsystem', label: '«subsystem»' },
-  { value: 'node', label: '«node»' },
-  { value: 'device', label: '«device»' },
-  { value: 'executionEnvironment', label: '«executionEnvironment»' },
+export const UML_PREDEFINED_STEREOTYPES: { value: UmlStereotype | string; label: string }[] = [
+  { value: UmlStereotype.UI, label: '«UI»' },
+  { value: UmlStereotype.ENTITY_DOT, label: '«Entity.»' },
+  { value: UmlStereotype.CONTROLLER_DOT, label: '«Controller.»' },
+  { value: UmlStereotype.BOUNDARY, label: '«boundary»' },
+  { value: UmlStereotype.CONTROL, label: '«control»' },
+  { value: UmlStereotype.ENTITY, label: '«entity»' },
+  { value: UmlStereotype.CLASS, label: '«class»' },
+  { value: UmlStereotype.VIEW, label: '«view»' },
+  { value: UmlStereotype.SERVICE, label: '«service»' },
+  { value: UmlStereotype.COMPONENT, label: '«component»' },
+  { value: UmlStereotype.DATABASE, label: '«database»' },
+  { value: UmlStereotype.NODE, label: '«node»' },
+  { value: UmlStereotype.DEVICE, label: '«device»' },
+  { value: UmlStereotype.EXECUTION_ENVIRONMENT, label: '«executionEnvironment»' },
+  { value: UmlStereotype.SUBSYSTEM, label: '«subsystem»' },
+  { value: UmlStereotype.PROCESS, label: '«process»' },
+  { value: UmlStereotype.SPECIFICATION, label: '«specification»' },
+  { value: UmlStereotype.IMPLEMENT, label: '«implement»' },
+  { value: UmlStereotype.REALIZATION, label: '«realization»' },
+  { value: UmlStereotype.ARTIFACT, label: '«artifact»' },
+  { value: UmlStereotype.FILE, label: '«file»' },
+  { value: UmlStereotype.LIBRARY, label: '«library»' },
+  { value: UmlStereotype.TABLE, label: '«table»' },
+  { value: UmlStereotype.SCRIPT, label: '«script»' },
+  { value: UmlStereotype.REPORT, label: '«report»' },
 ];
 
-export type UmlNodeType =
-  | 'class'
-  | 'actor'
-  | 'use_case'
-  | 'package'
-  | 'boundary'
-  | 'control'
-  | 'entity'
-  | 'lifeline'
-  | 'component'
-  | 'node'
-  | 'device'
-  | 'executionEnvironment'
-  | 'boundary_box';
+export enum UmlNodeType {
+  CLASS = 'class',
+  ACTOR = 'actor',
+  USE_CASE = 'use_case',
+  PACKAGE = 'package',
+  BOUNDARY = 'boundary',
+  CONTROL = 'control',
+  ENTITY = 'entity',
+  LIFELINE = 'lifeline',
+  COMPONENT = 'component',
+  NODE = 'node',
+  DEVICE = 'device',
+  EXECUTION_ENVIRONMENT = 'executionEnvironment',
+  BOUNDARY_BOX = 'boundary_box',
+}
+
+export const UML_NODE_DEFAULT_COLORS: Record<string, string> = {
+  [UmlNodeType.CLASS]: '#FDFAF3',
+  [UmlNodeType.ACTOR]: '#FEF2DD',
+  [UmlNodeType.USE_CASE]: '#FEF2DD',
+  [UmlNodeType.PACKAGE]: '#FAF1EC',
+  [UmlNodeType.COMPONENT]: '#FAF1EC',
+  [UmlNodeType.BOUNDARY_BOX]: '#FAF1EC',
+  [UmlNodeType.LIFELINE]: '#DDF4F5',
+  [UmlNodeType.BOUNDARY]: '#DDF4F5',
+  [UmlNodeType.CONTROL]: '#DDF4F5',
+  [UmlNodeType.ENTITY]: '#DDF4F5',
+  [UmlNodeType.DEVICE]: '#F3FAF7',
+  [UmlNodeType.NODE]: '#F3FAF7',
+  [UmlNodeType.EXECUTION_ENVIRONMENT]: '#CDE5F5',
+};
 
 export type UmlRelationshipType =
   | 'association'
@@ -225,6 +267,11 @@ export interface UmlAttribute {
   length?: number | null;
   defaultValue?: string | null;
   default?: string | null;
+  visibility?: string;
+  isPk?: boolean;
+  isFk?: boolean;
+  isNullable?: boolean;
+  isUnique?: boolean;
 }
 
 export interface UmlMethod {
@@ -232,6 +279,7 @@ export interface UmlMethod {
   parameters: string;
   returnType: string;
   orderIndex?: number;
+  visibility?: string;
 }
 
 export interface UmlClassNode {
@@ -248,8 +296,8 @@ export interface UmlClassNode {
   methods: UmlMethod[];
   isAnchor?: boolean;
   assocMainConnId?: string;
-  nodeType?: UmlNodeType;
-  stereotype?: string | null;
+  nodeType?: UmlNodeType | string;
+  stereotype?: UmlStereotype | string | null;
   activations?: any[];
   labelOffset?: { x: number; y: number };
 }
@@ -289,7 +337,7 @@ export interface DiagramDto {
     isAnchor?: boolean;
     assocMainConnId?: string | null;
     nodeType?: UmlNodeType | string;
-    stereotype?: string | null;
+    stereotype?: UmlStereotype | string | null;
     activations?: any[];
     attributes?: UmlAttribute[];
     methods?: UmlMethod[];
@@ -326,7 +374,7 @@ export interface SaveDiagramAstRequest {
     isAnchor?: boolean;
     assocMainConnId?: string | null;
     nodeType?: UmlNodeType | string;
-    stereotype?: string | null;
+    stereotype?: UmlStereotype | string | null;
     activations?: any[];
     attributes?: UmlAttribute[];
     methods?: UmlMethod[];
@@ -348,13 +396,13 @@ export interface SaveDiagramAstRequest {
 }
 
 export function hexToRgb(hex: string | null | undefined): { r: number; g: number; b: number } {
-  let clean = (hex || '#FFFDDD').replace('#', '').trim();
+  let clean = (hex || '#FDFAF3').replace('#', '').trim();
   if (clean.length === 3) {
     clean = clean.split('').map((c) => c + c).join('');
   }
   const num = parseInt(clean, 16);
   if (isNaN(num) || clean.length !== 6) {
-    return { r: 255, g: 253, b: 221 };
+    return { r: 253, g: 250, b: 243 };
   }
   return {
     r: (num >> 16) & 255,

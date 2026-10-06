@@ -525,7 +525,7 @@
                     <div class="w-full h-full flex items-center justify-center p-0 overflow-visible text-[#241C18]">
                       <app-actor-svg
                         class="w-full h-full"
-                        [fillColor]="node.color || '#FFFDDD'"
+                        [fillColor]="node.color || '#FEF2DD'"
                         strokeColor="currentColor"
                         className="w-full h-full max-w-full max-h-full text-[#241C18]"
                       />
@@ -622,7 +622,7 @@
                             class="absolute left-1/2 -translate-x-1/2 w-3.5 border shadow-2xs pointer-events-none z-20 rounded-none"
                             [style.top.px]="act.top"
                             [style.height.px]="act.height"
-                            [style.backgroundColor]="node.color || '#FFFDDD'"
+                            [style.backgroundColor]="node.color || '#DDF4F5'"
                             style="border-color: #796354;"
                             [title]="'editor.canvas.nodes.focusActivation' | translate">
                           </div>
@@ -660,7 +660,7 @@
                       'ring-2 ring-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.45)]': isNodeSelected(node.id),
                       'shadow-[3px_3px_0px_rgba(0,0,0,0.15)]': !isNodeSelected(node.id)
                     }"
-                    [style.backgroundColor]="node.color || '#FFFDDD'"
+                    [style.backgroundColor]="node.color || '#FEF2DD'"
                     class="w-full h-full flex items-center justify-center p-3 relative rounded-[50%] border-2 border-[#796354] select-none cursor-pointer">
                     
                     <button
@@ -708,7 +708,7 @@
                         'border-blue-600 text-blue-900': isNodeSelected(node.id),
                         'border-[#796354] text-[#241C18] shadow-[2px_0px_0px_rgba(0,0,0,0.15)]': !isNodeSelected(node.id)
                       }"
-                      [style.backgroundColor]="node.color || '#FFFDDD'"
+                      [style.backgroundColor]="node.color || '#FAF1EC'"
                       class="h-7 max-w-[65%] min-w-[90px] self-start px-2.5 py-1 flex items-center justify-between border-2 rounded-none z-10 font-bold text-[11px] font-sans truncate -mb-[2px]">
                       @if (renamingNodeId() === node.id) {
                         <input
@@ -739,7 +739,7 @@
                         'border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id),
                         'border-[#796354] shadow-[3px_3px_0px_rgba(0,0,0,0.15)]': !isNodeSelected(node.id)
                       }"
-                      [style.backgroundColor]="node.color || '#FFFDDD'"
+                      [style.backgroundColor]="node.color || '#FAF1EC'"
                       class="flex-1 w-full border-2 rounded-none p-3 flex flex-col justify-start relative z-0">
                       
                       <!-- Botón Eliminar en hover -->
@@ -772,7 +772,7 @@
                       'border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id),
                       'border-[#1E293B] dark:border-slate-300 shadow-sm': !isNodeSelected(node.id)
                     }"
-                    [style.backgroundColor]="(!node.color || node.color === '#FFFDDD') ? 'rgba(255, 255, 255, 0.75)' : node.color"
+                    [style.backgroundColor]="(!node.color || node.color === '#FFFDDD' || node.color === '#FAF1EC') ? '#FAF1EC' : node.color"
                     class="w-full h-full border-2 rounded-none p-3 flex flex-col justify-start relative select-none cursor-pointer backdrop-blur-[1px]">
                     
                     <!-- Botón Eliminar en hover -->
@@ -1190,7 +1190,7 @@
                       'ring-2 ring-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id),
                       'shadow-[3px_3px_0px_rgba(0,0,0,0.12)]': !isNodeSelected(node.id)
                     }"
-                    [style.backgroundColor]="(!node.color || node.color === '#FFFDDD') ? '#F8E5E5' : node.color"
+                    [style.backgroundColor]="(!node.color || node.color === '#FFFDDD' || node.color === '#F8E5E5') ? '#FAF1EC' : node.color"
                     class="w-full h-full flex flex-col justify-center px-4 py-2 relative border-2 border-[#796354] select-none cursor-pointer rounded-none">
 
                     <!-- Botón Eliminar en hover -->
@@ -1208,7 +1208,7 @@
                         mode="glyph"
                         width="22"
                         height="20"
-                        [fillColor]="(!node.color || node.color === '#FFFDDD') ? '#F8E5E5' : node.color"
+                        [fillColor]="(!node.color || node.color === '#FFFDDD' || node.color === '#F8E5E5') ? '#FAF1EC' : node.color"
                         strokeColor="#796354"
                         [strokeWidth]="1.5"
                       />
@@ -1334,9 +1334,9 @@
                       'bg-blue-600 text-white border-b border-blue-700': isNodeSelected(node.id),
                       'bg-indigo-100 text-indigo-950 border-b border-indigo-300': !isNodeSelected(node.id) && isNeighborNode(node.id),
                       'border-b border-[#796354] text-[#241C18]': !isNodeSelected(node.id) && !isNeighborNode(node.id),
-                      'bg-[#FFFDDD]': !isNodeSelected(node.id) && !isNeighborNode(node.id) && !node.color
+                      'bg-[#FDFAF3]': !isNodeSelected(node.id) && !isNeighborNode(node.id) && !node.color
                     }"
-                    [style.backgroundColor]="(!isNodeSelected(node.id) && !isNeighborNode(node.id)) ? (node.color || '#FFFDDD') : null"
+                    [style.backgroundColor]="(!isNodeSelected(node.id) && !isNeighborNode(node.id)) ? (node.color || '#FDFAF3') : null"
                     class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors shrink-0">
                     @if (renamingNodeId() === node.id) {
                       <input
@@ -1380,7 +1380,7 @@
 
                   <!-- 2. CUERPO: ATRIBUTOS TIPADOS ESTILO EA -->
                   <div
-                    [style.backgroundColor]="node.color || '#FFFDDD'"
+                    [style.backgroundColor]="node.color || '#FDFAF3'"
                     class="px-2.5 py-1.5 space-y-0.5 min-h-[28px] flex-1">
                     @if (node.attributes && node.attributes.length > 0) {
                       @for (attr of node.attributes; track attr.name) {
@@ -1396,7 +1396,7 @@
                   <!-- 3. CUERPO: MÉTODOS / OPERACIONES CON RETORNO ESTILO EA (SOLO SI TIENE MÉTODOS) -->
                   @if (node.methods && node.methods.length > 0) {
                     <div
-                      [style.backgroundColor]="node.color || '#FFFDDD'"
+                      [style.backgroundColor]="node.color || '#FDFAF3'"
                       class="px-2.5 py-1.5 space-y-0.5 border-t border-[#796354] shrink-0">
                       @for (m of node.methods; track m.name) {
                         <div class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] whitespace-nowrap">

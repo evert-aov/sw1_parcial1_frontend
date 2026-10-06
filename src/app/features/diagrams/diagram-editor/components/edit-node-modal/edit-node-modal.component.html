@@ -34,7 +34,7 @@
             @if (editingNode()!.stereotype) {
               <button
                 type="button"
-                (click)="editingNode()!.stereotype = null"
+                (click)="clearStereotype()"
                 class="text-[10px] text-red-500 hover:underline cursor-pointer font-medium">
                 Quitar estereotipo
               </button>
@@ -44,18 +44,12 @@
             <select
               [ngModel]="editingNode()!.stereotype || ''"
               (ngModelChange)="onStereotypeSelect($event)"
-              class="flex-1 px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all">
+              class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all">
               <option value="">(Sin estereotipo / null)</option>
               @for (st of predefinedStereotypes; track st.value) {
                 <option [value]="st.value">{{ st.label }}</option>
               }
             </select>
-            <input
-              type="text"
-              [(ngModel)]="editingNode()!.stereotype"
-              placeholder="Personalizado (e.g. database)"
-              class="w-44 px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-xs font-mono"
-            />
           </div>
         </div>
 
@@ -239,16 +233,16 @@
             <div class="flex items-center gap-1.5">
               <button
                 type="button"
-                (click)="setColor('#FFFDDD')"
+                (click)="setColor('#FDFAF3')"
                 class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                style="background-color: #FFFDDD"
-                title="Amarillo UML"></button>
+                style="background-color: #FDFAF3"
+                title="Clase UML (#FDFAF3)"></button>
               <button
                 type="button"
-                (click)="setColor('#D2EEF3')"
+                (click)="setColor('#DDF4F5')"
                 class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                style="background-color: #D2EEF3"
-                title="Cyan BCE"></button>
+                style="background-color: #DDF4F5"
+                title="BCE / Lifeline (#DDF4F5)"></button>
               <button
                 type="button"
                 (click)="setColor('#E9F5EC')"
@@ -268,7 +262,7 @@
                 style="background-color: #FFFFFF"
                 title="Blanco"></button>
             </div>
-            <span class="text-xs font-mono text-slate-500">{{ editingNode()!.color || '#FFFDDD' }}</span>
+            <span class="text-xs font-mono text-slate-500">{{ editingNode()!.color || '#FDFAF3' }}</span>
           </div>
         </div>
 

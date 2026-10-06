@@ -58,7 +58,7 @@ import { CommonModule } from '@angular/common';
 export class UseCaseSvgComponent {
   @Input() width: number | string = '100%';
   @Input() height: number | string = '100%';
-  @Input() fillColor: string = '#FFFDDD';
+  @Input() fillColor: string = '#FEF2DD';
   @Input() strokeColor: string = '#796354';
   @Input() strokeWidth: number = 1.5;
   @Input() textColor: string = '#241C18';

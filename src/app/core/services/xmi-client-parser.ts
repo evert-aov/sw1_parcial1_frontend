@@ -1,8 +1,9 @@
 import { XMLParser } from 'fast-xml-parser';
-import { UmlClassNode, UmlConnection, UmlLineStyle } from '../models/diagram.model';
+import { UmlClassNode, UmlConnection, UmlLineStyle, UmlStereotype } from '../models/diagram.model';
 
 export interface ParsedDiagramResult {
   name: string;
+  diagramType?: string;
   nodes: UmlClassNode[];
   connections: UmlConnection[];
   defaultLineStyle: string;
@@ -35,7 +36,7 @@ export class XmiClientParser {
     }
 
     // 1. Extraer geometrías y estilos de línea desde <xmi:Extension><diagrams><diagram><elements>
-    const geometryMap = new Map<string, { left: number; top: number; width: number; height: number }>();
+    const geometryMap = new Map<string, { left: number; top: number; width: number; height: number; color?: string }>();
     const connectorLabelsMap = new Map<string, { name?: string; sMult?: string; tMult?: string }>();
     const connLineStyleMap = new Map<string, UmlLineStyle>();
 
@@ -45,7 +46,10 @@ export class XmiClientParser {
       // Ignorar errores de layout y continuar con grid
     }
 
-    // 2. Extraer clases y elementos
+    // 2. Extraer metadatos de Enterprise Architect (sType, estereotipos BCE)
+    const eaElementMetaMap = this.extractEaElementMeta(xmiRoot);
+
+    // 3. Extraer clases, actores y elementos
     const rawElements = this.collectPackagedElements(umlModel);
     const nodeMap = new Map<string, UmlClassNode>();
     let gridIdx = 0;
@@ -57,7 +61,104 @@ export class XmiClientParser {
 
       if (!id) continue;
 
+      // A) Actores UML
+      if (type === 'uml:Actor' || type === 'Actor') {
+        let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
+        let width = 65;
+        let height = 95;
+
+        if (geometryMap.has(id)) {
+          const g = geometryMap.get(id)!;
+          pos = { x: g.left, y: g.top };
+          if (g.width > 20) width = g.width;
+          if (g.height > 20) height = g.height;
+        }
+
+        const customActorColor = geometryMap.get(id)?.color || eaElementMetaMap.get(id)?.color;
+        const node: UmlClassNode = {
+          id,
+          name: (name || `Actor_${gridIdx + 1}`).trim(),
+          position: pos,
+          width,
+          height,
+          nodeType: 'actor',
+          stereotype: null,
+          color: customActorColor || '#FEF2DD',
+          attributes: [],
+          methods: [],
+          isAnchor: false,
+        };
+
+        nodeMap.set(id, node);
+        gridIdx++;
+        continue;
+      }
+
+      // B) Clases UML y Clases Estereotipadas (BCE / Robustez)
       if (type === 'uml:Class' || type === 'uml:AssociationClass' || type === 'Class') {
+        const meta = eaElementMetaMap.get(id);
+
+        if (meta?.sType === 'Actor') {
+          let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
+          let width = 65;
+          let height = 95;
+
+          if (geometryMap.has(id)) {
+            const g = geometryMap.get(id)!;
+            pos = { x: g.left, y: g.top };
+            if (g.width > 20) width = g.width;
+            if (g.height > 20) height = g.height;
+          }
+
+          const customActorMetaColor = geometryMap.get(id)?.color || meta?.color;
+          const node: UmlClassNode = {
+            id,
+            name: (name || meta?.name || `Actor_${gridIdx + 1}`).trim(),
+            position: pos,
+            width,
+            height,
+            nodeType: 'actor',
+            stereotype: null,
+            color: customActorMetaColor || '#FEF2DD',
+            attributes: [],
+            methods: [],
+            isAnchor: false,
+          };
+
+          nodeMap.set(id, node);
+          gridIdx++;
+          continue;
+        }
+
+        let nodeType: any = 'class';
+        let stereotype: string | null = null;
+        const s = (meta?.stereotype || '').toLowerCase().trim();
+
+        if (s === 'entity.') {
+          nodeType = 'class';
+          stereotype = UmlStereotype.ENTITY_DOT;
+        } else if (s === 'controller.') {
+          nodeType = 'class';
+          stereotype = UmlStereotype.CONTROLLER_DOT;
+        } else if (s === 'ui') {
+          nodeType = 'class';
+          stereotype = UmlStereotype.UI;
+        } else if (s === 'boundary') {
+          nodeType = 'boundary';
+          stereotype = UmlStereotype.BOUNDARY;
+        } else if (s === 'control' || s === 'controller') {
+          nodeType = 'control';
+          stereotype = UmlStereotype.CONTROL;
+        } else if (s === 'entity') {
+          nodeType = 'entity';
+          stereotype = UmlStereotype.ENTITY;
+        } else if (meta?.stereotype) {
+          const match = Object.values(UmlStereotype).find(
+            (v) => (v as string).toLowerCase() === s,
+          );
+          stereotype = match || meta.stereotype;
+        }
+
         const attributes = this.extractAttributes(elem);
         const methods = this.extractMethods(elem);
 
@@ -68,16 +169,21 @@ export class XmiClientParser {
         if (geometryMap.has(id)) {
           const g = geometryMap.get(id)!;
           pos = { x: g.left, y: g.top };
-          if (g.width > 50) width = g.width;
-          if (g.height > 40) height = g.height;
+          if (g.width > 40) width = g.width;
+          if (g.height > 30) height = g.height;
         }
 
+        const customClassColor = geometryMap.get(id)?.color || meta?.color;
+        const defaultClassColor = (nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3';
         const node: UmlClassNode = {
           id,
-          name: name || `Clase_${gridIdx + 1}`,
+          name: (name || meta?.name || `Clase_${gridIdx + 1}`).trim(),
           position: pos,
           width,
           height,
+          nodeType,
+          stereotype,
+          color: customClassColor || defaultClassColor,
           attributes,
           methods,
           isAnchor: false,
@@ -88,7 +194,70 @@ export class XmiClientParser {
       }
     }
 
-    // 3. Extraer relaciones
+    // C) Elementos declarados en extensión EA no presentes en packagedElements
+    for (const [eId, meta] of eaElementMetaMap.entries()) {
+      if (!nodeMap.has(eId) && (meta.sType === 'Actor' || meta.sType === 'Class')) {
+        const isActor = meta.sType === 'Actor';
+        let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
+        let width = isActor ? 65 : 220;
+        let height = isActor ? 95 : 120;
+
+        if (geometryMap.has(eId)) {
+          const g = geometryMap.get(eId)!;
+          pos = { x: g.left, y: g.top };
+          if (g.width > 20) width = g.width;
+          if (g.height > 20) height = g.height;
+        }
+
+        let nodeType: any = isActor ? 'actor' : 'class';
+        let stereotype: string | null = null;
+        const s = (meta.stereotype || '').toLowerCase().trim();
+
+        if (s === 'entity.') {
+          nodeType = 'class';
+          stereotype = UmlStereotype.ENTITY_DOT;
+        } else if (s === 'controller.') {
+          nodeType = 'class';
+          stereotype = UmlStereotype.CONTROLLER_DOT;
+        } else if (s === 'ui') {
+          nodeType = 'class';
+          stereotype = UmlStereotype.UI;
+        } else if (s === 'boundary') {
+          nodeType = 'boundary';
+          stereotype = UmlStereotype.BOUNDARY;
+        } else if (s === 'control' || s === 'controller') {
+          nodeType = 'control';
+          stereotype = UmlStereotype.CONTROL;
+        } else if (s === 'entity') {
+          nodeType = 'entity';
+          stereotype = UmlStereotype.ENTITY;
+        } else if (meta.stereotype) {
+          const match = Object.values(UmlStereotype).find(
+            (v) => (v as string).toLowerCase() === s,
+          );
+          stereotype = match || meta.stereotype;
+        }
+
+        const customExtColor = geometryMap.get(eId)?.color || meta?.color;
+        const defaultExtColor = isActor ? '#FEF2DD' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3');
+        nodeMap.set(eId, {
+          id: eId,
+          name: (meta.name || (isActor ? `Actor_${gridIdx + 1}` : `Clase_${gridIdx + 1}`)).trim(),
+          position: pos,
+          width,
+          height,
+          nodeType,
+          stereotype,
+          color: customExtColor || defaultExtColor,
+          attributes: [],
+          methods: [],
+          isAnchor: false,
+        });
+        gridIdx++;
+      }
+    }
+
+    // 4. Extraer relaciones
     const connections: UmlConnection[] = [];
     const connSet = new Set<string>();
 
@@ -115,7 +284,7 @@ export class XmiClientParser {
       }
     }
 
-    // 4. Conectores de extensión EA
+    // 5. Conectores de extensión EA
     const eaConns = this.extractEaConnectors(xmiRoot, nodeMap, connLineStyleMap);
     for (const ec of eaConns) {
       if (!connSet.has(ec.id)) {
@@ -124,11 +293,21 @@ export class XmiClientParser {
       }
     }
 
-    // 5. Reconstruir tablas intermedias / Association Classes (ancla y enlace discontinuo)
+    // 6. Reconstruir tablas intermedias / Association Classes (ancla y enlace discontinuo)
     this.resolveAssociationClasses(xmiRoot, rawElements, nodeMap, connections, connSet);
+
+    // Determinar tipo de diagrama inferido
+    let hasActor = false;
+    let hasBce = false;
+    for (const node of nodeMap.values()) {
+      if (node.nodeType === 'actor') hasActor = true;
+      if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') hasBce = true;
+    }
+    const diagramType = (hasActor || hasBce) ? 'class_analysis' : 'class';
 
     return {
       name: diagramName,
+      diagramType,
       nodes: Array.from(nodeMap.values()),
       connections,
       defaultLineStyle: 'segment',
@@ -185,6 +364,7 @@ export class XmiClientParser {
         visibility: raw['@_visibility'] || 'private',
         isPk: (name.toLowerCase().endsWith('id') || name.toLowerCase() === 'id'),
         isNullable: false,
+        nullable: false,
       });
     }
 
@@ -316,8 +496,8 @@ export class XmiClientParser {
       targetId: `${targetNodeId}_left`,
       type,
       name: name || undefined,
-      sourceMultiplicity: sMult || '1',
-      targetMultiplicity: tMult || '0..*',
+      sourceMultiplicity: sMult || '',
+      targetMultiplicity: tMult || '',
       lineStyle,
     };
   }
@@ -401,13 +581,68 @@ export class XmiClientParser {
         targetId: `${targetId}_left`,
         type,
         name,
-        sourceMultiplicity: sMult || '1',
-        targetMultiplicity: tMult || '0..*',
+        sourceMultiplicity: sMult || '',
+        targetMultiplicity: tMult || '',
         lineStyle: style,
       });
     }
 
     return conns;
+  }
+
+  private static extractEaElementMeta(xmiRoot: any): Map<string, { sType?: string; stereotype?: string; name?: string; color?: string }> {
+    const metaMap = new Map<string, { sType?: string; stereotype?: string; name?: string; color?: string }>();
+    const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
+    if (!ext) return metaMap;
+
+    const elements = ext['elements']?.['element'];
+    if (elements) {
+      const list = Array.isArray(elements) ? elements : [elements];
+      for (const el of list) {
+        const idref = el['@_xmi:idref'] || el['@_id'];
+        if (!idref) continue;
+        const props = el['properties'];
+        const sType = props ? props['@_sType'] : undefined;
+        const stereotype = props ? props['@_stereotype'] : undefined;
+        const name = el['@_name'];
+
+        let color: string | undefined;
+        const styleElem = el['style'];
+        const appearance = styleElem ? styleElem['@_appearance'] : undefined;
+        if (appearance) {
+          const match = appearance.match(/BackColor=(-?\d+)/);
+          if (match && match[1] !== '-1' && match[1] !== '0') {
+            const val = parseInt(match[1], 10);
+            if (!isNaN(val) && val > 0) {
+              color = this.eaColorToHex(val);
+            }
+          }
+        }
+
+        metaMap.set(idref, { sType, stereotype, name, color });
+      }
+    }
+
+    // Perfiles personalizados de EA (ej: <thecustomprofile:Entity. base_Class="..."/>)
+    for (const key of Object.keys(xmiRoot)) {
+      if (key.includes(':')) {
+        const tagParts = key.split(':');
+        const tagStereotype = tagParts[1];
+        const entries = Array.isArray(xmiRoot[key]) ? xmiRoot[key] : [xmiRoot[key]];
+        for (const entry of entries) {
+          if (entry && typeof entry === 'object') {
+            const baseClass = entry['@_base_Class'];
+            if (baseClass) {
+              const existing = metaMap.get(baseClass) || {};
+              existing.stereotype = existing.stereotype || tagStereotype;
+              metaMap.set(baseClass, existing);
+            }
+          }
+        }
+      }
+    }
+
+    return metaMap;
   }
 
   private static extractGeometry(xmiRoot: any, geometryMap: Map<string, any>, labelsMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): void {
@@ -432,6 +667,17 @@ export class XmiClientParser {
       const geometry = elem['@_geometry'];
       const style = elem['@_style'];
 
+      let color: string | undefined;
+      if (style) {
+        const bcolMatch = style.match(/BCol=(-?\d+)/);
+        if (bcolMatch && bcolMatch[1] !== '-1' && bcolMatch[1] !== '0') {
+          const val = parseInt(bcolMatch[1], 10);
+          if (!isNaN(val) && val > 0) {
+            color = this.eaColorToHex(val);
+          }
+        }
+      }
+
       if (subject && style && connLineStyleMap) {
         const modeMatch = style.match(/Mode=(\d+)/);
         if (modeMatch) {
@@ -452,10 +698,11 @@ export class XmiClientParser {
           const bottom = parseInt(bottomMatch[1], 10);
 
           geometryMap.set(subject, {
-            left: Math.max(30, left),
-            top: Math.max(30, top),
-            width: Math.max(160, right - left),
-            height: Math.max(60, bottom - top),
+            left: Math.max(20, left),
+            top: Math.max(20, top),
+            width: Math.max(20, right - left),
+            height: Math.max(20, bottom - top),
+            color,
           });
         }
       }
@@ -488,6 +735,8 @@ export class XmiClientParser {
   private static extractMult(endElem: any): string {
     const lowerElem = endElem['lowerValue'];
     const upperElem = endElem['upperValue'];
+
+    if (!lowerElem && !upperElem) return '';
 
     const lower = lowerElem ? (lowerElem['@_value'] !== undefined ? String(lowerElem['@_value']) : '1') : '';
     const upper = upperElem ? (upperElem['@_value'] !== undefined ? String(upperElem['@_value']) : '1') : '';
@@ -606,8 +855,8 @@ export class XmiClientParser {
             sourceId: `${pair.sourceId}_right`,
             targetId: `${pair.targetId}_left`,
             type: 'association',
-            sourceMultiplicity: '*',
-            targetMultiplicity: '*',
+            sourceMultiplicity: '',
+            targetMultiplicity: '',
             lineStyle: 'straight',
           };
           connectionSet.add(newConnId);
@@ -664,5 +913,12 @@ export class XmiClientParser {
         });
       }
     }
+  }
+
+  public static eaColorToHex(val: number): string {
+    const r = val & 0xFF;
+    const g = (val >> 8) & 0xFF;
+    const b = (val >> 16) & 0xFF;
+    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
   }
 }

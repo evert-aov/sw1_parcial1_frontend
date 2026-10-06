@@ -149,7 +149,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   // Colores predefinidos modernos
   readonly presetColors = [
-    { name: 'Amarillo suave (Por defecto)', color: '#FFFDDD' },
+    { name: 'Por defecto (#FDFAF3)', color: '#FDFAF3' },
     { name: 'Cyan suave', color: '#BAE6FD' },
     { name: 'Azul suave', color: '#BFDBFE' },
     { name: 'Rosa suave', color: '#FBCFE8' },
@@ -264,7 +264,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   constructor() {
     effect(() => {
-      const color = this.selectedNodeColor() || '#FFFDDD';
+      const color = this.selectedNodeColor() || '#FDFAF3';
       if (!this.isPickerOpen && this.nativeColorInputRef?.nativeElement) {
         this.nativeColorInputRef.nativeElement.value = color;
       }
@@ -273,7 +273,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   ngAfterViewInit(): void {
     if (this.nativeColorInputRef?.nativeElement) {
-      this.nativeColorInputRef.nativeElement.value = this.selectedNodeColor() || '#FFFDDD';
+      this.nativeColorInputRef.nativeElement.value = this.selectedNodeColor() || '#FDFAF3';
     }
   }
 
@@ -284,7 +284,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
   onColorPickerBlur(): void {
     this.isPickerOpen = false;
     if (this.nativeColorInputRef?.nativeElement) {
-      this.nativeColorInputRef.nativeElement.value = this.selectedNodeColor() || '#FFFDDD';
+      this.nativeColorInputRef.nativeElement.value = this.selectedNodeColor() || '#FDFAF3';
     }
   }
 

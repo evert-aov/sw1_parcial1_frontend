@@ -40,6 +40,7 @@ import {
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe } from '../../../../../core/i18n';
 import { UML_SVG_COMPONENTS, getUmlMarkerConfig, UmlMarkerConfig } from '../uml-svg';
+import { calculateClassDynamicWidth } from '../../utils/node-metrics.util';
 
 export interface DiagramCanvasViewState {
   zoom: number;
@@ -1163,22 +1164,11 @@ export class DiagramCanvasComponent {
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
       return 70;
     }
-    const CHAR_W = 7.2;
-    let maxLen = (node.name || '').length + 3;
-    for (const attr of node.attributes || []) {
-      const len = 2 + (attr.name || '').length + 2 + (attr.type || '').length;
-      if (len > maxLen) maxLen = len;
-    }
-    for (const m of node.methods || []) {
-      const len = 2 + (m.name || '').length + 1 + (m.parameters || '').length + 3 + (m.returnType || 'void').length;
-      if (len > maxLen) maxLen = len;
-    }
-    const computed = Math.round(maxLen * CHAR_W + 28);
-    return Math.max(130, computed);
+    return calculateClassDynamicWidth(node);
   }
 
   // Ancho efectivo del nodo:
-  // - Para clases UML: la función principal y base es el cálculo dinámico según atributos (no se achica por debajo de atributos).
+  // - Para clases UML: la función principal y base es el cálculo dinámico según atributos y métodos (no se achica por debajo del contenido).
   // - Para casos de uso, actores y paquetes: permite redimensionar a dimensiones más reducidas adaptando el contenido.
   getNodeWidth(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
@@ -1242,7 +1232,7 @@ export class DiagramCanvasComponent {
       return 280;
     }
     const dynamicW = this.getDynamicNodeWidth(node);
-    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+    const manualW = (node.isCustomSize && node.customWidth) ? node.customWidth : 0;
     return Math.max(dynamicW, manualW);
   }
 
@@ -1340,7 +1330,7 @@ export class DiagramCanvasComponent {
       minW = 50;
       minH = 50;
     } else {
-      minW = Math.max(120, this.getDynamicNodeWidth(node));
+      minW = Math.max(90, this.getDynamicNodeWidth(node));
     }
     const width = Math.max(minW, Math.round(rect.width));
     const height = Math.max(minH, Math.round(rect.height));
@@ -1403,7 +1393,7 @@ export class DiagramCanvasComponent {
       minW = 160;
       minH = 90;
     } else {
-      minW = Math.max(120, this.getDynamicNodeWidth(node));
+      minW = Math.max(90, this.getDynamicNodeWidth(node));
     }
 
     let animationFrameId: number | null = null;
@@ -2115,17 +2105,17 @@ export class DiagramCanvasComponent {
     const isExec = node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment';
 
     let front = node.color;
-    if (!front || (front === '#FFFDDD' && (isDevice || isExec || node.nodeType === 'node'))) {
+    if (!front || ((front === '#FFFDDD' || front === '#FDFAF3') && (isDevice || isExec || node.nodeType === 'node'))) {
       if (isDevice) {
-        front = '#FFFDF8';
+        front = '#F3FAF7';
       } else if (isExec) {
-        front = '#CDE6F7';
+        front = '#CDE5F5';
       } else {
-        front = '#D2E8F9';
+        front = '#F3FAF7';
       }
     }
 
-    if (isDevice || front === '#FFFDF8' || front === '#FFF9F2' || front === '#FFFFFF') {
+    if (isDevice || front === '#F3FAF7' || front === '#FFFDF8' || front === '#FFF9F2' || front === '#FFFFFF') {
       return {
         front,
         top: '#FFFFFF',
@@ -2134,7 +2124,7 @@ export class DiagramCanvasComponent {
       };
     }
 
-    if (front === '#CDE6F7' || front === '#D2E8F9' || front === '#C6E2F7') {
+    if (front === '#CDE5F5' || front === '#CDE6F7' || front === '#D2E8F9' || front === '#C6E2F7') {
       return {
         front,
         top: '#E4F2FD',
