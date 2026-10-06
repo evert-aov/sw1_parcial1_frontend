@@ -4828,7 +4828,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
     const diagId = this.currentDiagramId();
-    if (diagId) {
+    if (!diagId) {
+      alert('Debes guardar el diagrama antes de exportar XMI.');
+      return;
+    }
+
+    const triggerDownload = () => {
       this.xmiService.exportDiagram(diagId).subscribe({
         next: (blob: Blob) => {
           const url = window.URL.createObjectURL(blob);
@@ -4843,8 +4848,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           alert(`Error al exportar XMI: ${errMsg}`);
         },
       });
+    };
+
+    if (this.hasUnsavedChanges() && !this.isReadOnly()) {
+      const payload = this.buildSaveAstPayload();
+      this.diagramService.saveAst(diagId, payload).subscribe({
+        next: () => {
+          this.hasUnsavedChanges.set(false);
+          this.clearLocalDraft(diagId);
+          triggerDownload();
+        },
+        error: (err) => {
+          console.warn('No se pudo guardar automáticamente antes de exportar XMI:', err);
+          triggerDownload();
+        },
+      });
     } else {
-      alert('Debes guardar el diagrama antes de exportar XMI.');
+      triggerDownload();
     }
   }
 
