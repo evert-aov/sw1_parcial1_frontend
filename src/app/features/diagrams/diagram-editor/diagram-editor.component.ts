@@ -4917,7 +4917,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               this.nodes.set(
                 ast.nodes.map((n: any) => ({
                   ...n,
-                  width: n.width || 220,
+                  width: n.width || (n.nodeType === 'actor' ? 65 : (n.nodeType === 'use_case' ? 140 : 220)),
+                  height: n.height || (n.nodeType === 'actor' ? 95 : (n.nodeType === 'use_case' ? 60 : 120)),
                   attributes: (n.attributes || []).map((a: any) => ({
                     ...a,
                     name: a.name,
@@ -4937,6 +4938,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               this.connections.set(ast.connections || []);
               if (ast.name) {
                 this.currentDiagramName.set(ast.name);
+              }
+              if (ast.diagramType) {
+                this.activeDiagramType.set(ast.diagramType as DiagramType);
               }
               this.markAsUnsaved();
               this.updateConnectionEndpoints();

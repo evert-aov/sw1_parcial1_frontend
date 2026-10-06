@@ -94,7 +94,40 @@ export class XmiClientParser {
         continue;
       }
 
-      // B) Clases UML y Clases Estereotipadas (BCE / Robustez)
+      // B) Casos de Uso UML
+      if (type === 'uml:UseCase' || type === 'UseCase') {
+        let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
+        let width = 140;
+        let height = 60;
+
+        if (geometryMap.has(id)) {
+          const g = geometryMap.get(id)!;
+          pos = { x: g.left, y: g.top };
+          if (g.width > 20) width = Math.min(200, g.width);
+          if (g.height > 20) height = Math.min(65, g.height);
+        }
+
+        const customUcColor = geometryMap.get(id)?.color || eaElementMetaMap.get(id)?.color;
+        const node: UmlClassNode = {
+          id,
+          name: (name || `CU_${gridIdx + 1}`).trim(),
+          position: pos,
+          width,
+          height,
+          nodeType: 'use_case',
+          stereotype: null,
+          color: customUcColor || '#FEF2DD',
+          attributes: [],
+          methods: [],
+          isAnchor: false,
+        };
+
+        nodeMap.set(id, node);
+        gridIdx++;
+        continue;
+      }
+
+      // C) Clases UML y Clases Estereotipadas (BCE / Robustez)
       if (type === 'uml:Class' || type === 'uml:AssociationClass' || type === 'Class') {
         const meta = eaElementMetaMap.get(id);
 
@@ -120,6 +153,38 @@ export class XmiClientParser {
             nodeType: 'actor',
             stereotype: null,
             color: customActorMetaColor || '#FEF2DD',
+            attributes: [],
+            methods: [],
+            isAnchor: false,
+          };
+
+          nodeMap.set(id, node);
+          gridIdx++;
+          continue;
+        }
+
+        if (meta?.sType === 'UseCase') {
+          let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
+          let width = 140;
+          let height = 60;
+
+          if (geometryMap.has(id)) {
+            const g = geometryMap.get(id)!;
+            pos = { x: g.left, y: g.top };
+            if (g.width > 20) width = Math.min(200, g.width);
+            if (g.height > 20) height = Math.min(65, g.height);
+          }
+
+          const customUcMetaColor = geometryMap.get(id)?.color || meta?.color;
+          const node: UmlClassNode = {
+            id,
+            name: (name || meta?.name || `CU_${gridIdx + 1}`).trim(),
+            position: pos,
+            width,
+            height,
+            nodeType: 'use_case',
+            stereotype: null,
+            color: customUcMetaColor || '#FEF2DD',
             attributes: [],
             methods: [],
             isAnchor: false,
@@ -194,55 +259,58 @@ export class XmiClientParser {
       }
     }
 
-    // C) Elementos declarados en extensión EA no presentes en packagedElements
+    // D) Elementos declarados en extensión EA no presentes en packagedElements
     for (const [eId, meta] of eaElementMetaMap.entries()) {
-      if (!nodeMap.has(eId) && (meta.sType === 'Actor' || meta.sType === 'Class')) {
+      if (!nodeMap.has(eId) && (meta.sType === 'Actor' || meta.sType === 'Class' || meta.sType === 'UseCase')) {
         const isActor = meta.sType === 'Actor';
+        const isUseCase = meta.sType === 'UseCase';
         let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
-        let width = isActor ? 65 : 220;
-        let height = isActor ? 95 : 120;
+        let width = isActor ? 65 : isUseCase ? 140 : 220;
+        let height = isActor ? 95 : isUseCase ? 60 : 120;
 
         if (geometryMap.has(eId)) {
           const g = geometryMap.get(eId)!;
           pos = { x: g.left, y: g.top };
-          if (g.width > 20) width = g.width;
-          if (g.height > 20) height = g.height;
+          if (g.width > 20) width = isUseCase ? Math.min(200, g.width) : g.width;
+          if (g.height > 20) height = isUseCase ? Math.min(65, g.height) : g.height;
         }
 
-        let nodeType: any = isActor ? 'actor' : 'class';
+        let nodeType: any = isActor ? 'actor' : isUseCase ? 'use_case' : 'class';
         let stereotype: string | null = null;
-        const s = (meta.stereotype || '').toLowerCase().trim();
+        if (!isActor && !isUseCase) {
+          const s = (meta.stereotype || '').toLowerCase().trim();
 
-        if (s === 'entity.') {
-          nodeType = 'class';
-          stereotype = UmlStereotype.ENTITY_DOT;
-        } else if (s === 'controller.') {
-          nodeType = 'class';
-          stereotype = UmlStereotype.CONTROLLER_DOT;
-        } else if (s === 'ui') {
-          nodeType = 'class';
-          stereotype = UmlStereotype.UI;
-        } else if (s === 'boundary') {
-          nodeType = 'boundary';
-          stereotype = UmlStereotype.BOUNDARY;
-        } else if (s === 'control' || s === 'controller') {
-          nodeType = 'control';
-          stereotype = UmlStereotype.CONTROL;
-        } else if (s === 'entity') {
-          nodeType = 'entity';
-          stereotype = UmlStereotype.ENTITY;
-        } else if (meta.stereotype) {
-          const match = Object.values(UmlStereotype).find(
-            (v) => (v as string).toLowerCase() === s,
-          );
-          stereotype = match || meta.stereotype;
+          if (s === 'entity.') {
+            nodeType = 'class';
+            stereotype = UmlStereotype.ENTITY_DOT;
+          } else if (s === 'controller.') {
+            nodeType = 'class';
+            stereotype = UmlStereotype.CONTROLLER_DOT;
+          } else if (s === 'ui') {
+            nodeType = 'class';
+            stereotype = UmlStereotype.UI;
+          } else if (s === 'boundary') {
+            nodeType = 'boundary';
+            stereotype = UmlStereotype.BOUNDARY;
+          } else if (s === 'control' || s === 'controller') {
+            nodeType = 'control';
+            stereotype = UmlStereotype.CONTROL;
+          } else if (s === 'entity') {
+            nodeType = 'entity';
+            stereotype = UmlStereotype.ENTITY;
+          } else if (meta.stereotype) {
+            const match = Object.values(UmlStereotype).find(
+              (v) => (v as string).toLowerCase() === s,
+            );
+            stereotype = match || meta.stereotype;
+          }
         }
 
         const customExtColor = geometryMap.get(eId)?.color || meta?.color;
-        const defaultExtColor = isActor ? '#FEF2DD' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3');
+        const defaultExtColor = (isActor || isUseCase) ? '#FEF2DD' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3');
         nodeMap.set(eId, {
           id: eId,
-          name: (meta.name || (isActor ? `Actor_${gridIdx + 1}` : `Clase_${gridIdx + 1}`)).trim(),
+          name: (meta.name || (isActor ? `Actor_${gridIdx + 1}` : isUseCase ? `CU_${gridIdx + 1}` : `Clase_${gridIdx + 1}`)).trim(),
           position: pos,
           width,
           height,
@@ -282,6 +350,16 @@ export class XmiClientParser {
           }
         }
       }
+
+      if (type === 'uml:UseCase' || type === 'UseCase') {
+        const ucConns = this.parseUseCaseRelationships(elem, nodeMap, connLineStyleMap);
+        for (const uc of ucConns) {
+          if (!connSet.has(uc.id)) {
+            connSet.add(uc.id);
+            connections.push(uc);
+          }
+        }
+      }
     }
 
     // 5. Conectores de extensión EA
@@ -298,12 +376,14 @@ export class XmiClientParser {
 
     // Determinar tipo de diagrama inferido
     let hasActor = false;
+    let hasUseCase = false;
     let hasBce = false;
     for (const node of nodeMap.values()) {
       if (node.nodeType === 'actor') hasActor = true;
+      if (node.nodeType === 'use_case') hasUseCase = true;
       if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') hasBce = true;
     }
-    const diagramType = (hasActor || hasBce) ? 'class_analysis' : 'class';
+    const diagramType = hasUseCase ? 'use_case' : ((hasActor || hasBce) ? 'class_analysis' : 'class');
 
     return {
       name: diagramName,
@@ -486,6 +566,23 @@ export class XmiClientParser {
       if (!tMult && lbl.tMult) tMult = lbl.tMult;
     }
 
+    const sNode = nodeMap.get(sourceNodeId);
+    const tNode = nodeMap.get(targetNodeId);
+    const isActorOrUseCase =
+      sNode?.nodeType === 'actor' ||
+      sNode?.nodeType === 'use_case' ||
+      tNode?.nodeType === 'actor' ||
+      tNode?.nodeType === 'use_case';
+
+    if (isActorOrUseCase) {
+      if (sMult === '1' && !end0['lowerValue'] && !end1['lowerValue']) {
+        sMult = '';
+      }
+      if (tMult === '1' && !end0['lowerValue'] && !end1['lowerValue']) {
+        tMult = '';
+      }
+    }
+
     const lineStyle = connLineStyleMap?.get(id) || 'segment';
 
     return {
@@ -533,6 +630,88 @@ export class XmiClientParser {
     return conns;
   }
 
+  private static parseUseCaseRelationships(
+    ucElem: any,
+    nodeMap: Map<string, any>,
+    connLineStyleMap?: Map<string, UmlLineStyle>,
+  ): UmlConnection[] {
+    const conns: UmlConnection[] = [];
+    const sourceId = ucElem['@_xmi:id'] || ucElem['@_id'];
+    if (!sourceId || !nodeMap.has(sourceId)) return conns;
+
+    // A) Extend: <extend xmi:type="uml:Extend" xmi:id="..." extendedCase="..."/>
+    const rawExtends = ucElem['extend'];
+    if (rawExtends) {
+      const list = Array.isArray(rawExtends) ? rawExtends : [rawExtends];
+      for (const ext of list) {
+        const targetId = ext['@_extendedCase'];
+        if (targetId && nodeMap.has(targetId)) {
+          const id = ext['@_xmi:id'] || ext['@_id'] || `ext_${sourceId}_${targetId}`;
+          const lineStyle = connLineStyleMap?.get(id) || 'segment';
+          conns.push({
+            id,
+            sourceNodeId: sourceId,
+            targetNodeId: targetId,
+            sourceId: `${sourceId}_right`,
+            targetId: `${targetId}_left`,
+            type: 'extend',
+            name: '«extend»',
+            lineStyle,
+          });
+        }
+      }
+    }
+
+    // B) Include: <include xmi:type="uml:Include" xmi:id="..." addition="..."/>
+    const rawIncludes = ucElem['include'];
+    if (rawIncludes) {
+      const list = Array.isArray(rawIncludes) ? rawIncludes : [rawIncludes];
+      for (const inc of list) {
+        const targetId = inc['@_addition'];
+        if (targetId && nodeMap.has(targetId)) {
+          const id = inc['@_xmi:id'] || inc['@_id'] || `inc_${sourceId}_${targetId}`;
+          const lineStyle = connLineStyleMap?.get(id) || 'segment';
+          conns.push({
+            id,
+            sourceNodeId: sourceId,
+            targetNodeId: targetId,
+            sourceId: `${sourceId}_right`,
+            targetId: `${targetId}_left`,
+            type: 'include',
+            name: '«include»',
+            lineStyle,
+          });
+        }
+      }
+    }
+
+    // C) Generalization: <generalization xmi:type="uml:Generalization" general="..."/>
+    const rawGens = ucElem['generalization'];
+    if (rawGens) {
+      const list = Array.isArray(rawGens) ? rawGens : [rawGens];
+      for (const g of list) {
+        const targetId = g['@_general'] || (g['general'] && g['general']['@_xmi:idref']);
+        if (targetId && nodeMap.has(targetId)) {
+          const id = g['@_xmi:id'] || `gen_${sourceId}_${targetId}`;
+          const lineStyle = connLineStyleMap?.get(id) || 'segment';
+          conns.push({
+            id,
+            sourceNodeId: sourceId,
+            targetNodeId: targetId,
+            sourceId: `${sourceId}_top`,
+            targetId: `${targetId}_bottom`,
+            type: 'generalization',
+            lineStyle,
+            sourceMultiplicity: '',
+            targetMultiplicity: '',
+          });
+        }
+      }
+    }
+
+    return conns;
+  }
+
   private static extractEaConnectors(xmiRoot: any, nodeMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): UmlConnection[] {
     const conns: UmlConnection[] = [];
     const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
@@ -558,16 +737,32 @@ export class XmiClientParser {
 
       const eaProps = c['properties'] || {};
       const eaType = eaProps['@_ea_type'] || 'Association';
+      const eaSubtype = (eaProps['@_subtype'] || '').toLowerCase();
+      const eaStereo = (eaProps['@_stereotype'] || '').toLowerCase();
+      const labels = c['labels'] || {};
+      const mbText = (labels['@_mb'] || '').toLowerCase();
 
       let type: any = 'association';
-      if (eaType === 'Generalization') type = 'generalization';
-      else if (eaType === 'Realisation') type = 'realization';
-      else if (eaType === 'Dependency') type = 'dependency';
+      let name = labels['@_mb'] || undefined;
 
-      const labels = c['labels'] || {};
+      if (eaType === 'UseCase') {
+        if (eaSubtype === 'extends' || eaStereo === 'extend' || mbText.includes('extend')) {
+          type = 'extend';
+          name = '«extend»';
+        } else if (eaSubtype === 'includes' || eaStereo === 'include' || mbText.includes('include')) {
+          type = 'include';
+          name = '«include»';
+        }
+      } else if (eaType === 'Generalization') {
+        type = 'generalization';
+      } else if (eaType === 'Realisation') {
+        type = 'realization';
+      } else if (eaType === 'Dependency') {
+        type = 'dependency';
+      }
+
       const sMult = labels['@_lb'] || '';
       const tMult = labels['@_rb'] || '';
-      const name = labels['@_mb'] || undefined;
 
       const appearance = c['appearance'] || {};
       const linemode = appearance['@_linemode'];
