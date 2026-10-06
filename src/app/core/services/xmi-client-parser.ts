@@ -1,5 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
-import { UmlClassNode, UmlConnection, UmlLineStyle, UmlStereotype } from '../models/diagram.model';
+import { UmlClassNode, UmlConnection, UmlLineStyle, UmlMessage, UmlStereotype } from '../models/diagram.model';
 
 export interface ParsedDiagramResult {
   name: string;
@@ -59,11 +59,16 @@ export class XmiClientParser {
     const geometryMap = new Map<string, { left: number; top: number; width: number; height: number; color?: string }>();
     const connectorLabelsMap = new Map<string, { name?: string; sMult?: string; tMult?: string }>();
     const connLineStyleMap = new Map<string, UmlLineStyle>();
+    const diagramMeta: { name?: string; type?: string } = {};
 
     try {
-      this.extractGeometry(xmiRoot, geometryMap, connectorLabelsMap, connLineStyleMap);
+      this.extractGeometry(xmiRoot, geometryMap, connectorLabelsMap, connLineStyleMap, diagramMeta);
     } catch (e) {
       // Ignorar errores de layout y continuar con grid
+    }
+
+    if (diagramMeta.name) {
+      diagramName = this.fixUtf8Mojibake(diagramMeta.name);
     }
 
     // 2. Extraer metadatos de Enterprise Architect (sType, estereotipos BCE)
@@ -427,13 +432,93 @@ export class XmiClientParser {
     // Determinar tipo de diagrama inferido
     let hasActor = false;
     let hasUseCase = false;
-    let hasBce = false;
+    let hasCommStereo = false;
+    let hasAnalysisStereo = false;
+    const hasMessages = connections.some(
+      (c) => c.messages && c.messages.length > 0,
+    );
+
     for (const node of nodeMap.values()) {
       if (node.nodeType === 'actor') hasActor = true;
       if (node.nodeType === 'use_case') hasUseCase = true;
-      if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') hasBce = true;
+      const s = (node.stereotype || '').toLowerCase().trim();
+      const nt = (node.nodeType || '').toLowerCase().trim();
+      if (
+        s === 'boundary' ||
+        s === 'control' ||
+        s === 'entity' ||
+        nt === 'boundary' ||
+        nt === 'control' ||
+        nt === 'entity'
+      ) {
+        hasCommStereo = true;
+      }
+      if (s === 'ui' || s === 'controller.' || s === 'entity.') {
+        hasAnalysisStereo = true;
+      }
     }
-    const diagramType = hasUseCase ? 'use_case' : ((hasActor || hasBce) ? 'class_analysis' : 'class');
+
+    let diagramType = 'class';
+    const eaDiagType = (diagramMeta.type || '').toLowerCase();
+    if (eaDiagType.includes('use case') || hasUseCase) {
+      diagramType = 'use_case';
+    } else if (
+      eaDiagType.includes('collab') ||
+      eaDiagType.includes('commun') ||
+      hasMessages ||
+      (hasCommStereo && !hasAnalysisStereo)
+    ) {
+      diagramType = 'communication';
+    } else if (hasAnalysisStereo || hasActor) {
+      diagramType = 'class_analysis';
+    }
+
+    // Normalizar estereotipos y tipos de nodo según el tipo de diagrama:
+    // Para comunicación: boundary, control, entity
+    // Para análisis de clases: UI, Controller., Entity.
+    if (diagramType === 'communication') {
+      for (const node of nodeMap.values()) {
+        const s = (node.stereotype || '').toLowerCase().trim();
+        const nt = (node.nodeType || '').toLowerCase().trim();
+        if (nt === 'boundary' || s === 'boundary' || s === 'ui') {
+          node.nodeType = 'boundary';
+          node.stereotype = UmlStereotype.BOUNDARY;
+          if (node.width && node.width > 120 && node.height && node.height > 100) {
+            node.width = 70;
+            node.height = 70;
+          }
+        } else if (nt === 'control' || s === 'control' || s.includes('controller')) {
+          node.nodeType = 'control';
+          node.stereotype = UmlStereotype.CONTROL;
+          if (node.width && node.width > 120 && node.height && node.height > 100) {
+            node.width = 70;
+            node.height = 70;
+          }
+        } else if (nt === 'entity' || s === 'entity' || s.includes('entity')) {
+          node.nodeType = 'entity';
+          node.stereotype = UmlStereotype.ENTITY;
+          if (node.width && node.width > 120 && node.height && node.height > 100) {
+            node.width = 70;
+            node.height = 70;
+          }
+        }
+      }
+    } else if (diagramType === 'class_analysis') {
+      for (const node of nodeMap.values()) {
+        const s = (node.stereotype || '').toLowerCase().trim();
+        const nt = (node.nodeType || '').toLowerCase().trim();
+        if (nt === 'boundary' || s === 'boundary' || s === 'ui') {
+          node.nodeType = 'class';
+          node.stereotype = UmlStereotype.UI;
+        } else if (nt === 'control' || s === 'control' || s.includes('controller')) {
+          node.nodeType = 'class';
+          node.stereotype = UmlStereotype.CONTROLLER_DOT;
+        } else if (nt === 'entity' || s === 'entity' || s.includes('entity')) {
+          node.nodeType = 'class';
+          node.stereotype = UmlStereotype.ENTITY_DOT;
+        }
+      }
+    }
 
     return {
       name: diagramName,
@@ -634,6 +719,9 @@ export class XmiClientParser {
     }
 
     const lineStyle = connLineStyleMap?.get(id) || 'segment';
+    const rawConnName = name || (labelsMap.has(id) ? labelsMap.get(id)!.name : undefined);
+    const cleanConnName = this.fixUtf8Mojibake(rawConnName || '');
+    const commMsgs = this.parseCommunicationMessages(cleanConnName);
 
     return {
       id,
@@ -642,10 +730,11 @@ export class XmiClientParser {
       sourceId: `${sourceNodeId}_right`,
       targetId: `${targetNodeId}_left`,
       type,
-      name: name || undefined,
+      name: commMsgs.length > 0 ? undefined : (cleanConnName || undefined),
       sourceMultiplicity: sMult || '',
       targetMultiplicity: tMult || '',
       lineStyle,
+      messages: commMsgs.length > 0 ? commMsgs : undefined,
     };
   }
 
@@ -817,6 +906,8 @@ export class XmiClientParser {
       const appearance = c['appearance'] || {};
       const linemode = appearance['@_linemode'];
       const style = connLineStyleMap?.get(id) || this.mapEaModeToLineStyle(linemode);
+      const cleanConnName = name ? this.fixUtf8Mojibake(name) : undefined;
+      const commMsgs = this.parseCommunicationMessages(cleanConnName);
 
       conns.push({
         id,
@@ -825,10 +916,11 @@ export class XmiClientParser {
         sourceId: `${sourceId}_right`,
         targetId: `${targetId}_left`,
         type,
-        name,
+        name: commMsgs.length > 0 ? undefined : (cleanConnName || undefined),
         sourceMultiplicity: sMult || '',
         targetMultiplicity: tMult || '',
         lineStyle: style,
+        messages: commMsgs.length > 0 ? commMsgs : undefined,
       });
     }
 
@@ -890,7 +982,13 @@ export class XmiClientParser {
     return metaMap;
   }
 
-  private static extractGeometry(xmiRoot: any, geometryMap: Map<string, any>, labelsMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): void {
+  private static extractGeometry(
+    xmiRoot: any,
+    geometryMap: Map<string, any>,
+    labelsMap: Map<string, any>,
+    connLineStyleMap?: Map<string, UmlLineStyle>,
+    diagramMetaRef?: { name?: string; type?: string },
+  ): void {
     const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
     if (!ext) return;
 
@@ -901,7 +999,17 @@ export class XmiClientParser {
     if (!list) return;
 
     const primary = Array.isArray(list) ? list[0] : list;
-    if (!primary || !primary['elements']) return;
+    if (!primary) return;
+
+    if (diagramMetaRef) {
+      const props = primary['properties'];
+      if (props) {
+        diagramMetaRef.type = props['@_type'];
+        diagramMetaRef.name = props['@_name'];
+      }
+    }
+
+    if (!primary['elements']) return;
 
     const elemList = primary['elements']['element'];
     if (!elemList) return;
@@ -952,6 +1060,32 @@ export class XmiClientParser {
         }
       }
     }
+  }
+
+  public static parseCommunicationMessages(rawText?: string): UmlMessage[] {
+    if (!rawText) return [];
+    const parts = rawText
+      .split(/\r?\n|&#xA;|;/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const msgs: UmlMessage[] = [];
+    const msgRegex = /^(\d+(?:\.\d+)*)\s*:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)(?:\s*\((.*?)\))?(?:\s*:\s*([a-zA-Z_$][a-zA-Z0-9_$<>]*))?$/;
+
+    for (let i = 0; i < parts.length; i++) {
+      const match = parts[i].match(msgRegex);
+      if (match) {
+        msgs.push({
+          id: `msg_${Date.now()}_${i}`,
+          sequenceNumber: match[1],
+          functionName: match[2],
+          parameters: match[3] || '',
+          returnType: match[4] || '',
+          direction: 'forward',
+          orderIndex: i,
+        });
+      }
+    }
+    return msgs;
   }
 
   public static mapEaModeToLineStyle(mode: string | number | undefined): UmlLineStyle {

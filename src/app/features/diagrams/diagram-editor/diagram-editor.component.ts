@@ -72,6 +72,7 @@ import { BmpExportService } from '../../../core/services/bmp-export.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import {
   DiagramType,
+  UmlStereotype,
   UmlNodeType,
   UmlRelationshipType,
   UmlLineStyle,
@@ -3256,17 +3257,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 35)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 35)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const isComm = this.activeDiagramType() === DiagramType.COMMUNICATION;
+    const isAnalysis = this.activeDiagramType() === DiagramType.CLASS_ANALYSIS;
+    const defaultWidth = isAnalysis ? 200 : 70;
+    const defaultHeight = isAnalysis ? 120 : 70;
+    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
-    const count = this.nodes().filter((n) => n.nodeType === 'boundary').length + 1;
+    const count = this.nodes().filter((n) => n.nodeType === 'boundary' || n.stereotype === UmlStereotype.UI || n.stereotype === UmlStereotype.BOUNDARY).length + 1;
     const newNode: UmlClassNode = {
       id: `boundary_${Date.now()}`,
       name: `Boundary_${count}`,
-      nodeType: 'boundary',
+      nodeType: isAnalysis ? 'class' : 'boundary',
+      stereotype: isAnalysis ? UmlStereotype.UI : UmlStereotype.BOUNDARY,
       position: { x: posX, y: posY },
-      width: 70,
-      height: 70,
+      width: defaultWidth,
+      height: defaultHeight,
       color: '#DDF4F5',
       attributes: [],
       methods: [],
@@ -3284,17 +3290,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 35)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 35)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const isComm = this.activeDiagramType() === DiagramType.COMMUNICATION;
+    const isAnalysis = this.activeDiagramType() === DiagramType.CLASS_ANALYSIS;
+    const defaultWidth = isAnalysis ? 200 : 70;
+    const defaultHeight = isAnalysis ? 120 : 70;
+    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
-    const count = this.nodes().filter((n) => n.nodeType === 'control').length + 1;
+    const count = this.nodes().filter((n) => n.nodeType === 'control' || n.stereotype === UmlStereotype.CONTROLLER_DOT || n.stereotype === UmlStereotype.CONTROL).length + 1;
     const newNode: UmlClassNode = {
       id: `control_${Date.now()}`,
       name: `Control_${count}`,
-      nodeType: 'control',
+      nodeType: isAnalysis ? 'class' : 'control',
+      stereotype: isAnalysis ? UmlStereotype.CONTROLLER_DOT : UmlStereotype.CONTROL,
       position: { x: posX, y: posY },
-      width: 70,
-      height: 70,
+      width: defaultWidth,
+      height: defaultHeight,
       color: '#DDF4F5',
       attributes: [],
       methods: [],
@@ -3312,17 +3323,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 35)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 35)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const isComm = this.activeDiagramType() === DiagramType.COMMUNICATION;
+    const isAnalysis = this.activeDiagramType() === DiagramType.CLASS_ANALYSIS;
+    const defaultWidth = isAnalysis ? 200 : 70;
+    const defaultHeight = isAnalysis ? 120 : 70;
+    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
-    const count = this.nodes().filter((n) => n.nodeType === 'entity').length + 1;
+    const count = this.nodes().filter((n) => n.nodeType === 'entity' || n.stereotype === UmlStereotype.ENTITY_DOT || n.stereotype === UmlStereotype.ENTITY).length + 1;
     const newNode: UmlClassNode = {
       id: `entity_${Date.now()}`,
       name: `Entity_${count}`,
-      nodeType: 'entity',
+      nodeType: isAnalysis ? 'class' : 'entity',
+      stereotype: isAnalysis ? UmlStereotype.ENTITY_DOT : UmlStereotype.ENTITY,
       position: { x: posX, y: posY },
-      width: 70,
-      height: 70,
+      width: defaultWidth,
+      height: defaultHeight,
       color: '#DDF4F5',
       attributes: [],
       methods: [],
@@ -3826,15 +3842,60 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const newNodeId = `${node.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
+    let resolvedNodeType = node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : (currentType === DiagramType.PACKAGE ? 'package' : (currentType === DiagramType.COMMUNICATION ? 'boundary' : 'class')));
+    let resolvedStereotype = node.stereotype || null;
+    let resolvedWidth = width;
+    let resolvedHeight = height;
+
+    if (currentType === DiagramType.COMMUNICATION) {
+      const rawType = (resolvedNodeType || '').toLowerCase().trim();
+      const rawStereo = (resolvedStereotype || '').toLowerCase().trim();
+      if (rawType === 'boundary' || rawStereo === 'ui' || rawStereo === 'boundary') {
+        resolvedNodeType = 'boundary';
+        resolvedStereotype = UmlStereotype.BOUNDARY;
+        resolvedWidth = 70;
+        resolvedHeight = 70;
+      } else if (rawType === 'control' || rawStereo.includes('controller') || rawStereo === 'control') {
+        resolvedNodeType = 'control';
+        resolvedStereotype = UmlStereotype.CONTROL;
+        resolvedWidth = 70;
+        resolvedHeight = 70;
+      } else if (rawType === 'entity' || rawStereo.includes('entity') || rawStereo === 'entity') {
+        resolvedNodeType = 'entity';
+        resolvedStereotype = UmlStereotype.ENTITY;
+        resolvedWidth = 70;
+        resolvedHeight = 70;
+      }
+    } else if (currentType === DiagramType.CLASS_ANALYSIS) {
+      const rawType = (resolvedNodeType || '').toLowerCase().trim();
+      const rawStereo = (resolvedStereotype || '').toLowerCase().trim();
+      if (rawType === 'boundary' || rawStereo === 'ui' || rawStereo === 'boundary') {
+        resolvedNodeType = 'class';
+        resolvedStereotype = UmlStereotype.UI;
+        if (resolvedWidth < 120) resolvedWidth = 200;
+        if (resolvedHeight < 80) resolvedHeight = 120;
+      } else if (rawType === 'control' || rawStereo.includes('controller') || rawStereo === 'control') {
+        resolvedNodeType = 'class';
+        resolvedStereotype = UmlStereotype.CONTROLLER_DOT;
+        if (resolvedWidth < 120) resolvedWidth = 200;
+        if (resolvedHeight < 80) resolvedHeight = 120;
+      } else if (rawType === 'entity' || rawStereo.includes('entity') || rawStereo === 'entity') {
+        resolvedNodeType = 'class';
+        resolvedStereotype = UmlStereotype.ENTITY_DOT;
+        if (resolvedWidth < 120) resolvedWidth = 200;
+        if (resolvedHeight < 80) resolvedHeight = 120;
+      }
+    }
+
     const newNode: UmlClassNode = {
       id: newNodeId,
       name: newName,
-      nodeType: node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : (currentType === DiagramType.PACKAGE ? 'package' : (currentType === DiagramType.COMMUNICATION ? 'boundary' : 'class'))),
-      stereotype: node.stereotype || null,
+      nodeType: resolvedNodeType,
+      stereotype: resolvedStereotype,
       position: { x: posX, y: posY },
-      width,
-      height,
-      color: node.color || this.getDefaultColorForNodeType(node.nodeType, node.stereotype),
+      width: resolvedWidth,
+      height: resolvedHeight,
+      color: node.color || this.getDefaultColorForNodeType(resolvedNodeType, resolvedStereotype),
       attributes: (node.attributes || []).map((a: any) => ({ ...a })),
       methods: (node.methods || []).map((m: any) => ({ ...m })),
     };
