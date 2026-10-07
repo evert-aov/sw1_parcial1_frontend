@@ -160,7 +160,52 @@ export class XmiClientParser {
         continue;
       }
 
-      // C) Clases UML, Objetos e InstanceSpecifications (BCE / Robustez)
+      // C) Líneas de Vida (Diagramas de Secuencia)
+      if (type === 'uml:Lifeline' || type === 'Lifeline' || type === 'uml:Sequence' || type === 'Sequence') {
+        const meta = eaElementMetaMap.get(id);
+        const cleanName = this.fixUtf8Mojibake(name || meta?.name || `Lifeline_${gridIdx + 1}`).trim();
+        let pos = { x: 80 + gridIdx * 180, y: 50 };
+        let width = 110;
+        let height = 48;
+
+        if (geometryMap.has(id)) {
+          const g = geometryMap.get(id)!;
+          pos = { x: g.left, y: 50 };
+          if (g.width > 20) width = Math.max(90, g.width);
+        }
+
+        let defaultSeqColor = '#D2EEF3';
+        const lowerName = cleanName.toLowerCase();
+        if (cleanName.startsWith('UI:') || cleanName.startsWith('IU_') || lowerName.includes('boundary')) {
+          defaultSeqColor = '#D2EEF3';
+        } else if (cleanName.endsWith('Controller') || cleanName.startsWith('Ctrl_') || lowerName.includes('control')) {
+          defaultSeqColor = '#E0D4F7';
+        } else if (cleanName.startsWith('DB:') || lowerName.includes('entity')) {
+          defaultSeqColor = '#FEF0C7';
+        }
+
+        const customSeqColor = geometryMap.get(id)?.color || meta?.color;
+
+        const node: UmlClassNode = {
+          id,
+          name: cleanName,
+          position: pos,
+          width,
+          height,
+          nodeType: 'lifeline',
+          stereotype: null,
+          color: customSeqColor || defaultSeqColor,
+          attributes: [],
+          methods: [],
+          isAnchor: false,
+        };
+
+        nodeMap.set(id, node);
+        gridIdx++;
+        continue;
+      }
+
+      // D) Clases UML, Objetos e InstanceSpecifications (BCE / Robustez)
       if (
         type === 'uml:Class' ||
         type === 'uml:AssociationClass' ||
@@ -309,7 +354,7 @@ export class XmiClientParser {
       }
     }
 
-    // D) Elementos declarados en extensión EA no presentes en packagedElements
+    // E) Elementos declarados en extensión EA no presentes en packagedElements
     for (const [eId, meta] of eaElementMetaMap.entries()) {
       if (
         !nodeMap.has(eId) &&
@@ -317,13 +362,28 @@ export class XmiClientParser {
           meta.sType === 'Class' ||
           meta.sType === 'UseCase' ||
           meta.sType === 'Object' ||
-          meta.sType === 'Boundary')
+          meta.sType === 'Boundary' ||
+          meta.sType === 'Sequence')
       ) {
         const isActor = meta.sType === 'Actor';
         const isUseCase = meta.sType === 'UseCase';
         const isObject = meta.sType === 'Object';
-        let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
-        const cleanName = this.fixUtf8Mojibake(meta.name || (isActor ? `Actor_${gridIdx + 1}` : isUseCase ? `CU_${gridIdx + 1}` : `Clase_${gridIdx + 1}`)).trim();
+        const isSequence = meta.sType === 'Sequence';
+
+        let pos = {
+          x: 80 + (gridIdx % 3) * 280,
+          y: isSequence ? 50 : 80 + Math.floor(gridIdx / 3) * 220,
+        };
+        const cleanName = this.fixUtf8Mojibake(
+          meta.name ||
+          (isActor
+            ? `Actor_${gridIdx + 1}`
+            : isUseCase
+              ? `CU_${gridIdx + 1}`
+              : isSequence
+                ? `Lifeline_${gridIdx + 1}`
+                : `Clase_${gridIdx + 1}`)
+        ).trim();
 
         let width = 220;
         let height = 120;
@@ -341,18 +401,27 @@ export class XmiClientParser {
         } else if (isObject) {
           width = 70;
           height = 70;
+        } else if (isSequence) {
+          width = 110;
+          height = 48;
         }
 
         if (geometryMap.has(eId)) {
           const g = geometryMap.get(eId)!;
-          pos = { x: g.left, y: g.top };
-          if (g.width > 20) width = isUseCase ? Math.max(width, g.width) : g.width;
-          if (g.height > 20) height = isUseCase ? Math.max(height, g.height) : g.height;
+          pos = { x: g.left, y: isSequence ? 50 : g.top };
+          if (g.width > 20) width = isUseCase ? Math.max(width, g.width) : isSequence ? Math.max(90, g.width) : g.width;
+          if (g.height > 20) height = isUseCase ? Math.max(height, g.height) : isSequence ? 48 : g.height;
         }
 
-        let nodeType: any = isActor ? 'actor' : isUseCase ? 'use_case' : 'class';
+        let nodeType: any = isActor
+          ? 'actor'
+          : isUseCase
+            ? 'use_case'
+            : isSequence
+              ? 'lifeline'
+              : 'class';
         let stereotype: string | null = null;
-        if (!isActor && !isUseCase) {
+        if (!isActor && !isUseCase && !isSequence) {
           const s = (meta.stereotype || '').toLowerCase().trim();
 
           if (s === 'entity.') {
@@ -381,8 +450,20 @@ export class XmiClientParser {
           }
         }
 
+        let defaultExtColor = (isActor || isUseCase) ? '#FEF2DD' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3');
+        if (isSequence) {
+          defaultExtColor = '#D2EEF3';
+          const lowerName = cleanName.toLowerCase();
+          if (cleanName.startsWith('UI:') || cleanName.startsWith('IU_') || lowerName.includes('boundary')) {
+            defaultExtColor = '#D2EEF3';
+          } else if (cleanName.endsWith('Controller') || cleanName.startsWith('Ctrl_') || lowerName.includes('control')) {
+            defaultExtColor = '#E0D4F7';
+          } else if (cleanName.startsWith('DB:') || lowerName.includes('entity')) {
+            defaultExtColor = '#FEF0C7';
+          }
+        }
+
         const customExtColor = geometryMap.get(eId)?.color || meta?.color;
-        const defaultExtColor = (isActor || isUseCase) ? '#FEF2DD' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3');
         nodeMap.set(eId, {
           id: eId,
           name: cleanName,
@@ -511,11 +592,28 @@ export class XmiClientParser {
 
     let diagramType = 'class';
     const eaDiagType = (diagramMeta.type || '').toLowerCase();
-    if (eaDiagType.includes('use case') || hasUseCase) {
+    const hasSequenceConn = connections.some(
+      (c) =>
+        c.type === 'sync' ||
+        c.type === 'reply' ||
+        c.sourceId?.includes('_slot_') ||
+        c.targetId?.includes('_slot_'),
+    );
+    const hasLifeline = Array.from(nodeMap.values()).some(
+      (n) => n.nodeType === 'lifeline',
+    );
+
+    if (eaDiagType.includes('sequence')) {
+      diagramType = 'sequence';
+    } else if (eaDiagType.includes('collab') || eaDiagType.includes('commun')) {
+      diagramType = 'communication';
+    } else if (eaDiagType.includes('use case')) {
+      diagramType = 'use_case';
+    } else if (hasSequenceConn || hasLifeline) {
+      diagramType = 'sequence';
+    } else if (hasUseCase) {
       diagramType = 'use_case';
     } else if (
-      eaDiagType.includes('collab') ||
-      eaDiagType.includes('commun') ||
       hasMessages ||
       (hasCommStereo && !hasAnalysisStereo)
     ) {
@@ -524,10 +622,15 @@ export class XmiClientParser {
       diagramType = 'class_analysis';
     }
 
-    // Normalizar estereotipos y tipos de nodo según el tipo de diagrama:
-    // Para comunicación: boundary, control, entity
-    // Para análisis de clases: UI, Controller., Entity.
-    if (diagramType === 'communication') {
+    if (diagramType === 'sequence') {
+      for (const node of nodeMap.values()) {
+        if (node.nodeType !== 'actor') {
+          node.nodeType = 'lifeline';
+          node.height = 48;
+          node.width = Math.max(90, node.width || 110);
+        }
+      }
+    } else if (diagramType === 'communication') {
       for (const node of nodeMap.values()) {
         const s = (node.stereotype || '').toLowerCase().trim();
         const nt = (node.nodeType || '').toLowerCase().trim();
@@ -955,9 +1058,24 @@ export class XmiClientParser {
       seqNum?: string;
       isReturn?: boolean;
     }> = [];
+    const sequenceConnList: Array<{
+      id: string;
+      sourceId: string;
+      targetId: string;
+      seqNo: number;
+      name: string;
+      functionName: string;
+      parameters: string;
+      returnType?: string;
+      isReply: boolean;
+    }> = [];
 
     for (const c of rawList) {
-      const id = c['@_xmi:idref'] || c['@_id'] || `conn_${Date.now()}`;
+      const id =
+        c['@_xmi:id'] ||
+        c['@_xmi:idref'] ||
+        c['@_id'] ||
+        `conn_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
       const src = c['source'];
       const tgt = c['target'];
       if (!src || !tgt) continue;
@@ -1002,6 +1120,70 @@ export class XmiClientParser {
         continue;
       }
 
+      if (eaType === 'Sequence') {
+        const extProps = c['extendedProperties'] || {};
+        const rawName = c['properties']?.['@_name'] || c['@_name'] || '';
+        const cleanName = this.fixUtf8Mojibake(rawName).trim();
+        const stateflags = extProps['@_stateflags'] || '';
+        const priv1 = (extProps['@_privatedata1'] || '').toLowerCase();
+        const priv4 = extProps['@_privatedata4'];
+        const isReply =
+          priv4 === '1' ||
+          stateflags.includes('IsReturn=true') ||
+          priv1.includes('return');
+
+        let seqNo = 0;
+        if (c['appearance'] && c['appearance']['@_seqno']) {
+          seqNo = parseInt(c['appearance']['@_seqno'], 10) || 0;
+        }
+        if (!seqNo && extProps['@_privatedata5']) {
+          const sMatch = extProps['@_privatedata5'].match(/SeqNo=(\d+)/);
+          if (sMatch) {
+            seqNo = parseInt(sMatch[1], 10) || 0;
+          }
+        }
+        if (!seqNo) {
+          seqNo = sequenceConnList.length + 1;
+        }
+
+        let functionName = cleanName;
+        let parameters = '';
+        const pMatch = cleanName.match(/^([^(]+)\((.*)\)$/);
+        if (pMatch) {
+          functionName = pMatch[1].trim();
+          parameters = pMatch[2].trim();
+        }
+
+        const priv2 = extProps['@_privatedata2'] || '';
+        if (!parameters && priv2) {
+          const paramsMatch = priv2.match(/paramsDlg=([^;]+);/);
+          if (paramsMatch) {
+            parameters = paramsMatch[1].trim();
+          }
+        }
+
+        let returnType: string | undefined = undefined;
+        if (priv2) {
+          const retMatch = priv2.match(/retval=([^;]+);/);
+          if (retMatch && retMatch[1].trim() !== 'void') {
+            returnType = retMatch[1].trim();
+          }
+        }
+
+        sequenceConnList.push({
+          id,
+          sourceId,
+          targetId,
+          seqNo,
+          name: cleanName,
+          functionName,
+          parameters,
+          returnType,
+          isReply,
+        });
+        continue;
+      }
+
       let type: any = 'association';
       let name = labels['@_mb'] ? this.fixUtf8Mojibake(labels['@_mb']) : undefined;
 
@@ -1042,6 +1224,38 @@ export class XmiClientParser {
         targetMultiplicity: tMult || '',
         lineStyle: style,
         messages: commMsgs.length > 0 ? commMsgs : undefined,
+      });
+    }
+
+    if (sequenceConnList.length > 0) {
+      sequenceConnList.sort((a, b) => a.seqNo - b.seqNo);
+      sequenceConnList.forEach((item, index) => {
+        const slot = index;
+        const seqNumStr = (index + 1).toString();
+        const type: any = item.isReply ? 'reply' : 'sync';
+        const connColor = this.getGroupColor(seqNumStr);
+
+        conns.push({
+          id: item.id,
+          sourceNodeId: item.sourceId,
+          targetNodeId: item.targetId,
+          sourceId: `${item.sourceId}_slot_${slot}`,
+          targetId: `${item.targetId}_slot_${slot}`,
+          type,
+          lineStyle: 'straight' as UmlLineStyle,
+          messages: [
+            {
+              id: `msg_${item.id}`,
+              sequenceNumber: seqNumStr,
+              functionName: item.functionName,
+              parameters: item.parameters || undefined,
+              returnType: item.returnType,
+              isReturn: item.isReply,
+              type,
+              color: connColor,
+            },
+          ],
+        });
       });
     }
 
