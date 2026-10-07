@@ -2056,6 +2056,9 @@ export class DiagramCanvasComponent {
   }
 
   isSequenceConnection(conn: UmlConnection): boolean {
+    if (this.activeDiagramType() === DiagramType.COMMUNICATION) {
+      return false;
+    }
     return (
       this.activeDiagramType() === DiagramType.SEQUENCE ||
       ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as any)

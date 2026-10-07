@@ -160,8 +160,16 @@ export class XmiClientParser {
         continue;
       }
 
-      // C) Clases UML y Clases Estereotipadas (BCE / Robustez)
-      if (type === 'uml:Class' || type === 'uml:AssociationClass' || type === 'Class') {
+      // C) Clases UML, Objetos e InstanceSpecifications (BCE / Robustez)
+      if (
+        type === 'uml:Class' ||
+        type === 'uml:AssociationClass' ||
+        type === 'Class' ||
+        type === 'uml:InstanceSpecification' ||
+        type === 'InstanceSpecification' ||
+        type === 'uml:Object' ||
+        type === 'Object'
+      ) {
         const meta = eaElementMetaMap.get(id);
 
         if (meta?.sType === 'Actor') {
@@ -269,14 +277,15 @@ export class XmiClientParser {
         const methods = this.extractMethods(elem);
 
         let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
-        let width = 220;
-        let height = 120;
+        const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
+        let width = isBce ? 70 : 220;
+        let height = isBce ? 70 : 120;
 
         if (geometryMap.has(id)) {
           const g = geometryMap.get(id)!;
           pos = { x: g.left, y: g.top };
-          if (g.width > 40) width = g.width;
-          if (g.height > 30) height = g.height;
+          if (g.width > 20) width = g.width;
+          if (g.height > 20) height = g.height;
         }
 
         const customClassColor = geometryMap.get(id)?.color || meta?.color;
@@ -302,9 +311,17 @@ export class XmiClientParser {
 
     // D) Elementos declarados en extensión EA no presentes en packagedElements
     for (const [eId, meta] of eaElementMetaMap.entries()) {
-      if (!nodeMap.has(eId) && (meta.sType === 'Actor' || meta.sType === 'Class' || meta.sType === 'UseCase')) {
+      if (
+        !nodeMap.has(eId) &&
+        (meta.sType === 'Actor' ||
+          meta.sType === 'Class' ||
+          meta.sType === 'UseCase' ||
+          meta.sType === 'Object' ||
+          meta.sType === 'Boundary')
+      ) {
         const isActor = meta.sType === 'Actor';
         const isUseCase = meta.sType === 'UseCase';
+        const isObject = meta.sType === 'Object';
         let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
         const cleanName = this.fixUtf8Mojibake(meta.name || (isActor ? `Actor_${gridIdx + 1}` : isUseCase ? `CU_${gridIdx + 1}` : `Clase_${gridIdx + 1}`)).trim();
 
@@ -321,6 +338,9 @@ export class XmiClientParser {
           const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
           width = dynamicWidth;
           height = Math.max(60, 45 + (lines - 1) * 18);
+        } else if (isObject) {
+          width = 70;
+          height = 70;
         }
 
         if (geometryMap.has(eId)) {
@@ -415,14 +435,45 @@ export class XmiClientParser {
           }
         }
       }
+
+      if (type === 'uml:Connector' || type === 'Connector') {
+        const cConn = this.parseUmlConnector(elem, nodeMap, connLineStyleMap);
+        if (cConn && !connSet.has(cConn.id)) {
+          connSet.add(cConn.id);
+          connections.push(cConn);
+        }
+      }
+
+      if (elem['ownedConnector']) {
+        const rawOConns = Array.isArray(elem['ownedConnector'])
+          ? elem['ownedConnector']
+          : [elem['ownedConnector']];
+        for (const oc of rawOConns) {
+          const cConn = this.parseUmlConnector(oc, nodeMap, connLineStyleMap);
+          if (cConn && !connSet.has(cConn.id)) {
+            connSet.add(cConn.id);
+            connections.push(cConn);
+          }
+        }
+      }
     }
 
     // 5. Conectores de extensión EA
-    const eaConns = this.extractEaConnectors(xmiRoot, nodeMap, connLineStyleMap);
+    const eaConns = this.extractEaConnectors(xmiRoot, nodeMap, connLineStyleMap, connections);
     for (const ec of eaConns) {
       if (!connSet.has(ec.id)) {
         connSet.add(ec.id);
         connections.push(ec);
+      } else {
+        const existing = connections.find((c) => c.id === ec.id);
+        if (existing) {
+          if (ec.messages && ec.messages.length > 0) {
+            existing.messages = ec.messages;
+          }
+          if (!existing.name && ec.name) {
+            existing.name = ec.name;
+          }
+        }
       }
     }
 
@@ -851,7 +902,40 @@ export class XmiClientParser {
     return conns;
   }
 
-  private static extractEaConnectors(xmiRoot: any, nodeMap: Map<string, any>, connLineStyleMap?: Map<string, UmlLineStyle>): UmlConnection[] {
+  private static parseUmlConnector(
+    elem: any,
+    nodeMap: Map<string, any>,
+    connLineStyleMap?: Map<string, UmlLineStyle>,
+  ): UmlConnection | null {
+    const id = elem['@_xmi:id'] || elem['@_id'] || `conn_${Date.now()}`;
+    const ends = elem['end'];
+    if (!ends) return null;
+    const endList = Array.isArray(ends) ? ends : [ends];
+    if (endList.length < 2) return null;
+    const s = endList[0]['@_role'];
+    const t = endList[1]['@_role'];
+    if (!s || !t || !nodeMap.has(s) || !nodeMap.has(t)) return null;
+
+    const lineStyle = connLineStyleMap?.get(id) || 'segment';
+    return {
+      id,
+      sourceNodeId: s,
+      targetNodeId: t,
+      sourceId: `${s}_right`,
+      targetId: `${t}_left`,
+      type: 'association',
+      sourceMultiplicity: '',
+      targetMultiplicity: '',
+      lineStyle,
+    };
+  }
+
+  private static extractEaConnectors(
+    xmiRoot: any,
+    nodeMap: Map<string, any>,
+    connLineStyleMap?: Map<string, UmlLineStyle>,
+    existingConnections: UmlConnection[] = [],
+  ): UmlConnection[] {
     const conns: UmlConnection[] = [];
     const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
     if (!ext) return conns;
@@ -863,6 +947,15 @@ export class XmiClientParser {
     if (!list) return conns;
 
     const rawList = Array.isArray(list) ? list : [list];
+    const collaborationMsgList: Array<{
+      targetConnId: string;
+      sourceId: string;
+      targetId: string;
+      rawLabel: string;
+      seqNum?: string;
+      isReturn?: boolean;
+    }> = [];
+
     for (const c of rawList) {
       const id = c['@_xmi:idref'] || c['@_id'] || `conn_${Date.now()}`;
       const src = c['source'];
@@ -880,6 +973,34 @@ export class XmiClientParser {
       const eaStereo = (eaProps['@_stereotype'] || '').toLowerCase();
       const labels = c['labels'] || {};
       const mbText = (labels['@_mb'] || '').toLowerCase();
+
+      // Manejo de mensajes de comunicación en EA (Collaboration links)
+      if (eaType === 'Collaboration') {
+        const extProps = c['extendedProperties'] || {};
+        const msgLink = extProps['@_message_link'];
+        const stateFlags = extProps['@_stateflags'] || '';
+        const isReturn = stateFlags.includes('IsReturn=true');
+        const rawLabel =
+          labels['@_lt'] ||
+          labels['@_mb'] ||
+          eaProps['@_name'] ||
+          c['@_name'] ||
+          '';
+        const seqMatch = rawLabel.match(/^(\d+(?:\.\d+)*):?/);
+        const seqNum = seqMatch ? seqMatch[1] : extProps['@_privatedata4'];
+
+        if (msgLink) {
+          collaborationMsgList.push({
+            targetConnId: msgLink,
+            sourceId,
+            targetId,
+            rawLabel,
+            seqNum,
+            isReturn,
+          });
+        }
+        continue;
+      }
 
       let type: any = 'association';
       let name = labels['@_mb'] ? this.fixUtf8Mojibake(labels['@_mb']) : undefined;
@@ -924,6 +1045,44 @@ export class XmiClientParser {
       });
     }
 
+    // Asociar mensajes de colaboración al conector base
+    for (const collab of collaborationMsgList) {
+      let baseConn =
+        conns.find((cn) => cn.id === collab.targetConnId) ||
+        existingConnections.find((cn) => cn.id === collab.targetConnId);
+      if (!baseConn) {
+        baseConn =
+          conns.find(
+            (cn) =>
+              (cn.sourceNodeId === collab.sourceId || cn.sourceNodeId === collab.targetId) &&
+              (cn.targetNodeId === collab.sourceId || cn.targetNodeId === collab.targetId),
+          ) ||
+          existingConnections.find(
+            (cn) =>
+              (cn.sourceNodeId === collab.sourceId || cn.sourceNodeId === collab.targetId) &&
+              (cn.targetNodeId === collab.sourceId || cn.targetNodeId === collab.targetId),
+          );
+      }
+      if (baseConn) {
+        const parsedMsgs = this.parseCommunicationMessages(collab.rawLabel);
+        if (parsedMsgs.length > 0) {
+          for (const pm of parsedMsgs) {
+            if (collab.seqNum) pm.sequenceNumber = collab.seqNum;
+            const isRev = collab.isReturn || collab.sourceId === baseConn.targetNodeId;
+            pm.direction = isRev ? 'reverse' : 'forward';
+            pm.isReturn = isRev;
+            if (!baseConn.messages) baseConn.messages = [];
+            const alreadyExists = baseConn.messages.some(
+              (m) => m.sequenceNumber === pm.sequenceNumber && m.functionName === pm.functionName,
+            );
+            if (!alreadyExists) {
+              baseConn.messages.push(pm);
+            }
+          }
+        }
+      }
+    }
+
     return conns;
   }
 
@@ -940,8 +1099,16 @@ export class XmiClientParser {
         if (!idref) continue;
         const props = el['properties'];
         const sType = props ? props['@_sType'] : undefined;
-        const stereotype = props ? props['@_stereotype'] : undefined;
+        let stereotype = props ? props['@_stereotype'] : undefined;
         const name = el['@_name'] ? this.fixUtf8Mojibake(el['@_name']) : undefined;
+
+        if (!stereotype) {
+          const xrefsVal = el['xrefs']?.['@_value'] || '';
+          const stMatch = xrefsVal.match(/@STEREO;Name=([^;@]+);/);
+          if (stMatch) {
+            stereotype = stMatch[1];
+          }
+        }
 
         let color: string | undefined;
         const styleElem = el['style'];
@@ -960,7 +1127,7 @@ export class XmiClientParser {
       }
     }
 
-    // Perfiles personalizados de EA (ej: <thecustomprofile:Entity. base_Class="..."/>)
+    // Perfiles personalizados de EA (ej: <thecustomprofile:Entity. base_Class="..."/> o <EAUML:entity base_InstanceSpecification="..."/>)
     for (const key of Object.keys(xmiRoot)) {
       if (key.includes(':')) {
         const tagParts = key.split(':');
@@ -968,7 +1135,11 @@ export class XmiClientParser {
         const entries = Array.isArray(xmiRoot[key]) ? xmiRoot[key] : [xmiRoot[key]];
         for (const entry of entries) {
           if (entry && typeof entry === 'object') {
-            const baseClass = entry['@_base_Class'];
+            const baseClass =
+              entry['@_base_Class'] ||
+              entry['@_base_InstanceSpecification'] ||
+              entry['@_base_Element'] ||
+              entry['@_base_Package'];
             if (baseClass) {
               const existing = metaMap.get(baseClass) || {};
               existing.stereotype = existing.stereotype || tagStereotype;
@@ -1069,20 +1240,55 @@ export class XmiClientParser {
       .map((p) => p.trim())
       .filter(Boolean);
     const msgs: UmlMessage[] = [];
-    const msgRegex = /^(\d+(?:\.\d+)*)\s*:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)(?:\s*\((.*?)\))?(?:\s*:\s*([a-zA-Z_$][a-zA-Z0-9_$<>]*))?$/;
+    const msgRegex = /^(\d+(?:\.\d+)*)\s*:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)(?:\s*\((.*?)(?:\)|$))?(?:\s*:\s*([a-zA-Z_$][a-zA-Z0-9_$<>]*))?$/;
 
     for (let i = 0; i < parts.length; i++) {
-      const match = parts[i].match(msgRegex);
+      let text = parts[i];
+      let isReverse = false;
+      if (text.startsWith('<-') || text.startsWith('&lt;-')) {
+        isReverse = true;
+        text = text.replace(/^(?:<-|&lt;-)\s*/, '').trim();
+      } else if (text.startsWith('->') || text.startsWith('-&gt;')) {
+        text = text.replace(/^(?:->|-&gt;)\s*/, '').trim();
+      }
+
+      const match = text.match(msgRegex);
       if (match) {
         msgs.push({
-          id: `msg_${Date.now()}_${i}`,
+          id: `msg_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
           sequenceNumber: match[1],
           functionName: match[2],
-          parameters: match[3] || '',
+          parameters: (match[3] || '').replace(/\.\.\.$/, '').trim(),
           returnType: match[4] || '',
-          direction: 'forward',
+          direction: isReverse ? 'reverse' : 'forward',
+          isReturn: isReverse,
           orderIndex: i,
         });
+      } else {
+        const colonIdx = text.indexOf(':');
+        if (colonIdx > 0) {
+          const seq = text.substring(0, colonIdx).trim();
+          const rest = text.substring(colonIdx + 1).trim();
+          const pStart = rest.indexOf('(');
+          const pEnd = rest.lastIndexOf(')');
+          const fn = pStart !== -1 ? rest.substring(0, pStart).trim() : rest;
+          let params = '';
+          if (pStart !== -1) {
+            params = pEnd !== -1 ? rest.substring(pStart + 1, pEnd).trim() : rest.substring(pStart + 1).trim();
+            params = params.replace(/\.\.\.$/, '').trim();
+          }
+          const retPart = pEnd !== -1 && rest.indexOf(':', pEnd) !== -1 ? rest.substring(rest.indexOf(':', pEnd) + 1).trim() : '';
+          msgs.push({
+            id: `msg_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+            sequenceNumber: seq || `${i + 1}`,
+            functionName: fn || 'msg',
+            parameters: params,
+            returnType: retPart,
+            direction: isReverse ? 'reverse' : 'forward',
+            isReturn: isReverse,
+            orderIndex: i,
+          });
+        }
       }
     }
     return msgs;

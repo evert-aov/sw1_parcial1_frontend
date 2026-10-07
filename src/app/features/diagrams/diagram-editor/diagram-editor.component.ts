@@ -5029,25 +5029,28 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             const ast = XmiClientParser.parse(content);
             if (ast.nodes && ast.nodes.length > 0) {
               this.nodes.set(
-                ast.nodes.map((n: any) => ({
-                  ...n,
-                  width: n.width || (n.nodeType === 'actor' ? 65 : (n.nodeType === 'use_case' ? 140 : 220)),
-                  height: n.height || (n.nodeType === 'actor' ? 95 : (n.nodeType === 'use_case' ? 60 : 120)),
-                  attributes: (n.attributes || []).map((a: any) => ({
-                    ...a,
-                    name: a.name,
-                    type: this.normalizeDataType(a.type),
-                    nullable: a.nullable !== undefined ? a.nullable : true,
-                    unique: a.unique !== undefined ? a.unique : false,
-                    length: a.length !== undefined ? a.length : 255,
-                    defaultValue: a.defaultValue ?? a.default ?? null,
-                  })),
-                  methods: (n.methods || []).map((m: any) => ({
-                    name: m.name,
-                    parameters: m.parameters || '',
-                    returnType: this.normalizeReturnType(m.returnType),
-                  })),
-                })),
+                ast.nodes.map((n: any) => {
+                  const isBce = n.nodeType === 'boundary' || n.nodeType === 'control' || n.nodeType === 'entity';
+                  return {
+                    ...n,
+                    width: n.width || (n.nodeType === 'actor' ? 65 : (n.nodeType === 'use_case' ? 140 : (isBce ? 70 : 220))),
+                    height: n.height || (n.nodeType === 'actor' ? 95 : (n.nodeType === 'use_case' ? 60 : (isBce ? 70 : 120))),
+                    attributes: (n.attributes || []).map((a: any) => ({
+                      ...a,
+                      name: a.name,
+                      type: this.normalizeDataType(a.type),
+                      nullable: a.nullable !== undefined ? a.nullable : true,
+                      unique: a.unique !== undefined ? a.unique : false,
+                      length: a.length !== undefined ? a.length : 255,
+                      defaultValue: a.defaultValue ?? a.default ?? null,
+                    })),
+                    methods: (n.methods || []).map((m: any) => ({
+                      name: m.name,
+                      parameters: m.parameters || '',
+                      returnType: this.normalizeReturnType(m.returnType),
+                    })),
+                  };
+                }),
               );
               this.connections.set(ast.connections || []);
               if (ast.name) {
