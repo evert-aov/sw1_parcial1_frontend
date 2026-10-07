@@ -987,7 +987,7 @@ export class XmiClientParser {
           c['@_name'] ||
           '';
         const seqMatch = rawLabel.match(/^(\d+(?:\.\d+)*):?/);
-        const seqNum = seqMatch ? seqMatch[1] : extProps['@_privatedata4'];
+        const seqNum = extProps['@_privatedata4'] || (seqMatch ? seqMatch[1] : undefined);
 
         if (msgLink) {
           collaborationMsgList.push({
@@ -1071,6 +1071,9 @@ export class XmiClientParser {
             const isRev = collab.isReturn || collab.sourceId === baseConn.targetNodeId;
             pm.direction = isRev ? 'reverse' : 'forward';
             pm.isReturn = isRev;
+            if (!pm.color || collab.seqNum) {
+              pm.color = this.getGroupColor(pm.sequenceNumber);
+            }
             if (!baseConn.messages) baseConn.messages = [];
             const alreadyExists = baseConn.messages.some(
               (m) => m.sequenceNumber === pm.sequenceNumber && m.functionName === pm.functionName,
@@ -1079,6 +1082,9 @@ export class XmiClientParser {
               baseConn.messages.push(pm);
             }
           }
+          baseConn.messages?.sort((a, b) =>
+            this.compareSequenceNumbers(a.sequenceNumber, b.sequenceNumber),
+          );
         }
       }
     }
@@ -1262,6 +1268,7 @@ export class XmiClientParser {
           returnType: match[4] || '',
           direction: isReverse ? 'reverse' : 'forward',
           isReturn: isReverse,
+          color: this.getGroupColor(match[1]),
           orderIndex: i,
         });
       } else {
@@ -1286,12 +1293,48 @@ export class XmiClientParser {
             returnType: retPart,
             direction: isReverse ? 'reverse' : 'forward',
             isReturn: isReverse,
+            color: this.getGroupColor(seq),
             orderIndex: i,
           });
         }
       }
     }
     return msgs;
+  }
+
+  public static getGroupColor(sequenceNumber?: string): string {
+    const match = (sequenceNumber || '').trim().match(/^(\d+)/);
+    const g = match ? parseInt(match[1], 10) : 1;
+    const palette = [
+      '#241C18', // 1: Negro Carbón
+      '#8B0000', // 2: Guindo / Rojo Carmín Oscuro (como en EA)
+      '#15803D', // 3: Verde Bosque (como en EA)
+      '#1D4ED8', // 4: Azul Real
+      '#7C3AED', // 5: Violeta Púrpura
+      '#C2410C', // 6: Naranja Óxido
+      '#0E7490', // 7: Cian Océano
+      '#BE185D', // 8: Rosa / Magenta
+      '#4D7C0F', // 9: Verde Oliva
+      '#4338CA', // 10: Índigo Profundo
+    ];
+    return palette[(Math.max(1, g) - 1) % palette.length];
+  }
+
+  public static compareSequenceNumbers(seqA?: string, seqB?: string): number {
+    if (!seqA && !seqB) return 0;
+    if (!seqA) return 1;
+    if (!seqB) return -1;
+    const partsA = seqA.trim().split('.').map((p) => parseInt(p, 10));
+    const partsB = seqB.trim().split('.').map((p) => parseInt(p, 10));
+    const len = Math.max(partsA.length, partsB.length);
+    for (let i = 0; i < len; i++) {
+      const valA = isNaN(partsA[i]) ? 0 : partsA[i];
+      const valB = isNaN(partsB[i]) ? 0 : partsB[i];
+      if (valA !== valB) {
+        return valA - valB;
+      }
+    }
+    return (seqA || '').localeCompare(seqB || '');
   }
 
   public static mapEaModeToLineStyle(mode: string | number | undefined): UmlLineStyle {

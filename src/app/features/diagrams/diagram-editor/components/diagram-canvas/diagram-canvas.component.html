@@ -254,7 +254,7 @@
                     title="Mensajes de Comunicación UML 2.5 (doble clic para editar)"
                     class="uml-communication-messages-badge-above">
                     @for (msg of getForwardMessages(conn); track msg.id || $index) {
-                      <div class="uml-comm-msg-item" [style.color]="msg.color || '#241C18'">
+                      <div class="uml-comm-msg-item" [style.color]="getCommMessageColor(msg)">
                         <span class="font-mono font-medium">{{ msg.sequenceNumber }}: {{ msg.functionName }}({{ msg.parameters || '' }})</span>
                         @if (msg.returnType) {
                           <span class="opacity-75 font-mono">: {{ msg.returnType }}</span>
@@ -280,7 +280,7 @@
                     title="Mensajes de Comunicación UML 2.5 (doble clic para editar)"
                     class="uml-communication-messages-badge-below">
                     @for (msg of getReverseMessages(conn); track msg.id || $index) {
-                      <div class="uml-comm-msg-item" [style.color]="msg.color || '#241C18'">
+                      <div class="uml-comm-msg-item" [style.color]="getCommMessageColor(msg)">
                         <span class="uml-comm-msg-arrow font-bold text-xs leading-none select-none">←</span>
                         <span class="font-mono font-medium">{{ msg.sequenceNumber }}: {{ msg.functionName }}({{ msg.parameters || '' }})</span>
                         @if (msg.returnType) {

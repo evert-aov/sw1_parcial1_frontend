@@ -116,17 +116,15 @@ export class EditConnectionModalComponent {
 
   readonly sequenceColorPalette: string[] = [
     '#241C18', // 1: Negro Carbón
-    '#B91C1C', // 2: Rojo Carmín
-    '#1D4ED8', // 3: Azul Real
-    '#047857', // 4: Verde Esmeralda
+    '#8B0000', // 2: Guindo / Rojo Carmín Oscuro (como en EA)
+    '#15803D', // 3: Verde Bosque (como en EA)
+    '#1D4ED8', // 4: Azul Real
     '#7C3AED', // 5: Violeta Púrpura
     '#C2410C', // 6: Naranja Óxido
     '#0E7490', // 7: Cian Océano
     '#BE185D', // 8: Rosa / Magenta
     '#4D7C0F', // 9: Verde Oliva
     '#4338CA', // 10: Índigo Profundo
-    '#9A3412', // 11: Terracota
-    '#0F766E', // 12: Teal
   ];
 
   canHaveMultiplicity(): boolean {
@@ -201,7 +199,9 @@ export class EditConnectionModalComponent {
     }
     const isSeq = this.isSequenceDiagram();
     const nextSeq = isSeq ? `1.${conn.messages.length}` : `${conn.messages.length + 1}`;
-    const defaultColor = this.sequenceColorPalette[conn.messages.length % this.sequenceColorPalette.length];
+    const groupMatch = nextSeq.match(/^(\d+)/);
+    const g = groupMatch ? parseInt(groupMatch[1], 10) : conn.messages.length + 1;
+    const defaultColor = this.sequenceColorPalette[(Math.max(1, g) - 1) % this.sequenceColorPalette.length];
     const newMsg: UmlMessage = {
       id: `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       sequenceNumber: nextSeq,
@@ -275,9 +275,28 @@ export class EditConnectionModalComponent {
 
         conn.messages = [firstMsg];
       }
+    } else if (conn.messages && conn.messages.length > 0) {
+      conn.messages.sort((a, b) => this.compareSequenceNumbers(a.sequenceNumber, b.sequenceNumber));
     }
     this.save.emit(conn);
     this.close.emit();
+  }
+
+  compareSequenceNumbers(seqA?: string, seqB?: string): number {
+    if (!seqA && !seqB) return 0;
+    if (!seqA) return 1;
+    if (!seqB) return -1;
+    const partsA = seqA.trim().split('.').map((p) => parseInt(p, 10));
+    const partsB = seqB.trim().split('.').map((p) => parseInt(p, 10));
+    const len = Math.max(partsA.length, partsB.length);
+    for (let i = 0; i < len; i++) {
+      const valA = isNaN(partsA[i]) ? 0 : partsA[i];
+      const valB = isNaN(partsB[i]) ? 0 : partsB[i];
+      if (valA !== valB) {
+        return valA - valB;
+      }
+    }
+    return (seqA || '').localeCompare(seqB || '');
   }
 
   onDelete(): void {

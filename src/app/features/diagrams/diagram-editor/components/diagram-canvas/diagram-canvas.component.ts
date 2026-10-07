@@ -1743,11 +1743,58 @@ export class DiagramCanvasComponent {
   }
 
   getForwardMessages(conn: UmlConnection): UmlMessage[] {
-    return (conn.messages || []).filter((m) => m.direction !== 'reverse');
+    return (conn.messages || [])
+      .filter((m) => m.direction !== 'reverse')
+      .slice()
+      .sort((a, b) => this.compareSequenceNumbers(a.sequenceNumber, b.sequenceNumber));
   }
 
   getReverseMessages(conn: UmlConnection): UmlMessage[] {
-    return (conn.messages || []).filter((m) => m.direction === 'reverse');
+    return (conn.messages || [])
+      .filter((m) => m.direction === 'reverse')
+      .slice()
+      .sort((a, b) => this.compareSequenceNumbers(a.sequenceNumber, b.sequenceNumber));
+  }
+
+  compareSequenceNumbers(seqA?: string, seqB?: string): number {
+    if (!seqA && !seqB) return 0;
+    if (!seqA) return 1;
+    if (!seqB) return -1;
+    const partsA = seqA.trim().split('.').map((p) => parseInt(p, 10));
+    const partsB = seqB.trim().split('.').map((p) => parseInt(p, 10));
+    const len = Math.max(partsA.length, partsB.length);
+    for (let i = 0; i < len; i++) {
+      const valA = isNaN(partsA[i]) ? 0 : partsA[i];
+      const valB = isNaN(partsB[i]) ? 0 : partsB[i];
+      if (valA !== valB) {
+        return valA - valB;
+      }
+    }
+    return (seqA || '').localeCompare(seqB || '');
+  }
+
+  readonly communicationGroupPalette: string[] = [
+    '#241C18', // 1: Negro Carbón
+    '#8B0000', // 2: Guindo / Rojo Carmín Oscuro (como en EA)
+    '#15803D', // 3: Verde Bosque (como en EA)
+    '#1D4ED8', // 4: Azul Real
+    '#7C3AED', // 5: Violeta Púrpura
+    '#C2410C', // 6: Naranja Óxido
+    '#0E7490', // 7: Cian Océano
+    '#BE185D', // 8: Rosa / Magenta
+    '#4D7C0F', // 9: Verde Oliva
+    '#4338CA', // 10: Índigo Profundo
+  ];
+
+  getCommMessageColor(msg: UmlMessage): string {
+    const match = (msg.sequenceNumber || '').trim().match(/^(\d+)/);
+    const g = match ? parseInt(match[1], 10) : 1;
+    const groupColor = this.communicationGroupPalette[(Math.max(1, g) - 1) % this.communicationGroupPalette.length];
+
+    if (!msg.color || msg.color === '#241C18' || msg.color === '#000000') {
+      return groupColor;
+    }
+    return msg.color;
   }
 
   getMaxSequenceSlotUsed(): number {
