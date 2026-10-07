@@ -107,7 +107,7 @@ import { CommonModule } from '@angular/common';
 export class LifelineSvgComponent {
   @Input() width: number | string = '100%';
   @Input() height: number | string = '100%';
-  @Input() fillColor: string = '#D2EEF3';
+  @Input() fillColor: string = '#DDF4F5';
   @Input() strokeColor: string = '#796354';
   @Input() strokeWidth: number = 1.5;
   @Input() textColor: string = '#241C18';

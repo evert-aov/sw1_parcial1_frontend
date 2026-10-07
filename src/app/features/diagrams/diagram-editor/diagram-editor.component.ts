@@ -673,10 +673,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               if (!nodeColor || ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) {
                 nodeColor = this.getDefaultColorForNodeType(nodeType, n.stereotype);
               }
-              return { ...n, nodeType, name, color: nodeColor, stereotype: n.stereotype || null };
+              return { ...n, nodeType, name, height: nodeType === 'lifeline' ? 60 : n.height, color: nodeColor, stereotype: n.stereotype || null };
             });
             this.nodes.set(sanitizedDraftNodes);
-            this.connections.set(this.recalculateSequenceNumbers(draft.connections || []));
+            this.connections.set(this.recalculateSequenceNumbers(draft.connections || [], true));
             if (draft.defaultLineStyle) {
               this.defaultLineStyle.set(draft.defaultLineStyle);
             }
@@ -734,7 +734,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           name: nodeName,
           position: { x: n.positionX, y: n.positionY },
           width: n.width || (nodeType === 'actor' ? 65 : (nodeType === 'use_case' ? 140 : (nodeType === 'boundary_box' ? 280 : (nodeType === 'package' ? 200 : (nodeType === 'component' ? 190 : (nodeType === 'device' ? 230 : (nodeType === 'executionEnvironment' ? 240 : (isBce ? 90 : (isLifeline ? 140 : 220))))))))),
-          height: n.height || (isBce ? 95 : (isLifeline ? 48 : (nodeType === 'actor' ? 95 : (nodeType === 'boundary_box' ? 200 : (nodeType === 'component' ? 70 : (nodeType === 'device' ? 140 : (nodeType === 'executionEnvironment' ? 160 : undefined))))))),
+          height: isLifeline ? 60 : n.height || (isBce ? 95 : (nodeType === 'actor' ? 95 : (nodeType === 'boundary_box' ? 200 : (nodeType === 'component' ? 70 : (nodeType === 'device' ? 140 : (nodeType === 'executionEnvironment' ? 160 : undefined)))))),
           customWidth: isManuallyResized ? n.width : undefined,
           customHeight: isManuallyResized ? n.height! : undefined,
           isCustomSize: isManuallyResized,
@@ -777,7 +777,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         assocAnchorNodeId: c.assocAnchorNodeId || undefined,
         messages: (c as any).messages || [],
       }));
-      this.connections.set(this.recalculateSequenceNumbers(mappedConnections));
+      this.connections.set(this.recalculateSequenceNumbers(mappedConnections, true));
 
       // Limpiar selecciones previas y pila de deshacer/rehacer al cambiar de diagrama
       this.selectedNodeId.set(null);
@@ -1022,6 +1022,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   buildSaveAstPayload(): SaveDiagramAstRequest {
     const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
+    const connections = isSequence
+      ? this.recalculateSequenceNumbers(this.connections(), true)
+      : this.connections();
     return {
       type: this.activeDiagramType(),
       defaultLineStyle: this.defaultLineStyle(),
@@ -1080,7 +1083,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           positionX: n.position.x,
           positionY: n.position.y,
           width: this.getNodeWidth(n),
-          height: n.customHeight || (n.isCustomSize ? n.height : null) || (n.nodeType === 'lifeline' ? 48 : null),
+          height: resolvedNodeType === 'lifeline' ? 60 : n.customHeight || (n.isCustomSize ? n.height : null),
           color: nodeColor,
           isAnchor: n.isAnchor,
           assocMainConnId: n.assocMainConnId,
@@ -1111,7 +1114,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           })),
         };
       }),
-      connections: this.connections().map((c) => {
+      connections: connections.map((c) => {
         const baseSourceId = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
         const baseTargetId = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
         return {
@@ -1137,8 +1140,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               direction: norm.direction,
               type: norm.type,
               isReturn: norm.isReturn,
-              orderIndex: typeof m.orderIndex === 'number' ? m.orderIndex : mIdx,
-              positionY: typeof m.positionY === 'number' ? m.positionY : undefined,
+              orderIndex: norm.orderIndex ?? mIdx,
+              positionY: norm.positionY,
               color: norm.color || undefined,
             };
           }),
@@ -1424,12 +1427,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return 65;
     }
     if (node.nodeType === 'lifeline') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
-      if (manualW && manualW > 0) {
-        return Math.max(130, manualW);
-      }
-      const nameLen = (node.name || '').length;
-      return Math.max(160, Math.round(nameLen * 8.5 + 44));
+      const manualW = node.customWidth || node.width || 0;
+      return Math.max(this.getDynamicNodeWidth(node), manualW);
     }
     if (node.nodeType === 'package') {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
@@ -1475,10 +1474,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   getNodeHeight(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
+    if (node.nodeType === 'lifeline') return 60;
     if (node.customHeight && node.customHeight > 0) return node.customHeight;
     if (node.isCustomSize && node.height && node.height > 0) return node.height;
     if (node.nodeType === 'actor') return node.customHeight || (node.isCustomSize ? node.height : null) || 95;
-    if (node.nodeType === 'lifeline') return node.customHeight || node.height || 48;
+
     if (node.nodeType === 'package') return node.customHeight || node.height || 120;
     if (node.nodeType === 'boundary_box') {
       return node.customHeight || (node.isCustomSize ? node.height : null) || 200;
@@ -1563,10 +1563,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           ? {
               ...n,
               customWidth: event.width,
-              customHeight: event.height,
+              customHeight: n.nodeType === 'lifeline' ? 60 : event.height,
               isCustomSize: true,
               width: event.width,
-              height: event.height,
+              height: n.nodeType === 'lifeline' ? 60 : event.height,
               position: event.position,
             }
           : n
@@ -2301,7 +2301,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     ];
   }
 
-  private recalculateSequenceNumbers(connectionsList: UmlConnection[]): UmlConnection[] {
+  private recalculateSequenceNumbers(
+    connectionsList: UmlConnection[],
+    preserveSequenceNumbers = false,
+  ): UmlConnection[] {
     const isSeq = this.activeDiagramType() === DiagramType.SEQUENCE;
     if (!isSeq) {
       return connectionsList;
@@ -2333,7 +2336,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       if (isConnSeq) {
         const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
         const tMatch = c.targetId?.match(/_slot_(\d+)$/);
-        const slot = sMatch ? parseInt(sMatch[1], 10) : (tMatch ? parseInt(tMatch[1], 10) : 0);
+        const slot = sMatch ? parseInt(sMatch[1], 10)
+          : tMatch ? parseInt(tMatch[1], 10)
+          : c.messages?.[0]?.orderIndex ?? idx;
         seqMetas.push({ conn: c, slot, index: idx });
       }
     });
@@ -2350,6 +2355,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const updatedConnMap = new Map<string, UmlConnection>();
 
+    let globalOrderIndex = 0;
     for (const meta of seqMetas) {
       const c = meta.conn;
       const baseSourceId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
@@ -2370,7 +2376,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         seqNum = `${currentGroup}.${childIndex}`;
       }
 
-      const color = palette[(currentGroup - 1) % palette.length];
+      // Cargar/importar no debe convertir etiquetas EA explícitas en grupos por actor.
+      const explicitNumber = c.messages?.[0]?.sequenceNumber?.trim();
+      if (preserveSequenceNumbers && explicitNumber) seqNum = explicitNumber;
+      const color = preserveSequenceNumbers
+        ? XmiClientParser.getGroupColor(seqNum)
+        : palette[(currentGroup - 1) % palette.length];
 
       let updatedMessages: UmlMessage[];
       if (c.messages && c.messages.length > 0) {
@@ -2379,10 +2390,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             return {
               ...m,
               sequenceNumber: seqNum,
+              direction: m.direction ?? 'forward',
+              type: m.type ?? (['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync'),
+              isReturn: m.isReturn ?? c.type === 'reply',
+              orderIndex: globalOrderIndex++,
               color,
             };
           }
-          return m;
+          return { ...m, orderIndex: globalOrderIndex++ };
         });
       } else {
         updatedMessages = [
@@ -2394,7 +2409,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             returnType: '',
             isReturn: c.type === 'reply',
             direction: 'forward',
-            orderIndex: 0,
+            orderIndex: globalOrderIndex++,
+            type: ['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync',
             color,
           },
         ];
@@ -2402,7 +2418,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
       const updatedConn: UmlConnection = {
         ...c,
-        name: c.name && /^\d+(\.\d+)?$/.test(c.name.trim()) ? seqNum : c.name,
+        name: c.name && /^\d+(\.\d+)*$/.test(c.name.trim()) ? seqNum : c.name,
         messages: updatedMessages,
       };
 
@@ -3381,7 +3397,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       nodeType: 'lifeline',
       position: { x: posX, y: posY },
       width: 160,
-      height: 48,
+      height: 60,
       color: '#DDF4F5',
       attributes: [],
       methods: [],
@@ -4174,7 +4190,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     this.pushSnapshot();
-    this.connections.update((list) => this.recalculateSequenceNumbers(list.map((c) => (c.id === edited.id ? edited : c))));
+    this.connections.update((list) => this.recalculateSequenceNumbers(list.map((c) => (c.id === edited.id ? edited : c)), true));
     this.markAsUnsaved();
     this.closeEditConnModal();
     this.updateConnectionEndpoints();
@@ -4353,7 +4369,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         defaultHeight = 70;
       } else if (nodeType === 'lifeline') {
         defaultWidth = 120;
-        defaultHeight = 48;
+        defaultHeight = 60;
       }
 
       const isBce = ['boundary', 'control', 'entity'].includes(nodeType);
@@ -4366,7 +4382,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
         },
         width: n.isAnchor ? 0 : (isBce ? 70 : (n.width || defaultWidth)),
-        height: n.isAnchor ? 0 : (isBce ? 70 : (n.height || defaultHeight)),
+        height: n.isAnchor ? 0 : nodeType === 'lifeline' ? 60 : (isBce ? 70 : (n.height || defaultHeight)),
         customWidth: n.customWidth,
         customHeight: n.customHeight,
         isCustomSize: isManuallyResized,
@@ -4489,7 +4505,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     if (!seq) seq = defaultSeq;
 
-    const isReverse = m.direction === 'reverse' || m.type === 'reply' || !!m.isReturn;
+    const isReturn = m.type === 'reply' || !!m.isReturn;
+    // En comunicación, direction es relativo al enlace; reply no implica invertir
+    // un conector de secuencia que ya tiene los extremos dirigidos.
+    const direction = m.direction === 'forward' || m.direction === 'reverse'
+      ? m.direction
+      : isReturn ? 'reverse' : 'forward';
 
     return {
       id: m.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -4497,9 +4518,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       functionName: fn,
       parameters: params,
       returnType,
-      direction: isReverse ? 'reverse' : 'forward',
-      type: (m.type as UmlMessageType) || (isReverse ? 'reply' : 'sync'),
-      isReturn: isReverse,
+      direction,
+      type: isReturn ? 'reply' : (m.type as UmlMessageType) || 'sync',
+      isReturn,
+      orderIndex: typeof m.orderIndex === 'number' && Number.isFinite(m.orderIndex) ? m.orderIndex : undefined,
+      positionY: typeof m.positionY === 'number' && Number.isFinite(m.positionY) ? m.positionY : undefined,
       color: m.color || undefined,
     };
   }
@@ -4543,7 +4566,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         // Si la conexión trajo múltiples mensajes agrupados, desempacarlos en conexiones individuales
         rawMsgs.forEach((m: any, mIdx: number) => {
           const norm = this.normalizeUmlMessage(m, `${seqConns.length + 1}`);
-          const isMsgReverse = norm.direction === 'reverse' || norm.type === 'reply' || !!norm.isReturn;
+          const isMsgReverse = norm.direction === 'reverse';
 
           let effectiveSource = s;
           let effectiveTarget = t;
@@ -4552,6 +4575,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             effectiveTarget = s;
           }
 
+          // Los extremos ya representan la dirección del mensaje individual.
+          norm.direction = 'forward';
           seqConns.push({
             ...c,
             id: rawMsgs.length === 1 && c.id ? c.id : `msg_${Date.now()}_${seqConns.length}_${Math.random().toString(36).substring(2, 5)}`,
@@ -4618,6 +4643,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     // 2. Asignar slots únicos y ordenados para diagramas de secuencia
     const usedSlots = new Set<number>();
     let nextFreeSlot = 0;
+    seqConns.sort((a, b) => {
+      const order = (c: any) => {
+        const match = c.sourceId?.match(/_slot_(\d+)$/) || c.targetId?.match(/_slot_(\d+)$/);
+        return match ? Number(match[1]) : c.messages?.[0]?.orderIndex;
+      };
+      return (order(a) ?? conns.length) - (order(b) ?? conns.length);
+    });
 
     const normalizedSeqConns: UmlConnection[] = seqConns.map((conn) => {
       const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
@@ -4737,7 +4769,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const combined = [...normalizedSeqConns, ...normalizedCommConns, ...normalizedOtherConns];
 
     if (this.activeDiagramType() === DiagramType.SEQUENCE) {
-      return this.recalculateSequenceNumbers(combined);
+      return this.recalculateSequenceNumbers(combined, true);
     }
 
     return combined;
@@ -5052,13 +5084,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                   };
                 }),
               );
-              this.connections.set(ast.connections || []);
               if (ast.name) {
                 this.currentDiagramName.set(ast.name);
               }
               if (ast.diagramType) {
                 this.activeDiagramType.set(ast.diagramType as DiagramType);
               }
+              this.connections.set(this.recalculateSequenceNumbers(ast.connections || [], true));
               this.markAsUnsaved();
               this.updateConnectionEndpoints();
               setTimeout(() => {
@@ -5224,7 +5256,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       const updated = list.map((c) =>
         c.id === savedConn.id ? { ...savedConn, messages: savedConn.messages ? [...savedConn.messages] : undefined } : c,
       );
-      return isSeq ? this.recalculateSequenceNumbers(updated) : updated;
+      return isSeq ? this.recalculateSequenceNumbers(updated, true) : updated;
     });
     this.markAsUnsaved();
     this.closeEditConnModal();

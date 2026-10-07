@@ -59,10 +59,11 @@ export class XmiClientParser {
     const geometryMap = new Map<string, { left: number; top: number; width: number; height: number; color?: string }>();
     const connectorLabelsMap = new Map<string, { name?: string; sMult?: string; tMult?: string }>();
     const connLineStyleMap = new Map<string, UmlLineStyle>();
+    const sequenceOrderMap = new Map<string, number>();
     const diagramMeta: { name?: string; type?: string } = {};
 
     try {
-      this.extractGeometry(xmiRoot, geometryMap, connectorLabelsMap, connLineStyleMap, diagramMeta);
+      this.extractGeometry(xmiRoot, geometryMap, connectorLabelsMap, connLineStyleMap, diagramMeta, sequenceOrderMap);
     } catch (e) {
       // Ignorar errores de layout y continuar con grid
     }
@@ -166,7 +167,7 @@ export class XmiClientParser {
         const cleanName = this.fixUtf8Mojibake(name || meta?.name || `Lifeline_${gridIdx + 1}`).trim();
         let pos = { x: 80 + gridIdx * 180, y: 50 };
         let width = 110;
-        let height = 48;
+        let height = 60;
 
         if (geometryMap.has(id)) {
           const g = geometryMap.get(id)!;
@@ -174,15 +175,7 @@ export class XmiClientParser {
           if (g.width > 20) width = Math.max(90, g.width);
         }
 
-        let defaultSeqColor = '#D2EEF3';
-        const lowerName = cleanName.toLowerCase();
-        if (cleanName.startsWith('UI:') || cleanName.startsWith('IU_') || lowerName.includes('boundary')) {
-          defaultSeqColor = '#D2EEF3';
-        } else if (cleanName.endsWith('Controller') || cleanName.startsWith('Ctrl_') || lowerName.includes('control')) {
-          defaultSeqColor = '#E0D4F7';
-        } else if (cleanName.startsWith('DB:') || lowerName.includes('entity')) {
-          defaultSeqColor = '#FEF0C7';
-        }
+        const defaultSeqColor = '#DDF4F5';
 
         const customSeqColor = geometryMap.get(id)?.color || meta?.color;
 
@@ -403,14 +396,14 @@ export class XmiClientParser {
           height = 70;
         } else if (isSequence) {
           width = 110;
-          height = 48;
+          height = 60;
         }
 
         if (geometryMap.has(eId)) {
           const g = geometryMap.get(eId)!;
           pos = { x: g.left, y: isSequence ? 50 : g.top };
           if (g.width > 20) width = isUseCase ? Math.max(width, g.width) : isSequence ? Math.max(90, g.width) : g.width;
-          if (g.height > 20) height = isUseCase ? Math.max(height, g.height) : isSequence ? 48 : g.height;
+          if (g.height > 20) height = isUseCase ? Math.max(height, g.height) : isSequence ? 60 : g.height;
         }
 
         let nodeType: any = isActor
@@ -452,15 +445,7 @@ export class XmiClientParser {
 
         let defaultExtColor = (isActor || isUseCase) ? '#FEF2DD' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3');
         if (isSequence) {
-          defaultExtColor = '#D2EEF3';
-          const lowerName = cleanName.toLowerCase();
-          if (cleanName.startsWith('UI:') || cleanName.startsWith('IU_') || lowerName.includes('boundary')) {
-            defaultExtColor = '#D2EEF3';
-          } else if (cleanName.endsWith('Controller') || cleanName.startsWith('Ctrl_') || lowerName.includes('control')) {
-            defaultExtColor = '#E0D4F7';
-          } else if (cleanName.startsWith('DB:') || lowerName.includes('entity')) {
-            defaultExtColor = '#FEF0C7';
-          }
+          defaultExtColor = '#DDF4F5';
         }
 
         const customExtColor = geometryMap.get(eId)?.color || meta?.color;
@@ -540,7 +525,7 @@ export class XmiClientParser {
     }
 
     // 5. Conectores de extensión EA
-    const eaConns = this.extractEaConnectors(xmiRoot, nodeMap, connLineStyleMap, connections);
+    const eaConns = this.extractEaConnectors(xmiRoot, nodeMap, connLineStyleMap, connections, sequenceOrderMap);
     for (const ec of eaConns) {
       if (!connSet.has(ec.id)) {
         connSet.add(ec.id);
@@ -626,7 +611,8 @@ export class XmiClientParser {
       for (const node of nodeMap.values()) {
         if (node.nodeType !== 'actor') {
           node.nodeType = 'lifeline';
-          node.height = 48;
+          node.color = geometryMap.get(node.id)?.color || eaElementMetaMap.get(node.id)?.color || '#DDF4F5';
+          node.height = 60;
           node.width = Math.max(90, node.width || 110);
         }
       }
@@ -1038,6 +1024,7 @@ export class XmiClientParser {
     nodeMap: Map<string, any>,
     connLineStyleMap?: Map<string, UmlLineStyle>,
     existingConnections: UmlConnection[] = [],
+    sequenceOrderMap: Map<string, number> = new Map(),
   ): UmlConnection[] {
     const conns: UmlConnection[] = [];
     const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
@@ -1050,6 +1037,7 @@ export class XmiClientParser {
     if (!list) return conns;
 
     const rawList = Array.isArray(list) ? list : [list];
+    const umlMessages = this.collectUmlMessages(xmiRoot['uml:Model'] || xmiRoot['Model']);
     const collaborationMsgList: Array<{
       targetConnId: string;
       sourceId: string;
@@ -1068,6 +1056,8 @@ export class XmiClientParser {
       parameters: string;
       returnType?: string;
       isReply: boolean;
+      type: 'sync' | 'async' | 'create' | 'reply';
+      sequenceNumber?: string;
     }> = [];
 
     for (const c of rawList) {
@@ -1122,29 +1112,31 @@ export class XmiClientParser {
 
       if (eaType === 'Sequence') {
         const extProps = c['extendedProperties'] || {};
-        const rawName = c['properties']?.['@_name'] || c['@_name'] || '';
-        const cleanName = this.fixUtf8Mojibake(rawName).trim();
+        const umlMessage = umlMessages.get(id);
+        const rawName = labels['@_mt'] || eaProps['@_name'] || c['@_name'] || umlMessage?.['@_name'] || '';
+        const label = this.fixUtf8Mojibake(String(rawName)).trim();
+        const labelSequence = label.match(/^(\d+(?:\.\d+)*)(?:\s*[:.-]\s*|\s+)(.*)$/);
+        const cleanName = labelSequence ? labelSequence[2].trim() : label;
         const stateflags = extProps['@_stateflags'] || '';
         const priv1 = (extProps['@_privatedata1'] || '').toLowerCase();
         const priv4 = extProps['@_privatedata4'];
         const isReply =
           priv4 === '1' ||
           stateflags.includes('IsReturn=true') ||
-          priv1.includes('return');
+          priv1.includes('return') ||
+          umlMessage?.['@_messageSort'] === 'reply';
+        const callKind = String(extProps['@_privatedata3'] || '').toLowerCase();
+        const messageSort = umlMessage?.['@_messageSort'];
+        const type = isReply ? 'reply'
+          : callKind.includes('create') || priv1.includes('create') || messageSort === 'createMessage' ? 'create'
+          : priv1.includes('asynch') || messageSort === 'asynchCall' || messageSort === 'asynchSignal' ? 'async'
+          : 'sync';
 
-        let seqNo = 0;
-        if (c['appearance'] && c['appearance']['@_seqno']) {
-          seqNo = parseInt(c['appearance']['@_seqno'], 10) || 0;
-        }
-        if (!seqNo && extProps['@_privatedata5']) {
-          const sMatch = extProps['@_privatedata5'].match(/SeqNo=(\d+)/);
-          if (sMatch) {
-            seqNo = parseInt(sMatch[1], 10) || 0;
-          }
-        }
-        if (!seqNo) {
-          seqNo = sequenceConnList.length + 1;
-        }
+        // SeqNo es cronología, no numeración visible; cero es una posición válida.
+        const seqNo = sequenceOrderMap.get(id)
+          ?? this.readSequenceOrder(extProps['@_privatedata5'])
+          ?? this.readSequenceOrder(c['appearance']?.['@_seqno'])
+          ?? sequenceConnList.length;
 
         let functionName = cleanName;
         let parameters = '';
@@ -1160,6 +1152,13 @@ export class XmiClientParser {
           if (paramsMatch) {
             parameters = paramsMatch[1].trim();
           }
+        }
+
+        if (!parameters && umlMessage?.argument) {
+          const args = Array.isArray(umlMessage.argument) ? umlMessage.argument : [umlMessage.argument];
+          parameters = args.map((arg: any) => this.fixUtf8Mojibake(String(
+            arg['@_value'] ?? arg['@_name'] ?? arg['#text'] ?? '',
+          )).trim()).join(', ');
         }
 
         let returnType: string | undefined = undefined;
@@ -1180,6 +1179,8 @@ export class XmiClientParser {
           parameters,
           returnType,
           isReply,
+          type,
+          sequenceNumber: labelSequence?.[1],
         });
         continue;
       }
@@ -1229,10 +1230,21 @@ export class XmiClientParser {
 
     if (sequenceConnList.length > 0) {
       sequenceConnList.sort((a, b) => a.seqNo - b.seqNo);
+      const hasHierarchicalLabels = sequenceConnList.some((item) => item.sequenceNumber?.includes('.'));
+      let group = 0;
+      let child = 0;
       sequenceConnList.forEach((item, index) => {
         const slot = index;
-        const seqNumStr = (index + 1).toString();
-        const type: any = item.isReply ? 'reply' : 'sync';
+        if (group === 0 || (!item.isReply && nodeMap.get(item.sourceId)?.nodeType === 'actor')) {
+          group++;
+          child = 0;
+        } else {
+          child++;
+        }
+        // Los ordinales planos de EA no representan grupos de interacción.
+        const groupedNumber = child === 0 ? `${group}` : `${group}.${child}`;
+        const seqNumStr = hasHierarchicalLabels ? item.sequenceNumber ?? groupedNumber : groupedNumber;
+        const type = item.type;
         const connColor = this.getGroupColor(seqNumStr);
 
         conns.push({
@@ -1251,6 +1263,8 @@ export class XmiClientParser {
               parameters: item.parameters || undefined,
               returnType: item.returnType,
               isReturn: item.isReply,
+              direction: 'forward',
+              orderIndex: index,
               type,
               color: connColor,
             },
@@ -1304,6 +1318,33 @@ export class XmiClientParser {
     }
 
     return conns;
+  }
+
+  private static readSequenceOrder(raw: unknown): number | undefined {
+    if (raw === undefined || raw === null || String(raw).trim() === '') return undefined;
+    const text = String(raw).trim();
+    const match = text.match(/(?:^|;)\s*SeqNo\s*=\s*(\d+)\s*(?:;|$)/i);
+    const value = match ? match[1] : text;
+    if (!/^\d+$/.test(value)) return undefined;
+    const order = Number(value);
+    return Number.isSafeInteger(order) ? order : undefined;
+  }
+
+  private static collectUmlMessages(model: any): Map<string, any> {
+    const messages = new Map<string, any>();
+    const visit = (value: any): void => {
+      if (!value || typeof value !== 'object') return;
+      for (const message of value.message ? (Array.isArray(value.message) ? value.message : [value.message]) : []) {
+        const id = message['@_xmi:id'] || message['@_id'];
+        if (id) messages.set(id, message);
+      }
+      for (const key of ['packagedElement', 'ownedBehavior', 'nestedClassifier']) {
+        const children = value[key];
+        if (children) (Array.isArray(children) ? children : [children]).forEach(visit);
+      }
+    };
+    visit(model);
+    return messages;
   }
 
   private static extractEaElementMeta(xmiRoot: any): Map<string, { sType?: string; stereotype?: string; name?: string; color?: string }> {
@@ -1379,6 +1420,7 @@ export class XmiClientParser {
     labelsMap: Map<string, any>,
     connLineStyleMap?: Map<string, UmlLineStyle>,
     diagramMetaRef?: { name?: string; type?: string },
+    sequenceOrderMap?: Map<string, number>,
   ): void {
     const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
     if (!ext) return;
@@ -1410,6 +1452,10 @@ export class XmiClientParser {
       const subject = elem['@_subject'];
       const geometry = elem['@_geometry'];
       const style = elem['@_style'];
+      const sequenceOrder = this.readSequenceOrder(geometry);
+      if (subject && sequenceOrder !== undefined) {
+        sequenceOrderMap?.set(subject, sequenceOrder);
+      }
 
       let color: string | undefined;
       if (style) {

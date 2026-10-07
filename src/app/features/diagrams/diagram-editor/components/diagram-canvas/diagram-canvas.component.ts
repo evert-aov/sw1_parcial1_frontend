@@ -1185,12 +1185,8 @@ export class DiagramCanvasComponent {
       return 65;
     }
     if (node.nodeType === 'lifeline') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
-      if (manualW && manualW > 0) {
-        return Math.max(130, manualW);
-      }
-      const nameLen = (node.name || '').length;
-      return Math.max(160, Math.round(nameLen * 8.5 + 44));
+      const manualW = node.customWidth || node.width || 0;
+      return Math.max(this.getDynamicNodeWidth(node), manualW);
     }
     if (node.nodeType === 'package') {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
@@ -1237,15 +1233,14 @@ export class DiagramCanvasComponent {
   // Alto dinámico adaptativo para elementos UML según su tipo y contenido
   getNodeHeight(node: UmlClassNode): number | null {
     if (node.isAnchor) return 0;
+    if (node.nodeType === 'lifeline') return 60;
     if (node.customHeight && node.customHeight > 0) {
       return node.customHeight;
     }
     if (node.isCustomSize && node.height && node.height > 0) {
       return node.height;
     }
-    if (node.nodeType === 'lifeline') {
-      return node.customHeight || node.height || 48;
-    }
+
     if (node.nodeType === 'actor') {
       return node.customHeight || (node.isCustomSize ? node.height : null) || 95;
     }
@@ -1836,7 +1831,7 @@ export class DiagramCanvasComponent {
   getLifelineLength(node?: UmlClassNode): number {
     const maxSlot = this.getMaxSequenceSlotUsed();
     const count = Math.max(4, maxSlot + 1 + 3);
-    const nodeHeaderHeight = node?.nodeType === 'actor' ? 95 : (node?.height || 48);
+    const nodeHeaderHeight = node?.nodeType === 'actor' ? 95 : 60;
     // La línea discontinua se extiende 40px más allá del último slot disponible
     const targetBottom = 160 + (count - 1) * 50 + 40;
     const minLength = node?.nodeType === 'actor' ? 80 : 120;
@@ -1852,7 +1847,7 @@ export class DiagramCanvasComponent {
       return [];
     }
 
-    const headerHeight = node.nodeType === 'actor' ? 95 : (node.height || 48);
+    const headerHeight = node.nodeType === 'actor' ? 95 : 60;
 
     interface ParsedSeqConn {
       conn: UmlConnection;

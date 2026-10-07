@@ -361,7 +361,7 @@
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
               [style.minWidth.px]="node.isAnchor ? 0 : (node.nodeType === 'package' || node.nodeType === 'boundary_box' ? 120 : (node.nodeType === 'use_case' ? 80 : (node.nodeType === 'actor' ? 50 : (node.nodeType === 'lifeline' ? 100 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 140 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 160 : getNodeWidth(node))))))))"
               [style.minHeight.px]="node.isAnchor ? 0 : (node.nodeType === 'package' ? 70 : (node.nodeType === 'boundary_box' ? 80 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 65 : (node.nodeType === 'lifeline' ? 40 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 50 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 90 : null))))))))"
-              [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'boundary_box' ? 200 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 95 : (node.nodeType === 'lifeline' ? 48 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : (node.nodeType === 'component' ? 70 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 140 : null)))))))))"
+              [style.height.px]="node.isAnchor ? 0 : (getNodeHeight(node) || (node.nodeType === 'boundary_box' ? 200 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 95 : (node.nodeType === 'lifeline' ? 60 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : (node.nodeType === 'component' ? 70 : (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment' ? 140 : null)))))))))"
               [style.zIndex]="getNodeZIndex(node)"
               [style.--node-bg]="node.color || null"
               [style.background]="(node.nodeType && node.nodeType !== 'class') || ['device', 'node', 'executionEnvironment', 'component'].includes(node.stereotype || '') ? 'transparent' : null"
@@ -1072,7 +1072,7 @@
                         'ring-1.5 ring-cyan-600 shadow-none': isNodeSelected(node.id),
                         'border-[#796354] dark:border-slate-400 shadow-none': !isNodeSelected(node.id)
                       }"
-                      [style.backgroundColor]="node.color || '#D2EEF3'"
+                      [style.backgroundColor]="node.color || '#DDF4F5'"
                       class="w-full h-full min-h-[44px] border rounded-none px-2.5 py-1.5 flex items-center justify-center text-center relative z-20 transition-all shadow-none">
 
                       <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
@@ -1153,7 +1153,7 @@
                             class="absolute left-1/2 -translate-x-1/2 w-3.5 border shadow-2xs pointer-events-none z-20 rounded-none"
                             [style.top.px]="act.top"
                             [style.height.px]="act.height"
-                            [style.backgroundColor]="node.color || '#D2EEF3'"
+                            [style.backgroundColor]="node.color || '#DDF4F5'"
                             style="border-color: #796354;"
                             [title]="'editor.canvas.nodes.focusActivation' | translate">
                           </div>
