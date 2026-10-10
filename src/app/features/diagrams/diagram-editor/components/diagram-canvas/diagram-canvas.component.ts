@@ -40,6 +40,7 @@ import {
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe } from '../../../../../core/i18n';
 import { UML_SVG_COMPONENTS, getUmlMarkerConfig, UmlMarkerConfig } from '../uml-svg';
+import { UML_WEBGL_COMPONENTS } from '../uml-webgl';
 import { calculateClassDynamicWidth } from '../../utils/node-metrics.util';
 
 export interface DiagramCanvasViewState {
@@ -72,7 +73,7 @@ export class AutofocusInputDirective implements AfterViewInit {
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
-  imports: [CommonModule, FFlowModule, NgIconComponent, AutofocusInputDirective, TranslatePipe, ...UML_SVG_COMPONENTS],
+  imports: [CommonModule, FFlowModule, NgIconComponent, AutofocusInputDirective, TranslatePipe, ...UML_SVG_COMPONENTS, ...UML_WEBGL_COMPONENTS],
   host: {
     class: 'flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden',
   },
@@ -1242,22 +1243,22 @@ export class DiagramCanvasComponent {
     }
 
     if (node.nodeType === 'actor') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || 95;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 95;
     }
     if (node.nodeType === 'package') {
       return node.customHeight || node.height || 120;
     }
     if (node.nodeType === 'boundary_box') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || 200;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 200;
     }
     if (node.nodeType === 'component') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
     }
     if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || (node.nodeType === 'executionEnvironment' ? 160 : 140);
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || (node.nodeType === 'executionEnvironment' ? 160 : 140);
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
     }
     if (node.nodeType === 'use_case') {
       const manualH = (node.isCustomSize && (node.customHeight || node.height)) ? (node.customHeight || node.height || 0) : (node.customHeight || 0);
