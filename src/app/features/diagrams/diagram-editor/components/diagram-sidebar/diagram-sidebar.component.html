@@ -247,55 +247,58 @@
               <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
             </button>
 
-            <!-- Boundary (UI) -->
+            <!-- Clase Boundary «UI» -->
             <button
-              (click)="addBoundary.emit()"
+              (click)="addClassWithStereotype.emit('UI')"
               [disabled]="isReadOnly()"
               [draggable]="!isReadOnly()"
-              (dragstart)="onToolboxDragStart('boundary', $event)"
+              (dragstart)="onToolboxDragStart('class', $event, 'UI')"
               [title]="'editor.toolbox.dragHint' | translate"
               class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-blue-300 dark:hover:border-blue-700">
-              <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
-                <app-boundary-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
+              <div class="w-9 h-8 flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
+                <app-table-svg mode="icon" width="16" height="13" strokeColor="currentColor" />
+                <span class="text-[7.5px] font-bold leading-none tracking-tighter text-blue-600 dark:text-blue-400 mt-0.5">&laquo;UI&raquo;</span>
               </div>
               <div class="min-w-0 flex-1">
-                <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Boundary &laquo;UI&raquo;</div>
+                <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Clase &laquo;UI&raquo;</div>
                 <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Pantalla, Formulario o Vista UI</div>
               </div>
               <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
             </button>
 
-            <!-- Control (Controller.) -->
+            <!-- Clase Control «Controller.» -->
             <button
-              (click)="addControl.emit()"
+              (click)="addClassWithStereotype.emit('Controller.')"
               [disabled]="isReadOnly()"
               [draggable]="!isReadOnly()"
-              (dragstart)="onToolboxDragStart('control', $event)"
+              (dragstart)="onToolboxDragStart('class', $event, 'Controller.')"
               [title]="'editor.toolbox.dragHint' | translate"
               class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-blue-300 dark:hover:border-blue-700">
-              <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
-                <app-control-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
+              <div class="w-9 h-8 flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
+                <app-table-svg mode="icon" width="16" height="13" strokeColor="currentColor" />
+                <span class="text-[7px] font-bold leading-none tracking-tighter text-blue-600 dark:text-blue-400 mt-0.5">&laquo;Ctrl&raquo;</span>
               </div>
               <div class="min-w-0 flex-1">
-                <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Control &laquo;Controller.&raquo;</div>
+                <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Clase &laquo;Controller.&raquo;</div>
                 <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Controlador y lógica de aplicación</div>
               </div>
               <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>
             </button>
 
-            <!-- Entity (Entity.) -->
+            <!-- Clase Entity «Entity.» -->
             <button
-              (click)="addEntity.emit()"
+              (click)="addClassWithStereotype.emit('Entity.')"
               [disabled]="isReadOnly()"
               [draggable]="!isReadOnly()"
-              (dragstart)="onToolboxDragStart('entity', $event)"
+              (dragstart)="onToolboxDragStart('class', $event, 'Entity.')"
               [title]="'editor.toolbox.dragHint' | translate"
               class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 hover:bg-blue-50/50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 transition-all cursor-grab active:cursor-grabbing group hover:border-blue-300 dark:hover:border-blue-700">
-              <div class="w-9 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
-                <app-entity-svg width="24" height="20" strokeColor="currentColor" [strokeWidth]="1.8" />
+              <div class="w-9 h-8 flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 rounded-md shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform p-0.5">
+                <app-table-svg mode="icon" width="16" height="13" strokeColor="currentColor" />
+                <span class="text-[7px] font-bold leading-none tracking-tighter text-blue-600 dark:text-blue-400 mt-0.5">&laquo;Ent&raquo;</span>
               </div>
               <div class="min-w-0 flex-1">
-                <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Entity &laquo;Entity.&raquo;</div>
+                <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100">Clase &laquo;Entity.&raquo;</div>
                 <div class="text-[9.5px] text-slate-400 truncate mt-0.5">Datos persistentes y dominio</div>
               </div>
               <span class="text-xs text-blue-600 dark:text-blue-400 font-bold px-1">+</span>

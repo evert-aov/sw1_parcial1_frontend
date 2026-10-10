@@ -673,7 +673,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               if (!nodeColor || ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) {
                 nodeColor = this.getDefaultColorForNodeType(nodeType, n.stereotype);
               }
-              return { ...n, nodeType, name, height: nodeType === 'lifeline' ? 60 : n.height, color: nodeColor, stereotype: n.stereotype || null };
+              const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
+              const defaultH = nodeType === 'lifeline' ? 60 : (nodeType === 'component' ? 70 : (nodeType === 'device' || nodeType === 'node' ? 140 : (nodeType === 'executionEnvironment' ? 160 : (nodeType === 'boundary_box' ? 200 : (nodeType === 'package' ? 120 : undefined)))));
+              const draftH = nodeType === 'lifeline' ? 60 : (n.height || n.customHeight || defaultH);
+              return {
+                ...n,
+                nodeType,
+                name,
+                height: draftH,
+                customHeight: n.customHeight || (isExplicitSizeNode ? draftH : undefined),
+                customWidth: n.customWidth || (isExplicitSizeNode ? (n.width || 220) : undefined),
+                isCustomSize: n.isCustomSize !== undefined ? n.isCustomSize : (isExplicitSizeNode || (!!draftH && nodeType === 'class')),
+                color: nodeColor,
+                stereotype: n.stereotype || null,
+              };
             });
             this.nodes.set(sanitizedDraftNodes);
             this.connections.set(this.recalculateSequenceNumbers(draft.connections || [], true));
@@ -716,9 +729,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             nodeType = 'lifeline';
           }
         }
-        const isManuallyResized = !!(n as any).isCustomSize || (!!(n as any).customHeight && (n as any).customHeight > 0) || (!!(n as any).customWidth && (n as any).customWidth > 0);
         const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
         const isLifeline = nodeType === 'lifeline';
+        const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
+        const hasExplicitDbHeight = !!(n.height && n.height > 0);
+        const hasCustomFlag = !!(n as any).isCustomSize || (!!(n as any).customHeight && (n as any).customHeight > 0) || (!!(n as any).customWidth && (n as any).customWidth > 0);
+        const isManuallyResized = hasCustomFlag || isExplicitSizeNode || (hasExplicitDbHeight && (nodeType === 'class' || isBce || nodeType === 'actor' || nodeType === 'use_case'));
+
         let nodeName = n.name || '';
         if (nodeType === 'boundary_box' && (nodeName === 'ClassName' || !nodeName.trim())) {
           nodeName = '.';
@@ -729,14 +746,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           nodeColor = this.getDefaultColorForNodeType(nodeType, (n as any).stereotype);
         }
 
+        const defaultWidth = nodeType === 'actor' ? 65 : (nodeType === 'use_case' ? 140 : (nodeType === 'boundary_box' ? 280 : (nodeType === 'package' ? 200 : (nodeType === 'component' ? 190 : (nodeType === 'device' ? 230 : (nodeType === 'executionEnvironment' ? 240 : (nodeType === 'node' ? 230 : (isBce ? 90 : (isLifeline ? 140 : 220)))))))));
+        const resolvedWidth = n.width || defaultWidth;
+
+        const defaultHeight = isLifeline ? 60 : (isBce ? 95 : (nodeType === 'actor' ? 95 : (nodeType === 'boundary_box' ? 200 : (nodeType === 'component' ? 70 : (nodeType === 'device' ? 140 : (nodeType === 'executionEnvironment' ? 160 : (nodeType === 'node' ? 140 : (nodeType === 'package' ? 120 : undefined))))))));
+        const resolvedHeight = isLifeline ? 60 : (n.height || defaultHeight);
+
         return {
           id: n.id,
           name: nodeName,
           position: { x: n.positionX, y: n.positionY },
-          width: n.width || (nodeType === 'actor' ? 65 : (nodeType === 'use_case' ? 140 : (nodeType === 'boundary_box' ? 280 : (nodeType === 'package' ? 200 : (nodeType === 'component' ? 190 : (nodeType === 'device' ? 230 : (nodeType === 'executionEnvironment' ? 240 : (isBce ? 90 : (isLifeline ? 140 : 220))))))))),
-          height: isLifeline ? 60 : n.height || (isBce ? 95 : (nodeType === 'actor' ? 95 : (nodeType === 'boundary_box' ? 200 : (nodeType === 'component' ? 70 : (nodeType === 'device' ? 140 : (nodeType === 'executionEnvironment' ? 160 : undefined)))))),
-          customWidth: isManuallyResized ? n.width : undefined,
-          customHeight: isManuallyResized ? n.height! : undefined,
+          width: resolvedWidth,
+          height: resolvedHeight,
+          customWidth: isManuallyResized ? ((n as any).customWidth || resolvedWidth) : undefined,
+          customHeight: isManuallyResized ? ((n as any).customHeight || resolvedHeight) : undefined,
           isCustomSize: isManuallyResized,
           color: nodeColor,
           isAnchor: n.isAnchor,
@@ -1077,13 +1100,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           nodeColor = this.getDefaultColorForNodeType(resolvedNodeType, n.stereotype);
         }
 
+        const isExplicitSize = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(resolvedNodeType);
+        const savedHeight = resolvedNodeType === 'lifeline'
+          ? 60
+          : (isExplicitSize
+              ? (n.customHeight || n.height || this.getNodeHeight(n))
+              : (n.customHeight || (n.isCustomSize ? n.height : null) || null));
+
         return {
           id: n.id,
           name: finalName,
           positionX: n.position.x,
           positionY: n.position.y,
           width: this.getNodeWidth(n),
-          height: resolvedNodeType === 'lifeline' ? 60 : n.customHeight || (n.isCustomSize ? n.height : null),
+          height: savedHeight,
           color: nodeColor,
           isAnchor: n.isAnchor,
           assocMainConnId: n.assocMainConnId,
@@ -1477,20 +1507,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (node.nodeType === 'lifeline') return 60;
     if (node.customHeight && node.customHeight > 0) return node.customHeight;
     if (node.isCustomSize && node.height && node.height > 0) return node.height;
-    if (node.nodeType === 'actor') return node.customHeight || (node.isCustomSize ? node.height : null) || 95;
+    if (node.nodeType === 'actor') return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 95;
 
     if (node.nodeType === 'package') return node.customHeight || node.height || 120;
     if (node.nodeType === 'boundary_box') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || 200;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 200;
     }
     if (node.nodeType === 'component') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
     }
     if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || (node.nodeType === 'executionEnvironment' ? 160 : 140);
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || (node.nodeType === 'executionEnvironment' ? 160 : 140);
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || 70;
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
     }
     if (node.nodeType === 'use_case') {
       const manualH = (node.isCustomSize && (node.customHeight || node.height)) ? (node.customHeight || node.height || 0) : (node.customHeight || 0);
@@ -3007,9 +3037,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
   }
 
-  addClass(position?: { x: number; y: number }): void {
+  addClass(position?: { x: number; y: number }, stereotype?: UmlStereotype | string | null): void {
     if (this.isReadOnly()) return;
     const currentType = this.activeDiagramType();
+    if (currentType === DiagramType.COMMUNICATION) {
+      this.showIncompatibleElementModal(currentType);
+      return;
+    }
     if (currentType === DiagramType.COMPONENT) {
       this.addComponent(position);
       return;
@@ -3026,19 +3060,34 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 110)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 40)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
+    const defaultWidth = 220;
+    const defaultHeight = stereotype ? 120 : undefined;
+    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
+    const posY = position ? Math.max(20, Math.round(position.y - (defaultHeight ? defaultHeight / 2 : 40))) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
     const count = this.nodes().filter((n) => !n.isAnchor).length + 1;
+    let namePrefix = 'Tabla_';
+    if (stereotype === UmlStereotype.UI || stereotype === 'UI') {
+      namePrefix = 'UI_';
+    } else if (stereotype === UmlStereotype.CONTROLLER_DOT || stereotype === 'Controller.') {
+      namePrefix = 'Controller_';
+    } else if (stereotype === UmlStereotype.ENTITY_DOT || stereotype === 'Entity.') {
+      namePrefix = 'Entity_';
+    } else if (currentType === DiagramType.CLASS_ANALYSIS) {
+      namePrefix = 'Clase_';
+    }
+
     const newNode: UmlClassNode = {
       id: `class_${Date.now()}`,
-      name: `Tabla_${count}`,
+      name: `${namePrefix}${count}`,
+      nodeType: 'class',
       position: { x: posX, y: posY },
-      width: 220,
+      width: defaultWidth,
+      height: defaultHeight,
       color: '#FDFAF3',
       attributes: [],
       methods: [],
-      stereotype: null,
+      stereotype: (stereotype as UmlStereotype) || null,
     };
 
     this.nodes.update((list) => [...list, newNode]);
@@ -3065,6 +3114,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 190,
       height: 70,
+      customWidth: 190,
+      customHeight: 70,
       isCustomSize: true,
       color: '#FAF1EC',
       attributes: [],
@@ -3095,6 +3146,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 230,
       height: 140,
+      customWidth: 230,
+      customHeight: 140,
       isCustomSize: true,
       color: '#F3FAF7',
       attributes: [],
@@ -3125,6 +3178,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 240,
       height: 160,
+      customWidth: 240,
+      customHeight: 160,
       isCustomSize: true,
       color: '#CDE5F5',
       attributes: [],
@@ -3159,6 +3214,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: defaultWidth,
       height: defaultHeight,
+      customWidth: defaultWidth,
+      customHeight: defaultHeight,
       isCustomSize: true,
       color: '#FAF1EC',
       attributes: [],
@@ -3172,6 +3229,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   addActor(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
+    const currentType = this.activeDiagramType();
+    if (currentType === DiagramType.CLASS) {
+      this.showIncompatibleElementModal(currentType);
+      return;
+    }
     this.pushSnapshot();
     const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
@@ -3269,23 +3331,26 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   addBoundary(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
+    const currentType = this.activeDiagramType();
+    if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
+      this.showIncompatibleElementModal(currentType);
+      return;
+    }
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const isComm = this.activeDiagramType() === DiagramType.COMMUNICATION;
-    const isAnalysis = this.activeDiagramType() === DiagramType.CLASS_ANALYSIS;
-    const defaultWidth = isAnalysis ? 200 : 70;
-    const defaultHeight = isAnalysis ? 120 : 70;
+    const defaultWidth = 70;
+    const defaultHeight = 70;
     const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
     const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
-    const count = this.nodes().filter((n) => n.nodeType === 'boundary' || n.stereotype === UmlStereotype.UI || n.stereotype === UmlStereotype.BOUNDARY).length + 1;
+    const count = this.nodes().filter((n) => n.nodeType === 'boundary').length + 1;
     const newNode: UmlClassNode = {
       id: `boundary_${Date.now()}`,
       name: `Boundary_${count}`,
-      nodeType: isAnalysis ? 'class' : 'boundary',
-      stereotype: isAnalysis ? UmlStereotype.UI : UmlStereotype.BOUNDARY,
+      nodeType: 'boundary',
+      stereotype: UmlStereotype.BOUNDARY,
       position: { x: posX, y: posY },
       width: defaultWidth,
       height: defaultHeight,
@@ -3302,23 +3367,26 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   addControl(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
+    const currentType = this.activeDiagramType();
+    if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
+      this.showIncompatibleElementModal(currentType);
+      return;
+    }
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const isComm = this.activeDiagramType() === DiagramType.COMMUNICATION;
-    const isAnalysis = this.activeDiagramType() === DiagramType.CLASS_ANALYSIS;
-    const defaultWidth = isAnalysis ? 200 : 70;
-    const defaultHeight = isAnalysis ? 120 : 70;
+    const defaultWidth = 70;
+    const defaultHeight = 70;
     const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
     const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
-    const count = this.nodes().filter((n) => n.nodeType === 'control' || n.stereotype === UmlStereotype.CONTROLLER_DOT || n.stereotype === UmlStereotype.CONTROL).length + 1;
+    const count = this.nodes().filter((n) => n.nodeType === 'control').length + 1;
     const newNode: UmlClassNode = {
       id: `control_${Date.now()}`,
       name: `Control_${count}`,
-      nodeType: isAnalysis ? 'class' : 'control',
-      stereotype: isAnalysis ? UmlStereotype.CONTROLLER_DOT : UmlStereotype.CONTROL,
+      nodeType: 'control',
+      stereotype: UmlStereotype.CONTROL,
       position: { x: posX, y: posY },
       width: defaultWidth,
       height: defaultHeight,
@@ -3335,23 +3403,26 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   addEntity(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
+    const currentType = this.activeDiagramType();
+    if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
+      this.showIncompatibleElementModal(currentType);
+      return;
+    }
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
-    const isComm = this.activeDiagramType() === DiagramType.COMMUNICATION;
-    const isAnalysis = this.activeDiagramType() === DiagramType.CLASS_ANALYSIS;
-    const defaultWidth = isAnalysis ? 200 : 70;
-    const defaultHeight = isAnalysis ? 120 : 70;
+    const defaultWidth = 70;
+    const defaultHeight = 70;
     const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
     const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
 
-    const count = this.nodes().filter((n) => n.nodeType === 'entity' || n.stereotype === UmlStereotype.ENTITY_DOT || n.stereotype === UmlStereotype.ENTITY).length + 1;
+    const count = this.nodes().filter((n) => n.nodeType === 'entity').length + 1;
     const newNode: UmlClassNode = {
       id: `entity_${Date.now()}`,
       name: `Entity_${count}`,
-      nodeType: isAnalysis ? 'class' : 'entity',
-      stereotype: isAnalysis ? UmlStereotype.ENTITY_DOT : UmlStereotype.ENTITY,
+      nodeType: 'entity',
+      stereotype: UmlStereotype.ENTITY,
       position: { x: posX, y: posY },
       width: defaultWidth,
       height: defaultHeight,
@@ -3469,11 +3540,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if (currentType === DiagramType.PACKAGE) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case' && n.nodeType !== 'actor');
     } else if (currentType === DiagramType.COMMUNICATION) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor' && n.nodeType !== 'class');
+      // En diagrama de comunicación: SOLO actor, boundary, control, entity. Clases no permitidas.
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor');
     } else if (currentType === DiagramType.SEQUENCE) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'lifeline' && n.nodeType !== 'class' && n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity');
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'class' && n.nodeType !== 'actor');
+      // En análisis de clases: SOLO clases estándar (con/sin estereotipo) y actor. Nodos puros (boundary/control/entity) no permitidos.
+      isInvalidPaste = clip.nodes.some((n) => (n.nodeType !== 'class' && n.nodeType !== undefined) && n.nodeType !== 'actor');
     } else if (currentType === DiagramType.COMPONENT) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'component' && n.nodeType !== 'boundary_box' && n.nodeType !== 'package');
     } else if (currentType === DiagramType.DEPLOYMENT) {
@@ -3481,7 +3554,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     } else if (currentType === DiagramType.LAYERED) {
       isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'boundary_box');
     } else if (currentType === DiagramType.CLASS) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'package' || n.nodeType === 'boundary' || n.nodeType === 'control' || n.nodeType === 'entity' || n.nodeType === 'lifeline');
+      isInvalidPaste = clip.nodes.some((n) => n.nodeType && n.nodeType !== 'class');
     }
 
     if (isInvalidPaste) {
@@ -3761,6 +3834,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     const currentType = this.activeDiagramType();
     let isInvalidCopy = false;
+    const isClassNode = !node.nodeType || node.nodeType === 'class';
+    const isPureBceNode = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
+
     if (currentType === DiagramType.USE_CASE) {
       if (node.nodeType !== 'actor' && node.nodeType !== 'use_case') {
         isInvalidCopy = true;
@@ -3770,15 +3846,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.COMMUNICATION) {
-      if (node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity' && node.nodeType !== 'actor' && node.nodeType !== 'class') {
+      // En diagrama de comunicación: SOLO se permiten actor, boundary, control, entity.
+      // Las clases (incluso con estereotipo UI, Controller., Entity.) NO están permitidas.
+      if (isClassNode || (!isPureBceNode && node.nodeType !== 'actor')) {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.SEQUENCE) {
-      if (node.nodeType !== 'actor' && node.nodeType !== 'lifeline' && node.nodeType !== 'class' && node.nodeType !== 'boundary' && node.nodeType !== 'control' && node.nodeType !== 'entity') {
+      if (node.nodeType !== 'actor' && node.nodeType !== 'lifeline' && !isClassNode && !isPureBceNode) {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      if (node.nodeType !== 'class' && node.nodeType !== 'actor') {
+      // En análisis de clases: SOLO se permiten clases y actor.
+      // Los nodos puros (boundary, control, entity) NO están permitidos.
+      if (isPureBceNode || (!isClassNode && node.nodeType !== 'actor')) {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.COMPONENT) {
@@ -3793,7 +3873,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         node.nodeType !== 'component' &&
         node.nodeType !== 'boundary_box' &&
         node.nodeType !== 'package' &&
-        node.nodeType !== 'class'
+        !isClassNode
       ) {
         isInvalidCopy = true;
       }
@@ -3802,7 +3882,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         isInvalidCopy = true;
       }
     } else if (currentType === DiagramType.CLASS) {
-      if (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' || node.nodeType === 'lifeline') {
+      if (!isClassNode) {
         isInvalidCopy = true;
       }
     }
@@ -3863,46 +3943,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     let resolvedWidth = width;
     let resolvedHeight = height;
 
-    if (currentType === DiagramType.COMMUNICATION) {
-      const rawType = (resolvedNodeType || '').toLowerCase().trim();
-      const rawStereo = (resolvedStereotype || '').toLowerCase().trim();
-      if (rawType === 'boundary' || rawStereo === 'ui' || rawStereo === 'boundary') {
-        resolvedNodeType = 'boundary';
-        resolvedStereotype = UmlStereotype.BOUNDARY;
-        resolvedWidth = 70;
-        resolvedHeight = 70;
-      } else if (rawType === 'control' || rawStereo.includes('controller') || rawStereo === 'control') {
-        resolvedNodeType = 'control';
-        resolvedStereotype = UmlStereotype.CONTROL;
-        resolvedWidth = 70;
-        resolvedHeight = 70;
-      } else if (rawType === 'entity' || rawStereo.includes('entity') || rawStereo === 'entity') {
-        resolvedNodeType = 'entity';
-        resolvedStereotype = UmlStereotype.ENTITY;
-        resolvedWidth = 70;
-        resolvedHeight = 70;
-      }
-    } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      const rawType = (resolvedNodeType || '').toLowerCase().trim();
-      const rawStereo = (resolvedStereotype || '').toLowerCase().trim();
-      if (rawType === 'boundary' || rawStereo === 'ui' || rawStereo === 'boundary') {
-        resolvedNodeType = 'class';
-        resolvedStereotype = UmlStereotype.UI;
-        if (resolvedWidth < 120) resolvedWidth = 200;
-        if (resolvedHeight < 80) resolvedHeight = 120;
-      } else if (rawType === 'control' || rawStereo.includes('controller') || rawStereo === 'control') {
-        resolvedNodeType = 'class';
-        resolvedStereotype = UmlStereotype.CONTROLLER_DOT;
-        if (resolvedWidth < 120) resolvedWidth = 200;
-        if (resolvedHeight < 80) resolvedHeight = 120;
-      } else if (rawType === 'entity' || rawStereo.includes('entity') || rawStereo === 'entity') {
-        resolvedNodeType = 'class';
-        resolvedStereotype = UmlStereotype.ENTITY_DOT;
-        if (resolvedWidth < 120) resolvedWidth = 200;
-        if (resolvedHeight < 80) resolvedHeight = 120;
-      }
-    }
-
+    const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(resolvedNodeType);
     const newNode: UmlClassNode = {
       id: newNodeId,
       name: newName,
@@ -3911,6 +3952,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: resolvedWidth,
       height: resolvedHeight,
+      customWidth: isExplicitSizeNode ? resolvedWidth : node.customWidth,
+      customHeight: isExplicitSizeNode ? resolvedHeight : node.customHeight,
+      isCustomSize: isExplicitSizeNode || !!node.isCustomSize,
       color: node.color || this.getDefaultColorForNodeType(resolvedNodeType, resolvedStereotype),
       attributes: (node.attributes || []).map((a: any) => ({ ...a })),
       methods: (node.methods || []).map((m: any) => ({ ...m })),
@@ -3934,7 +3978,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       const nodeType = payload.nodeType;
       switch (nodeType) {
         case 'class':
-          this.addClass(position);
+          this.addClass(position, payload.stereotype);
           break;
         case 'component':
           this.addComponent(position);
@@ -4343,7 +4387,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         else if (n.id?.startsWith('dev_') || n.id?.startsWith('device_')) nodeType = 'device';
         else if (n.id?.startsWith('exec_') || n.id?.startsWith('executionEnvironment_')) nodeType = 'executionEnvironment';
       }
-      const isManuallyResized = !!n.isCustomSize || (!!n.customHeight && n.customHeight > 0);
+      const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
+      const isManuallyResized = !!n.isCustomSize || (!!n.customHeight && n.customHeight > 0) || isExplicitSizeNode || (!!(n.height && n.height > 0) && nodeType === 'class');
       let defaultWidth = 220;
       let defaultHeight: number | undefined = undefined;
       if (nodeType === 'actor') {
@@ -4356,11 +4401,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         defaultWidth = 200;
         defaultHeight = 120;
       } else if (nodeType === 'component') {
-        defaultWidth = 200;
-        defaultHeight = 100;
-      } else if (nodeType === 'node' || nodeType === 'device' || nodeType === 'executionEnvironment') {
-        defaultWidth = 220;
-        defaultHeight = 120;
+        defaultWidth = 190;
+        defaultHeight = 70;
+      } else if (nodeType === 'node' || nodeType === 'device') {
+        defaultWidth = 230;
+        defaultHeight = 140;
+      } else if (nodeType === 'executionEnvironment') {
+        defaultWidth = 240;
+        defaultHeight = 160;
       } else if (nodeType === 'boundary_box') {
         defaultWidth = 280;
         defaultHeight = 200;
@@ -4373,6 +4421,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
 
       const isBce = ['boundary', 'control', 'entity'].includes(nodeType);
+      const resolvedW = n.isAnchor ? 0 : (isBce ? 70 : (n.width || defaultWidth));
+      const resolvedH = n.isAnchor ? 0 : nodeType === 'lifeline' ? 60 : (isBce ? 70 : (n.height || defaultHeight));
 
       return {
         id: n.id || `class_ai_${Date.now()}_${i}`,
@@ -4381,10 +4431,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
           y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
         },
-        width: n.isAnchor ? 0 : (isBce ? 70 : (n.width || defaultWidth)),
-        height: n.isAnchor ? 0 : nodeType === 'lifeline' ? 60 : (isBce ? 70 : (n.height || defaultHeight)),
-        customWidth: n.customWidth,
-        customHeight: n.customHeight,
+        width: resolvedW,
+        height: resolvedH,
+        customWidth: n.customWidth || (isExplicitSizeNode ? resolvedW : undefined),
+        customHeight: n.customHeight || (isExplicitSizeNode ? resolvedH : undefined),
         isCustomSize: isManuallyResized,
         color: (!n.color || ((n.color === '#FFFDDD' || n.color === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType)))
           ? this.getDefaultColorForNodeType(nodeType, n.stereotype)

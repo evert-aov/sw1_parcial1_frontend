@@ -68,6 +68,7 @@
       (resetView)="resetView()"
       (fitView)="fitView()"
       (addClass)="addClass()"
+      (addClassWithStereotype)="addClass(undefined, $event)"
       (addActor)="addActor()"
       (addUseCase)="addUseCase()"
       (addPackage)="addPackage()"
@@ -310,6 +311,7 @@
     [mode]="jsonModalMode()"
     [initialJson]="jsonContent()"
     (close)="showJsonModal.set(false)"
+    (copied)="showQuickToast('¡JSON AST copiado al portapapeles!')"
     (applyImport)="onApplyImportedJson($event)">
   </app-json-modal>
 

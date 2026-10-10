@@ -57,11 +57,12 @@ import {
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
 import { UML_SVG_COMPONENTS } from '../uml-svg';
+import { UML_WEBGL_COMPONENTS } from '../uml-webgl';
 
 @Component({
   selector: 'app-diagram-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe, ...UML_SVG_COMPONENTS],
+  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe, ...UML_SVG_COMPONENTS, ...UML_WEBGL_COMPONENTS],
   providers: [
     provideIcons({
       heroBars3,
@@ -256,6 +257,7 @@ export class DiagramSidebarComponent {
   readonly resetView = output<void>();
   readonly fitView = output<void>();
   readonly addClass = output<void>();
+  readonly addClassWithStereotype = output<string>();
   readonly addActor = output<void>();
   readonly addUseCase = output<void>();
   readonly addPackage = output<void>();
@@ -306,20 +308,24 @@ export class DiagramSidebarComponent {
     const currentType = this.activeDiagramType();
     const type = nodeType || 'class';
 
+    if (currentType === DiagramType.COMMUNICATION) {
+      // En diagrama de comunicación: solo se permiten actor, boundary, control, entity.
+      // Las clases (incluso con estereotipo UI, Controller., Entity.) NO están permitidas.
+      return type === 'actor' || type === 'boundary' || type === 'control' || type === 'entity';
+    }
+    if (currentType === DiagramType.CLASS_ANALYSIS) {
+      // En análisis de clases: solo clases estándar (con o sin estereotipo) y actor.
+      // Los nodos puros (boundary, control, entity) NO están permitidos.
+      return type === 'class' || type === 'actor';
+    }
+    if (currentType === DiagramType.CLASS) {
+      return type === 'class';
+    }
     if (currentType === DiagramType.USE_CASE) {
       return type === 'actor' || type === 'use_case';
     }
     if (currentType === DiagramType.PACKAGE) {
       return type === 'package' || type === 'use_case' || type === 'actor';
-    }
-    if (currentType === DiagramType.COMMUNICATION) {
-      return (
-        type === 'actor' ||
-        type === 'boundary' ||
-        type === 'control' ||
-        type === 'entity' ||
-        type === 'class'
-      );
     }
     if (currentType === DiagramType.SEQUENCE) {
       return (
@@ -347,9 +353,6 @@ export class DiagramSidebarComponent {
     }
     if (currentType === DiagramType.LAYERED) {
       return type === 'package' || type === 'boundary_box' || type === 'class';
-    }
-    if (currentType === DiagramType.CLASS) {
-      return type === 'class';
     }
     return true;
   }
@@ -579,12 +582,15 @@ export class DiagramSidebarComponent {
     }
   }
 
-  onToolboxDragStart(nodeType: string, event: DragEvent): void {
+  onToolboxDragStart(nodeType: string, event: DragEvent, stereotype?: string): void {
     if (this.isReadOnly()) return;
-    const payload = {
+    const payload: any = {
       type: 'toolbox_node',
       nodeType,
     };
+    if (stereotype) {
+      payload.stereotype = stereotype;
+    }
     if (event.dataTransfer) {
       event.dataTransfer.setData('application/json', JSON.stringify(payload));
       event.dataTransfer.setData('text/plain', nodeType);

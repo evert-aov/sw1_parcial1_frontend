@@ -164,3 +164,172 @@ describe('DiagramEditorComponent: estado de mensajes de secuencia', () => {
       .toEqual([['actor', 'ui'], ['ui', 'actor']]);
   });
 });
+
+describe('DiagramEditorComponent: persistencia de altura en diagramas de despliegue y componentes', () => {
+  let editor: DiagramEditorComponent;
+  let canvas: DiagramCanvasComponent;
+
+  beforeEach(() => {
+    editor = Object.assign(Object.create(DiagramEditorComponent.prototype), {
+      nodes: signal<UmlClassNode[]>([]),
+      connections: signal<UmlConnection[]>([]),
+      activeDiagramType: signal(DiagramType.DEPLOYMENT),
+      defaultLineStyle: signal('straight'),
+    });
+    canvas = Object.create(DiagramCanvasComponent.prototype) as DiagramCanvasComponent;
+  });
+
+  it('preserva la altura personalizada en nodos de componentes al calcular altura y generar payload', () => {
+    const compNode: UmlClassNode = {
+      id: 'component_1',
+      name: 'AuthComponent',
+      nodeType: 'component',
+      position: { x: 100, y: 100 },
+      width: 190,
+      height: 220,
+      customHeight: 220,
+      isCustomSize: true,
+      attributes: [],
+      methods: [],
+    };
+    editor.activeDiagramType.set(DiagramType.COMPONENT);
+    editor.nodes.set([compNode]);
+
+    expect(editor.getNodeHeight(compNode)).toBe(220);
+    expect(canvas.getNodeHeight(compNode)).toBe(220);
+
+    const payload = editor.buildSaveAstPayload();
+    expect(payload.nodes[0].height).toBe(220);
+  });
+
+  it('preserva la altura persistida de la BD (sin flags de customSize) para nodos de despliegue y componentes', () => {
+    // Simula nodos que vienen directamente de la BD sin customHeight ni isCustomSize
+    const dbCompNode: UmlClassNode = {
+      id: 'component_2',
+      name: 'PaymentService',
+      nodeType: 'component',
+      position: { x: 50, y: 50 },
+      width: 190,
+      height: 185,
+      attributes: [],
+      methods: [],
+    };
+    const dbDeviceNode: UmlClassNode = {
+      id: 'device_1',
+      name: 'GatewayRouter',
+      nodeType: 'device',
+      position: { x: 300, y: 50 },
+      width: 230,
+      height: 280,
+      attributes: [],
+      methods: [],
+    };
+    const dbExecNode: UmlClassNode = {
+      id: 'exec_1',
+      name: 'K8sCluster',
+      nodeType: 'executionEnvironment',
+      position: { x: 600, y: 50 },
+      width: 240,
+      height: 350,
+      attributes: [],
+      methods: [],
+    };
+    const dbBBoxNode: UmlClassNode = {
+      id: 'boundary_box_1',
+      name: 'CloudRegion',
+      nodeType: 'boundary_box',
+      position: { x: 50, y: 300 },
+      width: 400,
+      height: 450,
+      attributes: [],
+      methods: [],
+    };
+
+    editor.activeDiagramType.set(DiagramType.DEPLOYMENT);
+    editor.nodes.set([dbCompNode, dbDeviceNode, dbExecNode, dbBBoxNode]);
+
+    // Ni el canvas ni el editor deben resetear la altura al valor por defecto
+    expect(editor.getNodeHeight(dbCompNode)).toBe(185);
+    expect(canvas.getNodeHeight(dbCompNode)).toBe(185);
+
+    expect(editor.getNodeHeight(dbDeviceNode)).toBe(280);
+    expect(canvas.getNodeHeight(dbDeviceNode)).toBe(280);
+
+    expect(editor.getNodeHeight(dbExecNode)).toBe(350);
+    expect(canvas.getNodeHeight(dbExecNode)).toBe(350);
+
+    expect(editor.getNodeHeight(dbBBoxNode)).toBe(450);
+    expect(canvas.getNodeHeight(dbBBoxNode)).toBe(450);
+
+    // Al guardar de nuevo, debe enviar la altura persistida y nunca null
+    const payload = editor.buildSaveAstPayload();
+    expect(payload.nodes.map((n) => n.height)).toEqual([185, 280, 350, 450]);
+  });
+
+  it('separa estrictamente elementos en diagramas de comunicación y análisis de clase', () => {
+    let alertCount = 0;
+    (editor as any).confirmDialogService = { alert: () => { alertCount++; } };
+    (editor as any).pushSnapshot = () => {};
+    (editor as any).markAsUnsaved = () => {};
+    (editor as any).collaborationService = { sendDiagramSync: () => {} };
+    (editor as any).isReadOnly = signal(false);
+
+    // 1. En Diagrama de Comunicación: NO se permiten clases (ni con estereotipo)
+    editor.activeDiagramType.set(DiagramType.COMMUNICATION);
+    editor.nodes.set([]);
+
+    // addClass debe ser rechazado
+    editor.addClass();
+    expect(alertCount).toBe(1);
+    expect(editor.nodes().length).toBe(0);
+
+    // addBoundary, addControl, addEntity deben crear nodos puros (nodeType: boundary/control/entity, 70x70)
+    editor.addBoundary();
+    expect(editor.nodes().length).toBe(1);
+    expect(editor.nodes()[0].nodeType).toBe('boundary');
+    expect(editor.nodes()[0].width).toBe(70);
+    expect(editor.nodes()[0].height).toBe(70);
+
+    editor.addControl();
+    expect(editor.nodes()[1].nodeType).toBe('control');
+    expect(editor.nodes()[1].width).toBe(70);
+
+    editor.addEntity();
+    expect(editor.nodes()[2].nodeType).toBe('entity');
+    expect(editor.nodes()[2].width).toBe(70);
+
+    // 2. En Análisis de Clase: SOLO clases estándar (con/sin estereotipo) y actor. NO nodos puros.
+    editor.activeDiagramType.set(DiagramType.CLASS_ANALYSIS);
+    editor.nodes.set([]);
+
+    // addBoundary/addControl/addEntity directos deben ser rechazados
+    editor.addBoundary();
+    expect(alertCount).toBe(2);
+    expect(editor.nodes().length).toBe(0);
+
+    editor.addControl();
+    expect(alertCount).toBe(3);
+    expect(editor.nodes().length).toBe(0);
+
+    editor.addEntity();
+    expect(alertCount).toBe(4);
+    expect(editor.nodes().length).toBe(0);
+
+    // Creación de clases con estereotipo UI, Controller., Entity. en Análisis de Clase
+    editor.addClass(undefined, 'UI');
+    expect(editor.nodes().length).toBe(1);
+    expect(editor.nodes()[0].nodeType).toBe('class');
+    expect(editor.nodes()[0].stereotype).toBe('UI');
+    expect(editor.nodes()[0].width).toBe(220);
+
+    editor.addClass(undefined, 'Controller.');
+    expect(editor.nodes().length).toBe(2);
+    expect(editor.nodes()[1].nodeType).toBe('class');
+    expect(editor.nodes()[1].stereotype).toBe('Controller.');
+
+    editor.addClass(undefined, 'Entity.');
+    expect(editor.nodes().length).toBe(3);
+    expect(editor.nodes()[2].nodeType).toBe('class');
+    expect(editor.nodes()[2].stereotype).toBe('Entity.');
+  });
+});

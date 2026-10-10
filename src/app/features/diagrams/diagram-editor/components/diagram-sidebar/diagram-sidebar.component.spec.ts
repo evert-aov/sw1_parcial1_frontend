@@ -1,18 +1,19 @@
-import '@angular/compiler';
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createEnvironmentInjector, EnvironmentInjector, runInInjectionContext } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { DiagramSidebarComponent } from './diagram-sidebar.component';
 import { DiagramType } from '../../../../../core/models/diagram.model';
+import { TranslationService } from '../../../../../core/i18n';
 
 describe('DiagramSidebarComponent', () => {
   let component: DiagramSidebarComponent;
-  let injector: EnvironmentInjector;
 
-  beforeEach(() => {
-    injector = createEnvironmentInjector([], null as any);
-    runInInjectionContext(injector, () => {
-      component = new DiagramSidebarComponent();
-    });
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [DiagramSidebarComponent],
+      providers: [TranslationService],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(DiagramSidebarComponent);
+    component = fixture.componentInstance;
   });
 
   it('should create the component', () => {
@@ -69,5 +70,22 @@ describe('DiagramSidebarComponent', () => {
 
     component.closeSidebar.emit();
     expect(closed).toBe(true);
+  });
+
+  it('should correctly evaluate node compatibility for COMMUNICATION and CLASS_ANALYSIS', () => {
+    const fixture = TestBed.createComponent(DiagramSidebarComponent);
+    fixture.componentRef.setInput('activeDiagramType', DiagramType.COMMUNICATION);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('actor')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('boundary')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('control')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('entity')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('class')).toBe(false);
+
+    fixture.componentRef.setInput('activeDiagramType', DiagramType.CLASS_ANALYSIS);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('class')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('actor')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('boundary')).toBe(false);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('control')).toBe(false);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('entity')).toBe(false);
   });
 });
