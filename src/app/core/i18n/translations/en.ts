@@ -554,6 +554,7 @@ export const en = {
       importDesc: 'Paste the structured JSON to load classes onto canvas:',
       placeholder: 'Paste JSON here...',
       copy: 'Copy to clipboard',
+      copied: 'Copied to clipboard!',
       apply: 'Apply Diagram',
     },
     statusbar: {

@@ -554,6 +554,7 @@ export const es = {
       importDesc: 'Pega el JSON estructurado para cargar las clases en el lienzo:',
       placeholder: 'Pegar JSON aquí...',
       copy: 'Copiar al portapapeles',
+      copied: '¡Copiado al portapapeles!',
       apply: 'Aplicar Diagrama',
     },
     statusbar: {
