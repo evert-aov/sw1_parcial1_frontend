@@ -1,7 +1,83 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
+const { fork } = require('child_process');
+const http = require('http');
 
 let mainWindow;
+let backendProcess = null;
+
+function waitForBackend(url, timeoutMs = 20000) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const check = () => {
+      const req = http.get(url, (res) => {
+        resolve(true);
+      });
+      req.on('error', () => {
+        if (Date.now() - start > timeoutMs) {
+          resolve(false);
+        } else {
+          setTimeout(check, 300);
+        }
+      });
+      req.end();
+    };
+    check();
+  });
+}
+
+function startBackendServer() {
+  const isDev = process.argv.includes('--dev') || process.env.ELECTRON_DEV === 'true';
+
+  // Si se pasa --external-backend no levantamos el proceso embebido
+  if (process.argv.includes('--external-backend')) {
+    console.log('[Electron] Usando backend externo ya iniciado en el sistema.');
+    return;
+  }
+
+  let backendEntry;
+  let backendCwd;
+
+  if (app.isPackaged) {
+    backendEntry = path.join(process.resourcesPath, 'backend', 'dist', 'main.js');
+    backendCwd = path.join(process.resourcesPath, 'backend');
+  } else {
+    backendEntry = path.join(__dirname, '..', 'backend', 'dist', 'main.js');
+    backendCwd = path.join(__dirname, '..', 'backend');
+  }
+
+  const userDataPath = app.getPath('userData');
+  const sqliteDbPath = path.join(userDataPath, 'uml_studio.sqlite');
+
+  console.log(`[Electron] Iniciando backend embebido: ${backendEntry}`);
+  console.log(`[Electron] Base de datos SQLite: ${sqliteDbPath}`);
+
+  try {
+    backendProcess = fork(backendEntry, [], {
+      cwd: backendCwd,
+      env: {
+        ...process.env,
+        PORT: '4000',
+        DB_TYPE: 'better-sqlite3',
+        SQLITE_PATH: sqliteDbPath,
+        JWT_SECRET: process.env.JWT_SECRET || 'desktop-local-secret-jwt-key-2026',
+        NODE_ENV: 'production',
+        AI_PROVIDER: 'none',
+      },
+      stdio: 'inherit',
+    });
+
+    backendProcess.on('error', (err) => {
+      console.error('[Electron] Error en proceso backend:', err);
+    });
+
+    backendProcess.on('exit', (code, signal) => {
+      console.log(`[Electron] Backend finalizado con código ${code} y señal ${signal}`);
+    });
+  } catch (err) {
+    console.error('[Electron] No se pudo lanzar el subproceso backend:', err);
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -139,7 +215,12 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  startBackendServer();
+
+  // Esperar a que el backend responda en http://localhost:4000/api
+  await waitForBackend('http://localhost:4000/api', 15000);
+
   createWindow();
 
   app.on('activate', () => {
@@ -152,5 +233,15 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+app.on('will-quit', () => {
+  if (backendProcess) {
+    console.log('[Electron] Terminando proceso backend embebido...');
+    try {
+      backendProcess.kill('SIGINT');
+    } catch (_) {}
+    backendProcess = null;
   }
 });
