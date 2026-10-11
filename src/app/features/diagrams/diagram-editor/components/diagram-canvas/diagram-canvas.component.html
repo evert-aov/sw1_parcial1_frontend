@@ -217,7 +217,7 @@
                         </div>
                       }
                     } @else if (conn.name) {
-                      <div class="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-100">
+                      <div class="font-mono text-[11px] font-semibold text-slate-800">
                         {{ conn.name }}
                       </div>
                     } @else {
@@ -227,7 +227,7 @@
                     }
 
                     @if (isDraggingSeqMessage() && draggingSeqMessageConnId() === conn.id) {
-                      <span class="ml-1 text-[9.5px] font-mono px-1 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 font-bold animate-pulse">
+                      <span class="ml-1 text-[9.5px] font-mono px-1 rounded bg-blue-100 text-blue-700 font-bold animate-pulse">
                         @if (isGroupInitiator(conn) && getGroupMemberCount(conn) > 1) {
                           Lote Grupo {{ conn.messages?.[0]?.sequenceNumber }} ({{ getGroupMemberCount(conn) }} msgs) → Fila {{ draggingSeqMessageTargetSlot() + 1 }}
                         } @else {
@@ -770,7 +770,7 @@
                     (click)="onNodeClick(node.id, $event)"
                     [ngClass]="{
                       'border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isNodeSelected(node.id),
-                      'border-[#1E293B] dark:border-slate-300 shadow-sm': !isNodeSelected(node.id)
+                      'border-[#1E293B] shadow-sm': !isNodeSelected(node.id)
                     }"
                     [style.backgroundColor]="(!node.color || node.color === '#FFFDDD' || node.color === '#FAF1EC') ? '#FAF1EC' : node.color"
                     class="w-full h-full border-2 rounded-none p-3 flex flex-col justify-start relative select-none cursor-pointer backdrop-blur-[1px]">
@@ -1062,7 +1062,7 @@
                       (click)="onDeleteNode(node.id, $event)"
                       [disabled]="isNodeLockedByOther(node.id)"
                       [title]="'editor.canvas.nodes.deleteLifeline' | translate"
-                      class="absolute -top-2 -right-2 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-30 disabled:opacity-0 bg-white dark:bg-slate-800 rounded-full shadow-xs border border-slate-200">
+                      class="absolute -top-2 -right-2 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-30 disabled:opacity-0 bg-white rounded-full shadow-xs border border-slate-200">
                       <ng-icon name="heroTrash" class="text-xs"></ng-icon>
                     </button>
 
@@ -1070,7 +1070,7 @@
                     <div
                       [ngClass]="{
                         'ring-1.5 ring-cyan-600 shadow-none': isNodeSelected(node.id),
-                        'border-[#796354] dark:border-slate-400 shadow-none': !isNodeSelected(node.id)
+                        'border-[#796354] shadow-none': !isNodeSelected(node.id)
                       }"
                       [style.backgroundColor]="node.color || '#DDF4F5'"
                       class="w-full h-full min-h-[44px] border rounded-none px-2.5 py-1.5 flex items-center justify-center text-center relative z-20 transition-all shadow-none">
@@ -1217,7 +1217,7 @@
                     <!-- Estereotipo en la parte superior centro y Nombre del Componente -->
                     <div class="w-full h-full flex flex-col items-center justify-center text-center px-6 py-1.5 overflow-hidden">
                       @if (node.stereotype) {
-                        <span class="text-[11.5px] font-serif italic text-slate-700 dark:text-slate-300 leading-tight select-none block mb-0.5 tracking-tight">
+                        <span class="text-[11.5px] font-serif italic text-slate-700 leading-tight select-none block mb-0.5 tracking-tight">
                           «{{ node.stereotype }}»
                         </span>
                       }

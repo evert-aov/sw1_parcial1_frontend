@@ -84,7 +84,7 @@ f-flow {
 f-flow .f-node.f-node-class:not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
-  background-color: #FFFDF9 !important;
+  background-color: var(--node-bg, #FDFAF3) !important;
   border: 1px solid #796354 !important;
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15) !important;
   box-sizing: border-box !important;
@@ -182,19 +182,6 @@ f-flow f-connection-for-create .f-connection-content circle {
   box-shadow: 1px 1px 3px rgba(124, 58, 237, 0.3);
 }
 
-.dark .uml-multiplicity-badge {
-  background-color: rgba(21, 26, 48, 0.95);
-  color: #C7D2FE;
-  border-color: #3B487A;
-  box-shadow: 1px 1px 3px rgba(10, 13, 26, 0.6);
-}
-
-.dark .uml-multiplicity-badge:hover {
-  background-color: #3730A3;
-  border-color: #818CF8;
-  color: #EEF2FF;
-}
-
 .uml-relation-name-badge {
   background-color: rgba(255, 255, 255, 0.88);
   color: #3B2E26;
@@ -217,19 +204,6 @@ f-flow f-connection-for-create .f-connection-content circle {
   border-color: #4F46E5;
   color: #3730A3;
   transform: scale(1.06);
-}
-
-.dark .uml-relation-name-badge {
-  background-color: rgba(21, 26, 48, 0.95);
-  color: #C7D2FE;
-  border-color: #3B487A;
-  box-shadow: 1px 1px 3px rgba(10, 13, 26, 0.6);
-}
-
-.dark .uml-relation-name-badge:hover {
-  background-color: #3730A3;
-  border-color: #818CF8;
-  color: #EEF2FF;
 }
 
 /* Ocultar flecha nativa de datalist para evitar que recorte o tape el texto del tipo */
@@ -397,12 +371,6 @@ f-flow .f-connection:not(.f-selected):hover .f-connection-path,
 f-flow f-connection:not(.f-selected):hover path[f-connection-path] {
   stroke: #2563EB !important;
   filter: drop-shadow(0 0 2px rgba(37, 99, 235, 0.45));
-}
-
-.dark f-flow .f-connection:not(.f-selected):hover .f-connection-path,
-.dark f-flow f-connection:not(.f-selected):hover path[f-connection-path] {
-  stroke: #60A5FA !important;
-  filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.5));
 }
 
 f-flow f-connection.uml-relation-realization path[f-connection-path],

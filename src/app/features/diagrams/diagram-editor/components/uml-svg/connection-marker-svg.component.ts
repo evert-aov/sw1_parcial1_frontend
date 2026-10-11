@@ -152,7 +152,7 @@ export function getUmlMarkerConfig(
         [style.fill]="customColor || undefined"
         [style.stroke]="customColor || undefined"
         [ngClass]="{
-          'fill-[#2D3748] dark:fill-slate-200 stroke-[#2D3748] dark:stroke-slate-200': !customColor
+          'fill-[#2D3748] stroke-[#2D3748]': !customColor
         }"
         stroke-width="1"
       />
@@ -163,7 +163,7 @@ export function getUmlMarkerConfig(
         fill="none"
         [style.stroke]="customColor || undefined"
         [ngClass]="{
-          'stroke-[#2D3748] dark:stroke-slate-200': !customColor
+          'stroke-[#2D3748]': !customColor
         }"
         stroke-width="1.4"
         stroke-linecap="round"
@@ -176,7 +176,7 @@ export function getUmlMarkerConfig(
         fill="none"
         [style.stroke]="customColor || undefined"
         [ngClass]="{
-          'stroke-[#2D3748] dark:stroke-slate-200': !customColor
+          'stroke-[#2D3748]': !customColor
         }"
         stroke-width="1.4"
         stroke-linecap="round"

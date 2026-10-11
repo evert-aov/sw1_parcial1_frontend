@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { XmiClientParser } from './xmi-client-parser';
 
+declare const __dirname: string;
+
 interface SequenceFixtureMessage {
   id: string;
   source?: string;
@@ -187,8 +189,8 @@ describe('XmiClientParser: secuencia EA', () => {
 
 describe('XmiClientParser: paquete EA', () => {
   it('detecta diagramType package y admite la composición de {package, use_case, actor}', async () => {
-    const fs = await import('node:fs');
-    const path = await import('node:path');
+    const fs: any = await import('node:fs' as string);
+    const path: any = await import('node:path' as string);
     const fixturePath = path.resolve(__dirname, '../../../../../docs/ea/ejemplos_xmi/paquetes.xml');
     const xmlContent = fs.readFileSync(fixturePath, 'utf-8');
 
@@ -237,8 +239,8 @@ describe('XmiClientParser: paquete EA', () => {
 
   describe('XmiClientParser: componente EA', () => {
     it('importa componente_2.xml detectando diagramType component, nodos y conectores assembly', async () => {
-      const fs = await import('node:fs');
-      const path = await import('node:path');
+      const fs: any = await import('node:fs' as string);
+      const path: any = await import('node:path' as string);
       const fixturePath = path.resolve(__dirname, '../../../../../docs/ea/ejemplos_xmi/componente_2.xml');
       const xmlContent = fs.readFileSync(fixturePath, 'latin1');
 
@@ -273,8 +275,8 @@ describe('XmiClientParser: paquete EA', () => {
     });
 
     it('importa componentes.xml detectando diagramType component', async () => {
-      const fs = await import('node:fs');
-      const path = await import('node:path');
+      const fs: any = await import('node:fs' as string);
+      const path: any = await import('node:path' as string);
       const fixturePath = path.resolve(__dirname, '../../../../../docs/ea/ejemplos_xmi/componentes.xml');
       const xmlContent = fs.readFileSync(fixturePath, 'latin1');
 

@@ -465,22 +465,6 @@
   filter: drop-shadow(0 0 1.5px rgba(37, 99, 235, 0.45));
 }
 
-:host-context(.dark) ::ng-deep f-flow .f-magnetic-lines .f-line[style*="width: 1px"],
-:host-context(.dark) ::ng-deep f-flow .f-magnetic-lines .f-line[style*="width:1px"],
-.dark ::ng-deep f-flow .f-magnetic-lines .f-line[style*="width: 1px"],
-.dark ::ng-deep f-flow .f-magnetic-lines .f-line[style*="width:1px"] {
-  border-left: 1.5px dashed #60A5FA !important;
-  filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.6));
-}
-
-:host-context(.dark) ::ng-deep f-flow .f-magnetic-lines .f-line[style*="height: 1px"],
-:host-context(.dark) ::ng-deep f-flow .f-magnetic-lines .f-line[style*="height:1px"],
-.dark ::ng-deep f-flow .f-magnetic-lines .f-line[style*="height: 1px"],
-.dark ::ng-deep f-flow .f-magnetic-lines .f-line[style*="height:1px"] {
-  border-top: 1.5px dashed #60A5FA !important;
-  filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.6));
-}
-
 /* Rectángulos y calibres magnéticos de espaciado uniforme EA */
 ::ng-deep f-flow .f-magnetic-rects {
   position: absolute !important;
@@ -494,12 +478,6 @@
   border: 1px dashed rgba(37, 99, 235, 0.5) !important;
   pointer-events: none !important;
   box-sizing: border-box !important;
-}
-
-:host-context(.dark) ::ng-deep f-flow .f-magnetic-rects .f-rect,
-.dark ::ng-deep f-flow .f-magnetic-rects .f-rect {
-  background-color: rgba(96, 165, 250, 0.12) !important;
-  border: 1px dashed rgba(96, 165, 250, 0.6) !important;
 }
 
 /* =========================================================================
@@ -643,17 +621,6 @@
 ::ng-deep .uml-relation-create .f-connection-drag-handle,
 ::ng-deep .uml-relation-create path[f-connection-path] {
   stroke-dasharray: 6, 4 !important;
-}
-
-:host-context(.dark) ::ng-deep .uml-relation-sync path[f-connection-path],
-:host-context(.dark) ::ng-deep .uml-relation-reply path[f-connection-path],
-:host-context(.dark) ::ng-deep .uml-relation-async path[f-connection-path],
-:host-context(.dark) ::ng-deep .uml-relation-create path[f-connection-path],
-.dark ::ng-deep .uml-relation-sync path[f-connection-path],
-.dark ::ng-deep .uml-relation-reply path[f-connection-path],
-.dark ::ng-deep .uml-relation-async path[f-connection-path],
-.dark ::ng-deep .uml-relation-create path[f-connection-path] {
-  stroke: var(--seq-conn-color, #CBD5E1) !important;
 }
 
 .uml-sequence-message-anchor {
