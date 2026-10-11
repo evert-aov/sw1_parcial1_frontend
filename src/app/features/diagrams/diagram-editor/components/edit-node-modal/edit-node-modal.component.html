@@ -41,15 +41,19 @@
             }
           </div>
           <div class="flex items-center gap-2">
-            <select
+            <input
+              type="text"
+              list="predefined-stereotypes-list"
               [ngModel]="editingNode()!.stereotype || ''"
               (ngModelChange)="onStereotypeSelect($event)"
-              class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all">
-              <option value="">(Sin estereotipo / null)</option>
+              placeholder="e.g. file, service, subsystem, class..."
+              class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all font-mono"
+            />
+            <datalist id="predefined-stereotypes-list">
               @for (st of predefinedStereotypes; track st.value) {
                 <option [value]="st.value">{{ st.label }}</option>
               }
-            </select>
+            </datalist>
           </div>
         </div>
 

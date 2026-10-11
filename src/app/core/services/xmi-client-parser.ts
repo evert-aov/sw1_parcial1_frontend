@@ -2040,6 +2040,7 @@ export class XmiClientParser {
           if (entry && typeof entry === 'object') {
             const baseClass =
               entry['@_base_Class'] ||
+              entry['@_base_Component'] ||
               entry['@_base_InstanceSpecification'] ||
               entry['@_base_Element'] ||
               entry['@_base_Package'];

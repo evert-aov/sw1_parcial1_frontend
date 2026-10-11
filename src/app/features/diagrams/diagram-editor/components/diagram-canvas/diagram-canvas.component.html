@@ -1203,7 +1203,7 @@
                     </button>
 
                     <!-- Icono UML de Componente en la esquina superior derecha (Estándar UML 2.5) -->
-                    <div class="absolute top-2 right-2.5 pointer-events-none">
+                    <div class="absolute top-2 right-2.5 pointer-events-none z-10">
                       <app-component-svg
                         mode="glyph"
                         width="22"
@@ -1214,10 +1214,10 @@
                       />
                     </div>
 
-                    <!-- Nombre del Componente y Estereotipo -->
-                    <div class="pr-6 flex flex-col items-start justify-center">
-                      @if (node.stereotype && node.stereotype !== 'component') {
-                        <span class="text-[9.5px] italic font-serif leading-none tracking-tight opacity-75 select-none block mb-0.5">
+                    <!-- Estereotipo en la parte superior centro y Nombre del Componente -->
+                    <div class="w-full h-full flex flex-col items-center justify-center text-center px-6 py-1.5 overflow-hidden">
+                      @if (node.stereotype) {
+                        <span class="text-[11.5px] font-serif italic text-slate-700 dark:text-slate-300 leading-tight select-none block mb-0.5 tracking-tight">
                           «{{ node.stereotype }}»
                         </span>
                       }
@@ -1235,10 +1235,10 @@
                           (pointerdown)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
                           (click)="$event.stopPropagation()"
-                          class="uml-rename-input w-full font-bold text-[12px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
+                          class="uml-rename-input w-full font-bold text-[12.5px] text-center font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded px-1.5 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
                         />
                       } @else {
-                        <span class="font-bold text-[12.5px] font-sans leading-tight text-[#241C18] select-none truncate max-w-full" [title]="node.name">
+                        <span class="font-bold text-[13px] font-sans leading-tight text-[#241C18] select-none truncate max-w-full text-center" [title]="node.name">
                           {{ node.name }}
                         </span>
                       }

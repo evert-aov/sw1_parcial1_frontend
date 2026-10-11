@@ -3111,7 +3111,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       id: `component_${Date.now()}`,
       name: `Component_${count}`,
       nodeType: 'component',
-      stereotype: 'component',
+      stereotype: 'file',
       position: { x: posX, y: posY },
       width: 190,
       height: 70,

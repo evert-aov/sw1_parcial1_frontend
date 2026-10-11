@@ -261,11 +261,15 @@ describe('XmiClientParser: paquete EA', () => {
       const depConns = result.connections.filter((c) => c.type === 'dependency');
       expect(depConns.length).toBeGreaterThan(0);
 
-      // Verificar que los componentes tienen dimensiones y color adecuados
+      // Verificar que los componentes tienen dimensiones, color y estereotipo adecuados
       const comp1 = components.find((c) => c.name.includes('collaboration.gateway.ts'));
       expect(comp1).toBeDefined();
       expect(comp1?.width).toBeGreaterThanOrEqual(160);
       expect(comp1?.height).toBeGreaterThanOrEqual(60);
+
+      const compService = components.find((c) => c.name.includes('project.service.ts'));
+      expect(compService).toBeDefined();
+      expect(compService?.stereotype).toBe('class');
     });
 
     it('importa componentes.xml detectando diagramType component', async () => {
