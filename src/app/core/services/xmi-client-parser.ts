@@ -20,6 +20,32 @@ export class XmiClientParser {
 
   public static fixUtf8Mojibake(str: string): string {
     if (!str || typeof str !== 'string') return str || '';
+
+    // Decodificar entidades numéricas y HTML generadas por Enterprise Architect (ej. &#243;, &#237;, &aacute;, etc.)
+    if (str.includes('&')) {
+      str = str
+        .replace(/&#(\d+);/g, (_, code) => {
+          const num = parseInt(code, 10);
+          return !isNaN(num) && num > 0 ? String.fromCharCode(num) : _;
+        })
+        .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+          const num = parseInt(hex, 16);
+          return !isNaN(num) && num > 0 ? String.fromCharCode(num) : _;
+        })
+        .replace(/&aacute;/gi, 'á')
+        .replace(/&eacute;/gi, 'é')
+        .replace(/&iacute;/gi, 'í')
+        .replace(/&oacute;/gi, 'ó')
+        .replace(/&uacute;/gi, 'ú')
+        .replace(/&ntilde;/gi, 'ñ')
+        .replace(/&Aacute;/g, 'Á')
+        .replace(/&Eacute;/g, 'É')
+        .replace(/&Iacute;/g, 'Í')
+        .replace(/&Oacute;/g, 'Ó')
+        .replace(/&Uacute;/g, 'Ú')
+        .replace(/&Ntilde;/g, 'Ñ');
+    }
+
     if (!/Ã[\x80-\xBF]|Â[\x80-\xBF]/.test(str)) return str;
     try {
       const bytes = new Uint8Array(str.length);
@@ -79,6 +105,7 @@ export class XmiClientParser {
     const rawElements = this.collectPackagedElements(umlModel);
     const nodeMap = new Map<string, UmlClassNode>();
     let gridIdx = 0;
+    const pendingTextNotes: { id: string; text: string; pos?: { left: number; top: number; right: number; bottom: number } }[] = [];
 
     for (const elem of rawElements) {
       const type = elem['@_xmi:type'] || elem['@_type'];
@@ -87,8 +114,17 @@ export class XmiClientParser {
 
       if (!id) continue;
 
+      const hasGeo =
+        geometryMap.has(id) ||
+        geometryMap.has(id.replace('EAPK_', 'EAID_')) ||
+        geometryMap.has(id.replace('EAID_', 'EAPK_'));
+
       // A) Actores UML
       if (type === 'uml:Actor' || type === 'Actor') {
+        if (geometryMap.size > 0 && !hasGeo) {
+          continue;
+        }
+
         let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
         let width = 65;
         let height = 95;
@@ -122,6 +158,10 @@ export class XmiClientParser {
 
       // B) Casos de Uso UML
       if (type === 'uml:UseCase' || type === 'UseCase') {
+        if (geometryMap.size > 0 && !hasGeo) {
+          continue;
+        }
+
         let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
         const cleanName = this.fixUtf8Mojibake(name || `CU_${gridIdx + 1}`).trim();
         const nameLen = cleanName.length;
@@ -198,7 +238,75 @@ export class XmiClientParser {
         continue;
       }
 
-      // D) Clases UML, Objetos e InstanceSpecifications (BCE / Robustez)
+      // D) Paquetes UML (Diagramas de Paquetes)
+      if (type === 'uml:Package' || type === 'Package') {
+        const hasBehavior = !!elem['ownedBehavior'];
+        if (hasBehavior) {
+          continue;
+        }
+
+        const meta = eaElementMetaMap.get(id);
+        const hasGeo =
+          geometryMap.has(id) ||
+          geometryMap.has(id.replace('EAPK_', 'EAID_')) ||
+          geometryMap.has(id.replace('EAID_', 'EAPK_'));
+
+        // Si hay mapa de geometrías en EA, sólo los paquetes presentes en el diagrama son nodos
+        if (geometryMap.size > 0 && !hasGeo) {
+          continue;
+        }
+
+        // Si no hay mapa de geometrías en EA, paquetes contenedor raíz o con otros elementos no son nodos de lienzo
+        if (geometryMap.size === 0) {
+          if (!hasGeo && (!name || name === 'Model' || name === 'EA_PrimitiveTypes_Package' || elem['packagedElement'])) {
+            continue;
+          }
+        }
+
+        const cleanName = this.fixUtf8Mojibake(name || meta?.name || `Package_${gridIdx + 1}`).trim();
+        let pos = {
+          x: 80 + (gridIdx % 3) * 280,
+          y: 80 + Math.floor(gridIdx / 3) * 220,
+        };
+        let width = 200;
+        let height = 120;
+
+        if (hasGeo) {
+          const g =
+            geometryMap.get(id) ||
+            geometryMap.get(id.replace('EAPK_', 'EAID_')) ||
+            geometryMap.get(id.replace('EAID_', 'EAPK_'))!;
+          pos = { x: g.left, y: g.top };
+          if (g.width > 30) width = g.width;
+          if (g.height > 20) height = g.height;
+        }
+
+        const customColor =
+          geometryMap.get(id)?.color ||
+          geometryMap.get(id.replace('EAPK_', 'EAID_'))?.color ||
+          meta?.color;
+        const defaultColor = '#FAF1EC';
+
+        const node: UmlClassNode = {
+          id,
+          name: cleanName,
+          position: pos,
+          width,
+          height,
+          nodeType: 'package',
+          stereotype: meta?.stereotype || null,
+          color: customColor || defaultColor,
+          attributes: [],
+          methods: [],
+          isAnchor: false,
+        };
+
+        nodeMap.set(id, node);
+        gridIdx++;
+        continue;
+      }
+
+      // E) Clases UML, Objetos e InstanceSpecifications (BCE / Robustez)
       if (
         type === 'uml:Class' ||
         type === 'uml:AssociationClass' ||
@@ -210,7 +318,26 @@ export class XmiClientParser {
       ) {
         const meta = eaElementMetaMap.get(id);
 
+        // Si el elemento es de tipo Text en EA (nota de texto o descripción de paquete), no es una clase
+        if (meta?.sType === 'Text' || (name && name.startsWith('Package : '))) {
+          const rawDoc = meta?.documentation || name;
+          if (rawDoc && rawDoc !== 'undefined' && !rawDoc.startsWith('Package : ')) {
+            const cleanDoc = this.fixUtf8Mojibake(rawDoc).trim();
+            const g = geometryMap.get(id);
+            pendingTextNotes.push({
+              id,
+              text: cleanDoc,
+              pos: g ? { left: g.left, top: g.top, right: g.left + g.width, bottom: g.top + g.height } : undefined,
+            });
+          }
+          continue;
+        }
+
         if (meta?.sType === 'Actor') {
+          if (geometryMap.size > 0 && !hasGeo) {
+            continue;
+          }
+
           let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
           let width = 65;
           let height = 95;
@@ -243,6 +370,10 @@ export class XmiClientParser {
         }
 
         if (meta?.sType === 'UseCase') {
+          if (geometryMap.size > 0 && !hasGeo) {
+            continue;
+          }
+
           let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
           const cleanName = this.fixUtf8Mojibake(name || meta?.name || `CU_${gridIdx + 1}`).trim();
           const nameLen = cleanName.length;
@@ -279,6 +410,10 @@ export class XmiClientParser {
 
           nodeMap.set(id, node);
           gridIdx++;
+          continue;
+        }
+
+        if (geometryMap.size > 0 && !hasGeo) {
           continue;
         }
 
@@ -347,25 +482,57 @@ export class XmiClientParser {
       }
     }
 
-    // E) Elementos declarados en extensión EA no presentes en packagedElements
+    // F) Elementos declarados en extensión EA no presentes en packagedElements
     for (const [eId, meta] of eaElementMetaMap.entries()) {
+      if (meta.sType === 'Text') {
+        const rawDoc = meta.documentation || meta.name;
+        if (rawDoc && rawDoc !== 'undefined' && !rawDoc.startsWith('Package : ')) {
+          const cleanDoc = this.fixUtf8Mojibake(rawDoc).trim();
+          const g = geometryMap.get(eId);
+          pendingTextNotes.push({
+            id: eId,
+            text: cleanDoc,
+            pos: g ? { left: g.left, top: g.top, right: g.left + g.width, bottom: g.top + g.height } : undefined,
+          });
+        }
+        continue;
+      }
+
       if (
         !nodeMap.has(eId) &&
+        !nodeMap.has(eId.replace('EAPK_', 'EAID_')) &&
+        !nodeMap.has(eId.replace('EAID_', 'EAPK_')) &&
         (meta.sType === 'Actor' ||
           meta.sType === 'Class' ||
           meta.sType === 'UseCase' ||
           meta.sType === 'Object' ||
           meta.sType === 'Boundary' ||
-          meta.sType === 'Sequence')
+          meta.sType === 'Sequence' ||
+          meta.sType === 'Package')
       ) {
         const isActor = meta.sType === 'Actor';
         const isUseCase = meta.sType === 'UseCase';
         const isObject = meta.sType === 'Object';
         const isSequence = meta.sType === 'Sequence';
+        const isPackage = meta.sType === 'Package';
+
+        if (isPackage) {
+          const hasGeo =
+            geometryMap.has(eId) ||
+            geometryMap.has(eId.replace('EAPK_', 'EAID_')) ||
+            geometryMap.has(eId.replace('EAID_', 'EAPK_'));
+          if (!hasGeo) {
+            continue;
+          }
+        }
+
+        if (geometryMap.size > 0 && !geometryMap.has(eId)) {
+          continue;
+        }
 
         let pos = {
           x: 80 + (gridIdx % 3) * 280,
-          y: isSequence ? 50 : 80 + Math.floor(gridIdx / 3) * 220,
+          y: isSequence ? 50 : 80 + Math.floor(gridIdx % 3) * 220,
         };
         const cleanName = this.fixUtf8Mojibake(
           meta.name ||
@@ -375,10 +542,12 @@ export class XmiClientParser {
               ? `CU_${gridIdx + 1}`
               : isSequence
                 ? `Lifeline_${gridIdx + 1}`
-                : `Clase_${gridIdx + 1}`)
+                : isPackage
+                  ? `Package_${gridIdx + 1}`
+                  : `Clase_${gridIdx + 1}`)
         ).trim();
 
-        let width = 220;
+        let width = isPackage ? 200 : 220;
         let height = 120;
         if (isActor) {
           width = 65;
@@ -397,13 +566,19 @@ export class XmiClientParser {
         } else if (isSequence) {
           width = 110;
           height = 60;
+        } else if (isPackage) {
+          width = 200;
+          height = 120;
         }
 
-        if (geometryMap.has(eId)) {
-          const g = geometryMap.get(eId)!;
-          pos = { x: g.left, y: isSequence ? 50 : g.top };
-          if (g.width > 20) width = isUseCase ? Math.max(width, g.width) : isSequence ? Math.max(90, g.width) : g.width;
-          if (g.height > 20) height = isUseCase ? Math.max(height, g.height) : isSequence ? 60 : g.height;
+        const geoObj =
+          geometryMap.get(eId) ||
+          geometryMap.get(eId.replace('EAPK_', 'EAID_')) ||
+          geometryMap.get(eId.replace('EAID_', 'EAPK_'));
+        if (geoObj) {
+          pos = { x: geoObj.left, y: isSequence ? 50 : geoObj.top };
+          if (geoObj.width > 20) width = isUseCase ? Math.max(width, geoObj.width) : isSequence ? Math.max(90, geoObj.width) : geoObj.width;
+          if (geoObj.height > 20) height = isUseCase ? Math.max(height, geoObj.height) : isSequence ? 60 : geoObj.height;
         }
 
         let nodeType: any = isActor
@@ -412,9 +587,11 @@ export class XmiClientParser {
             ? 'use_case'
             : isSequence
               ? 'lifeline'
-              : 'class';
+              : isPackage
+                ? 'package'
+                : 'class';
         let stereotype: string | null = null;
-        if (!isActor && !isUseCase && !isSequence) {
+        if (!isActor && !isUseCase && !isSequence && !isPackage) {
           const s = (meta.stereotype || '').toLowerCase().trim();
 
           if (s === 'entity.') {
@@ -441,14 +618,18 @@ export class XmiClientParser {
             );
             stereotype = match || meta.stereotype;
           }
+        } else if (isPackage) {
+          stereotype = meta.stereotype || null;
         }
 
-        let defaultExtColor = isActor ? '#FEF2DD' : (isUseCase ? '#E5F2FE' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3'));
+        let defaultExtColor = isActor ? '#FEF2DD' : (isUseCase ? '#E5F2FE' : isPackage ? '#FAF1EC' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3'));
         if (isSequence) {
           defaultExtColor = '#DDF4F5';
         }
 
-        const customExtColor = geometryMap.get(eId)?.color || meta?.color;
+        const customExtColor = geometryMap.get(eId)?.color ||
+          geometryMap.get(eId.replace('EAPK_', 'EAID_'))?.color ||
+          meta?.color;
         nodeMap.set(eId, {
           id: eId,
           name: cleanName,
@@ -463,6 +644,56 @@ export class XmiClientParser {
           isAnchor: false,
         });
         gridIdx++;
+      }
+    }
+
+    // Asociar notas de texto pendientes a los paquetes que las contienen geométricamente
+    if (pendingTextNotes.length > 0) {
+      const packageNodes = Array.from(nodeMap.values()).filter((n) => n.nodeType === 'package');
+      for (const note of pendingTextNotes) {
+        if (!note.text) continue;
+        let targetPkg: UmlClassNode | undefined;
+
+        if (note.pos) {
+          targetPkg = packageNodes.find((pkg) => {
+            const pLeft = pkg.position.x;
+            const pTop = pkg.position.y;
+            const pRight = pLeft + (pkg.width || 200);
+            const pBottom = pTop + (pkg.height || 120);
+            return (
+              note.pos!.left >= pLeft - 30 &&
+              note.pos!.right <= pRight + 30 &&
+              note.pos!.top >= pTop - 30 &&
+              note.pos!.bottom <= pBottom + 30
+            );
+          });
+        }
+
+        if (!targetPkg && packageNodes.length === 1) {
+          targetPkg = packageNodes[0];
+        }
+
+        if (targetPkg) {
+          const alreadyExists = targetPkg.attributes.some((a) => a.name === note.text);
+          if (!alreadyExists) {
+            targetPkg.attributes.push({
+              name: note.text,
+              type: 'String',
+              visibility: 'private',
+              isPk: false,
+              isNullable: false,
+              nullable: false,
+            });
+
+            // Si la nota de texto o descripción es extensa, asegurar dimensiones proporcionales
+            const lines = note.text.split('\n');
+            const maxLineLen = Math.max(...lines.map((l) => l.length));
+            const neededWidth = Math.max(targetPkg.width || 200, Math.min(280, Math.round(maxLineLen * 7.5 + 40)));
+            const neededHeight = Math.max(targetPkg.height || 120, 90 + lines.length * 20);
+            targetPkg.width = Math.max(targetPkg.width || 200, neededWidth);
+            targetPkg.height = Math.max(targetPkg.height || 120, neededHeight);
+          }
+        }
       }
     }
 
@@ -498,6 +729,24 @@ export class XmiClientParser {
           if (!connSet.has(uc.id)) {
             connSet.add(uc.id);
             connections.push(uc);
+          }
+        }
+      }
+
+      if (type === 'uml:Dependency' || type === 'Dependency') {
+        const depConn = this.parseDependency(elem, nodeMap, connectorLabelsMap);
+        if (depConn && !connSet.has(depConn.id)) {
+          connSet.add(depConn.id);
+          connections.push(depConn);
+        }
+      }
+
+      if (type === 'uml:Package' || type === 'Package') {
+        const pkgConns = this.parsePackageRelationships(elem, nodeMap);
+        for (const pc of pkgConns) {
+          if (!connSet.has(pc.id)) {
+            connSet.add(pc.id);
+            connections.push(pc);
           }
         }
       }
@@ -587,6 +836,9 @@ export class XmiClientParser {
     const hasLifeline = Array.from(nodeMap.values()).some(
       (n) => n.nodeType === 'lifeline',
     );
+    const hasPackageNode = Array.from(nodeMap.values()).some(
+      (n) => n.nodeType === 'package',
+    );
 
     if (eaDiagType.includes('sequence')) {
       diagramType = 'sequence';
@@ -594,8 +846,12 @@ export class XmiClientParser {
       diagramType = 'communication';
     } else if (eaDiagType.includes('use case')) {
       diagramType = 'use_case';
+    } else if (eaDiagType.includes('package')) {
+      diagramType = 'package';
     } else if (hasSequenceConn || hasLifeline) {
       diagramType = 'sequence';
+    } else if (hasPackageNode) {
+      diagramType = 'package';
     } else if (hasUseCase) {
       diagramType = 'use_case';
     } else if (
@@ -658,13 +914,49 @@ export class XmiClientParser {
           node.stereotype = UmlStereotype.ENTITY_DOT;
         }
       }
+    } else if (diagramType === 'package') {
+      for (const node of nodeMap.values()) {
+        if (!node.nodeType) {
+          node.nodeType = 'package';
+        }
+        if (node.nodeType === 'package') {
+          node.width = Math.max(160, node.width || 200);
+          node.height = Math.max(80, node.height || 120);
+          node.color = node.color || '#FAF1EC';
+        }
+      }
+      // Un diagrama de paquetes está compuesto por {package, use_case, actor}
+      for (const [id, node] of Array.from(nodeMap.entries())) {
+        if (
+          node.nodeType !== 'package' &&
+          node.nodeType !== 'use_case' &&
+          node.nodeType !== 'actor'
+        ) {
+          nodeMap.delete(id);
+        }
+      }
+    } else if (diagramType === 'use_case') {
+      // Un diagrama de casos de uso sólo debe contener actores y casos de uso
+      for (const [id, node] of Array.from(nodeMap.entries())) {
+        if (node.nodeType !== 'use_case' && node.nodeType !== 'actor') {
+          nodeMap.delete(id);
+        }
+      }
     }
+
+    // Filtrar conexiones cuyos extremos hayan sido eliminados del lienzo
+    const activeNodeIds = new Set(nodeMap.keys());
+    const validConnections = connections.filter((c) => {
+      const srcNodeId = c.sourceNodeId || (c.sourceId ? c.sourceId.replace(/_(left|right|top|bottom|_slot_\d+)$/, '') : '');
+      const tgtNodeId = c.targetNodeId || (c.targetId ? c.targetId.replace(/_(left|right|top|bottom|_slot_\d+)$/, '') : '');
+      return activeNodeIds.has(srcNodeId) && activeNodeIds.has(tgtNodeId);
+    });
 
     return {
       name: diagramName,
       diagramType,
       nodes: Array.from(nodeMap.values()),
-      connections,
+      connections: validConnections,
       defaultLineStyle: 'segment',
     };
   }
@@ -827,9 +1119,13 @@ export class XmiClientParser {
       if (end1['@_aggregation'] && end1['@_aggregation'] !== 'none') aggregation = end1['@_aggregation'];
     }
 
-    if (!sourceNodeId || !targetNodeId || !nodeMap.has(sourceNodeId) || !nodeMap.has(targetNodeId)) {
+    const resolvedSrc = this.resolveNodeId(sourceNodeId, nodeMap);
+    const resolvedTgt = this.resolveNodeId(targetNodeId, nodeMap);
+    if (!resolvedSrc || !resolvedTgt || resolvedSrc === resolvedTgt) {
       return null;
     }
+    sourceNodeId = resolvedSrc;
+    targetNodeId = resolvedTgt;
 
     let type: any = 'association';
     if (aggregation === 'composite') type = 'composition';
@@ -991,6 +1287,137 @@ export class XmiClientParser {
     return conns;
   }
 
+  private static parseDependency(
+    depElem: any,
+    nodeMap: Map<string, UmlClassNode>,
+    connectorLabelsMap?: Map<string, { name?: string; sMult?: string; tMult?: string }>,
+  ): UmlConnection | null {
+    const id =
+      depElem['@_xmi:id'] ||
+      depElem['@_id'] ||
+      `dep_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const name = this.fixUtf8Mojibake(depElem['@_name'] || '');
+
+    const rawClient =
+      depElem['@_client'] ||
+      (depElem['client'] &&
+        (depElem['client']['@_xmi:idref'] || depElem['client']['@_idref']));
+    const rawSupplier =
+      depElem['@_supplier'] ||
+      (depElem['supplier'] &&
+        (depElem['supplier']['@_xmi:idref'] || depElem['supplier']['@_idref']));
+
+    const sourceId = this.resolveNodeId(rawClient, nodeMap);
+    const targetId = this.resolveNodeId(rawSupplier, nodeMap);
+
+    if (!sourceId || !targetId || sourceId === targetId) return null;
+
+    let type: any = 'dependency';
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('import')) {
+      type = 'import';
+    } else if (lowerName.includes('access')) {
+      type = 'access';
+    } else if (lowerName.includes('merge')) {
+      type = 'merge';
+    } else if (lowerName.includes('trace')) {
+      type = 'trace';
+    }
+
+    return {
+      id,
+      sourceNodeId: sourceId,
+      targetNodeId: targetId,
+      sourceId: `${sourceId}_right`,
+      targetId: `${targetId}_left`,
+      type,
+      name: name || undefined,
+    };
+  }
+
+  private static parsePackageRelationships(
+    pkgElem: any,
+    nodeMap: Map<string, UmlClassNode>,
+  ): UmlConnection[] {
+    const conns: UmlConnection[] = [];
+    const pkgId = pkgElem['@_xmi:id'] || pkgElem['@_id'];
+    const resolvedPkgId = this.resolveNodeId(pkgId, nodeMap);
+    if (!resolvedPkgId) return conns;
+
+    // A) Dependencies declaradas dentro de packagedElement del paquete
+    const childElems = pkgElem['packagedElement'];
+    if (childElems) {
+      const list = Array.isArray(childElems) ? childElems : [childElems];
+      for (const el of list) {
+        const type = el['@_xmi:type'] || el['@_type'];
+        if (type === 'uml:Dependency' || type === 'Dependency') {
+          const dep = this.parseDependency(el, nodeMap);
+          if (dep) conns.push(dep);
+        }
+      }
+    }
+
+    // B) PackageImport
+    const rawImports = pkgElem['packageImport'];
+    if (rawImports) {
+      const list = Array.isArray(rawImports) ? rawImports : [rawImports];
+      for (const imp of list) {
+        const targetRaw =
+          imp['@_importedPackage'] ||
+          (imp['importedPackage'] &&
+            (imp['importedPackage']['@_xmi:idref'] ||
+              imp['importedPackage']['@_idref']));
+        const targetId = this.resolveNodeId(targetRaw, nodeMap);
+        if (targetId && targetId !== resolvedPkgId) {
+          const id =
+            imp['@_xmi:id'] ||
+            imp['@_id'] ||
+            `pkg_imp_${resolvedPkgId}_${targetId}`;
+          conns.push({
+            id,
+            sourceNodeId: resolvedPkgId,
+            targetNodeId: targetId,
+            sourceId: `${resolvedPkgId}_right`,
+            targetId: `${targetId}_left`,
+            type: 'import' as any,
+            name: '«import»',
+          });
+        }
+      }
+    }
+
+    // C) PackageMerge
+    const rawMerges = pkgElem['packageMerge'];
+    if (rawMerges) {
+      const list = Array.isArray(rawMerges) ? rawMerges : [rawMerges];
+      for (const m of list) {
+        const targetRaw =
+          m['@_mergedPackage'] ||
+          (m['mergedPackage'] &&
+            (m['mergedPackage']['@_xmi:idref'] ||
+              m['mergedPackage']['@_idref']));
+        const targetId = this.resolveNodeId(targetRaw, nodeMap);
+        if (targetId && targetId !== resolvedPkgId) {
+          const id =
+            m['@_xmi:id'] ||
+            m['@_id'] ||
+            `pkg_mrg_${resolvedPkgId}_${targetId}`;
+          conns.push({
+            id,
+            sourceNodeId: resolvedPkgId,
+            targetNodeId: targetId,
+            sourceId: `${resolvedPkgId}_right`,
+            targetId: `${targetId}_left`,
+            type: 'merge' as any,
+            name: '«merge»',
+          });
+        }
+      }
+    }
+
+    return conns;
+  }
+
   private static parseUmlConnector(
     elem: any,
     nodeMap: Map<string, any>,
@@ -1070,10 +1497,13 @@ export class XmiClientParser {
       const tgt = c['target'];
       if (!src || !tgt) continue;
 
-      const sourceId = src['@_xmi:idref'] || (src['model'] && src['model']['@_ea_localid']);
-      const targetId = tgt['@_xmi:idref'] || (tgt['model'] && tgt['model']['@_ea_localid']);
+      const rawSourceId = src['@_xmi:idref'] || (src['model'] && src['model']['@_ea_localid']);
+      const rawTargetId = tgt['@_xmi:idref'] || (tgt['model'] && tgt['model']['@_ea_localid']);
 
-      if (!sourceId || !targetId || !nodeMap.has(sourceId) || !nodeMap.has(targetId)) continue;
+      const sourceId = this.resolveNodeId(rawSourceId, nodeMap);
+      const targetId = this.resolveNodeId(rawTargetId, nodeMap);
+
+      if (!sourceId || !targetId || sourceId === targetId) continue;
 
       const eaProps = c['properties'] || {};
       const eaType = eaProps['@_ea_type'] || 'Association';
@@ -1202,6 +1632,19 @@ export class XmiClientParser {
         type = 'realization';
       } else if (eaType === 'Dependency') {
         type = 'dependency';
+        if (eaStereo === 'import' || mbText.includes('import')) {
+          type = 'import';
+          name = '«import»';
+        } else if (eaStereo === 'access' || mbText.includes('access')) {
+          type = 'access';
+          name = '«access»';
+        } else if (eaStereo === 'merge' || mbText.includes('merge')) {
+          type = 'merge';
+          name = '«merge»';
+        } else if (eaStereo === 'trace' || mbText.includes('trace')) {
+          type = 'trace';
+          name = '«trace»';
+        }
       }
 
       const sMult = labels['@_lb'] || '';
@@ -1347,8 +1790,25 @@ export class XmiClientParser {
     return messages;
   }
 
-  private static extractEaElementMeta(xmiRoot: any): Map<string, { sType?: string; stereotype?: string; name?: string; color?: string }> {
-    const metaMap = new Map<string, { sType?: string; stereotype?: string; name?: string; color?: string }>();
+  private static resolveNodeId(
+    rawId: string | undefined | null,
+    nodeMap: Map<string, UmlClassNode>,
+  ): string | null {
+    if (!rawId) return null;
+    if (nodeMap.has(rawId)) return rawId;
+    if (rawId.startsWith('EAPK_')) {
+      const alt = rawId.replace('EAPK_', 'EAID_');
+      if (nodeMap.has(alt)) return alt;
+    }
+    if (rawId.startsWith('EAID_')) {
+      const alt = rawId.replace('EAID_', 'EAPK_');
+      if (nodeMap.has(alt)) return alt;
+    }
+    return null;
+  }
+
+  private static extractEaElementMeta(xmiRoot: any): Map<string, { sType?: string; stereotype?: string; name?: string; color?: string; documentation?: string }> {
+    const metaMap = new Map<string, { sType?: string; stereotype?: string; name?: string; color?: string; documentation?: string }>();
     const ext = xmiRoot['xmi:Extension'] || xmiRoot['Extension'];
     if (!ext) return metaMap;
 
@@ -1362,6 +1822,7 @@ export class XmiClientParser {
         const sType = props ? props['@_sType'] : undefined;
         let stereotype = props ? props['@_stereotype'] : undefined;
         const name = el['@_name'] ? this.fixUtf8Mojibake(el['@_name']) : undefined;
+        const documentation = props ? props['@_documentation'] : undefined;
 
         if (!stereotype) {
           const xrefsVal = el['xrefs']?.['@_value'] || '';
@@ -1384,7 +1845,7 @@ export class XmiClientParser {
           }
         }
 
-        metaMap.set(idref, { sType, stereotype, name, color });
+        metaMap.set(idref, { sType, stereotype, name, color, documentation });
       }
     }
 

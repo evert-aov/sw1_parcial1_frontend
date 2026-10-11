@@ -5116,8 +5116,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                   const isBce = n.nodeType === 'boundary' || n.nodeType === 'control' || n.nodeType === 'entity';
                   return {
                     ...n,
-                    width: n.width || (n.nodeType === 'actor' ? 65 : (n.nodeType === 'use_case' ? 140 : (isBce ? 70 : 220))),
-                    height: n.height || (n.nodeType === 'actor' ? 95 : (n.nodeType === 'use_case' ? 60 : (isBce ? 70 : 120))),
+                    width: n.width || (n.nodeType === 'actor' ? 65 : (n.nodeType === 'use_case' ? 140 : (n.nodeType === 'package' ? 200 : (isBce ? 70 : 220)))),
+                    height: n.height || (n.nodeType === 'actor' ? 95 : (n.nodeType === 'use_case' ? 60 : (n.nodeType === 'package' ? 120 : (isBce ? 70 : 120)))),
                     attributes: (n.attributes || []).map((a: any) => ({
                       ...a,
                       name: a.name,

@@ -184,3 +184,54 @@ describe('XmiClientParser: secuencia EA', () => {
     expect(result.connections[0].messages![0]).toMatchObject({ parameters: 'arg', returnType: 'Result' });
   });
 });
+
+describe('XmiClientParser: paquete EA', () => {
+  it('detecta diagramType package y admite la composición de {package, use_case, actor}', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const fixturePath = path.resolve(__dirname, '../../../../../docs/ea/ejemplos_xmi/paquetes.xml');
+    const xmlContent = fs.readFileSync(fixturePath, 'utf-8');
+
+    const result = XmiClientParser.parse(xmlContent);
+    expect(result.diagramType).toBe('package');
+
+    // Debe contener nodos de tipo paquete y casos de uso del diagrama
+    const packageNodes = result.nodes.filter((n) => n.nodeType === 'package');
+    expect(packageNodes.length).toBe(5);
+    const useCaseNodes = result.nodes.filter((n) => n.nodeType === 'use_case');
+    expect(useCaseNodes.length).toBe(8);
+
+    // Todos los nodos del diagrama de paquetes deben ser {package, use_case, actor}
+    expect(result.nodes.every((n) => n.nodeType === 'package' || n.nodeType === 'use_case' || n.nodeType === 'actor')).toBe(true);
+
+    const pkgNames = packageNodes.map((n) => n.name);
+    expect(pkgNames).toContain('AI-assistant');
+    expect(pkgNames).toContain('Auth');
+    expect(pkgNames).toContain('Code-generator');
+    expect(pkgNames).toContain('Diagrams');
+    expect(pkgNames).toContain('Projects');
+
+    // Verificar que los caracteres acentuados codificados como entidades numéricas HTML (ej. &#243;) se decodificaron correctamente
+    const authPkg = packageNodes.find((n) => n.name === 'Auth');
+    expect(authPkg).toBeDefined();
+    expect(authPkg?.attributes.length).toBeGreaterThan(0);
+    expect(authPkg?.attributes[0].name).toBe('Autenticación y Perfiles');
+
+    const projectsPkg = packageNodes.find((n) => n.name === 'Projects');
+    expect(projectsPkg).toBeDefined();
+    expect(projectsPkg?.attributes.length).toBeGreaterThan(0);
+    expect(projectsPkg?.attributes[0].name).toBe('Gestión de Proyectos, Equipos y Modelado en Tiempo Real');
+
+    // Debe contener dependencias válidas
+    expect(result.connections.length).toBeGreaterThan(0);
+    expect(result.connections.every((c) => c.type === 'dependency' || c.type === 'import' || c.type === 'merge')).toBe(true);
+  });
+
+  it('decodifica entidades numéricas y HTML en fixUtf8Mojibake', () => {
+    expect(XmiClientParser.fixUtf8Mojibake('Autenticaci&#243;n y Perfiles')).toBe('Autenticación y Perfiles');
+    expect(XmiClientParser.fixUtf8Mojibake('Gesti&#243;n de Proyectos')).toBe('Gestión de Proyectos');
+    expect(XmiClientParser.fixUtf8Mojibake('&#193;&#201;&#205;&#211;&#218;&#209;')).toBe('ÁÉÍÓÚÑ');
+    expect(XmiClientParser.fixUtf8Mojibake('&aacute;&eacute;&iacute;&oacute;&uacute;&ntilde;')).toBe('áéíóúñ');
+    expect(XmiClientParser.fixUtf8Mojibake('&#xF3;')).toBe('ó');
+  });
+});

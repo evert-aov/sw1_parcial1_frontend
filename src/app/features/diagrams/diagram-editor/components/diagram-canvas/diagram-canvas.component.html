@@ -709,7 +709,7 @@
                         'border-[#796354] text-[#241C18] shadow-[2px_0px_0px_rgba(0,0,0,0.15)]': !isNodeSelected(node.id)
                       }"
                       [style.backgroundColor]="node.color || '#FAF1EC'"
-                      class="h-7 max-w-[65%] min-w-[90px] self-start px-2.5 py-1 flex items-center justify-between border-2 rounded-none z-10 font-bold text-[11px] font-sans truncate -mb-[2px]">
+                      class="h-7.5 max-w-[85%] min-w-[70px] w-fit self-start px-3 py-1 flex items-center justify-between border-2 rounded-none z-10 font-bold text-[12px] font-sans truncate -mb-[2px]">
                       @if (renamingNodeId() === node.id) {
                         <input
                           #renamePkgInput
@@ -724,10 +724,10 @@
                           (pointerdown)="$event.stopPropagation()"
                           (mousedown)="$event.stopPropagation()"
                           (click)="$event.stopPropagation()"
-                          class="uml-rename-input w-full font-bold text-[11px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded-none px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
+                          class="uml-rename-input w-full font-bold text-[12px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded-none px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
                         />
                       } @else {
-                        <span class="truncate" [title]="getPackageTabTitle(node)">
+                        <span class="truncate leading-none" [title]="getPackageTabTitle(node)">
                           {{ getPackageTabTitle(node) }}
                         </span>
                       }
