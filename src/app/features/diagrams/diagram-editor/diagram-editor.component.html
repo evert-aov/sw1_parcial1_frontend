@@ -283,6 +283,7 @@
   <app-edit-node-modal
     [isOpen]="isEditNodeModalOpen()"
     [node]="editingNode()"
+    [activeDiagramType]="activeDiagramType()"
     (close)="closeEditNodeModal()"
     (save)="onSaveEditedNode($event)">
   </app-edit-node-modal>

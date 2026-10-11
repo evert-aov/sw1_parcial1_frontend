@@ -20,6 +20,7 @@ import {
 export class EditNodeModalComponent {
   readonly isOpen = input<boolean>(false);
   readonly node = input<UmlClassNode | null>(null);
+  readonly activeDiagramType = input<string>('class');
 
   readonly close = output<void>();
   readonly save = output<UmlClassNode>();
@@ -30,17 +31,64 @@ export class EditNodeModalComponent {
 
   readonly editingNode = signal<UmlClassNode | null>(null);
 
+  canHaveStereotype(): boolean {
+    const n = this.editingNode();
+    if (!n) return false;
+    const nt = (n.nodeType || '').toLowerCase().trim();
+    return nt !== 'actor' && nt !== 'use_case' && nt !== 'lifeline';
+  }
+
+  isCommunicationDiagram(): boolean {
+    const dt = (this.activeDiagramType() || '').toLowerCase().trim();
+    return dt === 'communication' || dt === 'collaboration';
+  }
+
+  isClassAnalysisDiagram(): boolean {
+    const dt = (this.activeDiagramType() || '').toLowerCase().trim();
+    return dt === 'class_analysis';
+  }
+
+  availableStereotypes(): { value: string; label: string }[] {
+    if (this.isClassAnalysisDiagram()) {
+      return [
+        { value: 'UI', label: 'UI' },
+        { value: 'Controller.', label: 'Controller.' },
+        { value: 'Entity.', label: 'Entity.' },
+      ];
+    }
+    const list = this.predefinedStereotypes.filter(
+      (s) => s.value.toLowerCase() !== 'class' && s.label.toLowerCase() !== 'class'
+    );
+    const curr = this.editingNode()?.stereotype;
+    if (
+      curr &&
+      curr.toLowerCase() !== 'class' &&
+      !list.some((s) => s.value.toLowerCase() === curr.toLowerCase())
+    ) {
+      return [{ value: curr, label: curr }, ...list];
+    }
+    return list;
+  }
+
   onStereotypeSelect(val: string): void {
     const curr = this.editingNode();
-    if (curr) {
-      curr.stereotype = val && val.trim() ? val.trim() : null;
-      this.editingNode.set({ ...curr });
+    if (!curr || !this.canHaveStereotype() || this.isCommunicationDiagram()) return;
+    let clean = val && val.trim() ? val.trim() : null;
+    if (clean && clean.toLowerCase() === 'class') {
+      clean = null;
     }
+    if (this.isClassAnalysisDiagram()) {
+      if (clean && !['UI', 'Controller.', 'Entity.'].includes(clean)) {
+        clean = null;
+      }
+    }
+    curr.stereotype = clean;
+    this.editingNode.set({ ...curr });
   }
 
   clearStereotype(): void {
     const curr = this.editingNode();
-    if (curr) {
+    if (curr && this.canHaveStereotype() && !this.isCommunicationDiagram()) {
       curr.stereotype = null;
       this.editingNode.set({ ...curr });
     }
@@ -62,6 +110,31 @@ export class EditNodeModalComponent {
               default: a.default ?? a.defaultValue ?? null,
             }));
           }
+
+          // Normalización estricta de estereotipos según tipo de nodo y diagrama
+          const nt = (cloned.nodeType || '').toLowerCase().trim();
+          const dt = (this.activeDiagramType() || '').toLowerCase().trim();
+          if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline') {
+            cloned.stereotype = null;
+          } else if (dt === 'communication' || dt === 'collaboration') {
+            if (nt === 'boundary' || nt === 'ui') cloned.stereotype = 'boundary';
+            else if (nt === 'control') cloned.stereotype = 'control';
+            else if (nt === 'entity') cloned.stereotype = 'entity';
+            else cloned.stereotype = null;
+          } else if (dt === 'class' || dt === 'logical') {
+            if (cloned.stereotype && cloned.stereotype.toLowerCase() === 'class') {
+              cloned.stereotype = null;
+            }
+          } else if (dt === 'class_analysis') {
+            const s = (cloned.stereotype || '').toLowerCase().trim();
+            if (s === 'ui' || s === 'boundary' || nt === 'boundary' || nt === 'ui') cloned.stereotype = 'UI';
+            else if (s === 'controller.' || s === 'controller' || s === 'control' || nt === 'control') cloned.stereotype = 'Controller.';
+            else if (s === 'entity.' || s === 'entity' || nt === 'entity') cloned.stereotype = 'Entity.';
+            else if (cloned.stereotype && !['UI', 'Controller.', 'Entity.'].includes(cloned.stereotype)) {
+              cloned.stereotype = null;
+            }
+          }
+
           this.editingNode.set(cloned);
           setTimeout(() => {
             if (this.modalColorInputRef?.nativeElement && !this.isModalPickerOpen) {
@@ -194,6 +267,27 @@ export class EditNodeModalComponent {
         default: a.defaultValue && String(a.defaultValue).trim() ? String(a.defaultValue).trim() : null,
       }));
     }
+
+    // Validar y aplicar restricciones de estereotipo al guardar
+    if (!this.canHaveStereotype()) {
+      curr.stereotype = null;
+    } else if (this.isCommunicationDiagram()) {
+      const nt = (curr.nodeType || '').toLowerCase().trim();
+      if (nt === 'boundary' || nt === 'ui') curr.stereotype = 'boundary';
+      else if (nt === 'control') curr.stereotype = 'control';
+      else if (nt === 'entity') curr.stereotype = 'entity';
+      else curr.stereotype = null;
+    } else {
+      if (curr.stereotype && curr.stereotype.toLowerCase() === 'class') {
+        curr.stereotype = null;
+      }
+      if (this.isClassAnalysisDiagram()) {
+        if (curr.stereotype && !['UI', 'Controller.', 'Entity.'].includes(curr.stereotype)) {
+          curr.stereotype = null;
+        }
+      }
+    }
+
     this.save.emit(curr);
     this.close.emit();
   }

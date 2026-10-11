@@ -3078,6 +3078,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       namePrefix = 'Clase_';
     }
 
+    let initialStereotype: UmlStereotype | string | null = (stereotype as UmlStereotype) || null;
+    if (initialStereotype && (initialStereotype as string).toLowerCase() === 'class') {
+      initialStereotype = null;
+    }
+
     const newNode: UmlClassNode = {
       id: `class_${Date.now()}`,
       name: `${namePrefix}${count}`,
@@ -3088,7 +3093,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       color: '#FDFAF3',
       attributes: [],
       methods: [],
-      stereotype: (stereotype as UmlStereotype) || null,
+      stereotype: initialStereotype,
     };
 
     this.nodes.update((list) => [...list, newNode]);
@@ -5276,6 +5281,30 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onSaveEditedNode(savedNode: UmlClassNode): void {
+    const dt = (this.activeDiagramType() || '').toLowerCase().trim();
+    const nt = (savedNode.nodeType || '').toLowerCase().trim();
+
+    if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline') {
+      savedNode.stereotype = null;
+    } else if (dt === 'communication' || dt === 'collaboration') {
+      if (nt === 'boundary' || nt === 'ui') savedNode.stereotype = UmlStereotype.BOUNDARY;
+      else if (nt === 'control') savedNode.stereotype = UmlStereotype.CONTROL;
+      else if (nt === 'entity') savedNode.stereotype = UmlStereotype.ENTITY;
+      else savedNode.stereotype = null;
+    } else if (dt === 'class' || dt === 'logical') {
+      if (savedNode.stereotype && (savedNode.stereotype as string).toLowerCase() === 'class') {
+        savedNode.stereotype = null;
+      }
+    } else if (dt === 'class_analysis') {
+      const s = (savedNode.stereotype || '').toLowerCase().trim();
+      if (s === 'ui' || s === 'boundary' || nt === 'boundary' || nt === 'ui') savedNode.stereotype = 'UI' as any;
+      else if (s === 'controller.' || s === 'controller' || s === 'control' || nt === 'control') savedNode.stereotype = 'Controller.' as any;
+      else if (s === 'entity.' || s === 'entity' || nt === 'entity') savedNode.stereotype = 'Entity.' as any;
+      else if (savedNode.stereotype && !['UI', 'Controller.', 'Entity.'].includes(savedNode.stereotype as string)) {
+        savedNode.stereotype = null;
+      }
+    }
+
     this.pushSnapshot();
     this.nodes.update((list) =>
       list.map((n) => (n.id === savedNode.id ? savedNode : n))
