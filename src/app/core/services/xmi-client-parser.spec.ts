@@ -234,4 +234,52 @@ describe('XmiClientParser: paquete EA', () => {
     expect(XmiClientParser.fixUtf8Mojibake('&aacute;&eacute;&iacute;&oacute;&uacute;&ntilde;')).toBe('áéíóúñ');
     expect(XmiClientParser.fixUtf8Mojibake('&#xF3;')).toBe('ó');
   });
+
+  describe('XmiClientParser: componente EA', () => {
+    it('importa componente_2.xml detectando diagramType component, nodos y conectores assembly', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+      const fixturePath = path.resolve(__dirname, '../../../../../docs/ea/ejemplos_xmi/componente_2.xml');
+      const xmlContent = fs.readFileSync(fixturePath, 'latin1');
+
+      const result = XmiClientParser.parse(xmlContent);
+      expect(result.diagramType).toBe('component');
+
+      const components = result.nodes.filter((n) => n.nodeType === 'component');
+      expect(components.length).toBe(11);
+
+      const boundaries = result.nodes.filter((n) => n.nodeType === 'boundary_box');
+      expect(boundaries.length).toBe(3);
+
+      // Todos los nodos deben pertenecer a {component, boundary_box, package, class}
+      expect(result.nodes.every((n) => ['component', 'boundary_box', 'package', 'class'].includes(n.nodeType || ''))).toBe(true);
+
+      // Verificar conectores assembly y dependency
+      const assemblyConns = result.connections.filter((c) => c.type === 'assembly');
+      expect(assemblyConns.length).toBeGreaterThan(0);
+
+      const depConns = result.connections.filter((c) => c.type === 'dependency');
+      expect(depConns.length).toBeGreaterThan(0);
+
+      // Verificar que los componentes tienen dimensiones y color adecuados
+      const comp1 = components.find((c) => c.name.includes('collaboration.gateway.ts'));
+      expect(comp1).toBeDefined();
+      expect(comp1?.width).toBeGreaterThanOrEqual(160);
+      expect(comp1?.height).toBeGreaterThanOrEqual(60);
+    });
+
+    it('importa componentes.xml detectando diagramType component', async () => {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+      const fixturePath = path.resolve(__dirname, '../../../../../docs/ea/ejemplos_xmi/componentes.xml');
+      const xmlContent = fs.readFileSync(fixturePath, 'latin1');
+
+      const result = XmiClientParser.parse(xmlContent);
+      expect(result.diagramType).toBe('component');
+
+      const components = result.nodes.filter((n) => n.nodeType === 'component');
+      expect(components.length).toBeGreaterThan(0);
+    });
+  });
 });
+

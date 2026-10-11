@@ -306,7 +306,49 @@ export class XmiClientParser {
         continue;
       }
 
-      // E) Clases UML, Objetos e InstanceSpecifications (BCE / Robustez)
+      // E) Componentes UML (Diagramas de Componentes)
+      if (type === 'uml:Component' || type === 'Component') {
+        if (geometryMap.size > 0 && !hasGeo) {
+          continue;
+        }
+
+        const meta = eaElementMetaMap.get(id);
+        const cleanName = this.fixUtf8Mojibake(name || meta?.name || `Componente_${gridIdx + 1}`).trim();
+        let pos = {
+          x: 80 + (gridIdx % 3) * 280,
+          y: 80 + Math.floor(gridIdx / 3) * 220,
+        };
+        let width = 190;
+        let height = 70;
+
+        if (geometryMap.has(id)) {
+          const g = geometryMap.get(id)!;
+          pos = { x: g.left, y: g.top };
+          if (g.width > 20) width = g.width;
+          if (g.height > 20) height = g.height;
+        }
+
+        const customCompColor = geometryMap.get(id)?.color || meta?.color;
+        const node: UmlClassNode = {
+          id,
+          name: cleanName,
+          position: pos,
+          width,
+          height,
+          nodeType: 'component',
+          stereotype: meta?.stereotype || null,
+          color: customCompColor || '#FAF1EC',
+          attributes: [],
+          methods: [],
+          isAnchor: false,
+        };
+
+        nodeMap.set(id, node);
+        gridIdx++;
+        continue;
+      }
+
+      // F) Clases UML, Objetos e InstanceSpecifications (BCE / Robustez)
       if (
         type === 'uml:Class' ||
         type === 'uml:AssociationClass' ||
@@ -413,6 +455,78 @@ export class XmiClientParser {
           continue;
         }
 
+        if (meta?.sType === 'Component') {
+          if (geometryMap.size > 0 && !hasGeo) {
+            continue;
+          }
+
+          let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
+          let width = 190;
+          let height = 70;
+
+          if (geometryMap.has(id)) {
+            const g = geometryMap.get(id)!;
+            pos = { x: g.left, y: g.top };
+            if (g.width > 20) width = g.width;
+            if (g.height > 20) height = g.height;
+          }
+
+          const customCompColor = geometryMap.get(id)?.color || meta?.color;
+          const node: UmlClassNode = {
+            id,
+            name: this.fixUtf8Mojibake(name || meta?.name || `Componente_${gridIdx + 1}`).trim(),
+            position: pos,
+            width,
+            height,
+            nodeType: 'component',
+            stereotype: meta?.stereotype || null,
+            color: customCompColor || '#FAF1EC',
+            attributes: [],
+            methods: [],
+            isAnchor: false,
+          };
+
+          nodeMap.set(id, node);
+          gridIdx++;
+          continue;
+        }
+
+        if (meta?.sType === 'Boundary') {
+          if (geometryMap.size > 0 && !hasGeo) {
+            continue;
+          }
+
+          let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
+          let width = 280;
+          let height = 200;
+
+          if (geometryMap.has(id)) {
+            const g = geometryMap.get(id)!;
+            pos = { x: g.left, y: g.top };
+            if (g.width > 20) width = g.width;
+            if (g.height > 20) height = g.height;
+          }
+
+          const customBBoxColor = geometryMap.get(id)?.color || meta?.color;
+          const node: UmlClassNode = {
+            id,
+            name: this.fixUtf8Mojibake(name || meta?.name || `BoundaryBox_${gridIdx + 1}`).trim(),
+            position: pos,
+            width,
+            height,
+            nodeType: 'boundary_box',
+            stereotype: null,
+            color: customBBoxColor || '#FAF8F5',
+            attributes: [],
+            methods: [],
+            isAnchor: false,
+          };
+
+          nodeMap.set(id, node);
+          gridIdx++;
+          continue;
+        }
+
         if (geometryMap.size > 0 && !hasGeo) {
           continue;
         }
@@ -505,13 +619,16 @@ export class XmiClientParser {
         (meta.sType === 'Actor' ||
           meta.sType === 'Class' ||
           meta.sType === 'UseCase' ||
-          meta.sType === 'Object' ||
+          meta.sType === 'Component' ||
           meta.sType === 'Boundary' ||
+          meta.sType === 'Object' ||
           meta.sType === 'Sequence' ||
           meta.sType === 'Package')
       ) {
         const isActor = meta.sType === 'Actor';
         const isUseCase = meta.sType === 'UseCase';
+        const isComponent = meta.sType === 'Component';
+        const isBoundary = meta.sType === 'Boundary';
         const isObject = meta.sType === 'Object';
         const isSequence = meta.sType === 'Sequence';
         const isPackage = meta.sType === 'Package';
@@ -540,11 +657,15 @@ export class XmiClientParser {
             ? `Actor_${gridIdx + 1}`
             : isUseCase
               ? `CU_${gridIdx + 1}`
-              : isSequence
-                ? `Lifeline_${gridIdx + 1}`
-                : isPackage
-                  ? `Package_${gridIdx + 1}`
-                  : `Clase_${gridIdx + 1}`)
+              : isComponent
+                ? `Componente_${gridIdx + 1}`
+                : isBoundary
+                  ? `BoundaryBox_${gridIdx + 1}`
+                  : isSequence
+                    ? `Lifeline_${gridIdx + 1}`
+                    : isPackage
+                      ? `Package_${gridIdx + 1}`
+                      : `Clase_${gridIdx + 1}`)
         ).trim();
 
         let width = isPackage ? 200 : 220;
@@ -560,6 +681,12 @@ export class XmiClientParser {
           const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
           width = dynamicWidth;
           height = Math.max(60, 45 + (lines - 1) * 18);
+        } else if (isComponent) {
+          width = 190;
+          height = 70;
+        } else if (isBoundary) {
+          width = 280;
+          height = 200;
         } else if (isObject) {
           width = 70;
           height = 70;
@@ -585,13 +712,17 @@ export class XmiClientParser {
           ? 'actor'
           : isUseCase
             ? 'use_case'
-            : isSequence
-              ? 'lifeline'
-              : isPackage
-                ? 'package'
-                : 'class';
+            : isComponent
+              ? 'component'
+              : isBoundary
+                ? 'boundary_box'
+                : isSequence
+                  ? 'lifeline'
+                  : isPackage
+                    ? 'package'
+                    : 'class';
         let stereotype: string | null = null;
-        if (!isActor && !isUseCase && !isSequence && !isPackage) {
+        if (!isActor && !isUseCase && !isComponent && !isBoundary && !isSequence && !isPackage) {
           const s = (meta.stereotype || '').toLowerCase().trim();
 
           if (s === 'entity.') {
@@ -618,11 +749,21 @@ export class XmiClientParser {
             );
             stereotype = match || meta.stereotype;
           }
-        } else if (isPackage) {
+        } else if (isPackage || isComponent) {
           stereotype = meta.stereotype || null;
         }
 
-        let defaultExtColor = isActor ? '#FEF2DD' : (isUseCase ? '#E5F2FE' : isPackage ? '#FAF1EC' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3'));
+        let defaultExtColor = isActor
+          ? '#FEF2DD'
+          : isUseCase
+            ? '#E5F2FE'
+            : isPackage || isComponent
+              ? '#FAF1EC'
+              : isBoundary
+                ? '#FAF8F5'
+                : (nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity')
+                  ? '#DDF4F5'
+                  : '#FDFAF3';
         if (isSequence) {
           defaultExtColor = '#DDF4F5';
         }
@@ -839,6 +980,12 @@ export class XmiClientParser {
     const hasPackageNode = Array.from(nodeMap.values()).some(
       (n) => n.nodeType === 'package',
     );
+    const hasComponentNode = Array.from(nodeMap.values()).some(
+      (n) => n.nodeType === 'component',
+    );
+    const hasAssemblyConn = connections.some(
+      (c) => c.type === 'assembly',
+    );
 
     if (eaDiagType.includes('sequence')) {
       diagramType = 'sequence';
@@ -846,10 +993,14 @@ export class XmiClientParser {
       diagramType = 'communication';
     } else if (eaDiagType.includes('use case')) {
       diagramType = 'use_case';
+    } else if (eaDiagType.includes('component')) {
+      diagramType = 'component';
     } else if (eaDiagType.includes('package')) {
       diagramType = 'package';
     } else if (hasSequenceConn || hasLifeline) {
       diagramType = 'sequence';
+    } else if (hasComponentNode || hasAssemblyConn) {
+      diagramType = 'component';
     } else if (hasPackageNode) {
       diagramType = 'package';
     } else if (hasUseCase) {
@@ -939,6 +1090,32 @@ export class XmiClientParser {
       // Un diagrama de casos de uso sólo debe contener actores y casos de uso
       for (const [id, node] of Array.from(nodeMap.entries())) {
         if (node.nodeType !== 'use_case' && node.nodeType !== 'actor') {
+          nodeMap.delete(id);
+        }
+      }
+    } else if (diagramType === 'component') {
+      for (const node of nodeMap.values()) {
+        if (!node.nodeType) {
+          node.nodeType = 'component';
+        }
+        if (node.nodeType === 'component') {
+          node.width = Math.max(160, node.width || 190);
+          node.height = Math.max(60, node.height || 70);
+          node.color = node.color || '#FAF1EC';
+        } else if (node.nodeType === 'boundary_box') {
+          node.width = Math.max(200, node.width || 280);
+          node.height = Math.max(120, node.height || 200);
+          node.color = node.color || '#FAF8F5';
+        }
+      }
+      // Un diagrama de componentes está compuesto por {component, boundary_box, package, class}
+      for (const [id, node] of Array.from(nodeMap.entries())) {
+        if (
+          node.nodeType !== 'component' &&
+          node.nodeType !== 'boundary_box' &&
+          node.nodeType !== 'package' &&
+          node.nodeType !== 'class'
+        ) {
           nodeMap.delete(id);
         }
       }
@@ -1433,13 +1610,15 @@ export class XmiClientParser {
     if (!s || !t || !nodeMap.has(s) || !nodeMap.has(t)) return null;
 
     const lineStyle = connLineStyleMap?.get(id) || 'segment';
+    const kind = elem['@_kind'];
+    const type = kind === 'assembly' ? 'assembly' : 'association';
     return {
       id,
       sourceNodeId: s,
       targetNodeId: t,
       sourceId: `${s}_right`,
       targetId: `${t}_left`,
-      type: 'association',
+      type,
       sourceMultiplicity: '',
       targetMultiplicity: '',
       lineStyle,
@@ -1645,6 +1824,8 @@ export class XmiClientParser {
           type = 'trace';
           name = '«trace»';
         }
+      } else if (eaType === 'Assembly' || eaStereo === 'assembly' || eaSubtype === 'assembly') {
+        type = 'assembly';
       }
 
       const sMult = labels['@_lb'] || '';
