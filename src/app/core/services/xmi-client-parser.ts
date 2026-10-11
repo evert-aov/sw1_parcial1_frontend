@@ -150,7 +150,7 @@ export class XmiClientParser {
           height,
           nodeType: 'use_case',
           stereotype: null,
-          color: customUcColor || '#FEF2DD',
+          color: customUcColor || '#E5F2FE',
           attributes: [],
           methods: [],
           isAnchor: false,
@@ -271,7 +271,7 @@ export class XmiClientParser {
             height,
             nodeType: 'use_case',
             stereotype: null,
-            color: customUcMetaColor || '#FEF2DD',
+            color: customUcMetaColor || '#E5F2FE',
             attributes: [],
             methods: [],
             isAnchor: false,
@@ -443,7 +443,7 @@ export class XmiClientParser {
           }
         }
 
-        let defaultExtColor = (isActor || isUseCase) ? '#FEF2DD' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3');
+        let defaultExtColor = isActor ? '#FEF2DD' : (isUseCase ? '#E5F2FE' : ((nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') ? '#DDF4F5' : '#FDFAF3'));
         if (isSequence) {
           defaultExtColor = '#DDF4F5';
         }

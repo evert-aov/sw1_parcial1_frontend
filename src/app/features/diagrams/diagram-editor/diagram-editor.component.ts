@@ -374,7 +374,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (nt === 'executionEnvironment' || st === 'executionEnvironment') return '#CDE5F5';
     if (nt === 'component' || st === 'component' || nt === 'package' || nt === 'boundary_box') return '#FAF1EC';
     if (nt === 'boundary' || nt === 'control' || nt === 'entity' || nt === 'lifeline' || st === 'UI' || st === 'Entity.' || st === 'Controller.' || st === 'boundary' || st === 'control' || st === 'entity') return '#DDF4F5';
-    if (nt === 'use_case' || nt === 'actor') return '#FEF2DD';
+    if (nt === 'use_case') return '#E5F2FE';
+    if (nt === 'actor') return '#FEF2DD';
     if (nt === 'node') return '#F3FAF7';
     return '#FDFAF3';
   }
@@ -3290,7 +3291,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       position: { x: posX, y: posY },
       width: 140,
       height: 60,
-      color: '#FEF2DD',
+      color: '#E5F2FE',
       attributes: [],
       methods: [],
     };

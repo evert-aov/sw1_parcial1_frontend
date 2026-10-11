@@ -15,7 +15,7 @@ import { CommonModule } from '@angular/common';
     '[style.width]': 'computedWidth',
     '[style.height]': 'computedHeight',
     '[style.display]': "width === '100%' ? 'flex' : 'inline-flex'",
-    'class': 'shrink-0 items-center justify-center'
+    class: 'shrink-0 items-center justify-center',
   },
   template: `
     <svg
@@ -27,7 +27,8 @@ import { CommonModule } from '@angular/common';
       fill="none"
       [class]="className || (isCustomSize ? '' : 'w-full h-full')"
       preserveAspectRatio="xMidYMid meet"
-      xmlns="http://www.w3.org/2000/svg">
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <!-- Elipse principal del Caso de Uso -->
       <ellipse
         cx="45"
@@ -48,17 +49,18 @@ import { CommonModule } from '@angular/common';
           [attr.fill]="textColor || strokeColor"
           font-family="system-ui, -apple-system, sans-serif"
           font-size="9.5"
-          font-weight="600">
+          font-weight="600"
+        >
           {{ label || name }}
         </text>
       }
     </svg>
-  `
+  `,
 })
 export class UseCaseSvgComponent {
   @Input() width: number | string = '100%';
   @Input() height: number | string = '100%';
-  @Input() fillColor: string = '#FEF2DD';
+  @Input() fillColor: string = '#E5F2FE';
   @Input() strokeColor: string = '#796354';
   @Input() strokeWidth: number = 1.5;
   @Input() textColor: string = '#241C18';

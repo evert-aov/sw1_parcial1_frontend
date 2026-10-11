@@ -40,6 +40,7 @@ describe('DiagramEditorComponent: estado de mensajes de secuencia', () => {
   it('usa RGB(221, 244, 245) como color predeterminado de las líneas de vida', () => {
     expect(editor.getDefaultColorForNodeType('lifeline')).toBe('#DDF4F5');
     expect(editor.getDefaultColorForNodeType('actor')).toBe('#FEF2DD');
+    expect(editor.getDefaultColorForNodeType('use_case')).toBe('#E5F2FE');
   });
 
   it('mantiene altura fija 60 en editor, lienzo y payload, con ancho adaptable al nombre', () => {

@@ -107,7 +107,7 @@ export enum UmlNodeType {
 export const UML_NODE_DEFAULT_COLORS: Record<string, string> = {
   [UmlNodeType.CLASS]: '#FDFAF3',
   [UmlNodeType.ACTOR]: '#FEF2DD',
-  [UmlNodeType.USE_CASE]: '#FEF2DD',
+  [UmlNodeType.USE_CASE]: '#E5F2FE',
   [UmlNodeType.PACKAGE]: '#FAF1EC',
   [UmlNodeType.COMPONENT]: '#FAF1EC',
   [UmlNodeType.BOUNDARY_BOX]: '#FAF1EC',
