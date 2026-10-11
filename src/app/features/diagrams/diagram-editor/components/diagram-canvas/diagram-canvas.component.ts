@@ -1567,14 +1567,26 @@ export class DiagramCanvasComponent {
     return this.getNodeWidth(node) * (this.getNodeHeight(node) || 60);
   }
 
-  // Rango base de z-index calculado dinámicamente según área efectiva:
-  // El elemento con mayor área va al fondo (rank 1) y los más pequeños sucesivamente al frente (2, 3, ...).
+  // Rango base de z-index calculado dinámicamente según área efectiva y tipo de nodo:
+  // Los contenedores (boundary_box, package) se mantienen al fondo y los componentes/clases al frente (top).
   getNodeBaseRank(node: UmlClassNode): number {
     if (node.isAnchor) return 0;
+    const isBgContainer = (n: UmlClassNode) => n.nodeType === 'boundary_box' || n.nodeType === 'package';
+    const myIsBg = isBgContainer(node);
     const myArea = this.getNodeArea(node);
     let rank = 1;
     for (const other of this.nodes()) {
       if (other.id === node.id || other.isAnchor) continue;
+      const otherIsBg = isBgContainer(other);
+      if (myIsBg && !otherIsBg) {
+        // Los contenedores de fondo siempre van por detrás de elementos regulares (componentes, clases, etc.)
+        continue;
+      }
+      if (!myIsBg && otherIsBg) {
+        // Elementos regulares siempre van por delante de contenedores de fondo
+        rank++;
+        continue;
+      }
       const otherArea = this.getNodeArea(other);
       if (otherArea > myArea) {
         rank++;
