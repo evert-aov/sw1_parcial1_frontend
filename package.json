@@ -69,7 +69,7 @@
   },
   "build": {
     "appId": "com.uagrm.diagramador",
-    "productName": "Diagramador UML",
+    "productName": "UML ER Studio",
     "directories": {
       "output": "release"
     },
@@ -84,7 +84,12 @@
       },
       {
         "from": "../backend/node_modules",
-        "to": "backend/node_modules"
+        "to": "backend/node_modules",
+        "filter": [
+          "**/*",
+          "!**/.bin/**",
+          "!**/*.map"
+        ]
       },
       {
         "from": "../backend/package.json",
@@ -95,10 +100,12 @@
       "target": [
         "AppImage"
       ],
+      "icon": "build/icon.png",
       "category": "Development",
       "maintainer": "diagramador@uagrm.edu.bo"
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis",
         "portable"

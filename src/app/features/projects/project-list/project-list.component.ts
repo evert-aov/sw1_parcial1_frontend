@@ -21,6 +21,7 @@ import {
   heroCheck,
   heroArrowTopRightOnSquare,
   heroAcademicCap,
+  heroExclamationCircle,
 } from '@ng-icons/heroicons/outline';
 
 import { ProjectService } from '../../../core/services/project.service';
@@ -64,6 +65,7 @@ import { ThemeToggleComponent } from '../../../core/components/theme-toggle/them
       heroCheck,
       heroArrowTopRightOnSquare,
       heroAcademicCap,
+      heroExclamationCircle,
     }),
   ],
   templateUrl: './project-list.component.html',
@@ -135,12 +137,19 @@ export class ProjectListComponent implements OnInit {
     this.authService.logout();
   }
 
+  readonly createErrorMessageKey = signal<string | null>(null);
+  readonly createCustomErrorMessage = signal<string | null>(null);
+  readonly editErrorMessageKey = signal<string | null>(null);
+  readonly editCustomErrorMessage = signal<string | null>(null);
+
   ngOnInit(): void {
     this.projectService.loadProjects().subscribe();
   }
 
   // --- CREAR PROYECTO ---
   openCreateModal(): void {
+    this.createErrorMessageKey.set(null);
+    this.createCustomErrorMessage.set(null);
     this.createForm.reset({
       name: '',
       description: '',
@@ -153,11 +162,16 @@ export class ProjectListComponent implements OnInit {
 
   closeCreateModal(): void {
     this.isCreateModalOpen.set(false);
+    this.createErrorMessageKey.set(null);
+    this.createCustomErrorMessage.set(null);
   }
 
   onCreateSubmit(): void {
+    this.createErrorMessageKey.set(null);
+    this.createCustomErrorMessage.set(null);
     if (this.createForm.invalid) {
       this.createForm.markAllAsTouched();
+      this.createErrorMessageKey.set('projects.createModal.requiredFieldsWarning');
       return;
     }
 
@@ -165,12 +179,22 @@ export class ProjectListComponent implements OnInit {
       next: () => {
         this.closeCreateModal();
       },
+      error: (err) => {
+        const msg = err?.error?.message || err?.message;
+        if (msg) {
+          this.createCustomErrorMessage.set(Array.isArray(msg) ? msg.join(', ') : msg);
+        } else {
+          this.createErrorMessageKey.set('projects.createModal.createError');
+        }
+      },
     });
   }
 
   // --- EDITAR PROYECTO ---
   openEditModal(project: Project, event?: MouseEvent): void {
     if (event) event.stopPropagation();
+    this.editErrorMessageKey.set(null);
+    this.editCustomErrorMessage.set(null);
     this.selectedProjectForEdit.set(project);
     this.editForm.patchValue({
       name: project.name,
@@ -185,18 +209,31 @@ export class ProjectListComponent implements OnInit {
   closeEditModal(): void {
     this.isEditModalOpen.set(false);
     this.selectedProjectForEdit.set(null);
+    this.editErrorMessageKey.set(null);
+    this.editCustomErrorMessage.set(null);
   }
 
   onEditSubmit(): void {
     const project = this.selectedProjectForEdit();
+    this.editErrorMessageKey.set(null);
+    this.editCustomErrorMessage.set(null);
     if (!project || this.editForm.invalid) {
       this.editForm.markAllAsTouched();
+      this.editErrorMessageKey.set('projects.editModal.requiredFieldsWarning');
       return;
     }
 
     this.projectService.updateProject(project.id, this.editForm.value).subscribe({
       next: () => {
         this.closeEditModal();
+      },
+      error: (err) => {
+        const msg = err?.error?.message || err?.message;
+        if (msg) {
+          this.editCustomErrorMessage.set(Array.isArray(msg) ? msg.join(', ') : msg);
+        } else {
+          this.editErrorMessageKey.set('projects.editModal.editError');
+        }
       },
     });
   }

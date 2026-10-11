@@ -1,27 +1,58 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, dialog, utilityProcess } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { fork } = require('child_process');
 const http = require('http');
 
 let mainWindow;
 let backendProcess = null;
+let logFileStream = null;
 
-function waitForBackend(url, timeoutMs = 20000) {
+function logBackend(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  console.log(msg);
+  if (logFileStream) {
+    try {
+      logFileStream.write(line);
+    } catch (_) {}
+  }
+}
+
+function waitForBackend(primaryUrl, timeoutMs = 45000) {
+  const urls = [
+    primaryUrl.replace('localhost', '127.0.0.1'),
+    primaryUrl,
+  ];
   return new Promise((resolve) => {
     const start = Date.now();
+    let urlIndex = 0;
+
     const check = () => {
-      const req = http.get(url, (res) => {
-        resolve(true);
+      const currentUrl = urls[urlIndex % urls.length];
+      urlIndex++;
+
+      const req = http.get(currentUrl, (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 500) {
+          logBackend(`[Electron] Backend listo y respondiendo en: ${currentUrl}`);
+          resolve(true);
+        } else {
+          setTimeout(check, 250);
+        }
       });
+
       req.on('error', () => {
         if (Date.now() - start > timeoutMs) {
           resolve(false);
         } else {
-          setTimeout(check, 300);
+          setTimeout(check, 250);
         }
       });
-      req.end();
+
+      req.setTimeout(1500, () => {
+        req.destroy();
+      });
     };
+
     check();
   });
 }
@@ -31,7 +62,7 @@ function startBackendServer() {
 
   // Si se pasa --external-backend no levantamos el proceso embebido
   if (process.argv.includes('--external-backend')) {
-    console.log('[Electron] Usando backend externo ya iniciado en el sistema.');
+    logBackend('[Electron] Usando backend externo ya iniciado en el sistema.');
     return;
   }
 
@@ -47,45 +78,122 @@ function startBackendServer() {
   }
 
   const userDataPath = app.getPath('userData');
+  try {
+    if (!fs.existsSync(userDataPath)) {
+      fs.mkdirSync(userDataPath, { recursive: true });
+    }
+    const logFilePath = path.join(userDataPath, 'backend.log');
+    logFileStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+  } catch (err) {
+    console.error('[Electron] Error inicializando logs en disco:', err);
+  }
+
   const sqliteDbPath = path.join(userDataPath, 'uml_studio.sqlite');
 
-  console.log(`[Electron] Iniciando backend embebido: ${backendEntry}`);
-  console.log(`[Electron] Base de datos SQLite: ${sqliteDbPath}`);
+  logBackend(`[Electron] Iniciando backend embebido: ${backendEntry}`);
+  logBackend(`[Electron] Directorio de trabajo backend: ${backendCwd}`);
+  logBackend(`[Electron] Base de datos SQLite: ${sqliteDbPath}`);
 
-  try {
-    backendProcess = fork(backendEntry, [], {
-      cwd: backendCwd,
-      env: {
-        ...process.env,
-        PORT: '4000',
-        DB_TYPE: 'better-sqlite3',
-        SQLITE_PATH: sqliteDbPath,
-        JWT_SECRET: process.env.JWT_SECRET || 'desktop-local-secret-jwt-key-2026',
-        NODE_ENV: 'production',
-        AI_PROVIDER: 'none',
-      },
-      stdio: 'inherit',
-    });
+  const backendEnv = {
+    ...process.env,
+    PORT: '28475',
+    DB_TYPE: 'sqljs',
+    SQLITE_PATH: sqliteDbPath,
+    NODE_PATH: path.join(backendCwd, 'node_modules'),
+    JWT_SECRET: process.env.JWT_SECRET || 'desktop-local-secret-jwt-key-2026',
+    NODE_ENV: 'production',
+    AI_PROVIDER: 'none',
+  };
 
-    backendProcess.on('error', (err) => {
-      console.error('[Electron] Error en proceso backend:', err);
-    });
+  // 1. Intentar con utilityProcess.fork (API oficial de Electron para subprocesos)
+  // NOTA: utilityProcess.fork NO debe tener ELECTRON_RUN_AS_NODE en su env,
+  // ya que Chromium pasa flags internas (--type=utility) que Node rechazaría como opciones no válidas.
+  if (utilityProcess && typeof utilityProcess.fork === 'function') {
+    try {
+      logBackend('[Electron] Lanzando backend mediante utilityProcess.fork...');
+      backendProcess = utilityProcess.fork(backendEntry, [], {
+        cwd: backendCwd,
+        env: backendEnv,
+        stdio: 'pipe',
+        serviceName: 'backend-service',
+      });
 
-    backendProcess.on('exit', (code, signal) => {
-      console.log(`[Electron] Backend finalizado con código ${code} y señal ${signal}`);
-    });
-  } catch (err) {
-    console.error('[Electron] No se pudo lanzar el subproceso backend:', err);
+      if (backendProcess.stdout) {
+        backendProcess.stdout.on('data', (data) => {
+          logBackend(`[Backend] ${data.toString().trimEnd()}`);
+        });
+      }
+
+      if (backendProcess.stderr) {
+        backendProcess.stderr.on('data', (data) => {
+          logBackend(`[Backend ERR] ${data.toString().trimEnd()}`);
+        });
+      }
+
+      backendProcess.on('exit', (code) => {
+        logBackend(`[Electron] Subproceso utilityProcess backend finalizado con código: ${code}`);
+      });
+    } catch (err) {
+      logBackend(`[Electron] Falló utilityProcess.fork (${err.message}), intentando con child_process.fork...`);
+      backendProcess = null;
+    }
+  }
+
+  // 2. Fallback a child_process.fork si utilityProcess no está disponible o falló
+  if (!backendProcess) {
+    try {
+      logBackend('[Electron] Lanzando backend mediante child_process.fork...');
+      backendProcess = fork(backendEntry, [], {
+        cwd: backendCwd,
+        env: {
+          ...backendEnv,
+          ELECTRON_RUN_AS_NODE: '1',
+        },
+        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+      });
+
+      if (backendProcess.stdout) {
+        backendProcess.stdout.on('data', (data) => {
+          logBackend(`[Backend] ${data.toString().trimEnd()}`);
+        });
+      }
+
+      if (backendProcess.stderr) {
+        backendProcess.stderr.on('data', (data) => {
+          logBackend(`[Backend ERR] ${data.toString().trimEnd()}`);
+        });
+      }
+
+      backendProcess.on('error', (err) => {
+        logBackend(`[Electron] Error en proceso backend: ${err.message}`);
+      });
+
+      backendProcess.on('exit', (code, signal) => {
+        logBackend(`[Electron] Backend finalizado con código ${code} y señal ${signal}`);
+      });
+    } catch (err) {
+      logBackend(`[Electron] No se pudo lanzar el subproceso backend: ${err.message}`);
+    }
   }
 }
 
 function createWindow() {
+  const possibleIcons = [
+    path.join(__dirname, 'build', 'icon.ico'),
+    path.join(__dirname, 'public', 'favicon.ico'),
+    path.join(__dirname, 'dist', 'frontend', 'browser', 'favicon.ico'),
+    path.join(__dirname, 'build', 'icon.png'),
+    path.join(__dirname, 'public', 'logo.png'),
+  ];
+  const windowIcon = possibleIcons.find((p) => fs.existsSync(p));
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: 'Diagramador UML',
+    title: 'UML/ER Studio',
+    icon: windowIcon,
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -117,7 +225,7 @@ function createWindow() {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Diagramador UML - Conectando...</title>
+        <title>UML/ER Studio - Conectando...</title>
         <style>
           * { box-sizing: border-box; }
           body {
@@ -218,8 +326,18 @@ function createWindow() {
 app.whenReady().then(async () => {
   startBackendServer();
 
-  // Esperar a que el backend responda en http://localhost:4000/api
-  await waitForBackend('http://localhost:4000/api', 15000);
+  // Esperar a que el backend responda en http://localhost:28475/api
+  const isReady = await waitForBackend('http://localhost:28475/api', 45000);
+
+  if (!isReady && !process.argv.includes('--external-backend')) {
+    const userDataPath = app.getPath('userData');
+    const logFilePath = path.join(userDataPath, 'backend.log');
+    logBackend(`[Electron] ADVERTENCIA: Backend no respondió en el puerto 28475 tras 45s. Registro en: ${logFilePath}`);
+    dialog.showErrorBox(
+      'Aviso del Servidor Local',
+      `El backend embebido no respondió en el puerto 28475 tras 45 segundos.\n\nPuedes revisar los detalles técnicos en el log:\n${logFilePath}`
+    );
+  }
 
   createWindow();
 
@@ -238,9 +356,11 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   if (backendProcess) {
-    console.log('[Electron] Terminando proceso backend embebido...');
+    logBackend('[Electron] Terminando proceso backend embebido...');
     try {
-      backendProcess.kill('SIGINT');
+      if (typeof backendProcess.kill === 'function') {
+        backendProcess.kill();
+      }
     } catch (_) {}
     backendProcess = null;
   }

@@ -249,11 +249,13 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
       quickActions: isEn
         ? [
             { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
+            { label: '📊 Supported Diagram Types', query: 'diagram types' },
             { label: '🐳 Project Run Commands', query: 'run commands' },
             { label: '⚡ What does the platform generate?', query: 'generated architecture' },
           ]
         : [
             { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
+            { label: '📊 Tipos de Diagramas Soportados', query: 'tipos de diagramas' },
             { label: '🐳 Comandos para Correr el Proyecto', query: 'comandos de ejecucion' },
             { label: '⚡ ¿Qué genera la plataforma?', query: 'arquitectura generada' },
           ],
@@ -281,18 +283,17 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
       tips: '💡 El paquete base configurado aquí determinará la estructura de carpetas de tu backend en Spring Boot.',
     },
     {
-      title: '2. Modelar Clases y Atributos UML',
+      title: '2. Modelar Diagramas UML y Arquitectónicos',
       badge: 'Paso 2 de 7',
-      description: 'Construye tu modelo entidad-relación de forma visual e intuitiva.',
+      description: 'Construye tu diseño visual alternando entre 8 tipos de diagramas según tu necesidad.',
       details: [
-        'Abre el Toolbox lateral izquierdo y haz clic en "+ Clase" o haz doble clic en el lienzo.',
-        'Haz clic en la clase para abrir el panel de edición.',
-        'Agrega atributos indicando visibilidad (+ público, - privado, # protegido).',
-        'Selecciona el tipo de dato: String, Long/Integer, UUID, Double, Boolean, LocalDate, LocalDateTime.',
-        'Marca los modificadores necesarios: PK (Clave Primaria), AutoIncrement, Nullable o Unique.',
-        'Agrega métodos con tipos de retorno y parámetros tipados si tu lógica lo requiere.',
+        'En la barra superior o Toolbox, selecciona el tipo de diagrama: Clases, Casos de Uso, Secuencia, Comunicación, Paquetes, Componentes, Despliegue o Análisis de Clases.',
+        'El Toolbox lateral izquierdo adaptará dinámicamente sus herramientas (Actores, Óvalos, Lifelines, Nodos de Frontera/Control/Entidad, Clases).',
+        'Haz clic en cualquier herramienta o haz doble clic sobre el lienzo para instanciar elementos.',
+        'En Clases: agrega atributos con visibilidad (+, -, #), tipos de datos (String, Long, UUID, Double, LocalDate) y modificadores (PK, AutoIncrement, Unique).',
+        'En Casos de Uso y Secuencia: define actores, mensajes síncronos/asíncronos y activaciones temporales.',
       ],
-      tips: '💡 Si defines un atributo como PK de tipo Long, el generador configurará automáticamente una secuencia numérica autoincrementable (BIGSERIAL).',
+      tips: '💡 Puedes tener múltiples diagramas de diferente tipo dentro del mismo proyecto y exportarlos a Enterprise Architect XMI.',
     },
     {
       title: '3. Conectar Relaciones y Multiplicidades',
@@ -385,18 +386,17 @@ flutter run`,
       tips: '💡 The base package configured here determines the folder structure of your Spring Boot backend.',
     },
     {
-      title: '2. Model UML Classes and Attributes',
+      title: '2. Model UML & Architectural Diagrams',
       badge: 'Step 2 of 7',
-      description: 'Build your entity-relationship model visually and intuitively.',
+      description: 'Build your system visually across 8 specialized diagram types.',
       details: [
-        'Open the left Toolbox and click "+ Class" or double-click anywhere on the canvas.',
-        'Click on the class to open the properties panel.',
-        'Add attributes specifying visibility (+ public, - private, # protected).',
-        'Select data types: String, Long/Integer, UUID, Double, Boolean, LocalDate, LocalDateTime.',
-        'Check required modifiers: PK (Primary Key), AutoIncrement, Nullable, or Unique.',
-        'Add methods with typed return values and parameters if your business logic requires it.',
+        'In the top bar or sidebar, switch between diagram types: Class, Use Case, Sequence, Communication, Package, Component, Deployment, or Class Analysis.',
+        'The left Toolbox dynamically updates its tools (Actors, Use Case Ovals, Lifelines, Boundary/Control/Entity nodes, Classes).',
+        'Click any tool or double-click anywhere on the canvas to place nodes.',
+        'In Class Diagrams: add attributes with visibility (+, -, #), data types (String, Long, UUID, Double, LocalDate) and modifiers (PK, AutoIncrement, Unique).',
+        'In Use Cases & Sequence: model actors, synchronous/asynchronous messages and activation lifetimes.',
       ],
-      tips: '💡 Defining a Long PK will automatically configure an autoincrementing numeric sequence (BIGSERIAL).',
+      tips: '💡 You can create multiple diagrams of distinct types within the same project and export them to Enterprise Architect XMI.',
     },
     {
       title: '3. Connect Relationships & Multiplicities',
@@ -481,9 +481,15 @@ flutter run`,
   // Píldoras de sugerencias rápidas en Español
   readonly quickPillsEs = [
     { label: '🚀 Guía Rápida (Paso a Paso)', query: 'iniciar tour' },
+    { label: '📊 Tipos de Diagramas soportados', query: 'tipos de diagramas' },
+    { label: '👤 Casos de Uso (Actores e Includes)', query: 'diagrama de casos de uso' },
+    { label: '⏱️ Secuencia (Lifelines y Mensajes)', query: 'diagrama de secuencia' },
+    { label: '💬 Comunicación y Flujos', query: 'diagrama de comunicacion' },
+    { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+    { label: '📦 Paquetes y Componentes', query: 'diagramas de paquetes y componentes' },
+    { label: '🎨 ¿Cómo crear clases y relaciones?', query: 'como modelar clases y relaciones' },
     { label: '🐳 ¿Cómo correr con Docker y Gradle?', query: 'comandos de ejecucion' },
     { label: '⚡ ¿Cómo generar Spring Boot y Flutter?', query: 'como generar codigo' },
-    { label: '🎨 ¿Cómo crear clases y relaciones?', query: 'como modelar clases y relaciones' },
     { label: '📱 ¿Cómo funciona la IA Local en el móvil?', query: 'ia en flutter y qwen' },
     { label: '👥 ¿Cómo colaborar en equipo?', query: 'colaboracion en tiempo real' },
     { label: '🔄 ¿Cómo importar/exportar a Enterprise Architect?', query: 'enterprise architect xmi' },
@@ -492,9 +498,15 @@ flutter run`,
   // Píldoras de sugerencias rápidas en Inglés
   readonly quickPillsEn = [
     { label: '🚀 Quick Guide (Step by Step)', query: 'start tour' },
+    { label: '📊 Supported Diagram Types', query: 'diagram types' },
+    { label: '👤 Use Cases (Actors & Includes)', query: 'use case diagram' },
+    { label: '⏱️ Sequence (Lifelines & Messages)', query: 'sequence diagram' },
+    { label: '💬 Communication Diagrams', query: 'communication diagram' },
+    { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
+    { label: '📦 Packages & Components', query: 'packages and components' },
+    { label: '🎨 How to create classes & relations?', query: 'how to model classes' },
     { label: '🐳 How to run with Docker & Gradle?', query: 'run commands' },
     { label: '⚡ How to generate Spring Boot & Flutter?', query: 'how to generate code' },
-    { label: '🎨 How to create classes & relations?', query: 'how to model classes' },
     { label: '📱 How does Local AI work on mobile?', query: 'mobile ai and qwen' },
     { label: '👥 How to collaborate in teams?', query: 'realtime collaboration' },
     { label: '🔄 How to import/export Enterprise Architect?', query: 'enterprise architect xmi' },
@@ -1071,7 +1083,207 @@ flutter run`,
       return;
     }
 
-    // 11. Respuesta por Defecto (Fallback Inteligente con Recomendaciones)
+    // 11. Visión General de Tipos de Diagramas Soportados
+    if (
+      text.includes('tipo de diagrama') ||
+      text.includes('tipos de diagrama') ||
+      text.includes('diagram type') ||
+      text.includes('diagram types') ||
+      text.includes('que diagramas') ||
+      text.includes('qué diagramas') ||
+      text.includes('cuales diagramas') ||
+      text.includes('cuáles diagramas') ||
+      text.includes('supported diagrams') ||
+      text.includes('todos los diagramas')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 📊 Supported UML & Architectural Diagram Types\n\nUML/ER Studio supports 8 integrated diagram types with interactive canvas modeling and Enterprise Architect (XMI) compatibility:\n\n1. **Class Diagram (`class`):** Static structure, typed attributes, visibility, relationships (association, composition, aggregation, generalization) and automatic Spring Boot code generation.\n2. **Use Case Diagram (`use_case`):** Functional requirements, actors (stick figure), use cases (ovals), `<<include>>`, `<<extend>>` and System Boundaries.\n3. **Sequence Diagram (`sequence`):** Temporal interactions, lifelines, activation blocks, synchronous, asynchronous and reply messages.\n4. **Communication Diagram (`communication`):** Object collaboration topology with hierarchically numbered sequential messages (`1:`, `1.1:`, `2:`).\n5. **Class Analysis Diagram (`class_analysis`):** Jacobson Robustness Analysis (Boundary, Control, Entity) linking use cases to technical design.\n6. **Package Diagram (`package`):** System modularity, architectural subsystems and dependencies.\n7. **Component Diagram (`component`):** Software modules, ports, provided and required assembly interfaces.\n8. **Deployment Diagram (`deployment`):** Physical execution nodes, database servers, cloud environments and deployment artifacts.'
+          : '### 📊 Tipos de Diagramas Soportados en UML/ER Studio\n\nNuestra suite soporta 8 tipos de diagramas estandarizados con modelado interactivo y compatibilidad bidireccional con Enterprise Architect (XMI):\n\n1. **Diagrama de Clases (`class`):** Estructura estática del dominio, atributos tipados, PKs, visibilidades, métodos, relaciones semánticas y generación automática de Spring Boot 3 y migraciones Flyway.\n2. **Diagrama de Casos de Uso (`use_case`):** Requerimientos del sistema, actores, casos de uso (óvalos), relaciones `<<include>>`, `<<extend>>` y límites del sistema (*System Boundary*).\n3. **Diagrama de Secuencia (`sequence`):** Interacción dinámica temporal, líneas de vida (*Lifelines*), bloques de activación y mensajes síncronos, asíncronos y de retorno.\n4. **Diagrama de Comunicación (`communication`):** Topología estructural de objetos colaboradores con mensajes numerados secuenciales (`1:`, `1.1:`, `2:`) y flechas directrices.\n5. **Diagrama de Análisis de Clases (`class_analysis`):** Análisis de Robustez de Ivar Jacobson (Boundary, Control, Entity) para transicionar de casos de uso a diseño técnico.\n6. **Diagrama de Paquetes (`package`):** Modularización en paquetes, subsistemas y dependencias de arquitectura.\n7. **Diagrama de Componentes (`component`):** Componentes ejecutables, puertos e interfaces provistas y requeridas (conectores assembly).\n8. **Diagrama de Despliegue (`deployment`):** Nodos físicos, servidores de base de datos, entornos de ejecución y artefactos.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '👤 Use Case Diagrams', query: 'use case diagram' },
+              { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
+              { label: '💬 Communication Diagrams', query: 'communication diagram' },
+              { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
+            ]
+          : [
+              { label: '👤 Casos de Uso', query: 'diagrama de casos de uso' },
+              { label: '⏱️ Secuencia', query: 'diagrama de secuencia' },
+              { label: '💬 Comunicación', query: 'diagrama de comunicacion' },
+              { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+            ],
+      );
+      return;
+    }
+
+    // 12. Diagrama de Casos de Uso (Use Cases)
+    if (
+      text.includes('caso de uso') ||
+      text.includes('casos de uso') ||
+      text.includes('use case') ||
+      text.includes('usecase') ||
+      text.includes('actor') ||
+      text.includes('include') ||
+      text.includes('extend') ||
+      text.includes('limite del sistema') ||
+      text.includes('límite del sistema') ||
+      text.includes('system boundary')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 👤 Use Case Diagrams (`use_case`)\n\nCapture system functional requirements from the perspective of external actors.\n\n**Visual Elements in Toolbox:**\n• **Actor (Stick Figure):** External users, external systems, or time triggers that initiate or participate in actions.\n• **Use Case (Oval):** Discrete service or goal that the system provides to produce value.\n• **System Boundary (Frame):** Rectangular container grouping use cases inside the system perimeter, keeping external actors outside.\n\n**Relationships & Connectors:**\n• **Association:** Plain line connecting an Actor to a Use Case.\n• **Include (`<<include>>`):** Mandatory dependency where the base use case always invokes the included behavior (e.g. *Checkout* `--<<include>>-->` *Process Payment*).\n• **Extend (`<<extend>>`):** Optional or conditional extension point (e.g. *Generate Invoice* `<--<<extend>>--* *Request Home Delivery*).\n• **Generalization:** Inheritance hierarchy between Actors (e.g. *Supervisor* inherits from *Employee*) or specialized Use Cases.\n\n**Tip:** Double-click any element on the canvas to edit its name, alias, and descriptive notes.'
+          : '### 👤 Diagrama de Casos de Uso (`use_case`)\n\nModela los requerimientos funcionales y las fronteras de tu sistema desde la perspectiva de los usuarios externos.\n\n**Elementos en el Toolbox:**\n• **Actor (Figura Humana):** Usuario humano, rol externo, sistema secundario o reloj de tiempo que interactúa con el software.\n• **Caso de Uso (Óvalo):** Unidad funcional atómica que produce un resultado observable de valor.\n• **Límites del Sistema (*System Boundary*):** Marco rectangular delimitador que agrupa los casos de uso dentro del alcance del software y deja a los actores en el exterior.\n\n**Conectores y Relaciones:**\n• **Asociación Simple:** Línea continua que vincula al Actor con el Caso de Uso en el que participa.\n• **Inclusión (`<<include>>`):** Relación obligatoria donde el caso base siempre ejecuta el caso incluido (ej: *Realizar Pedido* `--<<include>>-->` *Validar Inventario*).\n• **Extensión (`<<extend>>`):** Relación condicional donde el comportamiento se inserta sólo si se cumple una regla específica (ej: *Pagar Compra* `<--<<extend>>--* *Aplicar Cupón de Descuento*).\n• **Generalización:** Herencia entre actores (ej: *Administrador* especializa a *Usuario*) o entre casos de uso.\n\n**Consejo:** Haz doble clic en cualquier nodo para modificar su nombre, descripción y notas.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
+              { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
+              { label: '📊 All Diagram Types', query: 'diagram types' },
+            ]
+          : [
+              { label: '⏱️ Diagramas de Secuencia', query: 'diagrama de secuencia' },
+              { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+              { label: '📊 Ver todos los tipos', query: 'tipos de diagramas' },
+            ],
+      );
+      return;
+    }
+
+    // 13. Diagrama de Secuencia (Sequence)
+    if (
+      text.includes('secuencia') ||
+      text.includes('sequence') ||
+      text.includes('lifeline') ||
+      text.includes('linea de vida') ||
+      text.includes('línea de vida') ||
+      text.includes('mensaje sincron') ||
+      text.includes('mensaje asincron') ||
+      text.includes('retorno') ||
+      text.includes('reply') ||
+      text.includes('activacion') ||
+      text.includes('activación')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### ⏱️ Sequence Diagrams (`sequence`)\n\nVisualizes dynamic temporal interaction and message passing between objects over time.\n\n**Key Elements:**\n• **Lifeline (Participant):** Header box containing the participant name/role with a vertical dashed line extending downwards representing the progression of time.\n• **Execution Specification (Activation Bar):** Slim vertical rectangle along the lifeline showing when an object has active execution control.\n• **Synchronous Message (Call):** Solid line with filled arrow (`->`). The sender blocks waiting for completion.\n• **Asynchronous Message (Signal):** Solid line with open stick arrow (`->>`). The sender continues without blocking.\n• **Return / Reply Message:** Dashed line with open arrow (`-->`). Returns computed values or control back to the caller.\n• **Creation / Destruction:** Arrows pointing directly into participant boxes to create instances, or termination markers (`X`).\n\n**Usage:**\nDrag lifelines across the horizontal axis; messages are ordered vertically in chronological order from top to bottom.'
+          : '### ⏱️ Diagrama de Secuencia (`sequence`)\n\nModela la interacción dinámica y el intercambio temporal de mensajes entre objetos ordenados cronológicamente.\n\n**Elementos Clave:**\n• **Línea de Vida (*Lifeline*):** Caja superior con el nombre del objeto/rol y una línea vertical punteada que desciende representando el flujo del tiempo.\n• **Barra de Activación (*Execution Bar*):** Rectángulo vertical sobre la línea de vida que indica el periodo en el que el objeto está ejecutando una acción.\n• **Mensaje Síncrono (*Call*):** Flecha sólida con punta rellena (`->`). El emisor se detiene esperando la finalización de la operación.\n• **Mensaje Asíncrono (*Signal*):** Flecha sólida con punta abierta (`->>`). El emisor continúa inmediatamente sin bloquearse.\n• **Mensaje de Retorno (*Reply*):** Línea discontinua con punta abierta (`-->`). Devuelve el resultado o confirma el fin de la operación.\n• **Creación / Destrucción:** Flechas que apuntan a una nueva línea de vida para instanciarla, o aspas (`X`) para representar su finalización.\n\n**Uso:**\nLos objetos se disponen horizontalmente en la parte superior y el tiempo transcurre verticalmente de arriba hacia abajo.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '💬 Communication Diagrams', query: 'communication diagram' },
+              { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
+              { label: '📊 All Diagram Types', query: 'diagram types' },
+            ]
+          : [
+              { label: '💬 Diagramas de Comunicación', query: 'diagrama de comunicacion' },
+              { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+              { label: '📊 Ver todos los tipos', query: 'tipos de diagramas' },
+            ],
+      );
+      return;
+    }
+
+    // 14. Diagrama de Comunicación (Communication)
+    if (
+      text.includes('comunicacion') ||
+      text.includes('comunicación') ||
+      text.includes('communication') ||
+      text.includes('mensaje numerado') ||
+      text.includes('secuencia numerica') ||
+      text.includes('secuencia numérica') ||
+      text.includes('orden numerico') ||
+      text.includes('orden numérico')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 💬 Communication Diagrams (`communication`)\n\nFocuses on structural relationships and object collaboration network topology rather than timeline axes.\n\n**Core Concepts:**\n• **Collaborating Nodes:** Objects placed freely on the canvas, optionally annotated with stereotyping icons (`<<boundary>>`, `<<control>>`, `<<entity>>`).\n• **Communication Links:** Solid paths between nodes that represent active communication channels.\n• **Numbered Messages:** Messages placed along connection links with hierarchical sequence numbering:\n  - `1: submitForm(data)`\n  - `1.1: validateInput()`\n  - `1.2: persistRecord()`\n  - `2: notifySuccess()`\n• **Direction Arrows:** Directional arrows next to message labels specify which participant is sending the command.'
+          : '### 💬 Diagrama de Comunicación (`communication`)\n\nEnfatiza la red estructural de relaciones y colaboración entre objetos, organizando el espacio libremente en vez de usar un eje temporal rígido.\n\n**Conceptos Fundamentales:**\n• **Nodos Participantes:** Objetos distribuidos en el lienzo, soportando estereotipos normativos (`<<boundary>>`, `<<control>>`, `<<entity>>`).\n• **Enlaces de Comunicación:** Rutas continuas entre los objetos por donde circulan las llamadas.\n• **Mensajes Numerados Secuencialmente:** Cada mensaje lleva un prefijo numérico jerárquico que indica el orden exacto de ejecución:\n  - `1: registrarPedido(datos)`\n  - `1.1: verificarStock()`\n  - `1.2: debitarSaldo()`\n  - `2: enviarConfirmacion()`\n• **Flechas de Dirección:** Pequeñas flechas junto al texto del mensaje que indican el sentido en el que viaja la llamada entre los participantes.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
+              { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
+              { label: '🎨 UML Classes & Relations', query: 'how to model classes' },
+            ]
+          : [
+              { label: '⏱️ Diagramas de Secuencia', query: 'diagrama de secuencia' },
+              { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+              { label: '🎨 Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
+            ],
+      );
+      return;
+    }
+
+    // 15. Diagrama de Análisis de Clases / Análisis Robusto (Jacobson Robustness Analysis)
+    if (
+      text.includes('analisis de clase') ||
+      text.includes('análisis de clase') ||
+      text.includes('class analysis') ||
+      text.includes('robustez') ||
+      text.includes('robustness') ||
+      text.includes('boundary') ||
+      text.includes('control') ||
+      text.includes('entity') ||
+      text.includes('jacobson')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 🔬 Robustness Analysis Diagram (`class_analysis`)\n\nBridging the gap between Use Cases (requirements) and Detailed Class Design using Ivar Jacobson\'s Robustness Analysis.\n\n**The Three Canonical Stereotypes:**\n• **1. Boundary (Frontera):** Mediates interaction between external actors and system internals (screens, API endpoints, web forms, reports). Drawn as a circle with a vertical tangent line on the left.\n• **2. Control:** Coordinates business logic, orchestrates transactional workflows, and governs rules. Drawn as a circle topped by an arrow.\n• **3. Entity:** Encapsulates persistent business domain data (e.g. `Client`, `Order`, `Invoice`). Drawn as a circle with a flat horizontal base.\n\n**Golden Rules of Robustness:**\n• **Actors** only interact with **Boundary** classes.\n• **Boundary** classes only talk to **Control** classes (or Actors).\n• **Control** classes can talk to **Boundary**, other **Control**, and **Entity** classes.\n• **Entity** classes only interact with **Control** classes (two Entities should not invoke each other directly in analysis).'
+          : '### 🔬 Diagrama de Análisis de Clases / Robustez (`class_analysis`)\n\nConecta el puente metodológico entre los Casos de Uso (requerimientos) y el Diseño Detallado de Clases aplicando el Análisis de Robustez de Ivar Jacobson.\n\n**Los Tres Estereotipos Canónicos:**\n• **1. Boundary (Frontera / Interfaz):** Media entre los actores externos y el interior del sistema (pantallas, vistas, controladores API, diálogos). Representado por un círculo con una barra vertical tangente a la izquierda.\n• **2. Control (Controlador / Lógica de Negocio):** Orquesta la lógica del caso de uso, coordina transacciones y valida reglas del negocio. Representado por un círculo con una flecha directriz superior.\n• **3. Entity (Entidad / Dominio Persistente):** Almacena y gestiona los datos de dominio duraderos (`Cliente`, `Factura`, `Producto`). Representado por un círculo sobre una base horizontal.\n\n**Reglas de Oro del Análisis de Robustez:**\n• Los **Actores** solo pueden conectarse con clases **Boundary**.\n• Las clases **Boundary** solo se comunican con clases **Control** (o con Actores).\n• Las clases **Control** pueden comunicarse con **Boundary**, otros **Control** y clases **Entity**.\n• Las clases **Entity** solo interactúan con clases **Control** (dos entidades no deben comunicarse directamente en la fase de análisis).\n\n**En UML/ER Studio:** En este diagrama los estereotipos se posicionan centralmente en la cabecera del nodo y son completamente exportables a Enterprise Architect XMI.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '👤 Use Case Diagrams', query: 'use case diagram' },
+              { label: '🎨 Detailed Class Diagrams', query: 'how to model classes' },
+              { label: '⚡ Generate Spring Boot code', query: 'how to generate code' },
+            ]
+          : [
+              { label: '👤 Casos de Uso', query: 'diagrama de casos de uso' },
+              { label: '🎨 Diagrama de Clases Detallado', query: 'como modelar clases y relaciones' },
+              { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
+            ],
+      );
+      return;
+    }
+
+    // 16. Diagramas Arquitectónicos (Paquetes, Componentes y Despliegue)
+    if (
+      text.includes('paquete') ||
+      text.includes('package') ||
+      text.includes('componente') ||
+      text.includes('component') ||
+      text.includes('despliegue') ||
+      text.includes('deployment') ||
+      text.includes('nodo') ||
+      text.includes('artefacto')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 📦 Architectural Diagrams (Packages, Components & Deployment)\n\nModel high-level system topology, modular subsystems, and physical infrastructure:\n\n• **Package Diagrams (`package`):** Group classes and models into folder-like modules with dependency arrows (`<<import>>`, `<<access>>`) to organize large-scale architectures.\n• **Component Diagrams (`component`):** Represent deployable executable software blocks with provided interfaces (ball/lollipop) and required interfaces (socket) forming assembly connectors.\n• **Deployment Diagrams (`deployment`):** Depict hardware nodes (servers, devices, cloud clusters) and the software artifacts running inside them.'
+          : '### 📦 Diagramas Arquitectónicos (Paquetes, Componentes y Despliegue)\n\nModela la topología de alto nivel, la modularidad de subsistemas y la infraestructura física:\n\n• **Diagrama de Paquetes (`package`):** Agrupa clases, modelos y subsistemas en carpetas modulares con flechas de dependencia (`<<import>>`, `<<access>>`), organizando arquitecturas complejas.\n• **Diagrama de Componentes (`component`):** Representa módulos de software ejecutables con interfaces provistas (lollipop) e interfaces requeridas (socket) formando conectores de ensamble (*assembly*).\n• **Diagrama de Despliegue (`deployment`):** Mapea los nodos físicos y de red (servidores de aplicación, clústeres cloud, contenedores Docker, bases de datos) y los artefactos que se ejecutan en ellos.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '📊 All Diagram Types', query: 'diagram types' },
+              { label: '⚡ Generate Fullstack Code', query: 'how to generate code' },
+            ]
+          : [
+              { label: '📊 Ver todos los tipos', query: 'tipos de diagramas' },
+              { label: '⚡ Generar código Fullstack', query: 'como generar codigo' },
+            ],
+      );
+      return;
+    }
+
+    // 17. Respuesta por Defecto (Fallback Inteligente con Recomendaciones)
     this.addBotMessage(
       isEn
         ? `I understand your query regarding: "${rawInput}".\n\nHere are the primary topics from the **Interactive Manual** to assist you right away. Select any quick option below:`
@@ -1081,17 +1293,21 @@ flutter run`,
       isEn
         ? [
             { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
+            { label: '📊 Supported Diagram Types', query: 'diagram types' },
+            { label: '👤 Use Case Diagrams', query: 'use case diagram' },
+            { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
+            { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
             { label: '🐳 Docker & Gradle Run Commands', query: 'run commands' },
             { label: '⚡ Generate Spring Boot & Flutter', query: 'how to generate code' },
-            { label: '📱 Mobile App & Qwen2.5 Local AI', query: 'mobile ai and qwen' },
-            { label: '🎨 Create UML Classes & Relations', query: 'how to model classes' },
           ]
         : [
             { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
+            { label: '📊 Tipos de Diagramas Soportados', query: 'tipos de diagramas' },
+            { label: '👤 Diagramas de Casos de Uso', query: 'diagrama de casos de uso' },
+            { label: '⏱️ Diagramas de Secuencia', query: 'diagrama de secuencia' },
+            { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
             { label: '🐳 Comandos para Correr Docker y Gradle', query: 'comandos de ejecucion' },
             { label: '⚡ Generar Código Spring Boot y Flutter', query: 'como generar codigo' },
-            { label: '📱 App Móvil e IA Local Qwen2.5', query: 'ia en flutter y qwen' },
-            { label: '🎨 Crear Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
           ],
     );
   }

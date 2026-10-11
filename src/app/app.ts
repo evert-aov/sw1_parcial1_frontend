@@ -10,5 +10,5 @@ import { ConfirmModalComponent } from './core/components/confirm-modal/confirm-m
   templateUrl: './app.html',
 })
 export class App {
-  protected readonly title = signal('frontend');
+  protected readonly title = signal('UML/ER Studio');
 }
