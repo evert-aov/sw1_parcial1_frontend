@@ -3079,7 +3079,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     let initialStereotype: UmlStereotype | string | null = (stereotype as UmlStereotype) || null;
-    if (initialStereotype && (initialStereotype as string).toLowerCase() === 'class') {
+    if (currentType === DiagramType.CLASS) {
+      initialStereotype = null;
+    } else if (initialStereotype && (initialStereotype as string).toLowerCase() === 'class') {
       initialStereotype = null;
     }
 
@@ -5292,7 +5294,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       else if (nt === 'entity') savedNode.stereotype = UmlStereotype.ENTITY;
       else savedNode.stereotype = null;
     } else if (dt === 'class' || dt === 'logical') {
-      if (savedNode.stereotype && (savedNode.stereotype as string).toLowerCase() === 'class') {
+      if (nt === 'class') {
+        savedNode.stereotype = null;
+      } else if (savedNode.stereotype && (savedNode.stereotype as string).toLowerCase() === 'class') {
         savedNode.stereotype = null;
       }
     } else if (dt === 'class_analysis') {

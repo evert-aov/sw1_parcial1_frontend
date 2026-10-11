@@ -35,7 +35,15 @@ export class EditNodeModalComponent {
     const n = this.editingNode();
     if (!n) return false;
     const nt = (n.nodeType || '').toLowerCase().trim();
-    return nt !== 'actor' && nt !== 'use_case' && nt !== 'lifeline';
+    if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline') return false;
+
+    // En diagramas de clase estándar (class / logical), no se permite estereotipo a las clases
+    const dt = (this.activeDiagramType() || '').toLowerCase().trim();
+    if ((dt === 'class' || dt === 'logical') && nt === 'class') {
+      return false;
+    }
+
+    return true;
   }
 
   isCommunicationDiagram(): boolean {
@@ -75,6 +83,11 @@ export class EditNodeModalComponent {
     if (!curr || !this.canHaveStereotype() || this.isCommunicationDiagram()) return;
     let clean = val && val.trim() ? val.trim() : null;
     if (clean && clean.toLowerCase() === 'class') {
+      clean = null;
+    }
+    const dt = (this.activeDiagramType() || '').toLowerCase().trim();
+    const nt = (curr.nodeType || '').toLowerCase().trim();
+    if ((dt === 'class' || dt === 'logical') && nt === 'class') {
       clean = null;
     }
     if (this.isClassAnalysisDiagram()) {
@@ -122,7 +135,9 @@ export class EditNodeModalComponent {
             else if (nt === 'entity') cloned.stereotype = 'entity';
             else cloned.stereotype = null;
           } else if (dt === 'class' || dt === 'logical') {
-            if (cloned.stereotype && cloned.stereotype.toLowerCase() === 'class') {
+            if (nt === 'class') {
+              cloned.stereotype = null;
+            } else if (cloned.stereotype && cloned.stereotype.toLowerCase() === 'class') {
               cloned.stereotype = null;
             }
           } else if (dt === 'class_analysis') {
