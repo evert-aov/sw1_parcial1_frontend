@@ -1,12 +1,14 @@
-const { app, BrowserWindow, Menu, dialog, utilityProcess } = require('electron');
+const { app, BrowserWindow, Menu, utilityProcess } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { fork } = require('child_process');
 const http = require('http');
 
-let mainWindow;
+let mainWindow = null;
 let backendProcess = null;
 let logFileStream = null;
+let backendExitedEarly = false;
+let backendExitError = null;
 
 function logBackend(msg) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
@@ -18,7 +20,24 @@ function logBackend(msg) {
   }
 }
 
-function waitForBackend(primaryUrl, timeoutMs = 45000) {
+function checkHttpReady(url, timeoutMs = 1200) {
+  return new Promise((resolve) => {
+    const req = http.get(url, (res) => {
+      if (res.statusCode >= 200 && res.statusCode < 500) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(timeoutMs, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+function waitForBackend(primaryUrl, timeoutMs = 20000) {
   const urls = [
     primaryUrl.replace('localhost', '127.0.0.1'),
     primaryUrl,
@@ -27,44 +46,47 @@ function waitForBackend(primaryUrl, timeoutMs = 45000) {
     const start = Date.now();
     let urlIndex = 0;
 
-    const check = () => {
+    const check = async () => {
+      if (backendExitedEarly) {
+        logBackend('[Electron] El proceso backend finalizó antes de responder.');
+        return resolve(false);
+      }
+
       const currentUrl = urls[urlIndex % urls.length];
       urlIndex++;
 
-      const req = http.get(currentUrl, (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 500) {
-          logBackend(`[Electron] Backend listo y respondiendo en: ${currentUrl}`);
-          resolve(true);
-        } else {
-          setTimeout(check, 250);
-        }
-      });
+      const isUp = await checkHttpReady(currentUrl, 1000);
+      if (isUp) {
+        logBackend(`[Electron] Backend listo y respondiendo en: ${currentUrl}`);
+        return resolve(true);
+      }
 
-      req.on('error', () => {
-        if (Date.now() - start > timeoutMs) {
-          resolve(false);
-        } else {
-          setTimeout(check, 250);
-        }
-      });
+      if (Date.now() - start > timeoutMs) {
+        return resolve(false);
+      }
 
-      req.setTimeout(1500, () => {
-        req.destroy();
-      });
+      setTimeout(check, 300);
     };
 
     check();
   });
 }
 
-function startBackendServer() {
-  const isDev = process.argv.includes('--dev') || process.env.ELECTRON_DEV === 'true';
-
-  // Si se pasa --external-backend no levantamos el proceso embebido
+async function startBackendServer() {
   if (process.argv.includes('--external-backend')) {
     logBackend('[Electron] Usando backend externo ya iniciado en el sistema.');
     return;
   }
+
+  // Si ya hay un backend respondiendo en 28475, reutilizarlo directamente
+  const alreadyRunning = await checkHttpReady('http://127.0.0.1:28475/api', 800);
+  if (alreadyRunning) {
+    logBackend('[Electron] Detectada instancia activa de backend en el puerto 28475. Conectando directamente...');
+    return;
+  }
+
+  backendExitedEarly = false;
+  backendExitError = null;
 
   let backendEntry;
   let backendCwd;
@@ -106,8 +128,6 @@ function startBackendServer() {
   };
 
   // 1. Intentar con utilityProcess.fork (API oficial de Electron para subprocesos)
-  // NOTA: utilityProcess.fork NO debe tener ELECTRON_RUN_AS_NODE en su env,
-  // ya que Chromium pasa flags internas (--type=utility) que Node rechazaría como opciones no válidas.
   if (utilityProcess && typeof utilityProcess.fork === 'function') {
     try {
       logBackend('[Electron] Lanzando backend mediante utilityProcess.fork...');
@@ -126,12 +146,19 @@ function startBackendServer() {
 
       if (backendProcess.stderr) {
         backendProcess.stderr.on('data', (data) => {
-          logBackend(`[Backend ERR] ${data.toString().trimEnd()}`);
+          const str = data.toString().trimEnd();
+          logBackend(`[Backend ERR] ${str}`);
+          if (str.includes('EADDRINUSE')) {
+            backendExitError = 'El puerto 28475 ya está en uso por otro proceso (por ejemplo, una prueba previa de Wine o terminal).';
+          }
         });
       }
 
       backendProcess.on('exit', (code) => {
         logBackend(`[Electron] Subproceso utilityProcess backend finalizado con código: ${code}`);
+        if (code !== 0) {
+          backendExitedEarly = true;
+        }
       });
     } catch (err) {
       logBackend(`[Electron] Falló utilityProcess.fork (${err.message}), intentando con child_process.fork...`);
@@ -160,21 +187,198 @@ function startBackendServer() {
 
       if (backendProcess.stderr) {
         backendProcess.stderr.on('data', (data) => {
-          logBackend(`[Backend ERR] ${data.toString().trimEnd()}`);
+          const str = data.toString().trimEnd();
+          logBackend(`[Backend ERR] ${str}`);
+          if (str.includes('EADDRINUSE')) {
+            backendExitError = 'El puerto 28475 ya está en uso por otro proceso (por ejemplo, una prueba previa de Wine o terminal).';
+          }
         });
       }
 
       backendProcess.on('error', (err) => {
         logBackend(`[Electron] Error en proceso backend: ${err.message}`);
+        backendExitedEarly = true;
       });
 
       backendProcess.on('exit', (code, signal) => {
         logBackend(`[Electron] Backend finalizado con código ${code} y señal ${signal}`);
+        if (code !== 0) {
+          backendExitedEarly = true;
+        }
       });
     } catch (err) {
       logBackend(`[Electron] No se pudo lanzar el subproceso backend: ${err.message}`);
+      backendExitedEarly = true;
     }
   }
+}
+
+function getSplashHtml(statusText = 'Iniciando servicios locales...') {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>UML/ER Studio</title>
+      <style>
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #0A0D1A;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          color: #F8FAFC;
+          overflow: hidden;
+          user-select: none;
+        }
+        .container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 32px;
+          animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .logo-box {
+          width: 80px;
+          height: 80px;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .logo-box img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: drop-shadow(0 8px 24px rgba(139, 92, 246, 0.35));
+        }
+        .title {
+          font-size: 22px;
+          font-weight: 700;
+          letter-spacing: -0.5px;
+          margin-bottom: 4px;
+          color: #FFFFFF;
+        }
+        .subtitle {
+          font-size: 12px;
+          color: #64748B;
+          margin-bottom: 26px;
+        }
+        .spinner {
+          width: 26px;
+          height: 26px;
+          border: 3px solid rgba(139, 92, 246, 0.15);
+          border-top-color: #8B5CF6;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          margin-bottom: 12px;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        .status {
+          font-size: 12.5px;
+          color: #94A3B8;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="logo-box">
+          <img src="logo.png" alt="UML/ER Studio Logo" onerror="this.style.display='none'">
+        </div>
+        <div class="title">UML/ER Studio</div>
+        <div class="subtitle">Enterprise Architect Suite & Spring Boot Generator</div>
+        <div class="spinner"></div>
+        <div class="status">${statusText}</div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+function getErrorHtml(errorMessage, logPath) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>UML/ER Studio - Aviso</title>
+      <style>
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #0A0D1A;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          color: #F8FAFC;
+          padding: 24px;
+          user-select: none;
+        }
+        .card {
+          background: #0F142A;
+          border: 1px solid rgba(239, 68, 68, 0.35);
+          border-radius: 20px;
+          padding: 32px;
+          max-width: 500px;
+          text-align: center;
+          box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+        }
+        .icon {
+          font-size: 38px;
+          margin-bottom: 14px;
+        }
+        h2 { margin: 0 0 10px; font-size: 18px; color: #F87171; font-weight: 600; }
+        p { margin: 0 0 16px; color: #94A3B8; font-size: 13px; line-height: 1.5; }
+        .log-box {
+          background: #060914;
+          border: 1px solid #1E293B;
+          border-radius: 10px;
+          padding: 12px 14px;
+          color: #CBD5E1;
+          font-family: monospace;
+          font-size: 11.5px;
+          word-break: break-all;
+          margin-bottom: 22px;
+          text-align: left;
+        }
+        .btn {
+          background: #3B82F6;
+          color: white;
+          border: none;
+          padding: 10px 24px;
+          border-radius: 10px;
+          font-weight: 600;
+          font-size: 13px;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .btn:hover { background: #2563EB; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="icon">⚠️</div>
+        <h2>No se pudo conectar con el servicio local</h2>
+        <p>${errorMessage}</p>
+        <p style="font-size: 12px; color: #64748B;">Puedes revisar los detalles técnicos en el log:</p>
+        <div class="log-box">${logPath}</div>
+        <button class="btn" onclick="location.reload()">Reintentar Conexión</button>
+      </div>
+    </body>
+    </html>
+  `;
 }
 
 function createWindow() {
@@ -195,18 +399,23 @@ function createWindow() {
     title: 'UML/ER Studio',
     icon: windowIcon,
     autoHideMenuBar: true,
+    show: false, // Se muestra de inmediato al estar listo
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
-      webSecurity: false, // Permite peticiones HTTP/WS a localhost/backend desde el protocolo file://
+      webSecurity: false, // Permite peticiones HTTP/WS a localhost/backend desde file://
     },
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
   });
 
   // Quitar el menú por defecto del navegador
   Menu.setApplicationMenu(null);
 
-  // Permitir abrir DevTools con F12 o Ctrl+Shift+I en cualquier entorno
+  // Permitir abrir DevTools con F12 o Ctrl+Shift+I
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
       mainWindow.webContents.toggleDevTools();
@@ -220,102 +429,48 @@ function createWindow() {
     const devUrl = 'http://localhost:4200';
     let isConnected = false;
 
-    const waitingHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>UML/ER Studio - Conectando...</title>
-        <style>
-          * { box-sizing: border-box; }
-          body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #0b0f19 0%, #1e293b 100%);
-            color: #f8fafc;
-            text-align: center;
-            padding: 24px;
-          }
-          .card {
-            background: rgba(30, 41, 59, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            padding: 36px 32px;
-            max-width: 520px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-          }
-          .spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid rgba(59, 130, 246, 0.2);
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 0.9s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
-            margin-bottom: 20px;
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-          h2 { margin: 0 0 10px; font-size: 20px; font-weight: 600; color: #ffffff; }
-          p { margin: 0 0 18px; color: #94a3b8; font-size: 14px; line-height: 1.5; }
-          .cmd-box {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 10px 18px;
-            color: #38bdf8;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 13px;
-            display: inline-block;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="spinner"></div>
-          <h2>Esperando servidor Angular...</h2>
-          <p>Conectando con <code>http://localhost:4200</code>.<br>La aplicación cargará automáticamente en cuanto el servidor esté listo.</p>
-          <p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">Si aún no has iniciado el servidor web, ejecuta en otra terminal:</p>
-          <div class="cmd-box">npm start</div>
-        </div>
-      </body>
-      </html>
-    `;
-
     const tryLoad = () => {
       if (isConnected) return;
       mainWindow.loadURL(devUrl).then(() => {
         isConnected = true;
-      }).catch(() => {
-        // En caso de fallo inicial de conexión
-      });
+      }).catch(() => {});
     };
 
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
       if (validatedURL.startsWith(devUrl)) {
         isConnected = false;
-        mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(waitingHtml));
+        mainWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(getSplashHtml('Esperando servidor de desarrollo Angular (http://localhost:4200)...')));
         setTimeout(() => {
           if (mainWindow && !mainWindow.isDestroyed() && !isConnected) {
             tryLoad();
           }
-        }, 1500);
+        }, 1200);
       }
     });
 
     tryLoad();
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, 'dist', 'frontend', 'browser', 'index.html'));
+    // 1. Mostrar de inmediato la pantalla de carga elegante (tiempo de respuesta < 200ms)
+    const splashUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(getSplashHtml('Iniciando base de datos y servicios locales...'));
+    mainWindow.loadURL(splashUrl);
+
+    // 2. Esperar a que el backend embebido responda en el puerto 28475
+    waitForBackend('http://localhost:28475/api', 20000).then((isReady) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+
+      if (isReady) {
+        mainWindow.loadFile(path.join(__dirname, 'dist', 'frontend', 'browser', 'index.html'));
+      } else {
+        const userDataPath = app.getPath('userData');
+        const logFilePath = path.join(userDataPath, 'backend.log');
+        const errorMsg = backendExitError
+          ? backendExitError
+          : 'El servidor local no respondió en el puerto 28475 tras 20s. Si ejecutaste una prueba anterior en Wine o terminal, asegúrate de que no haya quedado abierta en segundo plano.';
+        const errUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(getErrorHtml(errorMsg, logFilePath));
+        mainWindow.loadURL(errUrl);
+      }
+    });
   }
 
   mainWindow.on('closed', () => {
@@ -323,38 +478,7 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(async () => {
-  startBackendServer();
-
-  // Esperar a que el backend responda en http://localhost:28475/api
-  const isReady = await waitForBackend('http://localhost:28475/api', 45000);
-
-  if (!isReady && !process.argv.includes('--external-backend')) {
-    const userDataPath = app.getPath('userData');
-    const logFilePath = path.join(userDataPath, 'backend.log');
-    logBackend(`[Electron] ADVERTENCIA: Backend no respondió en el puerto 28475 tras 45s. Registro en: ${logFilePath}`);
-    dialog.showErrorBox(
-      'Aviso del Servidor Local',
-      `El backend embebido no respondió en el puerto 28475 tras 45 segundos.\n\nPuedes revisar los detalles técnicos en el log:\n${logFilePath}`
-    );
-  }
-
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('will-quit', () => {
+function terminateBackend() {
   if (backendProcess) {
     logBackend('[Electron] Terminando proceso backend embebido...');
     try {
@@ -363,5 +487,35 @@ app.on('will-quit', () => {
       }
     } catch (_) {}
     backendProcess = null;
+  }
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  startBackendServer();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+app.on('before-quit', terminateBackend);
+app.on('will-quit', terminateBackend);
+
+process.on('SIGINT', () => {
+  terminateBackend();
+  app.quit();
+});
+
+process.on('SIGTERM', () => {
+  terminateBackend();
+  app.quit();
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
   }
 });
