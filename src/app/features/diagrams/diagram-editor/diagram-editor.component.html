@@ -91,7 +91,7 @@
     </app-diagram-sidebar>
 
     <!-- 2.2 [CONTENEDOR CENTRAL]: PESTAÑAS + PIZARRA (CANVAS) -->
-    <div class="flex-1 flex flex-col overflow-hidden relative">
+    <div class="flex-1 flex flex-col overflow-hidden relative" [class.pointer-events-none]="isAnyModalOpen()">
       <!-- Barra de Pestañas (Tabs) del Lienzo estilo SaaS / Enterprise Architect -->
       <app-diagram-tabs
         [tabs]="openTabs()"

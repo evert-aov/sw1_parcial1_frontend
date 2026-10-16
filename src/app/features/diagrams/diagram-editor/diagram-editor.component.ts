@@ -368,6 +368,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly isEditConnModalOpen = this.modalService.isEditConnModalOpen;
   readonly editingNode = this.modalService.editingNode;
   readonly editingConnection = this.modalService.editingConnection;
+  readonly isAnyModalOpen = this.modalService.isAnyModalOpen;
 
   // Modal JSON
   readonly showJsonModal = this.modalService.showJsonModal;
@@ -852,6 +853,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   handleKeyDown(event: KeyboardEvent): void {
     this.hotkeysService.handleKeyDown(event, {
       isReadOnly: () => this.isReadOnly(),
+      isModalOpen: () => this.isAnyModalOpen(),
       undo: () => this.undo(),
       redo: () => this.redo(),
       save: () => this.saveToBackend(),
@@ -3366,6 +3368,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
     this.markAsUnsaved();
     this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_class');
+    this.diagramCanvas?.redraw();
   }
 
   onSaveEditedConnection(savedConn: UmlConnection): void {

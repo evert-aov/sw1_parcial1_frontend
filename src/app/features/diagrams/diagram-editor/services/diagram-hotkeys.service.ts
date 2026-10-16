@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 
 export interface DiagramHotkeysActions {
   isReadOnly: () => boolean;
+  isModalOpen?: () => boolean;
   undo: () => void;
   redo: () => void;
   save: () => void;
@@ -29,6 +30,22 @@ export class DiagramHotkeysService {
    * y despachando las acciones correspondientes del editor.
    */
   handleKeyDown(event: KeyboardEvent, actions: DiagramHotkeysActions): void {
+    if (actions.isModalOpen?.()) {
+      if (event.key === 'Escape') {
+        if (actions.hasContextMenu()) {
+          actions.closeContextMenu();
+          event.preventDefault();
+          return;
+        }
+        actions.escape();
+        event.preventDefault();
+        return;
+      }
+      // Cuando hay un modal abierto, bloqueamos totalmente los atajos del lienzo
+      // (evita que presionar Supr / Delete o atajos eliminen o alteren nodos detrás)
+      return;
+    }
+
     const activeTag = (document.activeElement?.tagName || '').toLowerCase();
     const isInputActive = activeTag === 'input' || activeTag === 'textarea';
 

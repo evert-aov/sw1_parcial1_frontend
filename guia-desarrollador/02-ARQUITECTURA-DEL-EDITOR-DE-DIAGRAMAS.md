@@ -70,11 +70,12 @@ Originalmente, el componente principal del editor acumulaba miles de líneas de 
 
 ### 7. `DiagramModalService`
 - Gestiona el estado de apertura, cierre y payload de todos los modales auxiliares:
-  - Edición de clases y atributos.
-  - Edición de conexiones y multiplicidades.
+  - Edición de clases y entidades UML (`EditNodeModalComponent` con arquitectura en 2 pestañas: Modelo/Atributos y Estilo/Dimensiones).
+  - Edición de conexiones y multiplicidades (`EditConnectionModalComponent`).
   - Modal de microservicios Spring Boot / Flutter.
-  - Modal de historial de versiones XMI.
+  - Modal de importación/exportación JSON y XMI.
   - Perfil de usuario.
+- Expone la señal computada reactiva `isAnyModalOpen`, utilizada por el editor y el servicio de atajos para aislar completamente el lienzo (`pointer-events-none`) y desactivar atajos destructivos mientras cualquier modal está desplegado.
 
 ### 8. `DiagramNodeFactoryService`
 - Factoría de creación de nodos según el tipo de diagrama activo:

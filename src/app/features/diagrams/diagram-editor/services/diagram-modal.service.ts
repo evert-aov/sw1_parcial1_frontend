@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import {
   DiagramType,
   UmlClassNode,
@@ -30,6 +30,17 @@ export class DiagramModalService {
 
   // Menú desplegable de exportación
   readonly isExportDropdownOpen = signal<boolean>(false);
+
+  // Señal computada para saber si hay algún modal abierto
+  readonly isAnyModalOpen = computed(
+    () =>
+      this.isEditNodeModalOpen() ||
+      this.isEditConnModalOpen() ||
+      this.showJsonModal() ||
+      this.isProfileModalOpen() ||
+      this.showSpringBootModal() ||
+      this.isCreateDiagramModalOpen()
+  );
 
   openEditNodeModal(node: UmlClassNode): void {
     this.editingNode.set(JSON.parse(JSON.stringify(node)));
