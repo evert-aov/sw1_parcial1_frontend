@@ -24,6 +24,13 @@ describe('TranslationService', () => {
   beforeEach(() => {
     mockStorage = new MockStorage();
     (globalThis as any).localStorage = mockStorage;
+    try {
+      Object.defineProperty(globalThis, 'navigator', {
+        value: { language: 'es-ES' },
+        configurable: true,
+        writable: true,
+      });
+    } catch (_) {}
     service = new TranslationService();
   });
 

@@ -70,10 +70,21 @@ export class AutofocusInputDirective implements AfterViewInit {
   }
 }
 
+import { DiagramFloatingLabelComponent } from '../diagram-floating-label/diagram-floating-label.component';
+import { UML_CANVAS_NODE_COMPONENTS } from './nodes';
+
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
-  imports: [CommonModule, FFlowModule, NgIconComponent, AutofocusInputDirective, TranslatePipe, ...UML_SVG_COMPONENTS, ...UML_WEBGL_COMPONENTS],
+  imports: [
+    CommonModule,
+    FFlowModule,
+    NgIconComponent,
+    TranslatePipe,
+    ...UML_SVG_COMPONENTS,
+    ...UML_WEBGL_COMPONENTS,
+    ...UML_CANVAS_NODE_COMPONENTS,
+  ],
   host: {
     class: 'flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden',
   },
@@ -95,6 +106,9 @@ export class DiagramCanvasComponent {
   @ViewChild(FZoomDirective) fZoom?: FZoomDirective;
   @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
   @ViewChild('boardElement') boardElementRef?: ElementRef<HTMLElement>;
+
+  readonly isSequenceSlotOccupiedFn = (slot: number): boolean => this.isSequenceSlotOccupied(slot);
+  readonly getSlotTopFn = (slot: number): number => 160 + slot * 50;
 
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -1211,7 +1225,7 @@ export class DiagramCanvasComponent {
       const nameLen = (node.name || '').length;
       return Math.max(180, Math.round(nameLen * 8.5 + 50));
     }
-    if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+    if (this.isDeploymentNode(node)) {
       const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
       if (manualW && manualW > 0) {
         return Math.max(160, manualW);
@@ -1254,8 +1268,9 @@ export class DiagramCanvasComponent {
     if (node.nodeType === 'component') {
       return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
     }
-    if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || (node.nodeType === 'executionEnvironment' ? 160 : 140);
+    if (this.isDeploymentNode(node)) {
+      const isExec = node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment';
+      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || (isExec ? 160 : 140);
     }
     if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
       return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
@@ -1318,6 +1333,12 @@ export class DiagramCanvasComponent {
     } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
       minW = 50;
       minH = 50;
+    } else if (node.nodeType === 'component') {
+      minW = 140;
+      minH = 50;
+    } else if (this.isDeploymentNode(node)) {
+      minW = 160;
+      minH = 90;
     } else {
       minW = Math.max(90, this.getDynamicNodeWidth(node));
     }
@@ -1378,7 +1399,7 @@ export class DiagramCanvasComponent {
     } else if (node.nodeType === 'component') {
       minW = 140;
       minH = 50;
-    } else if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+    } else if (this.isDeploymentNode(node)) {
       minW = 160;
       minH = 90;
     } else {
@@ -2129,6 +2150,25 @@ export class DiagramCanvasComponent {
     return name;
   }
 
+  isDeploymentNode(node: UmlClassNode): boolean {
+    if (!node) return false;
+    const nt = node.nodeType;
+    const st = node.stereotype || '';
+    return (
+      nt === 'device' ||
+      nt === 'node' ||
+      nt === 'executionEnvironment' ||
+      st === 'device' ||
+      st === 'node' ||
+      st === 'executionEnvironment'
+    );
+  }
+
+  getDeploymentHeight(node: UmlClassNode): number {
+    const isExec = node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment';
+    return this.getNodeHeight(node) || (isExec ? 160 : 140);
+  }
+
   getDeploymentTopPoints(node: UmlClassNode): string {
     const w = this.getNodeWidth(node);
     const d = 14;
@@ -2137,7 +2177,7 @@ export class DiagramCanvasComponent {
 
   getDeploymentRightPoints(node: UmlClassNode): string {
     const w = this.getNodeWidth(node);
-    const h = this.getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140);
+    const h = this.getDeploymentHeight(node);
     const d = 14;
     return `${w - d},${d} ${w},0 ${w},${h - d} ${w - d},${h}`;
   }
@@ -2147,8 +2187,7 @@ export class DiagramCanvasComponent {
   }
 
   getDeploymentFrontHeight(node: UmlClassNode): number {
-    const h = this.getNodeHeight(node) || (node.nodeType === 'executionEnvironment' ? 160 : 140);
-    return Math.max(60, h - 14);
+    return Math.max(60, this.getDeploymentHeight(node) - 14);
   }
 
   getDeploymentColors(node: UmlClassNode): { front: string; top: string; right: string; border: string } {

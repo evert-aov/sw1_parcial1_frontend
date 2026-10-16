@@ -1,0 +1,118 @@
+<!-- ACTOR UML (FIGURA HUMANOIDE + ETIQUETA) -->
+<div
+  (click)="onContainerClick($event)"
+  [ngClass]="{
+    'ring-2 ring-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.35)]': isSelected,
+    'hover:bg-slate-100/40': !isSelected
+  }"
+  class="w-full h-full flex items-center justify-center p-1 relative select-none cursor-pointer rounded-xl">
+  
+  <button
+    (click)="onDelete($event)"
+    [disabled]="isLocked"
+    [title]="'editor.canvas.nodes.deleteActor' | translate"
+    class="absolute -top-1 -right-1 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
+    <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+  </button>
+
+  <!-- Stick figure del Actor UML con cabeza completa coloreada -->
+  <div class="w-full h-full flex items-center justify-center p-0 overflow-visible text-[#241C18]">
+    <app-actor-svg
+      class="w-full h-full"
+      [fillColor]="node.color || '#FEF2DD'"
+      strokeColor="currentColor"
+      className="w-full h-full max-w-full max-h-full text-[#241C18]"
+    />
+  </div>
+
+  <!-- CAPA TOTAL DE CONEXIÓN EN MODO RELACIÓN -->
+  <div
+    fConnector
+    fConnectorType="source-target"
+    [fConnectorId]="node.id"
+    [fConnectorSelfConnectable]="true"
+    [fConnectorDisabled]="activeDiagramType === 'sequence' || selectedRelationType === null || isLocked"
+    [ngClass]="{
+      'pointer-events-auto cursor-crosshair': activeDiagramType !== 'sequence' && selectedRelationType !== null && !isLocked,
+      'pointer-events-none': activeDiagramType === 'sequence' || selectedRelationType === null || isLocked
+    }"
+    class="absolute inset-0 z-40 bg-transparent"
+    (click)="onLayerClick($event)">
+  </div>
+
+  <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA DEL ACTOR (UML 2.5+) -->
+  <app-diagram-floating-label
+    [node]="node"
+    [renamingNodeId]="renamingNodeId"
+    [isDraggingLabel]="isDraggingLabel"
+    [draggingLabelNodeId]="draggingLabelNodeId"
+    [isReadOnly]="isReadOnly"
+    [isLocked]="isLocked"
+    [fallbackName]="activeDiagramType === 'sequence' ? '(actor)' : 'Actor'"
+    [transform]="labelTransform"
+    [hasOffset]="hasLabelOffset"
+    accentColor="blue"
+    (labelPointerDown)="labelPointerDown.emit($event)"
+    (labelDblClick)="labelDblClick.emit($event)"
+    (commitRename)="commitRename.emit($event)"
+    (cancelRename)="cancelRename.emit()"
+    (resetOffset)="resetOffset.emit($event)"
+  />
+
+  <!-- LÍNEA DISCONTINUA VERTICAL DESCENDENTE (SOLO EN SECUENCIA) -->
+  @if (activeDiagramType === 'sequence') {
+    <div
+      class="uml-lifeline-vertical-line absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center z-10 w-[2px]"
+      [style.height.px]="lifelineLength">
+      <svg
+        class="uml-lifeline-svg overflow-visible"
+        width="2"
+        [attr.height]="lifelineLength"
+        [style.height.px]="lifelineLength"
+        style="display: block;">
+        <line
+          x1="1"
+          y1="34"
+          x2="1"
+          [attr.y2]="lifelineLength"
+          stroke="#796354"
+          stroke-width="1.5"
+          stroke-dasharray="6,4"
+          style="stroke: #796354; stroke-width: 1.5px; stroke-dasharray: 6px, 4px;"
+        />
+      </svg>
+      @for (act of activations; track act.id) {
+        <div
+          class="absolute left-1/2 -translate-x-1/2 w-3.5 border shadow-2xs pointer-events-none z-20 rounded-none"
+          [style.top.px]="act.top"
+          [style.height.px]="act.height"
+          [style.backgroundColor]="node.color || '#DDF4F5'"
+          style="border-color: #796354;"
+          [title]="'editor.canvas.nodes.focusActivation' | translate">
+        </div>
+      }
+    </div>
+
+    <!-- SLOTS DE CONEXIÓN A LO LARGO DE LA LÍNEA DE VIDA (ZONA AMPLIA DE DESTINO) -->
+    @for (slot of sequenceSlots; track slot) {
+      <div
+        fConnector
+        fConnectorType="source-target"
+        [fConnectorId]="node.id + '_slot_' + slot"
+        [fConnectorSelfConnectable]="true"
+        [fConnectorDisabled]="selectedRelationType === null || isLocked || isSequenceSlotOccupiedFn(slot)"
+        (click)="onSlotClick($event)"
+        [title]="isSequenceSlotOccupiedFn(slot) ? 'Fila ocupada por otro mensaje' : ('Punto de secuencia ' + (slot + 1))"
+        [ngClass]="{
+          'opacity-100 scale-100 pointer-events-auto': selectedRelationType !== null && !isLocked && !isSequenceSlotOccupiedFn(slot),
+          'opacity-0 scale-75 pointer-events-none': selectedRelationType === null || isSequenceSlotOccupiedFn(slot)
+        }"
+        [style.top.px]="getSlotTopFn(slot) - 18"
+        class="uml-sequence-slot-zone group/slot absolute left-1/2 -translate-x-1/2 w-20 h-[50px] flex items-center justify-center z-30 cursor-crosshair">
+        <div
+          class="uml-sequence-slot w-3.5 h-3.5 rounded-full bg-cyan-500 border-2 border-white shadow-xs transition-transform group-hover/slot:scale-125 group-hover/slot:bg-cyan-600 pointer-events-none">
+        </div>
+      </div>
+    }
+  }
+</div>

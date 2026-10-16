@@ -1,0 +1,68 @@
+<div
+  class="uml-floating-label absolute left-1/2 top-full select-none z-30 flex flex-col items-center group/label pointer-events-auto"
+  [style.transform]="transform"
+  (pointerdown)="onPointerDown($event)"
+  (dblclick)="onDblClick($event)"
+  [title]="'Arrastrar para reposicionar el texto (Doble clic para editar)'"
+>
+  @if (isRenaming) {
+    <input
+      #renameInput
+      appAutofocusInput
+      type="text"
+      [attr.data-rename-node-id]="node.id"
+      [value]="node.name"
+      (keydown.enter)="onCommit(renameInput.value)"
+      (keydown.escape)="onCancel()"
+      (blur)="onCommit(renameInput.value)"
+      (keydown)="$event.stopPropagation()"
+      (pointerdown)="$event.stopPropagation()"
+      (mousedown)="$event.stopPropagation()"
+      (click)="$event.stopPropagation()"
+      class="uml-rename-input text-center font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] bg-white border rounded px-1.5 py-0.5 outline-hidden shadow-sm min-w-20 max-w-55"
+      [ngClass]="{
+        'border-blue-500 ring-1 ring-blue-500': accentColor === 'blue',
+        'border-cyan-500 ring-1 ring-cyan-500': accentColor === 'cyan',
+        'border-teal-500 ring-1 ring-teal-500': accentColor === 'teal',
+        'border-emerald-500 ring-1 ring-emerald-500': accentColor === 'emerald',
+        'border-amber-500 ring-1 ring-amber-500': accentColor === 'amber',
+      }"
+    />
+  } @else {
+    <div
+      class="flex items-center gap-1 px-2 py-0.5 rounded-md transition-all border border-slate-200/80 bg-white/95 shadow-2xs"
+      [ngClass]="{
+        'cursor-grabbing ring-1': isCurrentlyDragging,
+        'ring-blue-400 bg-blue-50/95 border-blue-300':
+          isCurrentlyDragging && accentColor === 'blue',
+        'ring-cyan-400 bg-cyan-50/95 border-cyan-300':
+          isCurrentlyDragging && accentColor === 'cyan',
+        'ring-teal-400 bg-teal-50/95 border-teal-300':
+          isCurrentlyDragging && accentColor === 'teal',
+        'ring-emerald-400 bg-emerald-50/95 border-emerald-300':
+          isCurrentlyDragging && accentColor === 'emerald',
+        'ring-amber-400 bg-amber-50/95 border-amber-300':
+          isCurrentlyDragging && accentColor === 'amber',
+        'cursor-grab hover:bg-slate-50 hover:border-slate-300': !isCurrentlyDragging,
+      }"
+    >
+      <span
+        class="font-semibold text-[11.5px] font-sans tracking-tight text-[#241C18] whitespace-nowrap select-none max-w-60 truncate"
+        [title]="node.name"
+      >
+        {{ node.name || fallbackName }}
+      </span>
+      @if (hasOffset && !isReadOnly && !isLocked) {
+        <button
+          type="button"
+          (click)="onReset($event)"
+          (pointerdown)="$event.stopPropagation()"
+          [title]="'editor.canvas.nodes.resetLabelPosition' | translate"
+          class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer"
+        >
+          ✕
+        </button>
+      }
+    </div>
+  }
+</div>

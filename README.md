@@ -142,8 +142,8 @@ Edita el archivo [`src/environments/environment.ts`](file:///mnt/datos/uagrm/8vo
 export const environment = {
   production: false,
   // Configura aquí el host/puerto del backend para desarrollo
-  apiUrl: 'http://localhost:3000/api',
-  socketUrl: 'http://localhost:3000/collaboration',
+  apiUrl: 'http://localhost:4000/api',
+  socketUrl: 'http://localhost:4000/collaboration',
 };
 ```
 
@@ -200,14 +200,50 @@ frontend/
 │                   ├── components/
 │                   │   ├── ai-assistant-panel/
 │                   │   ├── diagram-appbar/
-│                   │   ├── diagram-toolbox/
+│                   │   ├── diagram-canvas/
+│                   │   │   ├── nodes/        # Nodos especializados por tipo UML (Bajo Acoplamiento)
+│                   │   │   │   ├── uml-actor-node/
+│                   │   │   │   ├── uml-class-node/
+│                   │   │   │   ├── uml-component-node/
+│                   │   │   │   ├── uml-deployment-node/
+│                   │   │   │   ├── uml-lifeline-node/
+│                   │   │   │   ├── uml-package-node/
+│                   │   │   │   ├── uml-robustness-node/
+│                   │   │   │   └── uml-use-case-node/
+│                   │   │   ├── diagram-canvas.component.html
+│                   │   │   └── diagram-canvas.component.ts
+│                   │   ├── diagram-context-menu/  # Menú contextual flotante interactivo
+│                   │   ├── diagram-floating-label/# Etiquetas flotantes con offset arrastrable
+│                   │   ├── diagram-tabs/          # Barra de pestañas multi-diagrama
+│                   │   ├── diagram-toolbox/       # Paleta contextual filtrada por tipo de diagrama
+│                   │   ├── diagram-sidebar/       # Panel lateral de propiedades y navegación
 │                   │   ├── spring-boot-modal/
 │                   │   ├── user-profile-modal/
 │                   │   ├── xmi-import-modal/
 │                   │   └── xmi-versions-modal/
+│                   ├── directives/
+│                   │   └── autofocus-input.directive.ts # Directiva de foco automático para edición in-place
+│                   ├── services/                  # Servicios de Dominio Especializados (Alta Cohesión)
+│                   │   ├── diagram-ai-sync.service.ts
+│                   │   ├── diagram-alignment.service.ts
+│                   │   ├── diagram-clipboard.service.ts
+│                   │   ├── diagram-collaboration-coordinator.service.ts # WebSocket y exclusión mutua
+│                   │   ├── diagram-connection-layout.service.ts
+│                   │   ├── diagram-containment.service.ts
+│                   │   ├── diagram-export.service.ts
+│                   │   ├── diagram-history.service.ts
+│                   │   ├── diagram-hotkeys.service.ts
+│                   │   ├── diagram-import.service.ts
+│                   │   ├── diagram-modal.service.ts
+│                   │   ├── diagram-node-factory.service.ts
+│                   │   ├── diagram-persistence.service.ts
+│                   │   └── diagram-viewport.service.ts
+│                   ├── diagram-editor.icons.ts    # Iconografía HeroIcons optimizada para tree-shaking
+│                   ├── diagram-editor.component.html
 │                   └── diagram-editor.component.ts
 ├── angular.json
 ├── tsconfig.json
+├── vitest.config.ts
 └── package.json
 ```
 
@@ -217,7 +253,7 @@ frontend/
 
 * **Node.js**: Versión `20.x` o `22.x`.
 * **npm**: Versión `10.x` o superior.
-* **Backend**: Backend API ejecutándose (por defecto en `http://localhost:3000`).
+* **Backend**: Backend API ejecutándose (por defecto en `http://localhost:4000`).
 
 ---
 
@@ -390,8 +426,43 @@ Cuando tu backend esté desplegado en un servidor o dominio accesible:
 
 ## 🧩 Módulos y Componentes Clave
 
-* **`DiagramEditorComponent`**: Orquestador principal del editor, gestión de pestañas multidiagrama, atajos de teclado, persistencia, cálculo dinámico de jerarquía de contención y control de sincronización en tiempo real.
-* **`DiagramCanvasComponent`**: Lienzo visual interactivo con `@foblex/flow` que renderiza nodos de 9 tipos de diagramas (Clases, Análisis, Casos de Uso, Secuencia, Comunicación, Paquetes, Capas, Componentes y Despliegue), cajas de agrupación (`boundary_box`), barras de activación, líneas de vida y relaciones con hit target expandido de 40px y captura de eventos SVG.
+### 🏛️ Arquitectura Modular (Bajo Acoplamiento + Alta Cohesión)
+El editor de diagramas ha sido reestructurado desde un archivo monolítico de más de 5,000 líneas hacia un ecosistema desacoplado y altamente cohesivo guiado por principios de arquitectura limpia:
+
+1. **Orquestador Principal (`DiagramEditorComponent`)**:
+   - Actúa estrictamente como coordinador de alto nivel del ciclo de vida del diagrama, orquestando las señales reactivas del canvas, la barra de herramientas y los paneles laterales.
+   - Reducción drástica de complejidad delegando responsabilidades a servicios inyectables e interfaces bien tipadas.
+
+2. **Capa de Nodos Especializados (`components/diagram-canvas/nodes/`)**:
+   - **`UmlClassNodeComponent`**: Clases, interfaces, enumeraciones, atributos tipados, modificadores y métodos.
+   - **`UmlPackageNodeComponent`**: Paquetes UML con pestañas superiores y soporte nativo para recuadros agrupadores (`boundary_box`) en diagramas de capas y componentes.
+   - **`UmlDeploymentNodeComponent`**: Nodos físicos y virtuales con prisma 3D oblicuo conforme al estándar UML 2.5 (`node`, `device`, `executionEnvironment`).
+   - **`UmlComponentNodeComponent`**: Subsistemas y componentes ejecutables con iconografía incrustada.
+   - **`UmlActorNodeComponent`**: Actores vectoriales calibrados con líneas de vida opcionales para análisis.
+   - **`UmlLifelineNodeComponent`**: Líneas de vida en diagramas de secuencia con especificaciones de activación temporal.
+   - **`UmlUseCaseNodeComponent`**: Casos de uso elípticos con soporte para estereotipos `«include»` y `«extend»`.
+   - **`UmlRobustnessNodeComponent`**: Objetos de análisis BCE de Jacobson (Boundary, Control, Entity) con dimensiones calibradas.
+   - **Estilos de Host Flexibles (`host`)**: Todos los componentes de nodo cuentan con `host: { class: 'w-full h-full flex flex-col flex-1 min-h-0 min-w-0' }`, eliminando el comportamiento `display: inline` nativo de los custom elements de Angular y garantizando que el recuadro visual responda al 100% de la geometría redimensionada en el canvas.
+   - **Sincronización Geométrica 3D**: Nodos de despliegue con cálculo unificado (`isDeploymentNode` y `getDeploymentHeight`) que sincroniza milimétricamente las caras superior y lateral derecha SVG con la cara frontal principal.
+
+3. **Servicios de Dominio Desacoplados (`services/`)**:
+   - **`DiagramCollaborationCoordinatorService`**: Gestión aislada de la coordinación WebSocket multiusuario, cursores remotos, salas Socket.io y bloqueo de exclusión mutua de nodos (`NodeLock`).
+   - **`DiagramClipboardService`**: Operaciones de portapapeles (copiar, cortar, pegar) con validación estricta de compatibilidad entre tipos de diagramas y offset automático de pegado.
+   - **`DiagramNodeFactoryService`**: Fábrica estandarizada de creación de nodos para los 9 tipos de diagramas UML con dimensiones, colores y estereotipos predeterminados.
+   - **`DiagramExportService`**: Exportación de diagramas a imágenes PNG de alta resolución, BMP y estructuras AST limpias para persistencia.
+   - **`DiagramAiSyncService`**: Sincronización bidireccional y normalización de diagramas generados o modificados por el Copilot IA.
+   - **`DiagramHistoryService`**: Pila de deshacer/rehacer (*Undo/Redo*) con estados inmutables en memoria.
+   - **`DiagramHotkeysService`**: Mapeo centralizado de atajos de teclado (`Ctrl+Z`, `Ctrl+Y`, `Ctrl+C`, `Ctrl+V`, `Del`, `Ctrl+S`, `Ctrl++`, `Ctrl+-`).
+   - **`DiagramContainmentService`**: Algoritmo espacial de detección de contención para cajas de agrupación (`boundary_box`) y arrastre jerárquico.
+   - **`DiagramAlignmentService`**: Algoritmos de alineación y distribución espacial automática de nodos (izquierda, centro, derecha, superior, medio, inferior).
+
+4. **Componentes y Directivas UI Especializadas**:
+   - **`DiagramContextMenuComponent`**: Menú contextual interactivo activado por clic derecho con opciones de alineación, ordenamiento z-index, bloqueo, duplicación y eliminación.
+   - **`DiagramFloatingLabelComponent`**: Etiquetas flotantes arrastrables con offset independiente (`labelOffset`) para nombres de actores y objetos de robustez.
+   - **`DiagramTabsComponent`**: Barra de pestañas reactiva para conmutación fluida entre múltiples diagramas abiertos.
+   - **`AutofocusInputDirective`**: Directiva de auto-enfoque y selección de texto para renombrado in-place sin retrasos visuales.
+   - **`diagram-editor.icons.ts`**: Centralización de iconos HeroIcons organizados por propósito y optimizados para empaquetado mínimo.
+
 * **`ComponentSvgComponent`**: Componente visual standalone para la representación gráfica precisa de componentes UML conforme al estándar.
 * **`DeploymentNodeSvgComponent`**: Componente visual standalone para nodos tridimensionales isométricos de despliegue (`node`, `device`, `executionEnvironment`).
 * **`GroupingBoundaryComponent`**: Componente standalone para cajas de delimitación y agrupación de sistemas, capas y redes con etiquetas centradas superiores y jerarquía de contención reactiva.

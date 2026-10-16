@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DiagramEditorComponent } from './diagram-editor.component';
 import { DiagramCanvasComponent } from './components/diagram-canvas/diagram-canvas.component';
 import { DiagramType, UmlClassNode, UmlConnection } from '../../../core/models/diagram.model';
+import { DiagramNodeFactoryService } from './services/diagram-node-factory.service';
+import { DiagramAiSyncService } from './services/diagram-ai-sync.service';
+import { DiagramConnectionLayoutService } from './services/diagram-connection-layout.service';
 
 const nodes: UmlClassNode[] = [
   { id: 'actor', name: 'Ingeniero Anfitrión', nodeType: 'actor', position: { x: 50, y: 50 }, width: 65, attributes: [], methods: [] },
@@ -31,9 +34,14 @@ describe('DiagramEditorComponent: estado de mensajes de secuencia', () => {
 
   beforeEach(() => {
     // Solo lógica de estado: no plantilla, inyección, sockets, HTTP ni lifecycle.
+    const layoutService = new DiagramConnectionLayoutService();
+    const aiSyncService = new DiagramAiSyncService(layoutService);
     editor = Object.assign(Object.create(DiagramEditorComponent.prototype), {
       nodes: signal(structuredClone(nodes)), connections: signal<UmlConnection[]>([]),
       activeDiagramType: signal(DiagramType.SEQUENCE), defaultLineStyle: signal('straight'),
+      diagramNodeFactoryService: new DiagramNodeFactoryService(),
+      diagramConnectionLayoutService: layoutService,
+      diagramAiSyncService: aiSyncService,
     });
   });
 

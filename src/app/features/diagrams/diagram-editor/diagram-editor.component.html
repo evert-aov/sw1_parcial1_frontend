@@ -1,5 +1,6 @@
-<div class="h-screen w-screen flex flex-col bg-[#F9F7F5] dark:bg-[#0D1124] select-none overflow-hidden font-sans transition-colors duration-200">
-
+<div
+  class="h-screen w-screen flex flex-col bg-[#F9F7F5] dark:bg-[#0D1124] select-none overflow-hidden font-sans transition-colors duration-200"
+>
   <!-- 1. [TOPBAR / APPBAR] -->
   <app-diagram-appbar
     [diagramTitle]="currentDiagramName()"
@@ -40,12 +41,12 @@
     (fitView)="fitView()"
     (resetView)="resetView()"
     (addClass)="addClass()"
-    (setPointerMode)="setPointerMode()">
+    (setPointerMode)="setPointerMode()"
+  >
   </app-diagram-appbar>
 
   <!-- 2. [CUERPO PRINCIPAL]: SIDEBAR + PIZARRA CENTRAL + COPILOT IA -->
   <div class="flex-1 flex overflow-hidden relative">
-
     <!-- 2.1 [SIDEBAR / TOOLBOX & EXPLORER] SEPARADO COMO COMPONENTE MODULAR -->
     <app-diagram-sidebar
       [isOpen]="isSidebarOpen()"
@@ -85,88 +86,32 @@
       (renameDiagram)="onRenameDiagram($event)"
       (deleteDiagram)="onDeleteDiagram($event)"
       (copyNodeToCurrent)="handleCopyNodeFromExplorer($event)"
-      (selectNode)="handleSelectNodeFromExplorer($event)">
+      (selectNode)="handleSelectNodeFromExplorer($event)"
+    >
     </app-diagram-sidebar>
 
     <!-- 2.2 [CONTENEDOR CENTRAL]: PESTAÑAS + PIZARRA (CANVAS) -->
     <div class="flex-1 flex flex-col overflow-hidden relative">
-
       <!-- Barra de Pestañas (Tabs) del Lienzo estilo SaaS / Enterprise Architect -->
-      <div class="bg-slate-100 dark:bg-[#0A0D1B] border-b border-slate-200 dark:border-slate-800 px-2 flex items-center justify-between z-10 shrink-0 select-none min-h-[38px]">
-        <!-- Contenedor scrollable de pestañas -->
-        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 flex-1 mr-2">
-          @for (tab of openTabs(); track tab.id) {
-            <div
-              (click)="onSelectDiagram(tab.id)"
-              [class.bg-white]="currentDiagramId() === tab.id"
-              [class.dark:bg-[#14182E]]="currentDiagramId() === tab.id"
-              [class.text-blue-600]="currentDiagramId() === tab.id"
-              [class.dark:text-blue-400]="currentDiagramId() === tab.id"
-              [class.shadow-xs]="currentDiagramId() === tab.id"
-              [class.font-semibold]="currentDiagramId() === tab.id"
-              [class.border-b-2]="true"
-              [class.border-blue-500]="currentDiagramId() === tab.id"
-              [class.border-transparent]="currentDiagramId() !== tab.id"
-              [class.text-slate-500]="currentDiagramId() !== tab.id"
-              [class.dark:text-slate-400]="currentDiagramId() !== tab.id"
-              [class.hover:bg-slate-200/70]="currentDiagramId() !== tab.id"
-              [class.dark:hover:bg-[#151A33]]="currentDiagramId() !== tab.id"
-              [class.hover:text-slate-800]="currentDiagramId() !== tab.id"
-              [class.dark:hover:text-slate-200]="currentDiagramId() !== tab.id"
-              class="group flex items-center gap-2 px-3 py-1.5 rounded-t-md text-xs cursor-pointer transition-all max-w-[220px] shrink-0 border-t border-x border-slate-200/60 dark:border-slate-700/60">
-              
-              <!-- Badge de tipo UML -->
-              <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
-                {{ getTabTypeShort(tab.type) }}
-              </span>
-
-              <!-- Nombre del diagrama + indicador de cambios -->
-              <span class="truncate" [title]="tab.name">
-                @if (currentDiagramId() === tab.id && hasUnsavedChanges()) {
-                  <span class="text-amber-500 font-bold mr-0.5">●</span>
-                }
-                {{ tab.name }}
-              </span>
-
-              <!-- Botón cerrar tab (solo si hay más de 1 pestaña abierta) -->
-              @if (openTabs().length > 1) {
-                <button
-                  type="button"
-                  (click)="closeTab(tab.id, $event)"
-                  title="Cerrar pestaña"
-                  class="opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded p-0.5 transition-opacity shrink-0 cursor-pointer">
-                  <ng-icon name="heroXMark" class="text-xs"></ng-icon>
-                </button>
-              }
-            </div>
-          }
-
-          <!-- Botón + para Crear Nuevo Diagrama (Abre el Modal) -->
-          <button
-            type="button"
-            (click)="openCreateDiagramModal()"
-            title="Crear nuevo diagrama en nueva pestaña"
-            class="w-7 h-7 rounded hover:bg-white dark:hover:bg-[#14182E] text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 flex items-center justify-center cursor-pointer transition-colors shadow-2xs border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shrink-0">
-            <ng-icon name="heroPlus" class="text-sm"></ng-icon>
-          </button>
-        </div>
-
-        <!-- Breadcrumbs / Controles del lado derecho -->
-        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-400 font-mono shrink-0 pl-2">
-          <span>/</span>
-          <span class="font-medium text-slate-600 dark:text-slate-300">{{ currentDiagramName() }}</span>
-          <button (click)="fitView()" title="Ajustar vista" class="ml-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer transition-colors">
-            <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-          </button>
-        </div>
-      </div>
+      <app-diagram-tabs
+        [tabs]="openTabs()"
+        [activeDiagramId]="currentDiagramId()"
+        [hasUnsavedChanges]="hasUnsavedChanges()"
+        [currentDiagramName]="currentDiagramName()"
+        (selectTab)="onSelectDiagram($event)"
+        (closeTab)="closeTab($event.id, $event.event)"
+        (createTab)="openCreateDiagramModal()"
+        (fitView)="fitView()"
+      >
+      </app-diagram-tabs>
 
       <!-- Botón Flotante para reabrir Sidebar cuando está oculto -->
       @if (!isSidebarOpen()) {
         <button
           (click)="isSidebarOpen.set(true)"
           [title]="'toolbar.showToolbox' | translate"
-          class="absolute top-12 left-3.5 z-40 bg-white/95 hover:bg-white dark:bg-[#14182E]/95 dark:hover:bg-[#1C2242] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#2D3762] shadow-sm rounded-lg px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all hover:scale-102 backdrop-blur-xs">
+          class="absolute top-12 left-3.5 z-40 bg-white/95 hover:bg-white dark:bg-[#14182E]/95 dark:hover:bg-[#1C2242] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#2D3762] shadow-sm rounded-lg px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all hover:scale-102 backdrop-blur-xs"
+        >
           <ng-icon name="heroBars3" class="text-xs text-blue-600 dark:text-blue-400"></ng-icon>
           <span class="text-xs text-slate-700 dark:text-slate-200">Toolbox</span>
         </button>
@@ -177,7 +122,8 @@
         <button
           (click)="isAiPanelOpen.set(true)"
           [title]="'toolbar.openAiTooltip' | translate"
-          class="absolute top-12 right-3.5 z-40 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-all hover:scale-105">
+          class="absolute top-12 right-3.5 z-40 bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-all hover:scale-105"
+        >
           <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
           <span>{{ 'toolbar.aiCopilot' | translate }}</span>
           <ng-icon name="heroBars3CenterLeft" class="text-xs opacity-80"></ng-icon>
@@ -186,7 +132,9 @@
 
       <!-- Banner Informativo del Modo de Creación de Relaciones -->
       @if (selectedRelationType()) {
-        <div class="absolute top-12 left-1/2 -translate-x-1/2 z-40 bg-blue-900/90 text-white border border-blue-400 px-4 py-1.5 rounded-full shadow-lg text-xs font-mono flex items-center gap-2 animate-in fade-in slide-in-from-top-2 backdrop-blur-xs">
+        <div
+          class="absolute top-12 left-1/2 -translate-x-1/2 z-40 bg-blue-900/90 text-white border border-blue-400 px-4 py-1.5 rounded-full shadow-lg text-xs font-mono flex items-center gap-2 animate-in fade-in slide-in-from-top-2 backdrop-blur-xs"
+        >
           <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
           <span>
             @if (selectedSourceNodeId() === null) {
@@ -195,7 +143,10 @@
               {{ 'toolbar.step2' | translate }}
             }
           </span>
-          <button (click)="setPointerMode()" class="ml-2 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] cursor-pointer">
+          <button
+            (click)="setPointerMode()"
+            class="ml-2 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] cursor-pointer"
+          >
             {{ 'toolbar.cancelEsc' | translate }}
           </button>
         </div>
@@ -243,9 +194,9 @@
         (nodeDropped)="onNodeDropped($event)"
         (nodeContextMenu)="onNodeContextMenu($event)"
         (connectionContextMenu)="onConnectionContextMenu($event)"
-        (canvasContextMenu)="onCanvasContextMenu($event)">
+        (canvasContextMenu)="onCanvasContextMenu($event)"
+      >
       </app-diagram-canvas>
-
     </div>
 
     <!-- 2.3 [PANEL LATERAL DERECHO]: COPILOT IA -->
@@ -257,9 +208,9 @@
       [currentConnections]="connections()"
       [diagramType]="activeDiagramType()"
       (closePanel)="isAiPanelOpen.set(false)"
-      (applyMutation)="onAiMutation($event)">
+      (applyMutation)="onAiMutation($event)"
+    >
     </app-ai-assistant-panel>
-
   </div>
 
   <!-- 3. [STATUSBAR INFERIOR] REFACTORIZADO EN COMPONENTE SEPARADO -->
@@ -271,13 +222,12 @@
     [zoomLevel]="zoomLevel()"
     (zoomIn)="zoomIn()"
     (zoomOut)="zoomOut()"
-    (resetView)="resetView()">
+    (resetView)="resetView()"
+  >
   </app-diagram-statusbar>
 
   <!-- 4. MODALES REFACTORIZADOS EN COMPONENTES INDEPENDIENTES -->
-  <app-user-profile-modal
-    [isOpen]="isProfileModalOpen()"
-    (close)="isProfileModalOpen.set(false)">
+  <app-user-profile-modal [isOpen]="isProfileModalOpen()" (close)="isProfileModalOpen.set(false)">
   </app-user-profile-modal>
 
   <app-edit-node-modal
@@ -285,7 +235,8 @@
     [node]="editingNode()"
     [activeDiagramType]="activeDiagramType()"
     (close)="closeEditNodeModal()"
-    (save)="onSaveEditedNode($event)">
+    (save)="onSaveEditedNode($event)"
+  >
   </app-edit-node-modal>
 
   <app-edit-connection-modal
@@ -294,7 +245,8 @@
     [activeDiagramType]="activeDiagramType()"
     (close)="closeEditConnModal()"
     (save)="onSaveEditedConnection($event)"
-    (delete)="removeConnection($event)">
+    (delete)="removeConnection($event)"
+  >
   </app-edit-connection-modal>
 
   <app-spring-boot-modal
@@ -304,7 +256,8 @@
     [nodes]="nodes()"
     [connections]="connections()"
     [project]="currentProject()"
-    (closeModal)="showSpringBootModal.set(false)">
+    (closeModal)="showSpringBootModal.set(false)"
+  >
   </app-spring-boot-modal>
 
   <app-json-modal
@@ -313,7 +266,8 @@
     [initialJson]="jsonContent()"
     (close)="showJsonModal.set(false)"
     (copied)="showQuickToast('¡JSON AST copiado al portapapeles!')"
-    (applyImport)="onApplyImportedJson($event)">
+    (applyImport)="onApplyImportedJson($event)"
+  >
   </app-json-modal>
 
   <app-create-diagram-modal
@@ -321,14 +275,28 @@
     [lockedType]="createDiagramLockedType()"
     [projectName]="currentProject()?.name || currentDiagramName()"
     (close)="closeCreateDiagramModal()"
-    (create)="handleCreateDiagram($event)">
+    (create)="handleCreateDiagram($event)"
+  >
   </app-create-diagram-modal>
 
   <!-- Toast flotante de notificación rápida (copia/pegado de nodos) -->
   @if (quickToast()) {
-    <div class="fixed bottom-6 right-6 z-50 bg-slate-900/95 dark:bg-slate-800/95 text-white text-xs px-3.5 py-2.5 rounded-xl shadow-xl backdrop-blur-md border border-slate-700/60 dark:border-slate-600/60 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 select-none">
-      <div class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <div
+      class="fixed bottom-6 right-6 z-50 bg-slate-900/95 dark:bg-slate-800/95 text-white text-xs px-3.5 py-2.5 rounded-xl shadow-xl backdrop-blur-md border border-slate-700/60 dark:border-slate-600/60 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 select-none"
+    >
+      <div
+        class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </div>
@@ -337,331 +305,29 @@
   }
 
   <!-- MENÚ CONTEXTUAL DINÁMICO (CLIC DERECHO / ATAJOS RÁPIDOS) -->
-  @if (contextMenu(); as menu) {
-    <!-- Capa invisible para cerrar al hacer clic fuera -->
-    <div
-      class="fixed inset-0 z-50 bg-transparent"
-      (mousedown)="closeContextMenu()"
-      (contextmenu)="$event.preventDefault(); closeContextMenu()">
-    </div>
-
-    <div
-      class="fixed z-50 min-w-[220px] max-w-[270px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 text-xs py-1.5 select-none animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100 dark:divide-slate-800/80"
-      [style.left.px]="menu.x"
-      [style.top.px]="menu.y"
-      (click)="$event.stopPropagation()"
-      (contextmenu)="$event.preventDefault(); $event.stopPropagation()">
-
-      <!-- Encabezado contextual según tipo -->
-      <div class="px-3 py-1.5 text-[10.5px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between">
-        @if (menu.type === 'node') {
-          <span class="truncate max-w-[140px]">{{ menu.node?.name || 'Elemento' }}</span>
-          <span class="text-[9px] bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono">
-            {{ selectedNodeIds().size > 1 ? selectedNodeIds().size + ' seleccionados' : (menu.node?.nodeType || 'clase') }}
-          </span>
-        } @else if (menu.type === 'connection') {
-          <span>Relación UML</span>
-          <span class="text-[9px] bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300 px-1.5 py-0.5 rounded font-mono">
-            {{ menu.connection?.type || 'asociación' }}
-          </span>
-        } @else {
-          <span>Lienzo UML</span>
-          <span class="text-[9px] text-slate-400 font-mono">{{ activeDiagramType() }}</span>
-        }
-      </div>
-
-      <!-- SECCIÓN ACCIONES: NODO(S) -->
-      @if (menu.type === 'node') {
-        <div class="py-1">
-          <button
-            type="button"
-            (click)="copySelectedNodes(); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroDocumentDuplicate" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Copiar</span>
-            </div>
-            <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+C</kbd>
-          </button>
-
-          <button
-            type="button"
-            (click)="cutSelectedNodes()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroScissors" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Cortar</span>
-            </div>
-            <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+X</kbd>
-          </button>
-
-          <button
-            type="button"
-            (click)="duplicateSelected()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroSquare2Stack" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Duplicar</span>
-            </div>
-            <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+D</kbd>
-          </button>
-
-          <button
-            type="button"
-            [disabled]="!hasClipboardContent()"
-            (click)="pasteNodes(menu.canvasPos); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroClipboardDocument" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Pegar aquí</span>
-            </div>
-            <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+V</kbd>
-          </button>
-        </div>
-
-        <!-- Edición y Renombrar -->
-        @if (menu.node && selectedNodeIds().size <= 1) {
-          <div class="py-1">
-            <button
-              type="button"
-              (click)="openEditNodeModal(menu.node); closeContextMenu()"
-              class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-              <div class="flex items-center gap-2">
-                <ng-icon name="heroPencilSquare" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-                <span>Editar propiedades</span>
-              </div>
-              <span class="text-[10px] text-slate-400">Doble clic</span>
-            </button>
-
-            <button
-              type="button"
-              (click)="diagramCanvas?.startRenameNode(menu.node.id); closeContextMenu()"
-              class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-              <div class="flex items-center gap-2">
-                <ng-icon name="heroDocumentText" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-                <span>Renombrar</span>
-              </div>
-              <kbd class="text-[10px] text-slate-400 font-mono">F2</kbd>
-            </button>
-          </div>
-        }
-
-        <!-- Paleta de Colores Rápida estilo EA -->
-        <div class="px-3 py-2">
-          <div class="text-[10px] font-medium text-slate-400 dark:text-slate-500 mb-1.5 flex items-center gap-1.5">
-            <ng-icon name="heroSwatch" class="text-xs"></ng-icon>
-            <span>Color de fondo</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              title="Color por defecto (#FDFAF3)"
-              (click)="onSetSelectedNodeColor('#FDFAF3'); closeContextMenu()"
-              class="w-5 h-5 rounded-full border border-amber-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
-              style="background-color: #FDFAF3;">
-            </button>
-            <button
-              type="button"
-              title="Azul Pastel (#DDF4F5)"
-              (click)="onSetSelectedNodeColor('#DDF4F5'); closeContextMenu()"
-              class="w-5 h-5 rounded-full border border-sky-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
-              style="background-color: #DDF4F5;">
-            </button>
-            <button
-              type="button"
-              title="Verde Menta"
-              (click)="onSetSelectedNodeColor('#DCFCE7'); closeContextMenu()"
-              class="w-5 h-5 rounded-full border border-emerald-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
-              style="background-color: #DCFCE7;">
-            </button>
-            <button
-              type="button"
-              title="Lavanda"
-              (click)="onSetSelectedNodeColor('#EDE9FE'); closeContextMenu()"
-              class="w-5 h-5 rounded-full border border-purple-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
-              style="background-color: #EDE9FE;">
-            </button>
-            <button
-              type="button"
-              title="Melocotón"
-              (click)="onSetSelectedNodeColor('#FFEDD5'); closeContextMenu()"
-              class="w-5 h-5 rounded-full border border-orange-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
-              style="background-color: #FFEDD5;">
-            </button>
-            <button
-              type="button"
-              title="Rosa Suave"
-              (click)="onSetSelectedNodeColor('#FCE7F3'); closeContextMenu()"
-              class="w-5 h-5 rounded-full border border-pink-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
-              style="background-color: #FCE7F3;">
-            </button>
-            <button
-              type="button"
-              title="Blanco"
-              (click)="onSetSelectedNodeColor('#FFFFFF'); closeContextMenu()"
-              class="w-5 h-5 rounded-full border border-slate-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
-              style="background-color: #FFFFFF;">
-            </button>
-          </div>
-        </div>
-
-        <!-- Eliminar -->
-        <div class="py-1">
-          <button
-            type="button"
-            (click)="deleteSelected(); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition-colors text-left cursor-pointer font-medium">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroTrash" class="text-sm"></ng-icon>
-              <span>Eliminar</span>
-            </div>
-            <kbd class="text-[10px] text-rose-400 font-mono">Supr</kbd>
-          </button>
-        </div>
-      }
-
-      <!-- SECCIÓN ACCIONES: RELACIÓN UML -->
-      @else if (menu.type === 'connection' && menu.connection) {
-        <div class="py-1">
-          <button
-            type="button"
-            (click)="openEditConnModal(menu.connection); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroPencilSquare" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Editar relación</span>
-            </div>
-            <span class="text-[10px] text-slate-400">Doble clic</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="reverseConnection(menu.connection)"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroArrowsRightLeft" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Invertir dirección</span>
-            </div>
-          </button>
-        </div>
-
-        <!-- Estilos de Línea -->
-        <div class="py-1">
-          <div class="px-3 py-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">Estilo de línea</div>
-          <button
-            type="button"
-            (click)="setConnectionLineStyle(menu.connection, 'straight')"
-            [class.bg-blue-50]="menu.connection.lineStyle === 'straight'"
-            [class.text-blue-600]="menu.connection.lineStyle === 'straight'"
-            class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer">
-            <span>Recta</span>
-            @if (menu.connection.lineStyle === 'straight') {
-              <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-            }
-          </button>
-          <button
-            type="button"
-            (click)="setConnectionLineStyle(menu.connection, 'segment')"
-            [class.bg-blue-50]="menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle"
-            [class.text-blue-600]="menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle"
-            class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer">
-            <span>Ortogonal / Segmentada</span>
-            @if (menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle) {
-              <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-            }
-          </button>
-          <button
-            type="button"
-            (click)="setConnectionLineStyle(menu.connection, 'bezier')"
-            [class.bg-blue-50]="menu.connection.lineStyle === 'bezier'"
-            [class.text-blue-600]="menu.connection.lineStyle === 'bezier'"
-            class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer">
-            <span>Curva</span>
-            @if (menu.connection.lineStyle === 'bezier') {
-              <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-            }
-          </button>
-        </div>
-
-        <div class="py-1">
-          <button
-            type="button"
-            (click)="deleteSelected(); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition-colors text-left cursor-pointer font-medium">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroTrash" class="text-sm"></ng-icon>
-              <span>Eliminar relación</span>
-            </div>
-            <kbd class="text-[10px] text-rose-400 font-mono">Supr</kbd>
-          </button>
-        </div>
-      }
-
-      <!-- SECCIÓN ACCIONES: LIENZO (CANVAS BACKGROUND) -->
-      @else {
-        <div class="py-1">
-          <button
-            type="button"
-            [disabled]="!hasClipboardContent()"
-            (click)="pasteNodes(menu.canvasPos); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroClipboardDocument" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Pegar aquí</span>
-            </div>
-            <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+V</kbd>
-          </button>
-        </div>
-
-        <div class="py-1">
-          <button
-            type="button"
-            (click)="selectAllClasses(); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroSquares2x2" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Seleccionar todo</span>
-            </div>
-            <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+A</kbd>
-          </button>
-
-          <button
-            type="button"
-            [disabled]="selectedNodeIds().size === 0 && selectedConnIds().size === 0"
-            (click)="deselectAll(); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left disabled:opacity-40 disabled:pointer-events-none cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroCursorArrowRays" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Deseleccionar</span>
-            </div>
-            <kbd class="text-[10px] text-slate-400 font-mono">Esc</kbd>
-          </button>
-        </div>
-
-        <div class="py-1">
-          <button
-            type="button"
-            (click)="resetView(); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroMagnifyingGlassPlus" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Restablecer zoom (100%)</span>
-            </div>
-            <span class="text-[10px] text-slate-400 font-mono">{{ zoomLevel() }}%</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="fitView(); closeContextMenu()"
-            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer">
-            <div class="flex items-center gap-2">
-              <ng-icon name="heroArrowsPointingOut" class="text-sm text-slate-500 dark:text-slate-400"></ng-icon>
-              <span>Ajustar diagrama a pantalla</span>
-            </div>
-          </button>
-        </div>
-      }
-    </div>
-  }
-
+  <app-diagram-context-menu
+    [menu]="contextMenu()"
+    [selectedNodeIdsCount]="selectedNodeIds().size"
+    [selectedConnIdsCount]="selectedConnIds().size"
+    [activeDiagramType]="activeDiagramType()"
+    [hasClipboard]="hasClipboardContent()"
+    [zoomLevel]="zoomLevel()"
+    (close)="closeContextMenu()"
+    (copyNodes)="copySelectedNodes()"
+    (cutNodes)="cutSelectedNodes()"
+    (duplicateNodes)="duplicateSelected()"
+    (pasteNodes)="pasteNodes($event)"
+    (editNode)="openEditNodeModal($event)"
+    (renameNode)="diagramCanvas?.startRenameNode($event)"
+    (setNodeColor)="onSetSelectedNodeColor($event)"
+    (deleteSelected)="deleteSelected()"
+    (editConnection)="openEditConnModal($event)"
+    (reverseConnection)="reverseConnection($event)"
+    (setConnectionLineStyle)="setConnectionLineStyle($event.connection, $event.lineStyle)"
+    (selectAll)="selectAllClasses()"
+    (deselectAll)="deselectAll()"
+    (resetView)="resetView()"
+    (fitView)="fitView()"
+  >
+  </app-diagram-context-menu>
 </div>

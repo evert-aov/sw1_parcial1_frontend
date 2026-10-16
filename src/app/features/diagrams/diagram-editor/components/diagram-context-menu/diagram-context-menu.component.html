@@ -1,0 +1,399 @@
+@if (menu) {
+  <!-- Capa invisible para cerrar al hacer clic fuera -->
+  <div
+    class="fixed inset-0 z-50 bg-transparent"
+    (mousedown)="onClose()"
+    (contextmenu)="$event.preventDefault(); onClose()"
+  ></div>
+
+  <div
+    class="fixed z-50 min-w-55 max-w-67.5 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 text-xs py-1.5 select-none animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100 dark:divide-slate-800/80"
+    [style.left.px]="menu.x"
+    [style.top.px]="menu.y"
+    (click)="$event.stopPropagation()"
+    (contextmenu)="$event.preventDefault(); $event.stopPropagation()"
+  >
+    <!-- Encabezado contextual según tipo -->
+    <div
+      class="px-3 py-1.5 text-[10.5px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between"
+    >
+      @if (menu.type === 'node') {
+        <span class="truncate max-w-35">{{ menu.node?.name || 'Elemento' }}</span>
+        <span
+          class="text-[9px] bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono"
+        >
+          {{
+            selectedNodeIdsCount > 1
+              ? selectedNodeIdsCount + ' seleccionados'
+              : menu.node?.nodeType || 'clase'
+          }}
+        </span>
+      } @else if (menu.type === 'connection') {
+        <span>Relación UML</span>
+        <span
+          class="text-[9px] bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300 px-1.5 py-0.5 rounded font-mono"
+        >
+          {{ menu.connection?.type || 'asociación' }}
+        </span>
+      } @else {
+        <span>Lienzo UML</span>
+        <span class="text-[9px] text-slate-400 font-mono">{{ activeDiagramType }}</span>
+      }
+    </div>
+
+    <!-- SECCIÓN ACCIONES: NODO(S) -->
+    @if (menu.type === 'node') {
+      <div class="py-1">
+        <button
+          type="button"
+          (click)="onCopy()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroDocumentDuplicate"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Copiar</span>
+          </div>
+          <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+C</kbd>
+        </button>
+
+        <button
+          type="button"
+          (click)="onCut()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroScissors"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Cortar</span>
+          </div>
+          <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+X</kbd>
+        </button>
+
+        <button
+          type="button"
+          (click)="onDuplicate()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroSquare2Stack"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Duplicar</span>
+          </div>
+          <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+D</kbd>
+        </button>
+
+        <button
+          type="button"
+          [disabled]="!hasClipboard"
+          (click)="onPaste(menu.canvasPos)"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroClipboardDocument"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Pegar aquí</span>
+          </div>
+          <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+V</kbd>
+        </button>
+      </div>
+
+      <!-- Edición y Renombrar -->
+      @if (menu.node && selectedNodeIdsCount <= 1) {
+        <div class="py-1">
+          <button
+            type="button"
+            (click)="onEditNode(menu.node)"
+            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+          >
+            <div class="flex items-center gap-2">
+              <ng-icon
+                name="heroPencilSquare"
+                class="text-sm text-slate-500 dark:text-slate-400"
+              ></ng-icon>
+              <span>Editar propiedades</span>
+            </div>
+            <span class="text-[10px] text-slate-400">Doble clic</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="onRenameNode(menu.node.id)"
+            class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+          >
+            <div class="flex items-center gap-2">
+              <ng-icon
+                name="heroDocumentText"
+                class="text-sm text-slate-500 dark:text-slate-400"
+              ></ng-icon>
+              <span>Renombrar</span>
+            </div>
+            <kbd class="text-[10px] text-slate-400 font-mono">F2</kbd>
+          </button>
+        </div>
+      }
+
+      <!-- Paleta de Colores Rápida estilo EA -->
+      <div class="px-3 py-2">
+        <div
+          class="text-[10px] font-medium text-slate-400 dark:text-slate-500 mb-1.5 flex items-center gap-1.5"
+        >
+          <ng-icon name="heroSwatch" class="text-xs"></ng-icon>
+          <span>Color de fondo</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button
+            type="button"
+            title="Color por defecto (#FDFAF3)"
+            (click)="onSetColor('#FDFAF3')"
+            class="w-5 h-5 rounded-full border border-amber-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
+            style="background-color: #fdfaf3"
+          ></button>
+          <button
+            type="button"
+            title="Azul Pastel (#DDF4F5)"
+            (click)="onSetColor('#DDF4F5')"
+            class="w-5 h-5 rounded-full border border-sky-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
+            style="background-color: #ddf4f5"
+          ></button>
+          <button
+            type="button"
+            title="Verde Menta"
+            (click)="onSetColor('#DCFCE7')"
+            class="w-5 h-5 rounded-full border border-emerald-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
+            style="background-color: #dcfce7"
+          ></button>
+          <button
+            type="button"
+            title="Lavanda"
+            (click)="onSetColor('#EDE9FE')"
+            class="w-5 h-5 rounded-full border border-purple-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
+            style="background-color: #ede9fe"
+          ></button>
+          <button
+            type="button"
+            title="Melocotón"
+            (click)="onSetColor('#FFEDD5')"
+            class="w-5 h-5 rounded-full border border-orange-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
+            style="background-color: #ffedd5"
+          ></button>
+          <button
+            type="button"
+            title="Rosa Suave"
+            (click)="onSetColor('#FCE7F3')"
+            class="w-5 h-5 rounded-full border border-pink-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
+            style="background-color: #fce7f3"
+          ></button>
+          <button
+            type="button"
+            title="Blanco"
+            (click)="onSetColor('#FFFFFF')"
+            class="w-5 h-5 rounded-full border border-slate-300 hover:scale-125 transition-transform shadow-xs cursor-pointer"
+            style="background-color: #ffffff"
+          ></button>
+        </div>
+      </div>
+
+      <!-- Eliminar -->
+      <div class="py-1">
+        <button
+          type="button"
+          (click)="onDelete()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition-colors text-left cursor-pointer font-medium"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon name="heroTrash" class="text-sm"></ng-icon>
+            <span>Eliminar</span>
+          </div>
+          <kbd class="text-[10px] text-rose-400 font-mono">Supr</kbd>
+        </button>
+      </div>
+    }
+
+    <!-- SECCIÓN ACCIONES: RELACIÓN UML -->
+    @else if (menu.type === 'connection' && menu.connection) {
+      <div class="py-1">
+        <button
+          type="button"
+          (click)="onEditConn(menu.connection)"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroPencilSquare"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Editar relación</span>
+          </div>
+          <span class="text-[10px] text-slate-400">Doble clic</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="onReverseConn(menu.connection)"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroArrowsRightLeft"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Invertir dirección</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Estilos de Línea -->
+      <div class="py-1">
+        <div class="px-3 py-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
+          Estilo de línea
+        </div>
+        <button
+          type="button"
+          (click)="onSetLineStyle(menu.connection, 'straight')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'straight'"
+          [class.text-blue-600]="menu.connection.lineStyle === 'straight'"
+          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
+        >
+          <span>Recta</span>
+          @if (menu.connection.lineStyle === 'straight') {
+            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
+          }
+        </button>
+        <button
+          type="button"
+          (click)="onSetLineStyle(menu.connection, 'segment')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle"
+          [class.text-blue-600]="
+            menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle
+          "
+          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
+        >
+          <span>Ortogonal / Segmentada</span>
+          @if (menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle) {
+            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
+          }
+        </button>
+        <button
+          type="button"
+          (click)="onSetLineStyle(menu.connection, 'bezier')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'bezier'"
+          [class.text-blue-600]="menu.connection.lineStyle === 'bezier'"
+          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
+        >
+          <span>Curva</span>
+          @if (menu.connection.lineStyle === 'bezier') {
+            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
+          }
+        </button>
+      </div>
+
+      <div class="py-1">
+        <button
+          type="button"
+          (click)="onDelete()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition-colors text-left cursor-pointer font-medium"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon name="heroTrash" class="text-sm"></ng-icon>
+            <span>Eliminar relación</span>
+          </div>
+          <kbd class="text-[10px] text-rose-400 font-mono">Supr</kbd>
+        </button>
+      </div>
+    }
+
+    <!-- SECCIÓN ACCIONES: LIENZO (CANVAS BACKGROUND) -->
+    @else {
+      <div class="py-1">
+        <button
+          type="button"
+          [disabled]="!hasClipboard"
+          (click)="onPaste(menu.canvasPos)"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroClipboardDocument"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Pegar aquí</span>
+          </div>
+          <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+V</kbd>
+        </button>
+      </div>
+
+      <div class="py-1">
+        <button
+          type="button"
+          (click)="onSelectAll()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroSquares2x2"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Seleccionar todo</span>
+          </div>
+          <kbd class="text-[10px] text-slate-400 font-mono">Ctrl+A</kbd>
+        </button>
+
+        <button
+          type="button"
+          [disabled]="selectedNodeIdsCount === 0 && selectedConnIdsCount === 0"
+          (click)="onDeselectAll()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroCursorArrowRays"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Deseleccionar</span>
+          </div>
+          <kbd class="text-[10px] text-slate-400 font-mono">Esc</kbd>
+        </button>
+      </div>
+
+      <div class="py-1">
+        <button
+          type="button"
+          (click)="onResetView()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroMagnifyingGlassPlus"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Restablecer zoom (100%)</span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono">{{ zoomLevel }}%</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="onFitView()"
+          class="w-full flex items-center justify-between px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+        >
+          <div class="flex items-center gap-2">
+            <ng-icon
+              name="heroArrowsPointingOut"
+              class="text-sm text-slate-500 dark:text-slate-400"
+            ></ng-icon>
+            <span>Ajustar diagrama a pantalla</span>
+          </div>
+        </button>
+      </div>
+    }
+  </div>
+}

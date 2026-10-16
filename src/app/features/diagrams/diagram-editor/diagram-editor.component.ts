@@ -19,46 +19,7 @@ import {
   FSelectionChangeEvent,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import {
-  heroMagnifyingGlassPlus,
-  heroMagnifyingGlassMinus,
-  heroArrowsPointingOut,
-  heroDocumentText,
-  heroArrowDownTray,
-  heroArrowUpTray,
-  heroTrash,
-  heroPlus,
-  heroXMark,
-  heroClipboardDocument,
-  heroCheck,
-  heroCursorArrowRays,
-  heroChevronRight,
-  heroChevronDown,
-  heroSquares2x2,
-  heroCube,
-  heroArrowsRightLeft,
-  heroArrowRightOnRectangle,
-  heroUserCircle,
-  heroFolder,
-  heroCloudArrowUp,
-  heroUserGroup,
-  heroSparkles,
-  heroBolt,
-  heroCommandLine,
-  heroCpuChip,
-  heroArrowPath,
-  heroEye,
-  heroLockClosed,
-  heroLockOpen,
-  heroBars3,
-  heroBars3CenterLeft,
-  heroChevronLeft,
-  heroScissors,
-  heroSquare2Stack,
-  heroPencilSquare,
-  heroSwatch,
-  heroDocumentDuplicate,
-} from '@ng-icons/heroicons/outline';
+import { DIAGRAM_EDITOR_ICONS } from './diagram-editor.icons';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { DiagramService } from '../../../core/services/diagram.service';
@@ -101,6 +62,22 @@ import { EditNodeModalComponent } from './components/edit-node-modal/edit-node-m
 import { EditConnectionModalComponent } from './components/edit-connection-modal/edit-connection-modal.component';
 import { JsonModalComponent } from './components/json-modal/json-modal.component';
 import { CreateDiagramModalComponent } from './components/create-diagram-modal/create-diagram-modal.component';
+import { DiagramTabsComponent, DiagramTab } from './components/diagram-tabs/diagram-tabs.component';
+import { DiagramContextMenuComponent, DiagramContextMenuState } from './components/diagram-context-menu/diagram-context-menu.component';
+import { DiagramHistoryService, DiagramHistorySnapshot } from './services/diagram-history.service';
+import { DiagramClipboardService } from './services/diagram-clipboard.service';
+import { DiagramAlignmentService } from './services/diagram-alignment.service';
+import { DiagramNodeFactoryService } from './services/diagram-node-factory.service';
+import { DiagramExportService } from './services/diagram-export.service';
+import { DiagramImportService } from './services/diagram-import.service';
+import { DiagramConnectionLayoutService } from './services/diagram-connection-layout.service';
+import { DiagramAiSyncService } from './services/diagram-ai-sync.service';
+import { DiagramHotkeysService } from './services/diagram-hotkeys.service';
+import { DiagramViewportService } from './services/diagram-viewport.service';
+import { DiagramModalService } from './services/diagram-modal.service';
+import { DiagramPersistenceService } from './services/diagram-persistence.service';
+import { DiagramContainmentService } from './services/diagram-containment.service';
+import { DiagramCollaborationCoordinatorService } from './services/diagram-collaboration-coordinator.service';
 import { TranslatePipe, TranslationService } from '../../../core/i18n';
 import { calculateClassDynamicWidth } from './utils/node-metrics.util';
 
@@ -113,27 +90,7 @@ export interface UmlDiagramProject {
   connections: UmlConnection[];
 }
 
-export interface DiagramHistorySnapshot {
-  nodes: UmlClassNode[];
-  connections: UmlConnection[];
-  defaultLineStyle: UmlLineStyle;
-}
-
-export interface DiagramTab {
-  id: string;
-  name: string;
-  type: DiagramType;
-}
-
-export interface DiagramContextMenuState {
-  visible: boolean;
-  x: number;
-  y: number;
-  type: 'node' | 'connection' | 'canvas';
-  node?: UmlClassNode;
-  connection?: UmlConnection;
-  canvasPos?: { x: number; y: number };
-}
+export type { DiagramHistorySnapshot, DiagramTab, DiagramContextMenuState };
 
 @Component({
   standalone: true,
@@ -153,50 +110,11 @@ export interface DiagramContextMenuState {
     EditConnectionModalComponent,
     JsonModalComponent,
     CreateDiagramModalComponent,
+    DiagramTabsComponent,
+    DiagramContextMenuComponent,
     TranslatePipe,
   ],
-  providers: [
-    provideIcons({
-      heroMagnifyingGlassPlus,
-      heroMagnifyingGlassMinus,
-      heroArrowsPointingOut,
-      heroDocumentText,
-      heroArrowDownTray,
-      heroArrowUpTray,
-      heroTrash,
-      heroPlus,
-      heroXMark,
-      heroClipboardDocument,
-      heroCheck,
-      heroCursorArrowRays,
-      heroChevronRight,
-      heroChevronDown,
-      heroSquares2x2,
-      heroCube,
-      heroArrowsRightLeft,
-      heroArrowRightOnRectangle,
-      heroUserCircle,
-      heroFolder,
-      heroCloudArrowUp,
-      heroUserGroup,
-      heroSparkles,
-      heroBolt,
-      heroCommandLine,
-      heroCpuChip,
-      heroArrowPath,
-      heroEye,
-      heroLockClosed,
-      heroLockOpen,
-      heroBars3,
-      heroBars3CenterLeft,
-      heroChevronLeft,
-      heroScissors,
-      heroSquare2Stack,
-      heroPencilSquare,
-      heroSwatch,
-      heroDocumentDuplicate,
-    }),
-  ],
+  providers: [provideIcons(DIAGRAM_EDITOR_ICONS)],
   templateUrl: './diagram-editor.component.html',
   styleUrl: './diagram-editor.component.css',
 })
@@ -212,13 +130,75 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly confirmDialogService = inject(ConfirmDialogService);
+  readonly diagramHistoryService = inject(DiagramHistoryService);
+  readonly diagramClipboardService = inject(DiagramClipboardService);
+  readonly diagramNodeFactoryService = inject(DiagramNodeFactoryService, { optional: true }) ?? new DiagramNodeFactoryService();
+  readonly diagramExportService = inject(DiagramExportService, { optional: true }) ?? new DiagramExportService();
+  readonly diagramAlignmentService = inject(DiagramAlignmentService, { optional: true }) ?? new DiagramAlignmentService();
+  readonly diagramConnectionLayoutService = inject(DiagramConnectionLayoutService, { optional: true }) ?? new DiagramConnectionLayoutService();
+  readonly diagramAiSyncService = inject(DiagramAiSyncService, { optional: true }) ?? new DiagramAiSyncService();
+  readonly diagramImportService = inject(DiagramImportService, { optional: true }) ?? new DiagramImportService();
+  readonly diagramHotkeysService = inject(DiagramHotkeysService, { optional: true }) ?? new DiagramHotkeysService();
+  readonly diagramViewportService = inject(DiagramViewportService, { optional: true }) ?? new DiagramViewportService();
+  readonly diagramModalService = inject(DiagramModalService, { optional: true }) ?? new DiagramModalService();
+  readonly diagramPersistenceService = inject(DiagramPersistenceService, { optional: true }) ?? new DiagramPersistenceService();
+  readonly diagramContainmentService = inject(DiagramContainmentService, { optional: true }) ?? new DiagramContainmentService();
+  readonly diagramCollaborationCoordinatorService = inject(DiagramCollaborationCoordinatorService, { optional: true }) ?? new DiagramCollaborationCoordinatorService();
+
+  private get nodeFactory(): DiagramNodeFactoryService {
+    return this.diagramNodeFactoryService || new DiagramNodeFactoryService();
+  }
+
+  private get exportService(): DiagramExportService {
+    return this.diagramExportService || new DiagramExportService();
+  }
+
+  private get importService(): DiagramImportService {
+    return this.diagramImportService || new DiagramImportService();
+  }
+
+  private get alignmentService(): DiagramAlignmentService {
+    return this.diagramAlignmentService || new DiagramAlignmentService();
+  }
+
+  private get connectionLayoutService(): DiagramConnectionLayoutService {
+    return this.diagramConnectionLayoutService || new DiagramConnectionLayoutService();
+  }
+
+  private get aiSyncService(): DiagramAiSyncService {
+    return this.diagramAiSyncService || new DiagramAiSyncService();
+  }
+
+  private get hotkeysService(): DiagramHotkeysService {
+    return this.diagramHotkeysService || new DiagramHotkeysService();
+  }
+
+  private get viewportService(): DiagramViewportService {
+    return this.diagramViewportService || new DiagramViewportService();
+  }
+
+  private get modalService(): DiagramModalService {
+    return this.diagramModalService || new DiagramModalService();
+  }
+
+  private get persistenceService(): DiagramPersistenceService {
+    return this.diagramPersistenceService || new DiagramPersistenceService();
+  }
+
+  private get containmentService(): DiagramContainmentService {
+    return this.diagramContainmentService || new DiagramContainmentService();
+  }
+
+  private get collabCoordinator(): DiagramCollaborationCoordinatorService {
+    return this.diagramCollaborationCoordinatorService || new DiagramCollaborationCoordinatorService();
+  }
 
   // Lista reactiva de diagramas del proyecto para el Explorador por tipo
   readonly projectDiagrams = this.diagramService.projectDiagrams;
 
   // Indica si hay 2 o más usuarios editando concurrentemente en la sala
   readonly hasMultipleActiveUsers = computed(() => {
-    return this.collaborationService.isMultiUserEditing();
+    return this.collabCoordinator.isMultiUserEditing();
   });
 
   @ViewChild('diagramCanvas') diagramCanvas?: DiagramCanvasComponent;
@@ -229,9 +209,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   currentProjectId = signal<string | null>(null);
   currentProject = signal<Project | null>(null);
   currentDiagramName = signal<string>('Diagrama UML');
-  saveSuccessMessage = signal<boolean>(false);
-  hasUnsavedChanges = signal<boolean>(false);
-  zoomLevel = signal<number>(100);
+  readonly saveSuccessMessage = this.persistenceService.saveSuccessMessage;
+  readonly hasUnsavedChanges = this.persistenceService.hasUnsavedChanges;
+  readonly zoomLevel = this.viewportService.zoomLevel;
 
   // Notificaciones flotantes rápidas
   readonly quickToast = signal<string | null>(null);
@@ -245,26 +225,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }, 2500);
   }
 
-  // Portapapeles de nodos para copiar/pegar entre diagramas del mismo tipo
-  private clipboardNodes: {
-    diagramType: DiagramType;
-    nodes: UmlClassNode[];
-    connections?: UmlConnection[];
-  } | null = null;
-
   // Menú contextual flotante (clic derecho)
   readonly contextMenu = signal<DiagramContextMenuState | null>(null);
 
   hasClipboardContent(): boolean {
-    if (this.clipboardNodes?.nodes && this.clipboardNodes.nodes.length > 0) return true;
-    try {
-      const saved = sessionStorage.getItem('uml_clipboard_nodes');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return !!(parsed?.nodes?.length > 0);
-      }
-    } catch (_) {}
-    return false;
+    return this.diagramClipboardService.hasClipboardContent();
   }
 
   // Tipos de Diagrama & Paneles (Arquitectura Extensible para Casos de Uso, Secuencia, etc.)
@@ -273,71 +238,39 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // Pestañas abiertas en el lienzo (Multi-diagram tabs)
   readonly openTabs = signal<DiagramTab[]>([]);
 
-  // Estado de vista independiente por diagrama (zoom y posición de scroll)
-  private readonly diagramViewStates = new Map<string, DiagramCanvasViewState>();
-
   saveDiagramViewState(diagramId: string, state?: Partial<DiagramCanvasViewState>): void {
-    if (!diagramId) return;
-    const current = this.getDiagramViewState(diagramId);
-    const updated: DiagramCanvasViewState = {
-      zoom: state?.zoom !== undefined ? state.zoom : current.zoom,
-      scrollLeft: state?.scrollLeft !== undefined ? state.scrollLeft : current.scrollLeft,
-      scrollTop: state?.scrollTop !== undefined ? state.scrollTop : current.scrollTop,
-    };
-    this.diagramViewStates.set(diagramId, updated);
-    try {
-      sessionStorage.setItem(`diagram_view_state_${diagramId}`, JSON.stringify(updated));
-    } catch (_) {}
+    this.viewportService.saveDiagramViewState(diagramId, state);
   }
 
   getDiagramViewState(diagramId: string): DiagramCanvasViewState {
-    if (this.diagramViewStates.has(diagramId)) {
-      return this.diagramViewStates.get(diagramId)!;
-    }
-    try {
-      const raw = sessionStorage.getItem(`diagram_view_state_${diagramId}`);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed.zoom === 'number') {
-          this.diagramViewStates.set(diagramId, parsed);
-          return parsed;
-        }
-      }
-    } catch (_) {}
-    return { zoom: 100, scrollLeft: 0, scrollTop: 0 };
+    return this.viewportService.getDiagramViewState(diagramId);
   }
 
-  // Pipelines reactivos para auto-guardado en tiempo real (Google Docs style)
-  private readonly autoSave$ = new Subject<void>();
-  private readonly nodeDragEnd$ = new Subject<void>();
-
+  // Marcar cambios pendientes y actualizar borrador local
   markAsUnsaved(): void {
-    if (!this.isReadOnly()) {
-      this.hasUnsavedChanges.set(true);
-      this.saveLocalDraft();
-      this.autoSave$.next();
-    }
+    this.persistenceService.markAsUnsaved(
+      this.isReadOnly(),
+      this.currentDiagramId(),
+      {
+        nodes: this.nodes(),
+        connections: this.connections(),
+        defaultLineStyle: this.defaultLineStyle(),
+      },
+    );
   }
 
   private saveLocalDraft(): void {
     const diagramId = this.currentDiagramId();
     if (!diagramId) return;
-    try {
-      const draft = {
-        diagramId,
-        nodes: this.nodes(),
-        connections: this.connections(),
-        defaultLineStyle: this.defaultLineStyle(),
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(`uml_draft_${diagramId}`, JSON.stringify(draft));
-    } catch (_) {}
+    this.persistenceService.saveLocalDraft(diagramId, {
+      nodes: this.nodes(),
+      connections: this.connections(),
+      defaultLineStyle: this.defaultLineStyle(),
+    });
   }
 
   private clearLocalDraft(diagramId: string): void {
-    try {
-      localStorage.removeItem(`uml_draft_${diagramId}`);
-    } catch (_) {}
+    this.persistenceService.clearLocalDraft(diagramId);
   }
 
   // Rol del usuario actual en el proyecto
@@ -393,26 +326,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private canvasMouseDownPos = { x: 0, y: 0 };
 
   // Historial de cambios (Deshacer Ctrl+Z / Rehacer Ctrl+Y)
-  private historyUndoStack: DiagramHistorySnapshot[] = [];
-  private historyRedoStack: DiagramHistorySnapshot[] = [];
-  private readonly maxHistoryLength = 50;
   private isApplyingHistory = false;
-  private isDraggingNode = false;
   private hasMovedDuringPointerDown = false;
-  private lastNodeDragPos = new Map<string, { x: number; y: number }>();
-  private currentDragDescendantIds = new Set<string>();
   private lastSelectionChangeTime = 0;
 
-  historyUndoCount = signal<number>(0);
-  historyRedoCount = signal<number>(0);
-  readonly canUndo = computed(() => this.historyUndoCount() > 0 && !this.isReadOnly());
-  readonly canRedo = computed(() => this.historyRedoCount() > 0 && !this.isReadOnly());
+  historyUndoCount = computed(() => this.diagramHistoryService.undoCount());
+  historyRedoCount = computed(() => this.diagramHistoryService.redoCount());
+  readonly canUndo = computed(() => this.diagramHistoryService.canUndo() && !this.isReadOnly());
+  readonly canRedo = computed(() => this.diagramHistoryService.canRedo() && !this.isReadOnly());
 
   // Paneles laterales (Toolbox / Sidebar y Copilot IA) - Abierto por defecto con Explorador
   readonly isSidebarOpen = signal<boolean>(true);
   readonly isToolboxOpen = this.isSidebarOpen;
   isAiPanelOpen = signal<boolean>(false);
-  isExportDropdownOpen = signal<boolean>(false);
+  readonly isExportDropdownOpen = this.modalService.isExportDropdownOpen;
   isImportDropdownOpen = signal<boolean>(false);
 
   // Opciones de multiplicidad estándar
@@ -436,26 +363,26 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // Estilos de línea Enterprise Architect
   readonly lineStyles = UML_LINE_STYLES;
 
-  // Modales de edición
-  isEditNodeModalOpen = signal<boolean>(false);
-  isEditConnModalOpen = signal<boolean>(false);
-  editingNode = signal<UmlClassNode | null>(null);
-  editingConnection = signal<UmlConnection | null>(null);
+  // Modales de edición delegados a DiagramModalService
+  readonly isEditNodeModalOpen = this.modalService.isEditNodeModalOpen;
+  readonly isEditConnModalOpen = this.modalService.isEditConnModalOpen;
+  readonly editingNode = this.modalService.editingNode;
+  readonly editingConnection = this.modalService.editingConnection;
 
   // Modal JSON
-  showJsonModal = signal<boolean>(false);
-  jsonContent = signal<string>('');
-  jsonModalMode = signal<'import' | 'export'>('export');
+  readonly showJsonModal = this.modalService.showJsonModal;
+  readonly jsonContent = this.modalService.jsonContent;
+  readonly jsonModalMode = this.modalService.jsonModalMode;
 
   // Modal Perfil
-  isProfileModalOpen = signal<boolean>(false);
+  readonly isProfileModalOpen = this.modalService.isProfileModalOpen;
 
   // Modal Spring Boot
-  showSpringBootModal = signal<boolean>(false);
+  readonly showSpringBootModal = this.modalService.showSpringBootModal;
 
   // Modal Crear Diagrama por Tipo
-  isCreateDiagramModalOpen = signal<boolean>(false);
-  createDiagramLockedType = signal<DiagramType | null>(null);
+  readonly isCreateDiagramModalOpen = this.modalService.isCreateDiagramModalOpen;
+  readonly createDiagramLockedType = this.modalService.lockedDiagramType;
 
   nodes = signal<UmlClassNode[]>([]);
   connections = signal<UmlConnection[]>([]);
@@ -484,90 +411,81 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private animationTimers: any[] = [];
 
   ngOnInit(): void {
-    this.collaborationService.remoteNodeDrag$.subscribe((data) => {
-      this.nodes.update((list) =>
-        list.map((n) => (n.id === data.nodeId ? { ...n, position: data.position } : n)),
-      );
-      this.updateConnectionEndpoints();
-    });
-
-    this.collaborationService.remoteDiagramSync$.subscribe((data) => {
-      if (data.action === 'ai_mutation' && data.nodes) {
-        this.applyAiMutationWithAnimation(data.nodes, data.connections || []);
-      } else if (data.nodes) {
-        const cleanNodes = this.applyAiNodesMutation(data.nodes);
-        this.nodes.set(cleanNodes);
-        const cleanConns = this.sanitizeClientConnections(data.connections || [], cleanNodes);
-        this.connections.set(cleanConns);
+    this.collabCoordinator.setupSubscriptions({
+      onRemoteNodeDrag: (data) => {
+        this.nodes.update((list) =>
+          list.map((n) => (n.id === data.nodeId ? { ...n, position: data.position } : n)),
+        );
         this.updateConnectionEndpoints();
-        requestAnimationFrame(() => {
+      },
+      onRemoteDiagramSync: (data) => {
+        if (data.action === 'ai_mutation' && data.nodes) {
+          this.applyAiMutationWithAnimation(data.nodes, data.connections || []);
+        } else if (data.nodes) {
+          const cleanNodes = this.applyAiNodesMutation(data.nodes);
+          this.nodes.set(cleanNodes);
+          const cleanConns = this.sanitizeClientConnections(data.connections || [], cleanNodes);
+          this.connections.set(cleanConns);
           this.updateConnectionEndpoints();
-          this.diagramCanvas?.redraw();
-        });
-      }
-    });
-
-    this.collaborationService.nodeLockRejected$.subscribe((data) => {
-      if (this.editingNode()?.id === data.nodeId) {
-        this.isEditNodeModalOpen.set(false);
-        this.editingNode.set(null);
-        alert(`🔒 La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
-      }
-    });
-
-    // Escuchar confirmación de persistencia remota en la BD
-    this.collaborationService.lastServerSave$.subscribe((data) => {
-      if (data.diagramId === this.currentDiagramId()) {
-        this.diagramService.isSaving.set(false);
-        this.diagramService.lastSavedAt.set(new Date(data.savedAt));
-        if (!this.hasUnsavedChanges()) {
-          this.saveSuccessMessage.set(true);
-          setTimeout(() => this.saveSuccessMessage.set(false), 2000);
+          requestAnimationFrame(() => {
+            this.updateConnectionEndpoints();
+            this.diagramCanvas?.redraw();
+          });
         }
-      }
+      },
+      onNodeLockRejected: (data) => {
+        if (this.editingNode()?.id === data.nodeId) {
+          this.isEditNodeModalOpen.set(false);
+          this.editingNode.set(null);
+          alert(`🔒 La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
+        }
+      },
+      onServerSave: (data) => {
+        if (data.diagramId === this.currentDiagramId()) {
+          this.diagramService.isSaving.set(false);
+          this.diagramService.lastSavedAt.set(new Date(data.savedAt));
+          if (!this.hasUnsavedChanges()) {
+            this.persistenceService.notifySaveSuccess(2000);
+          }
+        }
+      },
+      onReconnected: () => {
+        const diagramId = this.currentDiagramId();
+        if (diagramId) {
+          if (this.hasUnsavedChanges()) {
+            this.collabCoordinator.sendDiagramSync(
+              this.nodes(),
+              this.connections(),
+              'reconnect_sync',
+              this.defaultLineStyle(),
+            );
+            this.saveToBackend(true);
+          } else {
+            this.loadDiagramFromBackend(diagramId);
+          }
+        }
+      },
     });
 
     // Pipeline de auto-guardado en tiempo real estilo Google Docs
-    this.autoSave$.pipe(debounceTime(1000)).subscribe(() => {
+    this.persistenceService.setupAutoSave(() => {
       if (this.hasUnsavedChanges() && !this.isReadOnly() && this.currentDiagramId()) {
         this.saveToBackend(true);
       }
     });
 
     // Sincronización y persistencia al terminar arrastre de nodos
-    this.nodeDragEnd$.pipe(debounceTime(600)).subscribe(() => {
-      this.isDraggingNode = false;
-      this.lastNodeDragPos.clear();
-      this.currentDragDescendantIds.clear();
+    this.persistenceService.setupNodeDragEnd(() => {
+      this.containmentService.resetDragState();
       if (!this.isReadOnly() && this.currentDiagramId()) {
-        this.collaborationService.sendDiagramSync(
+        this.collabCoordinator.sendDiagramSync(
           this.nodes(),
           this.connections(),
           'move_node',
           this.defaultLineStyle(),
         );
-        this.autoSave$.next();
+        this.persistenceService.triggerAutoSave();
       }
-    });
-
-    // Gestión resiliente de desconexión y reconexión de red
-    let wasConnected = false;
-    this.collaborationService.onConnect$.subscribe(() => {
-      const diagramId = this.currentDiagramId();
-      if (wasConnected && diagramId) {
-        if (this.hasUnsavedChanges()) {
-          this.collaborationService.sendDiagramSync(
-            this.nodes(),
-            this.connections(),
-            'reconnect_sync',
-            this.defaultLineStyle(),
-          );
-          this.saveToBackend(true);
-        } else {
-          this.loadDiagramFromBackend(diagramId);
-        }
-      }
-      wasConnected = true;
     });
 
     this.route.queryParams.subscribe((params) => {
@@ -623,11 +541,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.editingNode()) {
-      this.collaborationService.releaseNodeLock(this.editingNode()!.id);
+      this.collabCoordinator.releaseNodeLock(this.editingNode()!.id);
     }
     this.animationTimers.forEach((t) => clearTimeout(t));
     this.animationTimers = [];
-    this.collaborationService.leaveRoom();
+    this.collabCoordinator.leaveRoom();
   }
 
   loadDiagramFromBackend(diagramId: string): void {
@@ -635,7 +553,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.currentDiagramName.set(diagram.name);
       if (diagram.type) {
         this.activeDiagramType.set(diagram.type as DiagramType);
-        this.collaborationService.currentDiagramType.set(diagram.type);
+        this.collabCoordinator.setCurrentDiagramType(diagram.type);
       }
       if (diagram.defaultLineStyle) {
         this.defaultLineStyle.set(diagram.defaultLineStyle as UmlLineStyle);
@@ -809,10 +727,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.selectedConnId.set(null);
       this.selectedConnIds.set(new Set());
       this.selectedSourceNodeId.set(null);
-      this.historyUndoStack = [];
-      this.historyRedoStack = [];
-      this.historyUndoCount.set(0);
-      this.historyRedoCount.set(0);
+      this.diagramHistoryService.clear();
 
       // Sincronizar pestaña activa en la barra de pestañas (tabs)
       const diagType = (diagram.type as DiagramType) || DiagramType.CLASS;
@@ -826,10 +741,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         return [...tabs, { id: diagram.id, name: diagram.name, type: diagType }];
       });
 
-      if (this.collaborationService.currentDiagramId() && this.collaborationService.currentDiagramId() !== diagramId) {
-        this.collaborationService.leaveRoom();
-      }
-      this.collaborationService.joinRoom(diagramId);
+      this.collabCoordinator.switchRoom(this.collabCoordinator.getCurrentDiagramId(), diagramId);
 
       if (diagram.projectId) {
         if (!this.currentProject()) {
@@ -862,31 +774,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   normalizeDataType(type: string): string {
-    if (!type) return 'String';
-    const found = this.predefinedTypes.find((t) => t.toLowerCase() === type.trim().toLowerCase());
-    return found || 'String';
+    return this.aiSyncService.normalizeDataType(type);
   }
 
   normalizeReturnType(type: string): string {
-    if (!type) return 'void';
-    const found = this.predefinedReturnTypes.find((rt) => rt.toLowerCase() === type.trim().toLowerCase());
-    return found || 'void';
+    return this.aiSyncService.normalizeReturnType(type);
   }
 
   getNodeLock(nodeId: string): NodeLock | undefined {
-    return this.collaborationService.activeNodeLocks().get(nodeId);
+    return this.collabCoordinator.getNodeLock(nodeId);
   }
 
   isNodeLockedByOther(nodeId: string): boolean {
-    const lock = this.collaborationService.activeNodeLocks().get(nodeId);
-    const currentUserId = this.authService.currentUser()?.id;
-    return !!lock && lock.userId !== currentUserId;
+    return this.collabCoordinator.isNodeLockedByOther(nodeId, this.authService.currentUser()?.id);
   }
 
   @HostListener('window:pagehide')
   onPageHide(): void {
     this.flushExitSave();
-    this.collaborationService.leaveRoom();
+    this.collabCoordinator.leaveRoom();
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -896,7 +802,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       event.preventDefault();
       event.returnValue = '';
     } else {
-      this.collaborationService.leaveRoom();
+      this.collabCoordinator.leaveRoom();
     }
   }
 
@@ -905,7 +811,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (!diagramId || this.isReadOnly() || !this.hasUnsavedChanges()) return;
 
     // 1. Notificar inmediatamente a colaboradores por WebSocket
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'exit_save',
@@ -936,9 +842,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   @HostListener('window:mouseup')
   onWindowMouseUp(): void {
-    this.isDraggingNode = false;
-    this.lastNodeDragPos.clear();
-    this.currentDragDescendantIds.clear();
+    this.containmentService.resetDragState();
     setTimeout(() => {
       this.hasMovedDuringPointerDown = false;
     }, 50);
@@ -946,239 +850,59 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent): void {
-    const activeTag = (document.activeElement?.tagName || '').toLowerCase();
-    const isInputActive = activeTag === 'input' || activeTag === 'textarea';
-
-    if (event.key === 'Escape') {
-      this.selectedNodeId.set(null);
-      this.selectedNodeIds.set(new Set());
-      this.selectedConnId.set(null);
-      this.selectedConnIds.set(new Set());
-      this.setPointerMode();
-      this.closeEditNodeModal();
-      this.closeEditConnModal();
-      this.showJsonModal.set(false);
-      this.showSpringBootModal.set(false);
-      this.isExportDropdownOpen.set(false);
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.selectAllClasses();
-      }
-    } else if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.undo();
-      }
-    } else if (
-      (event.ctrlKey || event.metaKey) &&
-      (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))
-    ) {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.redo();
-      }
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-      event.preventDefault();
-      if (!this.isReadOnly()) {
-        this.saveToBackend();
-      }
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
-      event.preventDefault();
-      this.isToolboxOpen.set(!this.isToolboxOpen());
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'i') {
-      event.preventDefault();
-      this.isAiPanelOpen.set(!this.isAiPanelOpen());
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.copySelectedNodes();
-      }
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'x') {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.cutSelectedNodes();
-      }
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.pasteNodes();
-      }
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.duplicateSelected();
-      }
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.selectAllClasses();
-      }
-    } else if (event.key === 'Delete' && !this.isReadOnly()) {
-      if (!isInputActive) {
-        event.preventDefault();
-        this.deleteSelected();
-      }
-    } else if (event.key === 'Escape') {
-      if (this.contextMenu()) {
-        this.closeContextMenu();
-        event.preventDefault();
-        return;
-      }
-    } else if (event.key === 'F2') {
-      if (!isInputActive && !event.defaultPrevented) {
+    this.hotkeysService.handleKeyDown(event, {
+      isReadOnly: () => this.isReadOnly(),
+      undo: () => this.undo(),
+      redo: () => this.redo(),
+      save: () => this.saveToBackend(),
+      toggleToolbox: () => this.isToolboxOpen.set(!this.isToolboxOpen()),
+      toggleAi: () => this.isAiPanelOpen.set(!this.isAiPanelOpen()),
+      copy: () => this.copySelectedNodes(),
+      cut: () => this.cutSelectedNodes(),
+      paste: () => this.pasteNodes(),
+      duplicate: () => this.duplicateSelected(),
+      selectAll: () => this.selectAllClasses(),
+      deleteSelected: () => this.deleteSelected(),
+      escape: () => {
+        this.selectedNodeId.set(null);
+        this.selectedNodeIds.set(new Set());
+        this.selectedConnId.set(null);
+        this.selectedConnIds.set(new Set());
+        this.setPointerMode();
+        this.closeEditNodeModal();
+        this.closeEditConnModal();
+        this.showJsonModal.set(false);
+        this.showSpringBootModal.set(false);
+        this.isExportDropdownOpen.set(false);
+      },
+      hasContextMenu: () => !!this.contextMenu(),
+      closeContextMenu: () => this.closeContextMenu(),
+      getRenameTargetNodeId: () => {
         const isExplorerHovered =
           this.isSidebarOpen() &&
           this.diagramSidebar?.activeTab() === 'explorer' &&
           !!this.diagramSidebar?.hoveredDiagramId();
-        if (!isExplorerHovered) {
-          const hoveredNode = this.diagramCanvas?.hoveredNodeId();
-          const selectedNode = this.selectedNodeId();
-          const targetNodeId = hoveredNode || selectedNode;
-          if (targetNodeId && !this.isReadOnly()) {
-            event.preventDefault();
-            this.diagramCanvas?.startRenameNode(targetNodeId);
-          }
-        }
-      }
-    }
+        if (isExplorerHovered) return null;
+        return this.diagramCanvas?.hoveredNodeId() || this.selectedNodeId();
+      },
+      startRenameNode: (targetNodeId: string) => {
+        this.diagramCanvas?.startRenameNode(targetNodeId);
+      },
+    });
   }
 
   buildSaveAstPayload(): SaveDiagramAstRequest {
-    const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
-    const connections = isSequence
-      ? this.recalculateSequenceNumbers(this.connections(), true)
-      : this.connections();
-    return {
-      type: this.activeDiagramType(),
-      defaultLineStyle: this.defaultLineStyle(),
-      nodes: this.nodes().map((n) => {
-        const cleanName = (n.name || '').trim();
-        const fallbackName = n.isAnchor
-          ? 'Anchor'
-          : n.nodeType === 'boundary_box'
-            ? '.'
-            : (isSequence
-              ? (n.nodeType === 'actor' || n.id.startsWith('actor_') ? 'actor_1' : 'lifeline_1')
-              : 'ClassName');
-        const finalName = (n.nodeType === 'boundary_box' && (cleanName === 'ClassName' || !cleanName))
-          ? '.'
-          : (cleanName || fallbackName);
-
-        const resolvedNodeType =
-          n.nodeType && n.nodeType !== 'class'
-            ? n.nodeType
-            : n.id.startsWith('actor_')
-            ? 'actor'
-            : n.id.startsWith('use_case_')
-            ? 'use_case'
-            : n.id.startsWith('boundary_box_')
-            ? 'boundary_box'
-            : n.id.startsWith('package_')
-            ? 'package'
-            : n.id.startsWith('boundary_')
-            ? 'boundary'
-            : n.id.startsWith('control_')
-            ? 'control'
-            : n.id.startsWith('entity_')
-            ? 'entity'
-            : n.id.startsWith('component_')
-            ? 'component'
-            : n.id.startsWith('device_')
-            ? 'device'
-            : n.id.startsWith('exec_env_') || n.id.startsWith('exec_')
-            ? 'executionEnvironment'
-            : n.id.startsWith('lifeline_')
-            ? 'lifeline'
-            : isSequence
-            ? 'lifeline'
-            : this.activeDiagramType() === DiagramType.PACKAGE
-            ? 'package'
-            : n.nodeType || 'class';
-
-        let nodeColor = n.color;
-        if (!nodeColor || ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(resolvedNodeType))) {
-          nodeColor = this.getDefaultColorForNodeType(resolvedNodeType, n.stereotype);
-        }
-
-        const isExplicitSize = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(resolvedNodeType);
-        const savedHeight = resolvedNodeType === 'lifeline'
-          ? 60
-          : (isExplicitSize
-              ? (n.customHeight || n.height || this.getNodeHeight(n))
-              : (n.customHeight || (n.isCustomSize ? n.height : null) || null));
-
-        return {
-          id: n.id,
-          name: finalName,
-          positionX: n.position.x,
-          positionY: n.position.y,
-          width: this.getNodeWidth(n),
-          height: savedHeight,
-          color: nodeColor,
-          isAnchor: n.isAnchor,
-          assocMainConnId: n.assocMainConnId,
-          nodeType: resolvedNodeType,
-          stereotype: n.stereotype || null,
-          activations: (n as any).activations || [],
-          attributes: (n.attributes || []).map((a: any, aIdx: number) => ({
-            name: a.name,
-            type: a.type || 'String',
-            orderIndex: typeof a.orderIndex === 'number' ? a.orderIndex : aIdx,
-            nullable: a.nullable !== undefined ? a.nullable : (a.isNullable !== undefined ? a.isNullable : true),
-            unique: a.unique !== undefined ? a.unique : (a.isUnique !== undefined ? a.isUnique : false),
-            length: a.length !== undefined && a.length !== null ? Number(a.length) : 255,
-            defaultValue: a.defaultValue ?? a.default ?? null,
-            default: a.default ?? a.defaultValue ?? null,
-            visibility: a.visibility || undefined,
-            isPk: typeof a.isPk === 'boolean' ? a.isPk : undefined,
-            isFk: typeof a.isFk === 'boolean' ? a.isFk : undefined,
-            isNullable: typeof a.isNullable === 'boolean' ? a.isNullable : undefined,
-            isUnique: typeof a.isUnique === 'boolean' ? a.isUnique : undefined,
-          })),
-          methods: (n.methods || []).map((m: any, mIdx: number) => ({
-            name: m.name,
-            parameters: m.parameters || '',
-            returnType: m.returnType || 'void',
-            orderIndex: typeof m.orderIndex === 'number' ? m.orderIndex : mIdx,
-            visibility: m.visibility || undefined,
-          })),
-        };
-      }),
-      connections: connections.map((c) => {
-        const baseSourceId = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-        const baseTargetId = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-        return {
-          id: c.id,
-          sourceNodeId: baseSourceId,
-          targetNodeId: baseTargetId,
-          sourceId: c.sourceId,
-          targetId: c.targetId,
-          type: c.type,
-          lineStyle: c.lineStyle || this.defaultLineStyle(),
-          name: c.name || null,
-          sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
-          targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
-          assocAnchorNodeId: c.assocAnchorNodeId || null,
-          messages: (c.messages || []).map((m, mIdx) => {
-            const norm = this.normalizeUmlMessage(m, `${mIdx + 1}`);
-            return {
-              id: norm.id,
-              sequenceNumber: norm.sequenceNumber,
-              functionName: norm.functionName,
-              parameters: norm.parameters ?? '',
-              returnType: norm.returnType || undefined,
-              direction: norm.direction,
-              type: norm.type,
-              isReturn: norm.isReturn,
-              orderIndex: norm.orderIndex ?? mIdx,
-              positionY: norm.positionY,
-              color: norm.color || undefined,
-            };
-          }),
-        };
-      }),
-    };
+    return this.exportService.buildSaveAstPayload(
+      this.activeDiagramType(),
+      this.defaultLineStyle(),
+      this.nodes(),
+      this.connections(),
+      (n: UmlClassNode) => this.getNodeWidth(n),
+      (n: UmlClassNode) => this.getNodeHeight(n),
+      (nodeType?: string | null, stereotype?: string | null) => this.getDefaultColorForNodeType(nodeType, stereotype),
+      (m: any, defaultSeq?: string) => this.normalizeUmlMessage(m, defaultSeq),
+      (conns: UmlConnection[], preserveOrder?: boolean) => this.recalculateSequenceNumbers(conns, preserveOrder),
+    );
   }
 
   saveToBackend(silent = false): void {
@@ -1194,12 +918,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     this.diagramService.saveAst(diagramId, payload).subscribe({
       next: () => {
-        this.hasUnsavedChanges.set(false);
-        this.clearLocalDraft(diagramId);
-        this.saveSuccessMessage.set(true);
-        setTimeout(() => this.saveSuccessMessage.set(false), 2500);
+        this.persistenceService.markAsSaved(diagramId);
+        this.persistenceService.notifySaveSuccess(2500);
         if (!silent) {
-          this.collaborationService.sendDiagramSync(
+          this.collabCoordinator.sendDiagramSync(
             this.nodes(),
             this.connections(),
             'save',
@@ -1247,24 +969,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       newPosition = { x: Math.round(newPosition.x), y: 50 };
     }
 
-    if (!this.isDraggingNode) {
-      this.isDraggingNode = true;
-      this.pushSnapshot();
-      this.currentDragDescendantIds.clear();
-
-      // Recopilar todos los nodos hijos/descendientes del nodo arrastrado y de la selección actual
+    if (!this.containmentService.isDraggingNode) {
       const rootsToTrace = new Set<string>([node.id]);
       if (this.selectedNodeIds().has(node.id)) {
         for (const id of this.selectedNodeIds()) {
           rootsToTrace.add(id);
         }
       }
-      for (const rootId of rootsToTrace) {
-        const desc = this.getDescendantNodeIds(rootId);
-        for (const dId of desc) {
-          this.currentDragDescendantIds.add(dId);
-        }
-      }
+      this.containmentService.startDrag(
+        rootsToTrace,
+        this.nodes(),
+        (n) => this.getNodeWidth(n),
+        (n) => this.getNodeHeight(n),
+      );
+      this.pushSnapshot();
     }
 
     if (!this.selectedNodeIds().has(node.id) && this.selectedNodeId() !== node.id) {
@@ -1272,7 +990,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.selectedNodeId.set(node.id);
     }
 
-    const last = this.lastNodeDragPos.get(node.id);
+    const last = this.containmentService.lastNodeDragPos.get(node.id);
     if (last && last.x === newPosition.x && last.y === newPosition.y) {
       return;
     }
@@ -1288,16 +1006,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               const otherIsSeq = this.activeDiagramType() === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
               const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
               other.position = { x: Math.round(other.position.x + dx), y: otherY };
-              this.collaborationService.sendNodeDrag(other.id, other.position);
+              this.collabCoordinator.sendNodeDrag(other.id, other.position);
             }
           }
         }
 
         // 2. Mover nodos descendientes jerárquicos contenidos (agrupación visual padre-hijo)
-        if (this.currentDragDescendantIds.size > 0) {
+        if (this.containmentService.currentDragDescendantIds.size > 0) {
           for (const other of this.nodes()) {
             if (
-              this.currentDragDescendantIds.has(other.id) &&
+              this.containmentService.currentDragDescendantIds.has(other.id) &&
               other.id !== node.id &&
               !this.selectedNodeIds().has(other.id) &&
               !other.isAnchor
@@ -1305,26 +1023,26 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
               const otherIsSeq = this.activeDiagramType() === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
               const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
               other.position = { x: Math.round(other.position.x + dx), y: otherY };
-              this.collaborationService.sendNodeDrag(other.id, other.position);
+              this.collabCoordinator.sendNodeDrag(other.id, other.position);
             }
           }
         }
 
         if (
           (this.selectedNodeIds().size > 1 && this.selectedNodeIds().has(node.id)) ||
-          this.currentDragDescendantIds.size > 0
+          this.containmentService.currentDragDescendantIds.size > 0
         ) {
           this.diagramCanvas?.redraw();
         }
       }
     }
-    this.lastNodeDragPos.set(node.id, { x: newPosition.x, y: newPosition.y });
+    this.containmentService.lastNodeDragPos.set(node.id, { x: newPosition.x, y: newPosition.y });
 
     node.position = newPosition;
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendNodeDrag(node.id, newPosition);
-    this.nodeDragEnd$.next();
+    this.collabCoordinator.sendNodeDrag(node.id, newPosition);
+    this.persistenceService.triggerNodeDragEnd();
   }
 
   onNodeLabelOffsetChange(node: UmlClassNode, offset: { x: number; y: number }): void {
@@ -1334,23 +1052,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       list.map((n) => (n.id === node.id ? { ...n, labelOffset: { ...offset } } : n))
     );
     this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'move_node');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'move_node');
   }
 
   onMoveNodes(event: FMoveNodesEvent): void {
     if (this.isReadOnly()) return;
     this.hasMovedDuringPointerDown = true;
 
-    if (!this.isDraggingNode) {
-      this.isDraggingNode = true;
+    if (!this.containmentService.isDraggingNode) {
+      this.containmentService.startDrag(
+        event.nodes.map((n) => n.id),
+        this.nodes(),
+        (n) => this.getNodeWidth(n),
+        (n) => this.getNodeHeight(n),
+      );
       this.pushSnapshot();
-      this.currentDragDescendantIds.clear();
-      for (const item of event.nodes) {
-        const desc = this.getDescendantNodeIds(item.id);
-        for (const dId of desc) {
-          this.currentDragDescendantIds.add(dId);
-        }
-      }
     }
 
     const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
@@ -1367,11 +1083,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         const dy = isSequenceNode ? 0 : targetY - node.position.y;
         if (dx !== 0 || dy !== 0) {
           node.position = { x: targetX, y: targetY };
-          this.lastNodeDragPos.set(node.id, { x: targetX, y: targetY });
+          this.containmentService.lastNodeDragPos.set(node.id, { x: targetX, y: targetY });
           anyMoved = true;
-          this.collaborationService.sendNodeDrag(node.id, node.position);
+          this.collabCoordinator.sendNodeDrag(node.id, node.position);
 
-          if (this.currentDragDescendantIds.size > 0) {
+          if (this.containmentService.currentDragDescendantIds.size > 0) {
             const descendantsOfThisNode = this.getDescendantNodeIds(node.id);
             for (const descId of descendantsOfThisNode) {
               if (!eventNodeIds.has(descId)) {
@@ -1381,7 +1097,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
                     ? 50
                     : Math.round(descNode.position.y + dy);
                   descNode.position = { x: Math.round(descNode.position.x + dx), y: dY };
-                  this.collaborationService.sendNodeDrag(descNode.id, descNode.position);
+                  this.collabCoordinator.sendNodeDrag(descNode.id, descNode.position);
                 }
               }
             }
@@ -1395,7 +1111,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.markAsUnsaved();
       this.updateConnectionEndpoints();
       this.diagramCanvas?.redraw();
-      this.nodeDragEnd$.next();
+      this.persistenceService.triggerNodeDragEnd();
     }
   }
 
@@ -1414,7 +1130,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const canvasX = (rawX - posX) / scale;
     const canvasY = (rawY - posY) / scale;
 
-    this.collaborationService.sendCursorPosition(canvasX, canvasY);
+    this.collabCoordinator.sendCursorPosition(canvasX, canvasY);
     this.mouseCanvasPos.set({ x: Math.round(canvasX), y: Math.round(canvasY) });
   }
 
@@ -1542,47 +1258,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   isNodeInsideParent(child: UmlClassNode, parent: UmlClassNode): boolean {
-    if (child.id === parent.id || child.isAnchor || parent.isAnchor) return false;
-    const parentW = this.getNodeWidth(parent);
-    const parentH = this.getNodeHeight(parent) || 60;
-    const childW = this.getNodeWidth(child);
-    const childH = this.getNodeHeight(child) || 60;
-
-    const parentArea = parentW * parentH;
-    const childArea = childW * childH;
-    if (parentArea <= childArea * 1.05) return false;
-
-    const childCenterX = child.position.x + childW / 2;
-    const childCenterY = child.position.y + childH / 2;
-
-    return (
-      childCenterX >= parent.position.x - 5 &&
-      childCenterX <= parent.position.x + parentW + 5 &&
-      childCenterY >= parent.position.y - 5 &&
-      childCenterY <= parent.position.y + parentH + 5
+    return this.containmentService.isNodeInsideParent(
+      child,
+      parent,
+      (n) => this.getNodeWidth(n),
+      (n) => this.getNodeHeight(n),
     );
   }
 
   getDescendantNodeIds(parentNodeId: string): Set<string> {
-    const descendants = new Set<string>();
-    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
-    const parent = nodeMap.get(parentNodeId);
-    if (!parent) return descendants;
-
-    const queue: UmlClassNode[] = [parent];
-    const visited = new Set<string>([parentNodeId]);
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      for (const candidate of this.nodes()) {
-        if (!visited.has(candidate.id) && this.isNodeInsideParent(candidate, current)) {
-          visited.add(candidate.id);
-          descendants.add(candidate.id);
-          queue.push(candidate);
-        }
-      }
-    }
-    return descendants;
+    return this.containmentService.getDescendantNodeIds(
+      parentNodeId,
+      this.nodes(),
+      (n) => this.getNodeWidth(n),
+      (n) => this.getNodeHeight(n),
+    );
   }
 
   onNodeSizeChanged(event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }): void {
@@ -1605,7 +1295,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'update',
@@ -1620,55 +1310,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   alignNodes(direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'): void {
     if (this.isReadOnly()) return;
-    const selected = this.nodes().filter((n) => this.selectedNodeIds().has(n.id) && !n.isAnchor);
-    if (selected.length < 2) return;
+    if (this.selectedNodeIds().size < 2) return;
 
     this.pushSnapshot();
+    const modified = this.alignmentService.alignNodes(
+      this.nodes(),
+      this.selectedNodeIds(),
+      direction,
+      (n: UmlClassNode) => this.getNodeWidth(n),
+      (n: UmlClassNode) => this.getNodeHeight(n),
+    );
+    if (modified.length === 0) return;
 
-    if (direction === 'left') {
-      const minX = Math.min(...selected.map((n) => n.position.x));
-      for (const n of selected) {
-        n.position = { x: minX, y: n.position.y };
-        this.collaborationService.sendNodeDrag(n.id, n.position);
-      }
-    } else if (direction === 'center') {
-      const centers = selected.map((n) => n.position.x + this.getNodeWidth(n) / 2);
-      const avgCenter = Math.round(centers.reduce((a, b) => a + b, 0) / centers.length);
-      for (const n of selected) {
-        n.position = { x: Math.round(avgCenter - this.getNodeWidth(n) / 2), y: n.position.y };
-        this.collaborationService.sendNodeDrag(n.id, n.position);
-      }
-    } else if (direction === 'right') {
-      const maxRight = Math.max(...selected.map((n) => n.position.x + this.getNodeWidth(n)));
-      for (const n of selected) {
-        n.position = { x: Math.round(maxRight - this.getNodeWidth(n)), y: n.position.y };
-        this.collaborationService.sendNodeDrag(n.id, n.position);
-      }
-    } else if (direction === 'top') {
-      const minY = Math.min(...selected.map((n) => n.position.y));
-      for (const n of selected) {
-        n.position = { x: n.position.x, y: minY };
-        this.collaborationService.sendNodeDrag(n.id, n.position);
-      }
-    } else if (direction === 'middle') {
-      const middles = selected.map((n) => n.position.y + this.getNodeHeight(n) / 2);
-      const avgMiddle = Math.round(middles.reduce((a, b) => a + b, 0) / middles.length);
-      for (const n of selected) {
-        n.position = { x: n.position.x, y: Math.round(avgMiddle - this.getNodeHeight(n) / 2) };
-        this.collaborationService.sendNodeDrag(n.id, n.position);
-      }
-    } else if (direction === 'bottom') {
-      const maxBottom = Math.max(...selected.map((n) => n.position.y + this.getNodeHeight(n)));
-      for (const n of selected) {
-        n.position = { x: n.position.x, y: Math.round(maxBottom - this.getNodeHeight(n)) };
-        this.collaborationService.sendNodeDrag(n.id, n.position);
-      }
+    for (const n of modified) {
+      this.collabCoordinator.sendNodeDrag(n.id, n.position);
     }
-
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.diagramCanvas?.redraw();
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'align_nodes',
@@ -1678,45 +1338,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   distributeNodes(direction: 'horizontal' | 'vertical'): void {
     if (this.isReadOnly()) return;
-    const selected = this.nodes().filter((n) => this.selectedNodeIds().has(n.id) && !n.isAnchor);
-    if (selected.length < 3) return;
+    if (this.selectedNodeIds().size < 3) return;
 
     this.pushSnapshot();
+    const modified = this.alignmentService.distributeNodes(
+      this.nodes(),
+      this.selectedNodeIds(),
+      direction,
+      (n: UmlClassNode) => this.getNodeWidth(n),
+      (n: UmlClassNode) => this.getNodeHeight(n),
+    );
+    if (modified.length === 0) return;
 
-    if (direction === 'horizontal') {
-      selected.sort((a, b) => a.position.x - b.position.x);
-      const first = selected[0];
-      const last = selected[selected.length - 1];
-      const totalWidth = selected.slice(1, -1).reduce((sum, n) => sum + this.getNodeWidth(n), 0);
-      const span = last.position.x - (first.position.x + this.getNodeWidth(first));
-      const spacing = Math.max(20, Math.round((span - totalWidth) / (selected.length - 1)));
-
-      let currentX = first.position.x + this.getNodeWidth(first) + spacing;
-      for (let i = 1; i < selected.length - 1; i++) {
-        selected[i].position = { x: currentX, y: selected[i].position.y };
-        this.collaborationService.sendNodeDrag(selected[i].id, selected[i].position);
-        currentX += this.getNodeWidth(selected[i]) + spacing;
-      }
-    } else {
-      selected.sort((a, b) => a.position.y - b.position.y);
-      const first = selected[0];
-      const last = selected[selected.length - 1];
-      const totalHeight = selected.slice(1, -1).reduce((sum, n) => sum + this.getNodeHeight(n), 0);
-      const span = last.position.y - (first.position.y + this.getNodeHeight(first));
-      const spacing = Math.max(20, Math.round((span - totalHeight) / (selected.length - 1)));
-
-      let currentY = first.position.y + this.getNodeHeight(first) + spacing;
-      for (let i = 1; i < selected.length - 1; i++) {
-        selected[i].position = { x: selected[i].position.x, y: currentY };
-        this.collaborationService.sendNodeDrag(selected[i].id, selected[i].position);
-        currentY += this.getNodeHeight(selected[i]) + spacing;
-      }
+    for (const n of modified) {
+      this.collabCoordinator.sendNodeDrag(n.id, n.position);
     }
-
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.diagramCanvas?.redraw();
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'distribute_nodes',
@@ -1726,23 +1366,21 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   snapSelectedToGrid(gridSize = 20): void {
     if (this.isReadOnly()) return;
-    const targets = this.selectedNodeIds().size > 0
-      ? this.nodes().filter((n) => this.selectedNodeIds().has(n.id) && !n.isAnchor)
-      : this.nodes().filter((n) => !n.isAnchor);
-    if (targets.length === 0) return;
+    const modified = this.alignmentService.snapToGrid(
+      this.nodes(),
+      this.selectedNodeIds(),
+      gridSize,
+    );
+    if (modified.length === 0) return;
 
     this.pushSnapshot();
-    for (const n of targets) {
-      n.position = {
-        x: Math.round(n.position.x / gridSize) * gridSize,
-        y: Math.round(n.position.y / gridSize) * gridSize,
-      };
-      this.collaborationService.sendNodeDrag(n.id, n.position);
+    for (const n of modified) {
+      this.collabCoordinator.sendNodeDrag(n.id, n.position);
     }
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.diagramCanvas?.redraw();
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'snap_grid',
@@ -1751,211 +1389,43 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
-    if (sourceNode.id === targetNode.id) {
-      return {
-        sourceId: `${sourceNode.id}_top`,
-        targetId: `${targetNode.id}_right`,
-      };
-    }
-
-    const sWidth = sourceNode.isAnchor ? 0 : this.getNodeWidth(sourceNode);
-    const sHeight = sourceNode.isAnchor ? 0 : this.getNodeHeight(sourceNode);
-    const tWidth = targetNode.isAnchor ? 0 : this.getNodeWidth(targetNode);
-    const tHeight = targetNode.isAnchor ? 0 : this.getNodeHeight(targetNode);
-
-    const sCenter = { x: sourceNode.position.x + sWidth / 2, y: sourceNode.position.y + sHeight / 2 };
-    const tCenter = { x: targetNode.position.x + tWidth / 2, y: targetNode.position.y + tHeight / 2 };
-
-    const dx = tCenter.x - sCenter.x;
-    const dy = tCenter.y - sCenter.y;
-
-    let sourceSide = '_right';
-    let targetSide = '_left';
-
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      if (dx >= 0) {
-        sourceSide = '_right';
-        targetSide = '_left';
-      } else {
-        sourceSide = '_left';
-        targetSide = '_right';
-      }
-    } else {
-      if (dy >= 0) {
-        sourceSide = '_bottom';
-        targetSide = '_top';
-      } else {
-        sourceSide = '_top';
-        targetSide = '_bottom';
-      }
-    }
-
-    return {
-      sourceId: sourceNode.id + (sourceNode.isAnchor ? '' : sourceSide),
-      targetId: targetNode.id + (targetNode.isAnchor ? '' : targetSide),
-    };
+    return this.connectionLayoutService.getOptimalConnectorId(
+      sourceNode,
+      targetNode,
+      (n: UmlClassNode) => this.getNodeWidth(n),
+      (n: UmlClassNode) => this.getNodeHeight(n),
+    );
   }
 
   getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
-    const w = node.isAnchor ? 0 : node.width || 220;
-    const h = this.getNodeHeight(node);
-    const bottomExtra =
-      node.nodeType === 'actor' ||
-      node.nodeType === 'boundary' ||
-      node.nodeType === 'control' ||
-      node.nodeType === 'entity'
-        ? 38 + Math.max(0, node.labelOffset?.y || 0)
-        : 0;
-    switch (side) {
-      case 'left':
-        return { x: node.position.x, y: node.position.y + h / 2 };
-      case 'right':
-        return { x: node.position.x + w, y: node.position.y + h / 2 };
-      case 'top':
-        return { x: node.position.x + w / 2, y: node.position.y };
-      case 'bottom':
-        return { x: node.position.x + w / 2, y: node.position.y + h + bottomExtra };
-      default:
-        return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
-    }
+    return this.connectionLayoutService.getConnectorPoint(
+      node,
+      side,
+      (n: UmlClassNode) => this.getNodeHeight(n),
+    );
   }
 
   isRecursiveConn(conn: UmlConnection): boolean {
-    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
-    return !!s && s === t;
+    return this.connectionLayoutService.isRecursiveConn(conn);
   }
 
   getConnSide(connectorId: string | undefined, defaultSide: 'top' | 'right' | 'bottom' | 'left' = 'top'): 'top' | 'right' | 'bottom' | 'left' {
-    if (!connectorId) return defaultSide;
-    if (connectorId.endsWith('_top')) return 'top';
-    if (connectorId.endsWith('_right')) return 'right';
-    if (connectorId.endsWith('_bottom')) return 'bottom';
-    if (connectorId.endsWith('_left')) return 'left';
-    return defaultSide;
+    return this.connectionLayoutService.getConnSide(connectorId, defaultSide);
   }
 
   updateConnectionEndpoints(): void {
-    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
-
-    let anchorMoved = false;
-    for (const conn of this.connections()) {
-      if (conn.assocAnchorNodeId) {
-        const anchorNode = nodeMap.get(conn.assocAnchorNodeId);
-        const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
-        const sourceNode = nodeMap.get(baseSourceId);
-        const targetNode = nodeMap.get(baseTargetId);
-
-        if (anchorNode && sourceNode && targetNode) {
-          const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-          const sSide = optimal.sourceId.split('_').pop() || 'right';
-          const tSide = optimal.targetId.split('_').pop() || 'left';
-          const p1 = this.getConnectorPoint(sourceNode, sSide);
-          const p2 = this.getConnectorPoint(targetNode, tSide);
-          const newX = Math.round((p1.x + p2.x) / 2);
-          const newY = Math.round((p1.y + p2.y) / 2);
-          if (!anchorNode.position || anchorNode.position.x !== newX || anchorNode.position.y !== newY) {
-            anchorNode.position = { x: newX, y: newY };
-            anchorMoved = true;
-          }
-        }
-      }
-    }
-
-    if (anchorMoved) {
-      this.nodes.update((nodes) => nodes.map((n) => ({ ...n })));
-    }
-
-    this.connections.update((conns) =>
-      conns
-        .filter((conn) => {
-          const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-          const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
-          return nodeMap.has(baseSourceId) && nodeMap.has(baseTargetId);
-        })
-        .map((conn) => {
-          if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
-            const sourceNode = nodeMap.get(conn.sourceNodeId);
-            const targetNode = nodeMap.get(conn.targetNodeId);
-            if (sourceNode && targetNode) {
-              if (sourceNode.isAnchor) {
-                const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-                return {
-                  ...conn,
-                  sourceId: sourceNode.id,
-                  targetId: optimal.targetId,
-                };
-              } else if (targetNode.isAnchor) {
-                const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-                return {
-                  ...conn,
-                  sourceId: optimal.sourceId,
-                  targetId: targetNode.id,
-                };
-              }
-            }
-          }
-
-          const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-          const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-          const sourceNode = nodeMap.get(baseSourceId);
-          const targetNode = nodeMap.get(baseTargetId);
-
-          if (
-            conn.sourceId.includes('_slot_') ||
-            conn.targetId.includes('_slot_') ||
-            this.activeDiagramType() === DiagramType.SEQUENCE ||
-            ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type)
-          ) {
-            const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
-            const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
-            const slotNum = sMatch ? sMatch[1] : (tMatch ? tMatch[1] : '0');
-            return {
-              ...conn,
-              sourceNodeId: baseSourceId,
-              targetNodeId: baseTargetId,
-              sourceId: `${baseSourceId}_slot_${slotNum}`,
-              targetId: `${baseTargetId}_slot_${slotNum}`,
-            };
-          }
-
-          if (sourceNode && targetNode && !sourceNode.isAnchor && !targetNode.isAnchor) {
-            if (baseSourceId === baseTargetId) {
-              const validConnectors = [
-                `${baseSourceId}_top`,
-                `${baseSourceId}_right`,
-                `${baseSourceId}_bottom`,
-                `${baseSourceId}_left`,
-              ];
-              const curSource = conn.sourceId;
-              const curTarget = conn.targetId;
-              const hasDistinct =
-                validConnectors.includes(curSource) &&
-                validConnectors.includes(curTarget) &&
-                curSource !== curTarget;
-
-              return {
-                ...conn,
-                sourceNodeId: baseSourceId,
-                targetNodeId: baseTargetId,
-                sourceId: hasDistinct ? curSource : `${baseSourceId}_top`,
-                targetId: hasDistinct ? curTarget : `${baseTargetId}_right`,
-              };
-            }
-
-            const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-            return {
-              ...conn,
-              sourceNodeId: baseSourceId,
-              targetNodeId: baseTargetId,
-              sourceId: optimal.sourceId,
-              targetId: optimal.targetId,
-            };
-          }
-          return conn;
-        }),
+    const result = this.connectionLayoutService.recalculateConnectionEndpoints(
+      this.nodes(),
+      this.connections(),
+      this.activeDiagramType(),
+      this.defaultLineStyle(),
+      (n: UmlClassNode) => this.getNodeWidth(n),
+      (n: UmlClassNode) => this.getNodeHeight(n),
     );
+    if (result.anchorMoved) {
+      this.nodes.set(result.updatedNodes);
+    }
+    this.connections.set(result.updatedConnections);
   }
 
   onCanvasMouseDown(event: MouseEvent): void {
@@ -2160,41 +1630,32 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   private cloneSnapshot(): DiagramHistorySnapshot {
-    return {
-      nodes: JSON.parse(JSON.stringify(this.nodes())),
-      connections: JSON.parse(JSON.stringify(this.connections())),
-      defaultLineStyle: this.defaultLineStyle(),
-    };
+    return this.diagramHistoryService.cloneSnapshot(
+      this.nodes(),
+      this.connections(),
+      this.defaultLineStyle(),
+    );
   }
 
   pushSnapshot(): void {
     if (this.isApplyingHistory) return;
     const snapshot = this.cloneSnapshot();
-    this.historyUndoStack.push(snapshot);
-    if (this.historyUndoStack.length > this.maxHistoryLength) {
-      this.historyUndoStack.shift();
-    }
-    this.historyRedoStack = [];
-    this.historyUndoCount.set(this.historyUndoStack.length);
-    this.historyRedoCount.set(0);
+    this.diagramHistoryService.pushSnapshot(snapshot);
   }
 
   undo(): void {
-    if (this.isReadOnly() || this.historyUndoStack.length === 0) return;
+    if (this.isReadOnly() || !this.diagramHistoryService.canUndo()) return;
 
     const currentSnapshot = this.cloneSnapshot();
-    this.historyRedoStack.push(currentSnapshot);
+    const prevSnapshot = this.diagramHistoryService.undo(currentSnapshot);
+    if (!prevSnapshot) return;
 
-    const prevSnapshot = this.historyUndoStack.pop()!;
     this.isApplyingHistory = true;
 
     this.nodes.set(prevSnapshot.nodes);
     this.connections.set(prevSnapshot.connections);
     this.defaultLineStyle.set(prevSnapshot.defaultLineStyle);
 
-    this.historyUndoCount.set(this.historyUndoStack.length);
-    this.historyRedoCount.set(this.historyRedoStack.length);
-
     this.selectedNodeId.set(null);
     this.selectedNodeIds.set(new Set());
 
@@ -2206,31 +1667,28 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.isApplyingHistory = false;
     });
 
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'undo',
       this.defaultLineStyle(),
     );
-    this.autoSave$.next();
+    this.persistenceService.triggerAutoSave();
   }
 
   redo(): void {
-    if (this.isReadOnly() || this.historyRedoStack.length === 0) return;
+    if (this.isReadOnly() || !this.diagramHistoryService.canRedo()) return;
 
     const currentSnapshot = this.cloneSnapshot();
-    this.historyUndoStack.push(currentSnapshot);
+    const nextSnapshot = this.diagramHistoryService.redo(currentSnapshot);
+    if (!nextSnapshot) return;
 
-    const nextSnapshot = this.historyRedoStack.pop()!;
     this.isApplyingHistory = true;
 
     this.nodes.set(nextSnapshot.nodes);
     this.connections.set(nextSnapshot.connections);
     this.defaultLineStyle.set(nextSnapshot.defaultLineStyle);
 
-    this.historyUndoCount.set(this.historyUndoStack.length);
-    this.historyRedoCount.set(this.historyRedoStack.length);
-
     this.selectedNodeId.set(null);
     this.selectedNodeIds.set(new Set());
 
@@ -2242,13 +1700,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.isApplyingHistory = false;
     });
 
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'redo',
       this.defaultLineStyle(),
     );
-    this.autoSave$.next();
+    this.persistenceService.triggerAutoSave();
   }
 
   isConnectionSelected(connId: string): boolean {
@@ -2499,17 +1957,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         sourceId = isSeqRel ? `${currentSource}_right` : `${currentSource}_top`;
         targetId = `${nodeId}_right`;
       } else if (isSeqRel) {
-        const usedSlots = new Set<number>();
-        for (const c of this.connections()) {
-          const m1 = c.sourceId?.match(/_slot_(\d+)$/);
-          const m2 = c.targetId?.match(/_slot_(\d+)$/);
-          if (m1) usedSlots.add(parseInt(m1[1], 10));
-          if (m2) usedSlots.add(parseInt(m2[1], 10));
-        }
-        let nextSlot = 0;
-        while (usedSlots.has(nextSlot)) {
-          nextSlot++;
-        }
+        const nextSlot = this.connectionLayoutService.findNextAvailableSlot(this.connections());
         sourceId = `${currentSource}_slot_${nextSlot}`;
         targetId = `${nodeId}_slot_${nextSlot}`;
       } else {
@@ -2518,65 +1966,29 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         targetId = optimal.targetId;
       }
 
-      const isInheritance = activeRel === 'generalization' || activeRel === 'realization';
-      const isPackageRel =
-        activeRel === 'import' ||
-        activeRel === 'access' ||
-        activeRel === 'merge' ||
-        activeRel === 'trace' ||
-        this.activeDiagramType() === DiagramType.PACKAGE ||
-        this.activeDiagramType() === DiagramType.LAYERED ||
-        sourceNode.nodeType === 'package' ||
-        targetNode.nodeType === 'package';
-      const isUseCaseRel =
-        activeRel === 'include' ||
-        activeRel === 'extend' ||
-        this.activeDiagramType() === DiagramType.USE_CASE ||
-        sourceNode.nodeType === 'actor' ||
-        sourceNode.nodeType === 'use_case' ||
-        targetNode.nodeType === 'actor' ||
-        targetNode.nodeType === 'use_case';
-      const relName =
-        activeRel === 'include'
-          ? '«include»'
-          : activeRel === 'extend'
-          ? '«extend»'
-          : activeRel === 'import'
-          ? '«import»'
-          : activeRel === 'access'
-          ? '«access»'
-          : activeRel === 'merge'
-          ? '«merge»'
-          : activeRel === 'trace'
-          ? '«trace»'
-          : undefined;
-
       let messages: UmlMessage[] | undefined = undefined;
       if (isSeqRel) {
         const isReturn = activeRel === 'reply';
         messages = this.generateNextSequenceMessage(sourceNode, targetNode, isReturn);
       }
 
-      const newConn: UmlConnection = {
-        id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        sourceNodeId: currentSource,
-        targetNodeId: nodeId,
+      const newConn = this.connectionLayoutService.buildNewConnection({
+        sourceNode,
+        targetNode,
+        relType: activeRel,
         sourceId,
         targetId,
-        type: activeRel,
-        lineStyle: isSeqRel ? 'straight' : this.defaultLineStyle(),
-        name: relName,
-        sourceMultiplicity: '',
-        targetMultiplicity: '',
+        defaultLineStyle: this.defaultLineStyle(),
+        activeDiagramType: this.activeDiagramType(),
         messages,
-      };
+      });
 
       this.pushSnapshot();
       this.connections.update((list) => this.recalculateSequenceNumbers([...list, newConn]));
       this.markAsUnsaved();
       this.setPointerMode();
       this.updateConnectionEndpoints();
-      this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
+      this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
       if (isSeqRel) {
         const created = this.connections().find((c) => c.id === newConn.id) || newConn;
         setTimeout(() => this.openEditConnModal(created), 100);
@@ -2645,31 +2057,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
           } else if (tMatch) {
             slotNum = tMatch[1];
           } else {
-            const usedSlots = new Set<number>();
-            for (const c of this.connections()) {
-              const m1 = c.sourceId?.match(/_slot_(\d+)$/);
-              const m2 = c.targetId?.match(/_slot_(\d+)$/);
-              if (m1) usedSlots.add(parseInt(m1[1], 10));
-              if (m2) usedSlots.add(parseInt(m2[1], 10));
-            }
-            let nextSlot = 0;
-            while (usedSlots.has(nextSlot)) {
-              nextSlot++;
-            }
-            slotNum = nextSlot.toString();
+            slotNum = this.connectionLayoutService.findNextAvailableSlot(this.connections());
           }
 
           // Validación estricta: No permitir colocar dos mensajes en la misma posición temporal (fila colineal)
           const targetSlotNum = parseInt(slotNum, 10);
-          const isSlotOccupied = this.connections().some((c) => {
-            const isSeq =
-              this.activeDiagramType() === DiagramType.SEQUENCE ||
-              ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
-            if (!isSeq) return false;
-            const m1 = c.sourceId?.match(/_slot_(\d+)$/);
-            const m2 = c.targetId?.match(/_slot_(\d+)$/);
-            return (m1 && parseInt(m1[1], 10) === targetSlotNum) || (m2 && parseInt(m2[1], 10) === targetSlotNum);
-          });
+          const isSlotOccupied = this.connectionLayoutService.isSequenceSlotOccupied(
+            this.connections(),
+            targetSlotNum,
+            this.activeDiagramType(),
+          );
 
           if (isSlotOccupied) {
             alert('⚠️ No se permite colocar dos mensajes en la misma posición temporal (fila colineal). Cada mensaje debe ubicarse en una posición distinta.');
@@ -2702,56 +2099,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }
     }
 
-    const isInheritance = relType === 'generalization' || relType === 'realization';
-    const isPackageRel =
-      relType === 'import' ||
-      relType === 'access' ||
-      relType === 'merge' ||
-      relType === 'trace' ||
-      this.activeDiagramType() === DiagramType.PACKAGE ||
-      this.activeDiagramType() === DiagramType.LAYERED ||
-      (sourceNode && sourceNode.nodeType === 'package') ||
-      (targetNode && targetNode.nodeType === 'package');
-    const isUseCaseRel =
-      relType === 'include' ||
-      relType === 'extend' ||
-      this.activeDiagramType() === DiagramType.USE_CASE ||
-      (sourceNode && (sourceNode.nodeType === 'actor' || sourceNode.nodeType === 'use_case')) ||
-      (targetNode && (targetNode.nodeType === 'actor' || targetNode.nodeType === 'use_case'));
-    const relName =
-      relType === 'include'
-        ? '«include»'
-        : relType === 'extend'
-        ? '«extend»'
-        : relType === 'import'
-        ? '«import»'
-        : relType === 'access'
-        ? '«access»'
-        : relType === 'merge'
-        ? '«merge»'
-        : relType === 'trace'
-        ? '«trace»'
-        : undefined;
-
     let messages: UmlMessage[] | undefined = undefined;
-    if (isSeqRel) {
+    if (isSeqRel && sourceNode && targetNode) {
       const isReturn = relType === 'reply';
       messages = this.generateNextSequenceMessage(sourceNode, targetNode, isReturn);
     }
 
-    const newConnection: UmlConnection = {
-      id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      sourceNodeId: baseSourceId,
-      targetNodeId: baseTargetId,
+    const newConnection = this.connectionLayoutService.buildNewConnection({
+      sourceNode: sourceNode || ({ id: baseSourceId } as any),
+      targetNode: targetNode || ({ id: baseTargetId } as any),
+      relType,
       sourceId,
       targetId,
-      type: relType,
-      lineStyle: isSeqRel ? 'straight' : this.defaultLineStyle(),
-      name: relName,
-      sourceMultiplicity: '',
-      targetMultiplicity: '',
+      defaultLineStyle: this.defaultLineStyle(),
+      activeDiagramType: this.activeDiagramType(),
       messages,
-    };
+    });
 
     this.pushSnapshot();
     this.connections.update((list) => this.recalculateSequenceNumbers([...list, newConnection]));
@@ -2759,7 +2122,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.setPointerMode();
     this.updateConnectionEndpoints();
 
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
     if (isSeqRel) {
       const created = this.connections().find((c) => c.id === newConnection.id) || newConnection;
       setTimeout(() => this.openEditConnModal(created), 100);
@@ -2781,12 +2144,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
             const slotNum = sMatch ? sMatch[1] : (tMatch ? tMatch[1] : null);
             if (slotNum !== null) {
               const targetSlotNum = parseInt(slotNum, 10);
-              const isOccupied = list.some((other) => {
-                if (other.id === event.connectionId) return false;
-                const m1 = other.sourceId?.match(/_slot_(\d+)$/);
-                const m2 = other.targetId?.match(/_slot_(\d+)$/);
-                return (m1 && parseInt(m1[1], 10) === targetSlotNum) || (m2 && parseInt(m2[1], 10) === targetSlotNum);
-              });
+              const isOccupied = this.connectionLayoutService.isSequenceSlotOccupied(
+                list,
+                targetSlotNum,
+                this.activeDiagramType(),
+                event.connectionId,
+              );
               if (isOccupied) {
                 alert('⚠️ No se pueden colocar dos mensajes en la misma posición temporal (fila colineal).');
                 return c;
@@ -2809,7 +2172,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'reassign_conn');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'reassign_conn');
   }
 
   onSequenceMessageMove(event: { connectionId: string; targetSlot: number }): void {
@@ -2820,211 +2183,27 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const movingConn = allConns.find((c) => c.id === connectionId);
     if (!movingConn) return;
 
-    const sMatch = movingConn.sourceId?.match(/_slot_(\d+)$/);
-    const fromSlot = sMatch ? parseInt(sMatch[1], 10) : 0;
-    const toSlot = Math.max(0, targetSlot);
-
-    if (fromSlot === toSlot) return;
-
     this.pushSnapshot();
 
     this.connections.update((conns) => {
-      const isSeqConn = (c: UmlConnection) =>
-        this.activeDiagramType() === DiagramType.SEQUENCE ||
-        ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
-
-      const getSlot = (c: UmlConnection) => {
-        const m = c.sourceId?.match(/_slot_(\d+)$/);
-        return m ? parseInt(m[1], 10) : 0;
-      };
-
-      const movingSeqNum = movingConn.messages?.[0]?.sequenceNumber?.trim() || '';
-      const isInitiator = /^\d+$/.test(movingSeqNum);
-
-      interface MoveItem {
-        conn: UmlConnection;
-        originalSlot: number;
-        relativeOffset: number;
-        targetSlot: number;
-      }
-
-      const moveItems: MoveItem[] = [];
-
-      if (isInitiator) {
-        const groupPrefix = `${movingSeqNum}.`;
-        const groupMembers = conns.filter(
-          (c) =>
-            isSeqConn(c) &&
-            (c.id === connectionId || (c.messages?.[0]?.sequenceNumber?.trim() || '').startsWith(groupPrefix))
-        );
-
-        // Ordenar los miembros del grupo por su slot actual
-        groupMembers.sort((a, b) => getSlot(a) - getSlot(b));
-
-        for (const m of groupMembers) {
-          const origSlot = getSlot(m);
-          const relOffset = origSlot - fromSlot;
-          moveItems.push({
-            conn: m,
-            originalSlot: origSlot,
-            relativeOffset: relOffset,
-            targetSlot: toSlot + relOffset,
-          });
-        }
-      } else {
-        moveItems.push({
-          conn: movingConn,
-          originalSlot: fromSlot,
-          relativeOffset: 0,
-          targetSlot: toSlot,
-        });
-      }
-
-      const movingIds = new Set(moveItems.map((mi) => mi.conn.id));
-      const targetSlotMap = new Map<string, number>(moveItems.map((mi) => [mi.conn.id, mi.targetSlot]));
-
-      const deltaSlot = toSlot - fromSlot;
-      const numMovedItems = moveItems.length;
-
-      // Calcular nuevos slots para todas las conexiones
-      const updatedSlotsList = conns.map((c) => {
-        if (!isSeqConn(c)) return c;
-
-        const currentSlot = getSlot(c);
-        const baseSrc = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-        const baseTgt = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-
-        let newSlot = currentSlot;
-
-        if (movingIds.has(c.id)) {
-          newSlot = targetSlotMap.get(c.id)!;
-        } else {
-          // Desplazar las conexiones intermedias que no forman parte del lote
-          if (deltaSlot > 0) {
-            // Lote arrastrado hacia abajo: las conexiones intermedias suben
-            const maxTargetSlot = Math.max(...moveItems.map((mi) => mi.targetSlot));
-            if (currentSlot > fromSlot && currentSlot <= maxTargetSlot) {
-              newSlot = currentSlot - numMovedItems;
-            }
-          } else {
-            // Lote arrastrado hacia arriba: las conexiones intermedias bajan
-            const minTargetSlot = Math.min(...moveItems.map((mi) => mi.targetSlot));
-            if (currentSlot >= minTargetSlot && currentSlot < fromSlot) {
-              newSlot = currentSlot + numMovedItems;
-            }
-          }
-        }
-
-        if (newSlot !== currentSlot) {
-          return {
-            ...c,
-            sourceId: `${baseSrc}_slot_${newSlot}`,
-            targetId: `${baseTgt}_slot_${newSlot}`,
-          };
-        }
-        return c;
-      });
-
-      return this.recalculateSequenceNumbers(updatedSlotsList);
+      const moved = this.connectionLayoutService.computeSequenceMessageMove(
+        conns,
+        connectionId,
+        targetSlot,
+        this.activeDiagramType(),
+      );
+      return this.recalculateSequenceNumbers(moved);
     });
 
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'move_seq_msg');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'move_seq_msg');
   }
 
   createAssociationClassBetween(sourceNode: UmlClassNode, targetNode: UmlClassNode): void {
     this.pushSnapshot();
-    const timestamp = Date.now();
-    const anchorId = `anchor_${timestamp}`;
-    const assocNodeId = `node_${timestamp}_assoc`;
-    const assocName = `${sourceNode.name}_${targetNode.name}`;
-
-    const anchorNode: UmlClassNode = {
-      id: anchorId,
-      name: '',
-      position: {
-        x: Math.round((sourceNode.position.x + targetNode.position.x) / 2),
-        y: Math.round((sourceNode.position.y + targetNode.position.y) / 2),
-      },
-      width: 0,
-      height: 0,
-      attributes: [],
-      methods: [],
-      isAnchor: true,
-    };
-
-    const mainConnId = `conn_${timestamp}_assoc_main`;
-    const mainConnection: UmlConnection = {
-      id: mainConnId,
-      sourceNodeId: sourceNode.id,
-      targetNodeId: targetNode.id,
-      sourceId: `${sourceNode.id}_right`,
-      targetId: `${targetNode.id}_left`,
-      type: 'association',
-      lineStyle: 'straight',
-      name: assocName,
-      sourceMultiplicity: '',
-      targetMultiplicity: '',
-      assocAnchorNodeId: anchorId,
-    };
-
-    // Extraer atributos ID de las tablas a las que se asocia (sin id propio ni fechaRegistro)
-    const getEntityFk = (node: UmlClassNode): { name: string; type: string } => {
-      const pkAttr = (node.attributes || []).find((a) =>
-        /^(id|.*_id|.*id)$/i.test(a.name.trim()),
-      ) || (node.attributes || [])[0];
-
-      const pkType = pkAttr?.type || 'UUID';
-
-      let base = node.name.trim();
-      if (base.toLowerCase().endsWith('es') && base.length > 3) {
-        base = base.slice(0, -2);
-      } else if (base.toLowerCase().endsWith('s') && base.length > 2 && !base.toLowerCase().endsWith('ss')) {
-        base = base.slice(0, -1);
-      }
-      const camelBase = base.charAt(0).toLowerCase() + base.slice(1);
-
-      let fkName = `${camelBase}Id`;
-      if (pkAttr && pkAttr.name.trim().toLowerCase() !== 'id') {
-        fkName = pkAttr.name.trim();
-      }
-
-      return { name: fkName, type: pkType };
-    };
-
-    const sourceFk = getEntityFk(sourceNode);
-    const targetFk = getEntityFk(targetNode);
-
-    if (sourceFk.name.toLowerCase() === targetFk.name.toLowerCase()) {
-      sourceFk.name = `${sourceNode.name.toLowerCase()}Id`;
-      targetFk.name = `${targetNode.name.toLowerCase()}Id`;
-    }
-
-    const assocNode: UmlClassNode = {
-      id: assocNodeId,
-      name: assocName,
-      position: {
-        x: anchorNode.position.x - 110,
-        y: anchorNode.position.y + 120,
-      },
-      width: 220,
-      attributes: [sourceFk, targetFk],
-      methods: [],
-      assocMainConnId: mainConnId,
-    };
-
-    const dashedConnId = `conn_${timestamp}_assoc_dashed`;
-    const dashedConnection: UmlConnection = {
-      id: dashedConnId,
-      sourceNodeId: anchorId,
-      targetNodeId: assocNodeId,
-      sourceId: anchorId,
-      targetId: `${assocNodeId}_top`,
-      type: 'association_class',
-      lineStyle: 'straight',
-      name: '«link»',
-    };
+    const { anchorNode, assocNode, mainConnection, dashedConnection } =
+      this.connectionLayoutService.buildAssociationClassElements(sourceNode, targetNode);
 
     this.nodes.update((list) => [...list, anchorNode, assocNode]);
     this.connections.update((list) => [...list, mainConnection, dashedConnection]);
@@ -3035,7 +2214,24 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.updateConnectionEndpoints();
       this.diagramCanvas?.reset();
     });
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
+  }
+
+  private getScrollOffset(): { scrollLeft: number; scrollTop: number } {
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    return {
+      scrollLeft: scrollEl?.scrollLeft || 0,
+      scrollTop: scrollEl?.scrollTop || 0,
+    };
+  }
+
+  private commitNewNode(newNode: UmlClassNode, autoRename = true): void {
+    this.nodes.update((list) => [...list, newNode]);
+    this.markAsUnsaved();
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    if (autoRename) {
+      setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    }
   }
 
   addClass(position?: { x: number; y: number }, stereotype?: UmlStereotype | string | null): void {
@@ -3058,181 +2254,58 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const defaultWidth = 220;
-    const defaultHeight = stereotype ? 120 : undefined;
-    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - (defaultHeight ? defaultHeight / 2 : 40))) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => !n.isAnchor).length + 1;
-    let namePrefix = 'Tabla_';
-    if (stereotype === UmlStereotype.UI || stereotype === 'UI') {
-      namePrefix = 'UI_';
-    } else if (stereotype === UmlStereotype.CONTROLLER_DOT || stereotype === 'Controller.') {
-      namePrefix = 'Controller_';
-    } else if (stereotype === UmlStereotype.ENTITY_DOT || stereotype === 'Entity.') {
-      namePrefix = 'Entity_';
-    } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      namePrefix = 'Clase_';
-    }
-
-    let initialStereotype: UmlStereotype | string | null = (stereotype as UmlStereotype) || null;
-    if (currentType === DiagramType.CLASS) {
-      initialStereotype = null;
-    } else if (initialStereotype && (initialStereotype as string).toLowerCase() === 'class') {
-      initialStereotype = null;
-    }
-
-    const newNode: UmlClassNode = {
-      id: `class_${Date.now()}`,
-      name: `${namePrefix}${count}`,
-      nodeType: 'class',
-      position: { x: posX, y: posY },
-      width: defaultWidth,
-      height: defaultHeight,
-      color: '#FDFAF3',
-      attributes: [],
-      methods: [],
-      stereotype: initialStereotype,
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createClassNode(
+      this.nodes(),
+      currentType,
+      position,
+      stereotype,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addComponent(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 95)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 35)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => n.nodeType === 'component').length + 1;
-    const newNode: UmlClassNode = {
-      id: `component_${Date.now()}`,
-      name: `Component_${count}`,
-      nodeType: 'component',
-      stereotype: 'file',
-      position: { x: posX, y: posY },
-      width: 190,
-      height: 70,
-      customWidth: 190,
-      customHeight: 70,
-      isCustomSize: true,
-      color: '#FAF1EC',
-      attributes: [],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createComponentNode(
+      this.nodes(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addDevice(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 115)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 70)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => n.nodeType === 'device').length + 1;
-    const newNode: UmlClassNode = {
-      id: `device_${Date.now()}`,
-      name: `Dispositivo_${count}`,
-      nodeType: 'device',
-      stereotype: 'device',
-      position: { x: posX, y: posY },
-      width: 230,
-      height: 140,
-      customWidth: 230,
-      customHeight: 140,
-      isCustomSize: true,
-      color: '#F3FAF7',
-      attributes: [],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createDeviceNode(
+      this.nodes(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addExecutionEnvironment(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 120)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 80)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => n.nodeType === 'executionEnvironment').length + 1;
-    const newNode: UmlClassNode = {
-      id: `exec_env_${Date.now()}`,
-      name: `Servidor_${count}`,
-      nodeType: 'executionEnvironment',
-      stereotype: 'executionEnvironment',
-      position: { x: posX, y: posY },
-      width: 240,
-      height: 160,
-      customWidth: 240,
-      customHeight: 160,
-      isCustomSize: true,
-      color: '#CDE5F5',
-      attributes: [],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createExecutionEnvironmentNode(
+      this.nodes(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addBoundaryBox(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const isLayered = this.activeDiagramType() === DiagramType.LAYERED;
-    const isComponent = this.activeDiagramType() === DiagramType.COMPONENT;
-    const defaultWidth = (isLayered || isComponent) ? 420 : 280;
-    const defaultHeight = (isLayered || isComponent) ? 220 : 200;
-    const defaultName = isLayered ? 'Capa' : (isComponent ? 'Agrupación' : '.');
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const newNode: UmlClassNode = {
-      id: `boundary_box_${Date.now()}`,
-      name: defaultName,
-      nodeType: 'boundary_box',
-      stereotype: null,
-      position: { x: posX, y: posY },
-      width: defaultWidth,
-      height: defaultHeight,
-      customWidth: defaultWidth,
-      customHeight: defaultHeight,
-      isCustomSize: true,
-      color: '#FAF1EC',
-      attributes: [],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    const newNode = this.nodeFactory.createBoundaryBoxNode(
+      this.activeDiagramType(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode, false);
   }
 
   addActor(position?: { x: number; y: number }): void {
@@ -3243,98 +2316,35 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
     this.pushSnapshot();
-    const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    let posX = position ? Math.max(20, Math.round(position.x - 32)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    let posY = isSequence ? 50 : (position ? Math.max(20, Math.round(position.y - 47)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60)));
-
-    if (isSequence && !position) {
-      posY = 50;
-      const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
-      if (topNodes.length > 0) {
-        const maxRight = Math.max(...topNodes.map((n) => (n.position?.x || 0) + (n.width || 120)));
-        posX = maxRight + 60;
-      } else {
-        posX = 80;
-      }
-    }
-
-    const count = this.nodes().filter((n) => n.nodeType === 'actor').length + 1;
-    const newNode: UmlClassNode = {
-      id: `actor_${Date.now()}`,
-      name: isSequence ? `actor_${count}` : `Actor_${count}`,
-      nodeType: 'actor',
-      position: { x: posX, y: posY },
-      width: 65,
-      height: 95,
-      color: '#FEF2DD',
-      attributes: [],
-      methods: [],
-      activations: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createActorNode(
+      this.nodes(),
+      currentType,
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addUseCase(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 70)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 30)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => n.nodeType === 'use_case').length + 1;
-    const newNode: UmlClassNode = {
-      id: `use_case_${Date.now()}`,
-      name: `CasoDeUso_${count}`,
-      nodeType: 'use_case',
-      position: { x: posX, y: posY },
-      width: 140,
-      height: 60,
-      color: '#E5F2FE',
-      attributes: [],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createUseCaseNode(
+      this.nodes(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addPackage(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const posX = position ? Math.max(20, Math.round(position.x - 100)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - 60)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => n.nodeType === 'package').length + 1;
-    const newNode: UmlClassNode = {
-      id: `package_${Date.now()}`,
-      name: `Paquete_${count}`,
-      nodeType: 'package',
-      position: { x: posX, y: posY },
-      width: 200,
-      height: 120,
-      color: '#FAF1EC',
-      attributes: [{ name: `Contenido Paquete ${count}`, type: 'package' }],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createPackageNode(
+      this.nodes(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addBoundary(position?: { x: number; y: number }): void {
@@ -3345,32 +2355,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const defaultWidth = 70;
-    const defaultHeight = 70;
-    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => n.nodeType === 'boundary').length + 1;
-    const newNode: UmlClassNode = {
-      id: `boundary_${Date.now()}`,
-      name: `Boundary_${count}`,
-      nodeType: 'boundary',
-      stereotype: UmlStereotype.BOUNDARY,
-      position: { x: posX, y: posY },
-      width: defaultWidth,
-      height: defaultHeight,
-      color: '#DDF4F5',
-      attributes: [],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createBoundaryNode(
+      this.nodes(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addControl(position?: { x: number; y: number }): void {
@@ -3381,32 +2371,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const defaultWidth = 70;
-    const defaultHeight = 70;
-    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => n.nodeType === 'control').length + 1;
-    const newNode: UmlClassNode = {
-      id: `control_${Date.now()}`,
-      name: `Control_${count}`,
-      nodeType: 'control',
-      stereotype: UmlStereotype.CONTROL,
-      position: { x: posX, y: posY },
-      width: defaultWidth,
-      height: defaultHeight,
-      color: '#DDF4F5',
-      attributes: [],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createControlNode(
+      this.nodes(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addEntity(position?: { x: number; y: number }): void {
@@ -3417,110 +2387,39 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-    const defaultWidth = 70;
-    const defaultHeight = 70;
-    const posX = position ? Math.max(20, Math.round(position.x - defaultWidth / 2)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    const posY = position ? Math.max(20, Math.round(position.y - defaultHeight / 2)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60));
-
-    const count = this.nodes().filter((n) => n.nodeType === 'entity').length + 1;
-    const newNode: UmlClassNode = {
-      id: `entity_${Date.now()}`,
-      name: `Entity_${count}`,
-      nodeType: 'entity',
-      stereotype: UmlStereotype.ENTITY,
-      position: { x: posX, y: posY },
-      width: defaultWidth,
-      height: defaultHeight,
-      color: '#DDF4F5',
-      attributes: [],
-      methods: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createEntityNode(
+      this.nodes(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   addLifeline(position?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-
-    let posX = position ? Math.max(20, Math.round(position.x - 80)) : Math.max(50, Math.round(scrollLeft + 120 + Math.random() * 60));
-    let posY = isSequence ? 50 : (position ? Math.max(20, Math.round(position.y - 24)) : Math.max(50, Math.round(scrollTop + 80 + Math.random() * 60)));
-
-    if (isSequence && !position) {
-      posY = 50;
-      const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
-      if (topNodes.length > 0) {
-        const maxRight = Math.max(...topNodes.map((n) => (n.position?.x || 0) + (n.width || 140)));
-        posX = maxRight + 60;
-      } else {
-        posX = 80;
-      }
-    }
-
-    const count = this.nodes().filter((n) => n.nodeType === 'lifeline').length + 1;
-    const defaultName = isSequence ? `lifeline_${count}` : `Objeto_${count}`;
-
-    const newNode: UmlClassNode = {
-      id: `lifeline_${Date.now()}`,
-      name: defaultName,
-      nodeType: 'lifeline',
-      position: { x: posX, y: posY },
-      width: 160,
-      height: 60,
-      color: '#DDF4F5',
-      attributes: [],
-      methods: [],
-      activations: [],
-    };
-
-    this.nodes.update((list) => [...list, newNode]);
-    this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
-    setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
+    const newNode = this.nodeFactory.createLifelineNode(
+      this.nodes(),
+      this.activeDiagramType(),
+      position,
+      this.getScrollOffset(),
+    );
+    this.commitNewNode(newNode);
   }
 
   copySelectedNodes(): void {
-    const selIds = this.selectedNodeIds();
-    const selId = this.selectedNodeId();
-    const ids = Array.from(selIds);
-    if (selId && !ids.includes(selId)) ids.push(selId);
+    const result = this.diagramClipboardService.copyNodes(
+      this.nodes(),
+      this.connections(),
+      this.selectedNodeIds(),
+      this.selectedNodeId(),
+      this.activeDiagramType(),
+    );
+    if (!result) return;
 
-    const nodesToCopy = this.nodes().filter((n) => ids.includes(n.id) && !n.isAnchor);
-    if (nodesToCopy.length === 0) return;
-
-    const copiedNodeIdSet = new Set(nodesToCopy.map((n) => n.id));
-
-    // Identificar y copiar relaciones que conectan a los nodos seleccionados
-    const connectionsToCopy = this.connections().filter((c) => {
-      const s = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-      const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
-      return s && t && copiedNodeIdSet.has(s) && copiedNodeIdSet.has(t);
-    });
-
-    this.clipboardNodes = {
-      diagramType: this.activeDiagramType(),
-      nodes: JSON.parse(JSON.stringify(nodesToCopy)),
-      connections: JSON.parse(JSON.stringify(connectionsToCopy)),
-    };
-    try {
-      sessionStorage.setItem('uml_clipboard_nodes', JSON.stringify(this.clipboardNodes));
-    } catch (_) {}
-
-    const count = nodesToCopy.length;
-    const connsCount = connectionsToCopy.length;
-    let toast = count === 1 ? `"${nodesToCopy[0].name}" copiado` : `${count} elementos copiados`;
-    if (connsCount > 0) {
-      toast += ` (${connsCount} ${connsCount === 1 ? 'relación' : 'relaciones'})`;
+    let toast = result.copiedNodesCount === 1 ? `"${result.sampleName}" copiado` : `${result.copiedNodesCount} elementos copiados`;
+    if (result.copiedConnsCount > 0) {
+      toast += ` (${result.copiedConnsCount} ${result.copiedConnsCount === 1 ? 'relación' : 'relaciones'})`;
     }
     this.showQuickToast(toast);
   }
@@ -3528,44 +2427,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   pasteNodes(targetPos?: { x: number; y: number }): void {
     if (this.isReadOnly()) return;
 
-    let clip = this.clipboardNodes;
-    if (!clip) {
-      try {
-        const saved = sessionStorage.getItem('uml_clipboard_nodes');
-        if (saved) clip = JSON.parse(saved);
-      } catch (_) {}
-    }
-
+    const clip = this.diagramClipboardService.getClipboard();
     if (!clip || !clip.nodes || clip.nodes.length === 0) {
       return;
     }
 
     const currentType = this.activeDiagramType();
-    // Validar compatibilidad de tipo de diagrama
-    let isInvalidPaste = false;
-    if (currentType === DiagramType.USE_CASE) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'use_case');
-    } else if (currentType === DiagramType.PACKAGE) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case' && n.nodeType !== 'actor');
-    } else if (currentType === DiagramType.COMMUNICATION) {
-      // En diagrama de comunicación: SOLO actor, boundary, control, entity. Clases no permitidas.
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor');
-    } else if (currentType === DiagramType.SEQUENCE) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'lifeline' && n.nodeType !== 'class' && n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity');
-    } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      // En análisis de clases: SOLO clases estándar (con/sin estereotipo) y actor. Nodos puros (boundary/control/entity) no permitidos.
-      isInvalidPaste = clip.nodes.some((n) => (n.nodeType !== 'class' && n.nodeType !== undefined) && n.nodeType !== 'actor');
-    } else if (currentType === DiagramType.COMPONENT) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'component' && n.nodeType !== 'boundary_box' && n.nodeType !== 'package');
-    } else if (currentType === DiagramType.DEPLOYMENT) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'lifeline');
-    } else if (currentType === DiagramType.LAYERED) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'boundary_box');
-    } else if (currentType === DiagramType.CLASS) {
-      isInvalidPaste = clip.nodes.some((n) => n.nodeType && n.nodeType !== 'class');
-    }
-
-    if (isInvalidPaste) {
+    if (!this.diagramClipboardService.isPasteCompatible(clip, currentType)) {
       this.showIncompatibleElementModal(currentType);
       return;
     }
@@ -3575,78 +2443,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const scrollLeft = scrollEl?.scrollLeft || 0;
     const scrollTop = scrollEl?.scrollTop || 0;
 
-    const newPastedIds: string[] = [];
-    const newNodes: UmlClassNode[] = [];
-    const oldToNewIdMap = new Map<string, string>();
-
-    const minClipX = clip.nodes.reduce((min, n) => Math.min(min, n.position?.x ?? 0), Infinity);
-    const minClipY = clip.nodes.reduce((min, n) => Math.min(min, n.position?.y ?? 0), Infinity);
-
-    for (let i = 0; i < clip.nodes.length; i++) {
-      const src = clip.nodes[i];
-      const newId = `${src.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000) + i}`;
-      newPastedIds.push(newId);
-      oldToNewIdMap.set(src.id, newId);
-
-      const isSameDiagram = clip.diagramType === currentType && this.nodes().some((n) => n.name === src.name);
-      const newName = isSameDiagram ? `${src.name}_Copia` : src.name;
-
-      let posX: number;
-      let posY: number;
-      if (targetPos) {
-        const deltaX = (src.position?.x ?? 0) - minClipX;
-        const deltaY = (src.position?.y ?? 0) - minClipY;
-        posX = Math.max(20, Math.round(targetPos.x + deltaX));
-        posY = currentType === DiagramType.SEQUENCE ? 50 : Math.max(20, Math.round(targetPos.y + deltaY));
-      } else {
-        posX = src.position ? src.position.x + 35 : Math.max(60, scrollLeft + 150 + i * 30);
-        posY = currentType === DiagramType.SEQUENCE ? 50 : (src.position ? src.position.y + 35 : Math.max(60, scrollTop + 100 + i * 30));
-      }
-
-      newNodes.push({
-        id: newId,
-        name: newName,
-        nodeType: src.nodeType,
-        stereotype: src.stereotype || null,
-        position: { x: posX, y: posY },
-        width: src.width,
-        height: src.height,
-        color: src.color,
-        attributes: (src.attributes || []).map((a) => ({ ...a })),
-        methods: (src.methods || []).map((m) => ({ ...m })),
-      });
-    }
-
-    // Copiar y enlazar las relaciones entre los nodos duplicados/pegados
-    const newConnections: UmlConnection[] = [];
-    if (clip.connections && clip.connections.length > 0) {
-      for (const oldConn of clip.connections) {
-        const oldSourceNode = oldConn.sourceNodeId || oldConn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-        const oldTargetNode = oldConn.targetNodeId || oldConn.targetId?.replace(/_(top|bottom|left|right)$/, '');
-
-        const newSourceNodeId = oldSourceNode ? oldToNewIdMap.get(oldSourceNode) : undefined;
-        const newTargetNodeId = oldTargetNode ? oldToNewIdMap.get(oldTargetNode) : undefined;
-
-        if (newSourceNodeId && newTargetNodeId) {
-          const sSideMatch = oldConn.sourceId?.match(/_(top|bottom|left|right)$/);
-          const tSideMatch = oldConn.targetId?.match(/_(top|bottom|left|right)$/);
-          const sSide = sSideMatch ? sSideMatch[1] : 'right';
-          const tSide = tSideMatch ? tSideMatch[1] : 'left';
-
-          const newConnId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-          newConnections.push({
-            ...oldConn,
-            id: newConnId,
-            sourceNodeId: newSourceNodeId,
-            targetNodeId: newTargetNodeId,
-            sourceId: `${newSourceNodeId}_${sSide}`,
-            targetId: `${newTargetNodeId}_${tSide}`,
-            from: newSourceNodeId,
-            to: newTargetNodeId,
-          });
-        }
-      }
-    }
+    const { newNodes, newConnections, newPastedIds } = this.diagramClipboardService.createPastedElements(
+      clip,
+      this.nodes(),
+      currentType,
+      targetPos,
+      scrollLeft,
+      scrollTop,
+    );
 
     this.nodes.update((list) => [...list, ...newNodes]);
     if (newConnections.length > 0) {
@@ -3657,7 +2461,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.diagramCanvas?.select(newPastedIds, []);
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
     this.closeContextMenu();
 
     let toast = newNodes.length === 1 ? `"${newNodes[0].name}" pegado en el lienzo` : `${newNodes.length} elementos pegados`;
@@ -3788,7 +2592,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.connections.update((conns) => [...conns]);
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
     this.closeContextMenu();
     this.showQuickToast('Dirección de relación invertida');
   }
@@ -3799,7 +2603,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     conn.lineStyle = style;
     this.connections.update((conns) => [...conns]);
     this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
     this.closeContextMenu();
     this.showQuickToast(`Estilo de línea cambiado a ${style}`);
   }
@@ -3839,140 +2643,35 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const node = event.node;
     if (!node) return;
     const isCurrentDiag = event.sourceDiagramId === this.currentDiagramId();
-
     const currentType = this.activeDiagramType();
-    let isInvalidCopy = false;
-    const isClassNode = !node.nodeType || node.nodeType === 'class';
-    const isPureBceNode = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
 
-    if (currentType === DiagramType.USE_CASE) {
-      if (node.nodeType !== 'actor' && node.nodeType !== 'use_case') {
-        isInvalidCopy = true;
-      }
-    } else if (currentType === DiagramType.PACKAGE) {
-      if (node.nodeType !== 'package' && node.nodeType !== 'use_case' && node.nodeType !== 'actor') {
-        isInvalidCopy = true;
-      }
-    } else if (currentType === DiagramType.COMMUNICATION) {
-      // En diagrama de comunicación: SOLO se permiten actor, boundary, control, entity.
-      // Las clases (incluso con estereotipo UI, Controller., Entity.) NO están permitidas.
-      if (isClassNode || (!isPureBceNode && node.nodeType !== 'actor')) {
-        isInvalidCopy = true;
-      }
-    } else if (currentType === DiagramType.SEQUENCE) {
-      if (node.nodeType !== 'actor' && node.nodeType !== 'lifeline' && !isClassNode && !isPureBceNode) {
-        isInvalidCopy = true;
-      }
-    } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      // En análisis de clases: SOLO se permiten clases y actor.
-      // Los nodos puros (boundary, control, entity) NO están permitidos.
-      if (isPureBceNode || (!isClassNode && node.nodeType !== 'actor')) {
-        isInvalidCopy = true;
-      }
-    } else if (currentType === DiagramType.COMPONENT) {
-      if (node.nodeType !== 'component' && node.nodeType !== 'boundary_box' && node.nodeType !== 'package') {
-        isInvalidCopy = true;
-      }
-    } else if (currentType === DiagramType.DEPLOYMENT) {
-      if (
-        node.nodeType !== 'device' &&
-        node.nodeType !== 'node' &&
-        node.nodeType !== 'executionEnvironment' &&
-        node.nodeType !== 'component' &&
-        node.nodeType !== 'boundary_box' &&
-        node.nodeType !== 'package' &&
-        !isClassNode
-      ) {
-        isInvalidCopy = true;
-      }
-    } else if (currentType === DiagramType.LAYERED) {
-      if (node.nodeType !== 'package' && node.nodeType !== 'boundary_box') {
-        isInvalidCopy = true;
-      }
-    } else if (currentType === DiagramType.CLASS) {
-      if (!isClassNode) {
-        isInvalidCopy = true;
-      }
-    }
-
-    if (isInvalidCopy) {
+    if (!this.diagramClipboardService.isNodeCompatibleWithDiagramType(node, currentType)) {
       this.showIncompatibleElementModal(currentType);
       return;
     }
 
     this.pushSnapshot();
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
-
-    const isBce = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
-    const isDeploymentNode = node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment';
-    const width = node.width || (node.nodeType === 'actor' ? 65 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (node.nodeType === 'component' ? 190 : (isDeploymentNode ? 240 : (isBce ? 90 : 220))))));
-    const height = node.height || (node.nodeType === 'actor' ? 95 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'component' ? 70 : (isDeploymentNode ? 150 : (isBce ? 95 : null))))));
-
-    let posX: number;
-    let posY: number;
-
-    if (event.position) {
-      posX = Math.max(20, Math.round(event.position.x - width / 2));
-      posY = (currentType === DiagramType.SEQUENCE && (node.nodeType === 'actor' || node.nodeType === 'lifeline'))
-        ? 50
-        : Math.max(20, Math.round(event.position.y - (height || 80) / 2));
-    } else {
-      posX = isCurrentDiag && node.position?.x
-        ? node.position.x + 40
-        : Math.max(60, Math.round(scrollLeft + 150 + Math.random() * 50));
-      posY = isCurrentDiag && node.position?.y
-        ? node.position.y + 40
-        : Math.max(60, Math.round(scrollTop + 100 + Math.random() * 50));
-
-      if (currentType === DiagramType.SEQUENCE && (node.nodeType === 'actor' || node.nodeType === 'lifeline')) {
-        posY = 50;
-        const topNodes = this.nodes().filter((n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor);
-        if (topNodes.length > 0) {
-          const maxRight = Math.max(...topNodes.map((n) => (n.position?.x || 0) + (n.width || 120)));
-          posX = maxRight + 60;
-        } else {
-          posX = 80;
-        }
-      }
-    }
-
-    let newName = node.name;
-    if (isCurrentDiag) {
-      const sameNameCount = this.nodes().filter((n) => n.name.startsWith(node.name)).length;
-      newName = sameNameCount > 0 ? `${node.name}_Copia` : node.name;
-    }
-
-    const newNodeId = `${node.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-    let resolvedNodeType = node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : (currentType === DiagramType.PACKAGE ? 'package' : (currentType === DiagramType.COMMUNICATION ? 'boundary' : 'class')));
-    let resolvedStereotype = node.stereotype || null;
-    let resolvedWidth = width;
-    let resolvedHeight = height;
-
-    const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(resolvedNodeType);
-    const newNode: UmlClassNode = {
-      id: newNodeId,
-      name: newName,
-      nodeType: resolvedNodeType,
-      stereotype: resolvedStereotype,
-      position: { x: posX, y: posY },
-      width: resolvedWidth,
-      height: resolvedHeight,
-      customWidth: isExplicitSizeNode ? resolvedWidth : node.customWidth,
-      customHeight: isExplicitSizeNode ? resolvedHeight : node.customHeight,
-      isCustomSize: isExplicitSizeNode || !!node.isCustomSize,
-      color: node.color || this.getDefaultColorForNodeType(resolvedNodeType, resolvedStereotype),
-      attributes: (node.attributes || []).map((a: any) => ({ ...a })),
-      methods: (node.methods || []).map((m: any) => ({ ...m })),
+    const scrollOffset = {
+      scrollLeft: scrollEl?.scrollLeft || 0,
+      scrollTop: scrollEl?.scrollTop || 0,
     };
+
+    const newNode = this.diagramClipboardService.createExplorerCopiedNode(
+      node,
+      currentType,
+      this.nodes(),
+      isCurrentDiag,
+      event.position,
+      scrollOffset,
+      (nodeType, stereotype) => this.getDefaultColorForNodeType(nodeType, stereotype),
+    );
 
     this.nodes.update((list) => [...list, newNode]);
     this.selectedNodeId.set(newNode.id);
     this.selectedNodeIds.set(new Set([newNode.id]));
     this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
 
     const typeLabel = newNode.nodeType === 'actor' ? 'Actor' : (newNode.nodeType === 'use_case' ? 'Caso de Uso' : (newNode.nodeType === 'package' ? 'Paquete' : (newNode.nodeType === 'boundary' ? 'Boundary' : (newNode.nodeType === 'control' ? 'Control' : (newNode.nodeType === 'entity' ? 'Entidad' : (newNode.nodeType === 'component' ? 'Componente' : (newNode.nodeType === 'device' || newNode.nodeType === 'node' ? 'Nodo' : 'Clase')))))));
     this.showQuickToast(`${typeLabel} "${newNode.name}" copiado al lienzo`);
@@ -4137,7 +2836,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'remove_node');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'remove_node');
   }
 
   openEditNodeModal(node: UmlClassNode, event?: MouseEvent): void {
@@ -4150,17 +2849,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.collaborationService.requestNodeLock(node.id);
-    this.editingNode.set(JSON.parse(JSON.stringify(node)));
-    this.isEditNodeModalOpen.set(true);
+    this.collabCoordinator.requestNodeLock(node.id);
+    this.modalService.openEditNodeModal(node);
   }
 
   closeEditNodeModal(): void {
-    if (this.editingNode()) {
-      this.collaborationService.releaseNodeLock(this.editingNode()!.id);
-    }
-    this.isEditNodeModalOpen.set(false);
-    this.editingNode.set(null);
+    this.modalService.closeEditNodeModal((nodeId) => {
+      this.collabCoordinator.releaseNodeLock(nodeId);
+    });
   }
 
   saveEditedNode(): void {
@@ -4172,54 +2868,34 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.markAsUnsaved();
     this.closeEditNodeModal();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_node');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_node');
   }
 
   addAttributeToEditingNode(): void {
-    const n = this.editingNode();
-    if (!n) return;
-    n.attributes = n.attributes || [];
-    n.attributes.push({
-      name: 'nuevoCampo',
-      type: 'String',
-      nullable: true,
-      unique: false,
-      length: 255,
-      defaultValue: null,
-      default: null,
-    });
+    this.modalService.addAttributeToEditingNode();
   }
 
   removeAttributeFromEditingNode(index: number): void {
-    const n = this.editingNode();
-    if (!n || !n.attributes) return;
-    n.attributes.splice(index, 1);
+    this.modalService.removeAttributeFromEditingNode(index);
   }
 
   addMethodToEditingNode(): void {
-    const n = this.editingNode();
-    if (!n) return;
-    n.methods = n.methods || [];
-    n.methods.push({ name: 'nuevaOperacion', parameters: '', returnType: 'void' });
+    this.modalService.addMethodToEditingNode();
   }
 
   removeMethodFromEditingNode(index: number): void {
-    const n = this.editingNode();
-    if (!n || !n.methods) return;
-    n.methods.splice(index, 1);
+    this.modalService.removeMethodFromEditingNode(index);
   }
 
   openEditConnModal(conn: UmlConnection, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
 
-    this.editingConnection.set(JSON.parse(JSON.stringify(conn)));
-    this.isEditConnModalOpen.set(true);
+    this.modalService.openEditConnModal(conn);
   }
 
   closeEditConnModal(): void {
-    this.isEditConnModalOpen.set(false);
-    this.editingConnection.set(null);
+    this.modalService.closeEditConnModal();
   }
 
   saveEditedConnection(): void {
@@ -4246,7 +2922,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.markAsUnsaved();
     this.closeEditConnModal();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_conn');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_conn');
   }
 
   removeConnection(connId: string, event?: MouseEvent): void {
@@ -4318,13 +2994,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.markAsUnsaved();
     this.closeEditConnModal();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'delete_conn');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'delete_conn');
   }
 
   onAiMutation(event: { nodes: UmlClassNode[]; connections: UmlConnection[]; summary: string }): void {
     if (event.nodes && event.nodes.length > 0) {
       this.applyAiMutationWithAnimation(event.nodes, event.connections || []);
-      this.collaborationService.sendDiagramSync(event.nodes, event.connections || [], 'ai_mutation');
+      this.collabCoordinator.sendDiagramSync(event.nodes, event.connections || [], 'ai_mutation');
     }
   }
 
@@ -4376,461 +3052,23 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   private applyAiNodesMutation(targetNodes: any[]): UmlClassNode[] {
-    return targetNodes.map((n, i) => {
-      let nodeType: UmlNodeType | string = n.nodeType || 'class';
-      if (/^cu[-_ \d]/i.test(n.name || '') || (typeof n.name === 'string' && /caso\s+de\s+uso/i.test(n.name))) {
-        nodeType = 'use_case';
-      } else if (nodeType === 'boundary_box' || n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) {
-        nodeType = 'boundary_box';
-      } else if (nodeType === 'class' || (nodeType === 'package' && (n.id?.startsWith('uc_') || n.id?.startsWith('use_case_')))) {
-        if (n.id?.startsWith('actor_')) nodeType = 'actor';
-        else if (n.id?.startsWith('use_case_') || n.id?.startsWith('uc_')) nodeType = 'use_case';
-        else if (n.id?.startsWith('package_') || n.id?.startsWith('pkg_')) nodeType = 'package';
-        else if (n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) nodeType = 'boundary_box';
-        else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
-        else if (n.id?.startsWith('control_')) nodeType = 'control';
-        else if (n.id?.startsWith('entity_')) nodeType = 'entity';
-        else if (n.id?.startsWith('lifeline_')) nodeType = 'lifeline';
-        else if (n.id?.startsWith('comp_') || n.id?.startsWith('component_')) nodeType = 'component';
-        else if (n.id?.startsWith('dev_') || n.id?.startsWith('device_')) nodeType = 'device';
-        else if (n.id?.startsWith('exec_') || n.id?.startsWith('executionEnvironment_')) nodeType = 'executionEnvironment';
-      }
-      const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
-      const isManuallyResized = !!n.isCustomSize || (!!n.customHeight && n.customHeight > 0) || isExplicitSizeNode || (!!(n.height && n.height > 0) && nodeType === 'class');
-      let defaultWidth = 220;
-      let defaultHeight: number | undefined = undefined;
-      if (nodeType === 'actor') {
-        defaultWidth = 65;
-        defaultHeight = 95;
-      } else if (nodeType === 'use_case') {
-        defaultWidth = 150;
-        defaultHeight = 65;
-      } else if (nodeType === 'package') {
-        defaultWidth = 200;
-        defaultHeight = 120;
-      } else if (nodeType === 'component') {
-        defaultWidth = 190;
-        defaultHeight = 70;
-      } else if (nodeType === 'node' || nodeType === 'device') {
-        defaultWidth = 230;
-        defaultHeight = 140;
-      } else if (nodeType === 'executionEnvironment') {
-        defaultWidth = 240;
-        defaultHeight = 160;
-      } else if (nodeType === 'boundary_box') {
-        defaultWidth = 280;
-        defaultHeight = 200;
-      } else if (['boundary', 'control', 'entity'].includes(nodeType)) {
-        defaultWidth = 70;
-        defaultHeight = 70;
-      } else if (nodeType === 'lifeline') {
-        defaultWidth = 120;
-        defaultHeight = 60;
-      }
-
-      const isBce = ['boundary', 'control', 'entity'].includes(nodeType);
-      const resolvedW = n.isAnchor ? 0 : (isBce ? 70 : (n.width || defaultWidth));
-      const resolvedH = n.isAnchor ? 0 : nodeType === 'lifeline' ? 60 : (isBce ? 70 : (n.height || defaultHeight));
-
-      return {
-        id: n.id || `class_ai_${Date.now()}_${i}`,
-        name: n.name || (n.isAnchor ? '' : (nodeType === 'boundary_box' ? 'BoundaryBox' : `Clase_${i + 1}`)),
-        position: {
-          x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
-          y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
-        },
-        width: resolvedW,
-        height: resolvedH,
-        customWidth: n.customWidth || (isExplicitSizeNode ? resolvedW : undefined),
-        customHeight: n.customHeight || (isExplicitSizeNode ? resolvedH : undefined),
-        isCustomSize: isManuallyResized,
-        color: (!n.color || ((n.color === '#FFFDDD' || n.color === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType)))
-          ? this.getDefaultColorForNodeType(nodeType, n.stereotype)
-          : n.color,
-        nodeType,
-        stereotype: n.stereotype || null,
-        activations: n.activations || [],
-        labelOffset: n.labelOffset,
-        isAnchor: !!n.isAnchor,
-        assocMainConnId: n.assocMainConnId,
-        attributes: (n.attributes || []).map((a: any) => ({
-          ...a,
-          name: a.name,
-          type: this.normalizeDataType(a.type),
-          nullable: a.nullable !== undefined ? a.nullable : true,
-          unique: a.unique !== undefined ? a.unique : false,
-          length: a.length !== undefined ? a.length : 255,
-          defaultValue: a.defaultValue ?? a.default ?? null,
-        })),
-        methods: (n.methods || []).map((m: any) => ({
-          name: m.name,
-          parameters: m.parameters || '',
-          returnType: this.normalizeReturnType(m.returnType),
-        })),
-      };
-    });
+    return this.aiSyncService.applyAiNodesMutation(targetNodes, (nodeType, stereotype) =>
+      this.getDefaultColorForNodeType(nodeType, stereotype),
+    );
   }
 
   public normalizeUmlMessage(m: any, defaultSeq = '1'): UmlMessage {
-    let seq = String(m.sequenceNumber || '').trim();
-    let fn = String(m.functionName || '').trim();
-    let params = String(m.parameters ?? '').trim();
-    let returnType = m.returnType ? String(m.returnType).trim() : undefined;
-    const rawText = String(m.name || m.text || m.label || '').trim();
-
-    // 1. Limpiar fn si contiene números de secuencia, tipo de retorno o parámetros entre paréntesis
-    if (fn) {
-      // 1a. ¿Prefijo de secuencia? Ej: "1.1 register(data)" o "1: login(user)" o "1 - test"
-      const fnSeqMatch = fn.match(/^(\d+(?:\.\d+)*)\s*[:.\s-]\s*(.*)$/);
-      if (fnSeqMatch) {
-        if (!seq) seq = fnSeqMatch[1];
-        fn = fnSeqMatch[2].trim();
-      } else if (/^\d+(\.\d+)*$/.test(fn)) {
-        if (!seq) seq = fn;
-        fn = '';
-      }
-
-      // 1b. ¿Tipo de retorno al final? Ej: "getUser(id): User"
-      const fnRetMatch = fn.match(/^(.*?)\s*:\s*([a-zA-Z0-9_\[\]<>]+)$/);
-      if (fnRetMatch) {
-        fn = fnRetMatch[1].trim();
-        if (!returnType) returnType = fnRetMatch[2].trim();
-      }
-
-      // 1c. ¿Paréntesis con parámetros? Ej: "register(data)" o "logout()"
-      const fnParenMatch = fn.match(/^(.*?)\((.*?)\)$/);
-      if (fnParenMatch) {
-        fn = fnParenMatch[1].trim();
-        if (!params && fnParenMatch[2] !== undefined) {
-          params = fnParenMatch[2].trim();
-        }
-      }
-
-      fn = fn.replace(/\(\)/g, '').trim();
-      fn = fn.replace(/^(\d+(?:\.\d+)*)\s*[:.\s-]\s*/, '').trim();
-    }
-
-    // 2. Si fn quedó vacío o es el placeholder por defecto ('msj', 'mensaje'), intentar extraer de rawText
-    if ((!fn || fn.toLowerCase() === 'msj' || fn.toLowerCase() === 'mensaje') && rawText) {
-      let candidate = rawText;
-
-      const rawSeqMatch = candidate.match(/^(\d+(?:\.\d+)*)\s*[:.\s-]\s*(.*)$/);
-      if (rawSeqMatch) {
-        if (!seq) seq = rawSeqMatch[1];
-        candidate = rawSeqMatch[2].trim();
-      } else if (/^\d+(\.\d+)*$/.test(candidate)) {
-        if (!seq) seq = candidate;
-        candidate = '';
-      }
-
-      const rawRetMatch = candidate.match(/^(.*?)\s*:\s*([a-zA-Z0-9_\[\]<>]+)$/);
-      if (rawRetMatch) {
-        candidate = rawRetMatch[1].trim();
-        if (!returnType) returnType = rawRetMatch[2].trim();
-      }
-
-      const rawParenMatch = candidate.match(/^(.*?)\((.*?)\)$/);
-      if (rawParenMatch) {
-        candidate = rawParenMatch[1].trim();
-        if (!params && rawParenMatch[2] !== undefined) {
-          params = rawParenMatch[2].trim();
-        }
-      }
-
-      candidate = candidate.replace(/\(\)/g, '').trim();
-      candidate = candidate.replace(/^(\d+(?:\.\d+)*)\s*[:.\s-]\s*/, '').trim();
-
-      if (candidate && candidate.toLowerCase() !== 'msj' && candidate.toLowerCase() !== 'mensaje') {
-        fn = candidate;
-      }
-    }
-
-    // 3. Fallback final para fn
-    if (!fn || fn.toLowerCase() === 'msj' || fn.toLowerCase() === 'mensaje') {
-      const fallbackName = m.name && m.name !== 'msj' && m.name !== 'mensaje()' && m.name !== 'mensaje'
-        ? m.name.replace(/\(\)/g, '').replace(/^(\d+(?:\.\d+)*)\s*[:.\s-]\s*/, '').trim()
-        : '';
-      fn = fallbackName || 'msj';
-    }
-
-    // 4. Limpieza de parámetros
-    if (params) {
-      params = params.trim();
-      if (params.startsWith('(') && params.endsWith(')')) {
-        params = params.slice(1, -1).trim();
-      }
-    }
-
-    if (!seq) seq = defaultSeq;
-
-    const isReturn = m.type === 'reply' || !!m.isReturn;
-    // En comunicación, direction es relativo al enlace; reply no implica invertir
-    // un conector de secuencia que ya tiene los extremos dirigidos.
-    const direction = m.direction === 'forward' || m.direction === 'reverse'
-      ? m.direction
-      : isReturn ? 'reverse' : 'forward';
-
-    return {
-      id: m.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      sequenceNumber: seq,
-      functionName: fn,
-      parameters: params,
-      returnType,
-      direction,
-      type: isReturn ? 'reply' : (m.type as UmlMessageType) || 'sync',
-      isReturn,
-      orderIndex: typeof m.orderIndex === 'number' && Number.isFinite(m.orderIndex) ? m.orderIndex : undefined,
-      positionY: typeof m.positionY === 'number' && Number.isFinite(m.positionY) ? m.positionY : undefined,
-      color: m.color || undefined,
-    };
+    return this.aiSyncService.normalizeUmlMessage(m, defaultSeq);
   }
 
   private sanitizeClientConnections(conns: any[], validNodes: UmlClassNode[]): UmlConnection[] {
-    const nodeMap = new Map(validNodes.map((n) => [n.id, n]));
-    const nodeIds = new Set(validNodes.map((n) => n.id));
-    const extractBaseNodeId = (rawId?: string) => {
-      if (!rawId) return '';
-      return rawId
-        .replace(/_(top|bottom|left|right)$/, '')
-        .replace(/_slot_\d+$/, '');
-    };
-
-    const isSeqDiagram = this.activeDiagramType() === DiagramType.SEQUENCE;
-    const isCommDiagram = this.activeDiagramType() === DiagramType.COMMUNICATION;
-
-    const seqConns: any[] = [];
-    const commMergedMap = new Map<string, any>();
-    const otherConns: any[] = [];
-
-    for (const c of conns) {
-      const s = c.sourceNodeId || extractBaseNodeId(c.sourceId);
-      const t = c.targetNodeId || extractBaseNodeId(c.targetId);
-      if (!nodeIds.has(s) || !nodeIds.has(t)) continue;
-
-      const isSeqConn =
-        isSeqDiagram ||
-        ['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ||
-        (c.sourceId && c.sourceId.includes('_slot_')) ||
-        (c.targetId && c.targetId.includes('_slot_'));
-
-      if (isSeqConn) {
-        // EN DIAGRAMAS DE SECUENCIA:
-        // CADA MENSAJE DEBE SER SU PROPIA CONEXIÓN CON EXACTAMENTE UN MENSAJE (messages.length === 1)
-        // NUNCA FUSIONAR CONEXIONES DE SECUENCIA POR PAIRKEY.
-        const rawMsgs = (c.messages && c.messages.length > 0)
-          ? c.messages
-          : (c.name ? [{ name: c.name, type: c.type }] : [{ functionName: 'msj', type: c.type || 'sync' }]);
-
-        // Si la conexión trajo múltiples mensajes agrupados, desempacarlos en conexiones individuales
-        rawMsgs.forEach((m: any, mIdx: number) => {
-          const norm = this.normalizeUmlMessage(m, `${seqConns.length + 1}`);
-          const isMsgReverse = norm.direction === 'reverse';
-
-          let effectiveSource = s;
-          let effectiveTarget = t;
-          if (isMsgReverse && !['reply'].includes(c.type) && !c.isReturn && mIdx > 0) {
-            effectiveSource = t;
-            effectiveTarget = s;
-          }
-
-          // Los extremos ya representan la dirección del mensaje individual.
-          norm.direction = 'forward';
-          seqConns.push({
-            ...c,
-            id: rawMsgs.length === 1 && c.id ? c.id : `msg_${Date.now()}_${seqConns.length}_${Math.random().toString(36).substring(2, 5)}`,
-            sourceNodeId: effectiveSource,
-            targetNodeId: effectiveTarget,
-            type: norm.type || (isMsgReverse ? 'reply' : 'sync'),
-            lineStyle: 'straight',
-            sourceMultiplicity: '',
-            targetMultiplicity: '',
-            messages: [norm],
-          });
-        });
-      } else if (isCommDiagram) {
-        // EN DIAGRAMAS DE COMUNICACIÓN:
-        // Existe una sola línea de asociación entre cada par de objetos, y múltiples mensajes viven sobre esa línea
-        const pairKey = [s, t].sort().join('___');
-        const rawMsgs = (c.messages && c.messages.length > 0)
-          ? c.messages
-          : (c.name ? [{ name: c.name }] : []);
-
-        if (commMergedMap.has(pairKey)) {
-          const existing = commMergedMap.get(pairKey);
-          const isReversedPair = (existing.sourceNodeId || extractBaseNodeId(existing.sourceId)) !== s;
-
-          const normalizedNewMsgs = rawMsgs.map((m: any, mIdx: number) => {
-            const norm = this.normalizeUmlMessage(m, `${(existing.messages || []).length + mIdx + 1}`);
-            if (isReversedPair) {
-              norm.direction = norm.direction === 'reverse' ? 'forward' : 'reverse';
-            }
-            return norm;
-          });
-
-          existing.messages = existing.messages || [];
-          for (const nm of normalizedNewMsgs) {
-            const exists = existing.messages.some(
-              (em: any) => em.sequenceNumber === nm.sequenceNumber && em.functionName === nm.functionName
-            );
-            if (!exists) {
-              existing.messages.push(nm);
-            }
-          }
-        } else {
-          const normalizedMsgs = rawMsgs.map((m: any, mIdx: number) =>
-            this.normalizeUmlMessage(m, `${mIdx + 1}`)
-          );
-
-          commMergedMap.set(pairKey, {
-            ...c,
-            sourceNodeId: s,
-            targetNodeId: t,
-            messages: normalizedMsgs.length > 0 ? normalizedMsgs : undefined,
-          });
-        }
-      } else {
-        // OTROS DIAGRAMAS
-        otherConns.push({
-          ...c,
-          sourceNodeId: s,
-          targetNodeId: t,
-        });
-      }
-    }
-
-    // 2. Asignar slots únicos y ordenados para diagramas de secuencia
-    const usedSlots = new Set<number>();
-    let nextFreeSlot = 0;
-    seqConns.sort((a, b) => {
-      const order = (c: any) => {
-        const match = c.sourceId?.match(/_slot_(\d+)$/) || c.targetId?.match(/_slot_(\d+)$/);
-        return match ? Number(match[1]) : c.messages?.[0]?.orderIndex;
-      };
-      return (order(a) ?? conns.length) - (order(b) ?? conns.length);
-    });
-
-    const normalizedSeqConns: UmlConnection[] = seqConns.map((conn) => {
-      const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
-      const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
-      let slot = sMatch ? parseInt(sMatch[1], 10) : (tMatch ? parseInt(tMatch[1], 10) : -1);
-
-      if (slot < 0 || usedSlots.has(slot)) {
-        while (usedSlots.has(nextFreeSlot)) {
-          nextFreeSlot++;
-        }
-        slot = nextFreeSlot;
-      }
-      usedSlots.add(slot);
-      nextFreeSlot = Math.max(nextFreeSlot, slot + 1);
-
-      const msg = conn.messages[0];
-      return {
-        id: conn.id || `msg_${Date.now()}_${slot}`,
-        sourceNodeId: conn.sourceNodeId,
-        targetNodeId: conn.targetNodeId,
-        sourceId: `${conn.sourceNodeId}_slot_${slot}`,
-        targetId: `${conn.targetNodeId}_slot_${slot}`,
-        type: (conn.type as UmlRelationshipType) || (msg?.isReturn ? 'reply' : 'sync'),
-        lineStyle: 'straight',
-        name: undefined,
-        sourceMultiplicity: '',
-        targetMultiplicity: '',
-        assocAnchorNodeId: undefined,
-        messages: [msg],
-      };
-    });
-
-    // 3. Procesar conexiones de comunicación
-    const normalizedCommConns: UmlConnection[] = Array.from(commMergedMap.values()).map((c) => {
-      const sourceNodeId = c.sourceNodeId || extractBaseNodeId(c.sourceId);
-      const targetNodeId = c.targetNodeId || extractBaseNodeId(c.targetId);
-
-      const sortedMessages = (c.messages || []).slice().sort((a: any, b: any) => {
-        const parseSeq = (str: string) => String(str || '').split('.').map((n) => parseInt(n, 10) || 0);
-        const pa = parseSeq(a.sequenceNumber);
-        const pb = parseSeq(b.sequenceNumber);
-        for (let k = 0; k < Math.max(pa.length, pb.length); k++) {
-          const na = pa[k] || 0;
-          const nb = pb[k] || 0;
-          if (na !== nb) return na - nb;
-        }
-        return 0;
-      });
-
-      return {
-        id: c.id || `conn_comm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        sourceNodeId,
-        targetNodeId,
-        sourceId: c.sourceId || `${sourceNodeId}_right`,
-        targetId: c.targetId || `${targetNodeId}_left`,
-        type: (c.type as UmlRelationshipType) || 'association',
-        lineStyle: (c.lineStyle as UmlLineStyle) || 'straight',
-        name: sortedMessages.length > 0 ? undefined : (c.name || undefined),
-        sourceMultiplicity: '',
-        targetMultiplicity: '',
-        assocAnchorNodeId: undefined,
-        messages: sortedMessages.length > 0 ? sortedMessages : undefined,
-      };
-    });
-
-    // 4. Procesar otros diagramas
-    const normalizedOtherConns: UmlConnection[] = otherConns.map((c) => {
-      const sourceNodeId = c.sourceNodeId || extractBaseNodeId(c.sourceId);
-      const targetNodeId = c.targetNodeId || extractBaseNodeId(c.targetId);
-      const sourceNode = nodeMap.get(sourceNodeId);
-      const targetNode = nodeMap.get(targetNodeId);
-
-      let sourceId = c.sourceId;
-      let targetId = c.targetId;
-
-      if (sourceNode && targetNode) {
-        if (sourceNodeId === targetNodeId) {
-          sourceId = sourceId || `${sourceNodeId}_top`;
-          targetId = targetId || `${targetNodeId}_right`;
-        } else if (c.type === 'association_class') {
-          if (sourceNode.isAnchor) {
-            const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-            sourceId = sourceNode.id;
-            targetId = optimal.targetId;
-          } else if (targetNode.isAnchor) {
-            const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-            sourceId = optimal.sourceId;
-            targetId = targetNode.id;
-          } else {
-            const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-            sourceId = optimal.sourceId;
-            targetId = optimal.targetId;
-          }
-        } else if (!sourceNode.isAnchor && !targetNode.isAnchor) {
-          const optimal = this.getOptimalConnectorId(sourceNode, targetNode);
-          sourceId = optimal.sourceId;
-          targetId = optimal.targetId;
-        }
-      }
-
-      return {
-        id: c.id || `conn_ai_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        sourceNodeId,
-        targetNodeId,
-        sourceId: sourceId || `${sourceNodeId}_right`,
-        targetId: targetId || `${targetNodeId}_left`,
-        type: (c.type as UmlRelationshipType) || 'association',
-        lineStyle: (c.lineStyle as UmlLineStyle) || this.defaultLineStyle(),
-        name: c.name || undefined,
-        sourceMultiplicity: c.sourceMultiplicity || '',
-        targetMultiplicity: c.targetMultiplicity || '',
-        assocAnchorNodeId: c.assocAnchorNodeId || undefined,
-        messages: c.messages,
-      };
-    });
-
-    const combined = [...normalizedSeqConns, ...normalizedCommConns, ...normalizedOtherConns];
-
-    if (this.activeDiagramType() === DiagramType.SEQUENCE) {
-      return this.recalculateSequenceNumbers(combined, true);
-    }
-
-    return combined;
+    return this.aiSyncService.sanitizeClientConnections(
+      conns,
+      validNodes,
+      this.activeDiagramType(),
+      this.defaultLineStyle(),
+      (combined, preserve) => this.recalculateSequenceNumbers(combined, preserve),
+    );
   }
 
   async downloadBmpFile(): Promise<void> {
@@ -4850,66 +3088,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   private async exportDiagramImage(format: 'bmp' | 'png'): Promise<void> {
-    const canvasComp = this.diagramCanvas?.canvas;
-    const prevScale = canvasComp?.transform?.scale ?? 1;
-    const prevPos = canvasComp?.transform?.position ? { ...canvasComp.transform.position } : { x: 0, y: 0 };
-    const prevScaledPos = canvasComp?.transform?.scaledPosition ? { ...canvasComp.transform.scaledPosition } : { x: 0, y: 0 };
-
-    // Limpiar selección para que no salgan recuadros azules de foco en la imagen
-    this.diagramCanvas?.clearSelection();
-
-    try {
-      // Normalizar escala a 1:1 y origen para captura pura de elementos
-      if (canvasComp?.transform) {
-        canvasComp.resetScale();
-        canvasComp.transform.position = { x: 0, y: 0 };
-        canvasComp.transform.scaledPosition = { x: 0, y: 0 };
-        canvasComp.redraw();
-      }
-      // Breve espera para que el DOM de Foblex sincronice transformaciones
-      await new Promise((resolve) => setTimeout(resolve, 60));
-
-      const containerEl = this.diagramCanvas?.getExportElement();
-      if (containerEl) {
-        if (format === 'bmp') {
-          await this.bmpExportService.exportElementToBmp(
-            containerEl,
-            this.currentDiagramName(),
-            this.activeDiagramType(),
-          );
-        } else {
-          await this.bmpExportService.exportElementToPng(
-            containerEl,
-            this.currentDiagramName(),
-            this.activeDiagramType(),
-          );
-        }
-      } else {
-        if (format === 'bmp') {
-          this.bmpExportService.exportToBmp(
-            this.nodes(),
-            this.connections(),
-            this.currentDiagramName(),
-            this.activeDiagramType(),
-          );
-        } else {
-          this.bmpExportService.exportToPng(
-            this.nodes(),
-            this.connections(),
-            this.currentDiagramName(),
-            this.activeDiagramType(),
-          );
-        }
-      }
-    } finally {
-      // Restaurar el zoom y posición de pantalla que tenía el usuario
-      if (canvasComp?.transform) {
-        canvasComp.transform.scale = prevScale;
-        canvasComp.transform.position = prevPos;
-        canvasComp.transform.scaledPosition = prevScaledPos;
-        canvasComp.redraw();
-      }
-    }
+    await this.diagramExportService.exportDiagramImage(
+      this.diagramCanvas,
+      format,
+      this.currentDiagramName(),
+      this.activeDiagramType(),
+      this.nodes(),
+      this.connections(),
+    );
   }
 
   downloadXmiFile(): void {
@@ -4926,12 +3112,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const triggerDownload = () => {
       this.xmiService.exportDiagram(diagId).subscribe({
         next: (blob: Blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${this.currentDiagramName().toLowerCase().replace(/\s+/g, '_')}_ea.xmi`;
-          a.click();
-          window.URL.revokeObjectURL(url);
+          const filename = `${this.currentDiagramName().toLowerCase().replace(/\s+/g, '_')}_ea.xmi`;
+          this.diagramExportService.downloadBlob(blob, filename);
         },
         error: (err: any) => {
           const errMsg = err?.error?.message || err?.message || 'Error al exportar XMI.';
@@ -4963,22 +3145,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
-    const project: UmlDiagramProject = {
-      version: '1.0',
-      name: this.currentDiagramName(),
-      createdDate: new Date().toISOString(),
-      defaultLineStyle: this.defaultLineStyle(),
-      nodes: this.nodes(),
-      connections: this.connections(),
-    };
-
-    const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${this.currentDiagramName().toLowerCase().replace(/\s+/g, '_')}_ast.json`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    this.diagramExportService.downloadJsonFile(
+      this.currentDiagramName(),
+      this.defaultLineStyle(),
+      this.nodes(),
+      this.connections(),
+    );
   }
 
   openExportModal(): void {
@@ -4994,9 +3166,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       nodes: this.nodes(),
       connections: this.connections(),
     };
-    this.jsonContent.set(JSON.stringify(project, null, 2));
-    this.jsonModalMode.set('export');
-    this.showJsonModal.set(true);
+    this.modalService.openExportModal(JSON.stringify(project, null, 2));
   }
 
   openImportModal(): void {
@@ -5004,9 +3174,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       alert(this.translationService.translate('appbar.multiUserImportBlocked'));
       return;
     }
-    this.jsonContent.set('');
-    this.jsonModalMode.set('import');
-    this.showJsonModal.set(true);
+    this.modalService.openImportModal();
   }
 
   applyImportedJson(): void {
@@ -5044,7 +3212,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         }
         this.updateConnectionEndpoints();
         this.showJsonModal.set(false);
-        this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'apply_json');
+        this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'apply_json');
       } else {
         alert('Estructura JSON inválida: faltan nodos o conexiones.');
       }
@@ -5059,7 +3227,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  onFileSelected(event: Event): void {
+  async onFileSelected(event: Event): Promise<void> {
     if (this.isReadOnly()) return;
     if (this.hasMultipleActiveUsers()) {
       alert(this.translationService.translate('appbar.multiUserImportBlocked'));
@@ -5071,215 +3239,97 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const file = target.files?.[0];
     if (!file) return;
 
-    const fileName = file.name.toLowerCase();
-    const isXmiOrXml = fileName.endsWith('.xml') || fileName.endsWith('.xmi');
+    try {
+      const result = await this.importService.parseFile(
+        file,
+        (t) => this.normalizeDataType(t),
+        (rt) => this.normalizeReturnType(rt),
+      );
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        let content = '';
-        const buffer = e.target?.result;
-        if (buffer instanceof ArrayBuffer) {
-          const headerBytes = new Uint8Array(buffer.slice(0, Math.min(buffer.byteLength, 300)));
-          const asciiHeader = String.fromCharCode(...headerBytes);
-          const match = asciiHeader.match(/encoding=["']([^"']+)["']/i);
-          const declaredEncoding = match ? match[1].toLowerCase() : '';
-
-          if (declaredEncoding.includes('1252') || declaredEncoding.includes('ansi')) {
-            try {
-              content = new TextDecoder('windows-1252').decode(buffer);
-            } catch {
-              content = new TextDecoder('utf-8').decode(buffer);
-            }
-          } else if (declaredEncoding.includes('8859-1')) {
-            try {
-              content = new TextDecoder('iso-8859-1').decode(buffer);
-            } catch {
-              content = new TextDecoder('utf-8').decode(buffer);
-            }
-          } else {
-            try {
-              content = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
-            } catch {
-              try {
-                content = new TextDecoder('windows-1252').decode(buffer);
-              } catch {
-                content = new TextDecoder('utf-8').decode(buffer);
-              }
-            }
-          }
-        } else {
-          content = (buffer as string) || '';
+      this.nodes.set(result.nodes);
+      if (result.format === 'xmi') {
+        if (result.name) {
+          this.currentDiagramName.set(result.name);
         }
-
-        content = XmiClientParser.fixUtf8Mojibake(content);
-
-        if (isXmiOrXml) {
-          try {
-            const ast = XmiClientParser.parse(content);
-            if (ast.nodes && ast.nodes.length > 0) {
-              this.nodes.set(
-                ast.nodes.map((n: any) => {
-                  const isBce = n.nodeType === 'boundary' || n.nodeType === 'control' || n.nodeType === 'entity';
-                  return {
-                    ...n,
-                    width: n.width || (n.nodeType === 'actor' ? 65 : (n.nodeType === 'use_case' ? 140 : (n.nodeType === 'package' ? 200 : (isBce ? 70 : 220)))),
-                    height: n.height || (n.nodeType === 'actor' ? 95 : (n.nodeType === 'use_case' ? 60 : (n.nodeType === 'package' ? 120 : (isBce ? 70 : 120)))),
-                    attributes: (n.attributes || []).map((a: any) => ({
-                      ...a,
-                      name: a.name,
-                      type: this.normalizeDataType(a.type),
-                      nullable: a.nullable !== undefined ? a.nullable : true,
-                      unique: a.unique !== undefined ? a.unique : false,
-                      length: a.length !== undefined ? a.length : 255,
-                      defaultValue: a.defaultValue ?? a.default ?? null,
-                    })),
-                    methods: (n.methods || []).map((m: any) => ({
-                      name: m.name,
-                      parameters: m.parameters || '',
-                      returnType: this.normalizeReturnType(m.returnType),
-                    })),
-                  };
-                }),
-              );
-              if (ast.name) {
-                this.currentDiagramName.set(ast.name);
-              }
-              if (ast.diagramType) {
-                this.activeDiagramType.set(ast.diagramType as DiagramType);
-              }
-              this.connections.set(this.recalculateSequenceNumbers(ast.connections || [], true));
-              this.markAsUnsaved();
-              this.updateConnectionEndpoints();
-              setTimeout(() => {
-                this.updateConnectionEndpoints();
-                this.fitView();
-              }, 100);
-              this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_xmi');
-            } else {
-              alert('El archivo XMI no contiene clases UML legibles.');
-            }
-          } catch (err: any) {
-            alert('Error al leer el archivo XMI: ' + (err.message || err));
-          } finally {
-            target.value = '';
-          }
-        } else {
-          const project = JSON.parse(content) as UmlDiagramProject;
-          if (project.nodes && project.connections) {
-            this.nodes.set(
-              project.nodes.map((n) => ({
-                ...n,
-                width: n.width || 220,
-                attributes: (n.attributes || []).map((a) => ({
-                  ...a,
-                  name: a.name,
-                  type: this.normalizeDataType(a.type),
-                  nullable: a.nullable !== undefined ? a.nullable : true,
-                  unique: a.unique !== undefined ? a.unique : false,
-                  length: a.length !== undefined ? a.length : 255,
-                  defaultValue: a.defaultValue ?? a.default ?? null,
-                })),
-                methods: (n.methods || []).map((m) => ({
-                  name: m.name,
-                  parameters: m.parameters,
-                  returnType: this.normalizeReturnType(m.returnType),
-                })),
-              })),
-            );
-            this.connections.set(project.connections);
-            if (project.defaultLineStyle) {
-              this.defaultLineStyle.set(project.defaultLineStyle);
-            }
-            this.markAsUnsaved();
-            this.updateConnectionEndpoints();
-            setTimeout(() => {
-              this.updateConnectionEndpoints();
-              this.fitView();
-            }, 100);
-            this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'import_json');
-          } else {
-            alert('El archivo JSON no contiene un diagrama válido.');
-          }
+        if (result.diagramType) {
+          this.activeDiagramType.set(result.diagramType);
         }
-      } catch (err) {
-        alert('Error al leer el archivo: ' + err);
-      } finally {
-        target.value = '';
+        this.connections.set(this.recalculateSequenceNumbers(result.connections, true));
+        this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'import_xmi');
+      } else {
+        this.connections.set(result.connections);
+        if (result.defaultLineStyle) {
+          this.defaultLineStyle.set(result.defaultLineStyle);
+        }
+        this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'import_json');
       }
-    };
-    reader.readAsArrayBuffer(file);
+
+      this.markAsUnsaved();
+      this.updateConnectionEndpoints();
+      setTimeout(() => {
+        this.updateConnectionEndpoints();
+        this.fitView();
+      }, 100);
+    } catch (err: any) {
+      alert('Error al leer el archivo: ' + (err.message || err));
+    } finally {
+      target.value = '';
+    }
   }
 
   triggerSpringBootGeneration(): void {
-    this.showSpringBootModal.set(true);
+    this.modalService.openSpringBootModal();
   }
 
   openProfileModal(): void {
-    this.isProfileModalOpen.set(true);
+    this.modalService.openProfileModal();
   }
 
   syncZoomFromCanvas(): void {
-    this.diagramCanvas?.syncZoomFromCanvas();
+    this.viewportService.syncZoomFromCanvas(this.diagramCanvas);
   }
 
   onZoomChanged(zoom: number): void {
     if (this.contextMenu()) {
       this.closeContextMenu();
     }
-    this.zoomLevel.set(zoom);
-    const diagId = this.currentDiagramId();
-    if (diagId) {
-      this.saveDiagramViewState(diagId, { zoom });
-    }
+    this.viewportService.onZoomChanged(zoom, this.currentDiagramId());
   }
 
   zoomIn(): void {
-    this.diagramCanvas?.zoomIn();
+    this.viewportService.zoomIn(this.diagramCanvas);
   }
 
   zoomOut(): void {
-    this.diagramCanvas?.zoomOut();
+    this.viewportService.zoomOut(this.diagramCanvas);
   }
 
   onViewportScroll(event: Event): void {
     if (this.contextMenu()) {
       this.closeContextMenu();
     }
-    const el = event.target as HTMLElement;
-    if (!el) return;
-    const diagramId = this.currentDiagramId();
-    if (diagramId) {
-      this.saveDiagramViewState(diagramId, {
-        scrollLeft: el.scrollLeft,
-        scrollTop: el.scrollTop,
-      });
-      sessionStorage.setItem(
-        `diagram_scroll_${diagramId}`,
-        JSON.stringify({ left: el.scrollLeft, top: el.scrollTop }),
-      );
-    }
+    this.viewportService.onViewportScroll(event, this.currentDiagramId());
   }
 
   restoreViewportScroll(diagramId: string | null): void {
-    this.diagramCanvas?.restoreViewportScroll(diagramId);
+    this.viewportService.restoreViewportScroll(this.diagramCanvas, diagramId);
   }
 
   centerViewportOnBoard(): void {
-    this.diagramCanvas?.centerViewportOnBoard();
+    this.viewportService.centerViewportOnBoard(this.diagramCanvas);
   }
 
   resetView(): void {
-    this.diagramCanvas?.resetView();
+    this.viewportService.resetView(this.diagramCanvas);
   }
 
   fitView(): void {
-    this.diagramCanvas?.fitView();
+    this.viewportService.fitView(this.diagramCanvas);
   }
 
   onDiagramTypeChange(type: DiagramType): void {
     this.activeDiagramType.set(type);
-    this.collaborationService.currentDiagramType.set(type);
+    this.collabCoordinator.setCurrentDiagramType(type);
   }
 
   onSaveEditedNode(savedNode: UmlClassNode): void {
@@ -5315,7 +3365,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
     this.updateConnectionEndpoints();
     this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_class');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_class');
   }
 
   onSaveEditedConnection(savedConn: UmlConnection): void {
@@ -5345,7 +3395,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.markAsUnsaved();
     this.closeEditConnModal();
     this.updateConnectionEndpoints();
-    this.collaborationService.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
   }
 
   onApplyImportedJson(json: string): void {
@@ -5376,7 +3426,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       }),
     );
     this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'update_class',
@@ -5387,13 +3437,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // --- MÉTODOS DEL EXPLORADOR DE DIAGRAMAS POR TIPO ---
 
   openCreateDiagramModal(lockedType: DiagramType | null = null): void {
-    this.createDiagramLockedType.set(lockedType);
-    this.isCreateDiagramModalOpen.set(true);
+    this.modalService.openCreateDiagramModal(lockedType);
   }
 
   closeCreateDiagramModal(): void {
-    this.isCreateDiagramModalOpen.set(false);
-    this.createDiagramLockedType.set(null);
+    this.modalService.closeCreateDiagramModal();
   }
 
   handleCreateDiagram(data: { name: string; type: DiagramType }): void {
@@ -5463,11 +3511,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.saveToBackend(true);
     }
 
-    this.diagramViewStates.delete(tabId);
-    try {
-      sessionStorage.removeItem(`diagram_view_state_${tabId}`);
-      sessionStorage.removeItem(`diagram_scroll_${tabId}`);
-    } catch (_) {}
+    this.viewportService.deleteDiagramViewState(tabId);
 
     const index = currentTabs.findIndex((t) => t.id === tabId);
     const newTabs = currentTabs.filter((t) => t.id !== tabId);
@@ -5517,11 +3561,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     this.diagramService.deleteDiagram(diagramId).subscribe({
       next: () => {
-        this.diagramViewStates.delete(diagramId);
-        try {
-          sessionStorage.removeItem(`diagram_view_state_${diagramId}`);
-          sessionStorage.removeItem(`diagram_scroll_${diagramId}`);
-        } catch (_) {}
+        this.viewportService.deleteDiagramViewState(diagramId);
 
         const currentTabs = this.openTabs();
         const wasActive = this.currentDiagramId() === diagramId;
@@ -5565,7 +3605,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       list.map((n) => (n.id === event.nodeId ? { ...n, name: newName } : n))
     );
     this.markAsUnsaved();
-    this.collaborationService.sendDiagramSync(
+    this.collabCoordinator.sendDiagramSync(
       this.nodes(),
       this.connections(),
       'edit_node',

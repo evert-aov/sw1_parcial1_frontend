@@ -1,0 +1,52 @@
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import { heroLockClosed, heroTrash } from '@ng-icons/heroicons/outline';
+import { UmlClassNode } from '../../../../../../../core/models/diagram.model';
+import { TranslatePipe } from '../../../../../../../core/i18n';
+import { AutofocusInputDirective } from '../../../../directives/autofocus-input.directive';
+
+@Component({
+  selector: 'app-uml-class-node',
+  standalone: true,
+  imports: [CommonModule, NgIconComponent, AutofocusInputDirective, TranslatePipe],
+  providers: [provideIcons({ heroLockClosed, heroTrash })],
+  templateUrl: './uml-class-node.component.html',
+  host: {
+    class: 'w-full h-full flex flex-col flex-1 min-h-0 min-w-0',
+  },
+})
+export class UmlClassNodeComponent {
+  @Input({ required: true }) node!: UmlClassNode;
+  @Input() isSelected = false;
+  @Input() isNeighbor = false;
+  @Input() isLocked = false;
+  @Input() lockOwner?: string;
+  @Input() renamingNodeId: string | null = null;
+
+  @Output() nodeClick = new EventEmitter<MouseEvent>();
+  @Output() deleteNode = new EventEmitter<MouseEvent>();
+  @Output() commitRename = new EventEmitter<string>();
+  @Output() cancelRename = new EventEmitter<void>();
+
+  get isRenaming(): boolean {
+    return this.renamingNodeId === this.node?.id;
+  }
+
+  onHeaderClick(event: MouseEvent): void {
+    this.nodeClick.emit(event);
+  }
+
+  onDelete(event: MouseEvent): void {
+    event.stopPropagation();
+    this.deleteNode.emit(event);
+  }
+
+  onCommit(val: string): void {
+    this.commitRename.emit(val);
+  }
+
+  onCancel(): void {
+    this.cancelRename.emit();
+  }
+}
