@@ -1,20 +1,62 @@
-import { Component, input, output, signal, effect, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  input,
+  output,
+  signal,
+  computed,
+  effect,
+  ElementRef,
+  ViewChild,
+  HostListener,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import {
+  heroDocumentText,
+  heroSwatch,
+  heroPencilSquare,
+  heroPlus,
+  heroTrash,
+  heroXMark,
+  heroArrowsPointingOut,
+  heroArrowPath,
+  heroCheck,
+  heroAdjustmentsHorizontal,
+} from '@ng-icons/heroicons/outline';
 import { TranslatePipe } from '../../../../../core/i18n';
 import {
   UmlClassNode,
   UML_PREDEFINED_TYPES,
   UML_PREDEFINED_RETURN_TYPES,
   UML_PREDEFINED_STEREOTYPES,
-  hexToRgb,
-  rgbToHex,
 } from '../../../../../core/models/diagram.model';
+
+export interface ColorPreset {
+  hex: string;
+  name: string;
+}
 
 @Component({
   selector: 'app-edit-node-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CommonModule, FormsModule, TranslatePipe, NgIconComponent],
+  providers: [
+    provideIcons({
+      heroDocumentText,
+      heroSwatch,
+      heroPencilSquare,
+      heroPlus,
+      heroTrash,
+      heroXMark,
+      heroArrowsPointingOut,
+      heroArrowPath,
+      heroCheck,
+      heroAdjustmentsHorizontal,
+    }),
+  ],
   templateUrl: './edit-node-modal.component.html',
 })
 export class EditNodeModalComponent {
@@ -30,6 +72,30 @@ export class EditNodeModalComponent {
   readonly predefinedStereotypes = UML_PREDEFINED_STEREOTYPES;
 
   readonly editingNode = signal<UmlClassNode | null>(null);
+  readonly activeTab = signal<'general' | 'style'>('general');
+  protected readonly Math = Math;
+
+  // Estados de Dimensiones (Tamaño)
+  readonly isCustomSize = signal<boolean>(false);
+  readonly nodeWidth = signal<number>(200);
+  readonly nodeHeight = signal<number | null>(null);
+
+  // Paleta armónica de colores de nodo
+  readonly colorPalette: ColorPreset[] = [
+    { hex: '#FDFAF3', name: 'Crema UML' },
+    { hex: '#DDF4F5', name: 'Cyan BCE' },
+    { hex: '#E9F5EC', name: 'Verde Menta' },
+    { hex: '#F5EBF7', name: 'Lavanda' },
+    { hex: '#FFFFFF', name: 'Blanco' },
+    { hex: '#FEF3C7', name: 'Ámbar Suave' },
+    { hex: '#E0F2FE', name: 'Celeste' },
+    { hex: '#FCE7F3', name: 'Rosa Pálido' },
+    { hex: '#F1F5F9', name: 'Pizarra Claro' },
+    { hex: '#1E293B', name: 'Pizarra Oscuro' },
+  ];
+
+  @ViewChild('modalColorInput') modalColorInputRef?: ElementRef<HTMLInputElement>;
+  private isModalPickerOpen = false;
 
   canHaveStereotype(): boolean {
     const n = this.editingNode();
@@ -107,6 +173,15 @@ export class EditNodeModalComponent {
     }
   }
 
+  getDefaultColorForNode(): string {
+    const nt = (this.editingNode()?.nodeType || '').toLowerCase().trim();
+    if (nt === 'lifeline' || nt === 'boundary' || nt === 'control' || nt === 'entity') return '#DDF4F5';
+    if (nt === 'actor') return '#FEF2DD';
+    if (nt === 'use_case') return '#E5F2FE';
+    if (nt === 'package') return '#FFFFFF';
+    return '#FDFAF3';
+  }
+
   constructor() {
     effect(
       () => {
@@ -151,9 +226,16 @@ export class EditNodeModalComponent {
           }
 
           this.editingNode.set(cloned);
+          this.activeTab.set('general');
+
+          const hasCustom = !!cloned.isCustomSize || (!!cloned.customWidth && cloned.customWidth > 0);
+          this.isCustomSize.set(hasCustom);
+          this.nodeWidth.set(cloned.customWidth || cloned.width || 200);
+          this.nodeHeight.set(cloned.customHeight || (cloned.isCustomSize ? cloned.height || null : null));
+
           setTimeout(() => {
             if (this.modalColorInputRef?.nativeElement && !this.isModalPickerOpen) {
-              this.modalColorInputRef.nativeElement.value = cloned.color || '#FDFAF3';
+              this.modalColorInputRef.nativeElement.value = cloned.color || this.getDefaultColorForNode();
             }
           }, 0);
         } else if (!this.isOpen()) {
@@ -164,17 +246,36 @@ export class EditNodeModalComponent {
     );
   }
 
-  @ViewChild('modalColorInput') modalColorInputRef?: ElementRef<HTMLInputElement>;
-  private isModalPickerOpen = false;
+  @HostListener('window:keydown', ['$event'])
+  onWindowKeyDown(event: KeyboardEvent): void {
+    if (!this.isOpen()) return;
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      event.preventDefault();
+      this.onClose();
+    }
+  }
+
+  onBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.onClose();
+    }
+  }
 
   setColor(color: string): void {
     const curr = this.editingNode();
     if (curr) {
       curr.color = color;
+      this.editingNode.set({ ...curr });
       if (this.modalColorInputRef?.nativeElement) {
         this.modalColorInputRef.nativeElement.value = color;
       }
     }
+  }
+
+  resetColor(): void {
+    const defaultColor = this.getDefaultColorForNode();
+    this.setColor(defaultColor);
   }
 
   onColorPickerFocus(): void {
@@ -184,7 +285,7 @@ export class EditNodeModalComponent {
   onColorPickerBlur(): void {
     this.isModalPickerOpen = false;
     if (this.modalColorInputRef?.nativeElement && this.editingNode()) {
-      this.modalColorInputRef.nativeElement.value = this.editingNode()!.color || '#FDFAF3';
+      this.modalColorInputRef.nativeElement.value = this.editingNode()!.color || this.getDefaultColorForNode();
     }
   }
 
@@ -194,6 +295,7 @@ export class EditNodeModalComponent {
     const curr = this.editingNode();
     if (curr && target?.value) {
       curr.color = target.value;
+      this.editingNode.set({ ...curr });
     }
   }
 
@@ -203,6 +305,62 @@ export class EditNodeModalComponent {
     const curr = this.editingNode();
     if (curr && target?.value) {
       curr.color = target.value;
+      this.editingNode.set({ ...curr });
+    }
+  }
+
+  toggleCustomSize(enabled: boolean): void {
+    this.isCustomSize.set(enabled);
+    if (!enabled) {
+      this.resetToAutoSize();
+    } else {
+      if (!this.nodeWidth() || this.nodeWidth() < 60) {
+        this.nodeWidth.set(200);
+      }
+    }
+  }
+
+  onWidthChange(val: number | string): void {
+    const num = Number(val);
+    if (!isNaN(num) && num > 0) {
+      this.nodeWidth.set(Math.max(60, Math.min(1200, Math.round(num))));
+      this.isCustomSize.set(true);
+    }
+  }
+
+  onHeightChange(val: number | string | null): void {
+    if (val === null || val === '' || isNaN(Number(val))) {
+      this.nodeHeight.set(null);
+    } else {
+      const num = Number(val);
+      this.nodeHeight.set(Math.max(40, Math.min(1200, Math.round(num))));
+      this.isCustomSize.set(true);
+    }
+  }
+
+  applyPreset(preset: 'compact' | 'standard' | 'wide'): void {
+    this.isCustomSize.set(true);
+    if (preset === 'compact') {
+      this.nodeWidth.set(180);
+      this.nodeHeight.set(90);
+    } else if (preset === 'standard') {
+      this.nodeWidth.set(240);
+      this.nodeHeight.set(130);
+    } else if (preset === 'wide') {
+      this.nodeWidth.set(320);
+      this.nodeHeight.set(190);
+    }
+  }
+
+  resetToAutoSize(): void {
+    this.isCustomSize.set(false);
+    this.nodeHeight.set(null);
+    const curr = this.editingNode();
+    if (curr) {
+      curr.customWidth = undefined;
+      curr.customHeight = undefined;
+      curr.isCustomSize = false;
+      this.editingNode.set({ ...curr });
     }
   }
 
@@ -281,6 +439,28 @@ export class EditNodeModalComponent {
         defaultValue: a.defaultValue && String(a.defaultValue).trim() ? String(a.defaultValue).trim() : null,
         default: a.defaultValue && String(a.defaultValue).trim() ? String(a.defaultValue).trim() : null,
       }));
+    }
+
+    // Configuración técnica y estética de dimensiones
+    if (this.isCustomSize()) {
+      const w = Math.max(60, Math.round(this.nodeWidth()));
+      curr.isCustomSize = true;
+      curr.customWidth = w;
+      curr.width = w;
+
+      const h = this.nodeHeight();
+      if (h && h > 0) {
+        const roundedH = Math.max(40, Math.round(h));
+        curr.customHeight = curr.nodeType === 'lifeline' ? 60 : roundedH;
+        curr.height = curr.nodeType === 'lifeline' ? 60 : roundedH;
+      } else {
+        curr.customHeight = undefined;
+        curr.height = undefined;
+      }
+    } else {
+      curr.isCustomSize = false;
+      curr.customWidth = undefined;
+      curr.customHeight = undefined;
     }
 
     // Validar y aplicar restricciones de estereotipo al guardar

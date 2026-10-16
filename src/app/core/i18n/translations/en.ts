@@ -36,9 +36,11 @@ export const en = {
       cancel: 'Cancel',
       incompatibleTitle: 'Incompatible Element',
       deleteDiagramTitle: 'Delete Diagram',
-      deleteDiagramMessage: 'Are you sure you want to delete the diagram "{{name}}"? This action is irreversible and will remove all its elements.',
+      deleteDiagramMessage:
+        'Are you sure you want to delete the diagram "{{name}}"? This action is irreversible and will remove all its elements.',
       deleteProjectTitle: 'Delete Project',
-      deleteProjectMessage: 'Are you sure you want to delete the project "{{name}}" and all its associated diagrams? This action cannot be undone.',
+      deleteProjectMessage:
+        'Are you sure you want to delete the project "{{name}}" and all its associated diagrams? This action cannot be undone.',
       removeMemberTitle: 'Remove Member',
       removeMemberMessage: 'Are you sure you want to remove this member from the project?',
     },
@@ -111,7 +113,8 @@ export const en = {
     openCanvas: 'Open Canvas',
     membersCount: '{{count}} member(s)',
     deleteConfirmTitle: 'Confirm Deletion',
-    deleteConfirmMessage: 'Are you sure you want to delete project "{{name}}"? This action cannot be undone.',
+    deleteConfirmMessage:
+      'Are you sure you want to delete project "{{name}}"? This action cannot be undone.',
     deleteTooltip: 'Delete Project',
     noDescription: 'No detailed description.',
     createModal: {
@@ -179,9 +182,12 @@ export const en = {
     exportXmi: 'OMG XMI 2.1 Standard (CASE)',
     import: 'Import',
     importXmi: 'Import XMI File (UML)',
-    multiUserExportBlocked: 'Exporting this diagram is not allowed while 2 or more users are editing it concurrently.',
-    multiUserImportBlocked: 'Importing into this diagram is not allowed while 2 or more users are editing it concurrently.',
-    multiUserBanner: 'Active concurrent editing (2+ users): Export and import are temporarily blocked to prevent inconsistencies.',
+    multiUserExportBlocked:
+      'Exporting this diagram is not allowed while 2 or more users are editing it concurrently.',
+    multiUserImportBlocked:
+      'Importing into this diagram is not allowed while 2 or more users are editing it concurrently.',
+    multiUserBanner:
+      'Active concurrent editing (2+ users): Export and import are temporarily blocked to prevent inconsistencies.',
     generateCode: 'Generate Full Stack',
     generateTooltip: 'Generate Spring Boot microservice & Flutter mobile app',
     aiAssistant: 'AI Assistant',
@@ -335,13 +341,18 @@ export const en = {
       title: 'Incompatible Element',
       useCase: 'Only actors and use cases can be added or copied to Use Case diagrams.',
       package: 'Only packages, use cases, and actors can be added or copied to Package diagrams.',
-      communication: 'Only actors, boundaries, controls, and entities can be added or copied to Communication diagrams.',
-      sequence: 'Only actors, lifelines, or participants can be added or copied to Sequence diagrams.',
+      communication:
+        'Only actors, boundaries, controls, and entities can be added or copied to Communication diagrams.',
+      sequence:
+        'Only actors, lifelines, or participants can be added or copied to Sequence diagrams.',
       class: 'Only classes can be added or copied to Class diagrams.',
       classAnalysis: 'Only classes and actors can be added or copied to Class Analysis diagrams.',
-      deployment: 'Only physical nodes («device»), execution environments («executionEnvironment»), components, and grouping boundaries can be added or copied to Deployment diagrams.',
-      layered: 'Only packages and grouping boundary boxes can be added or copied to Layered diagrams.',
-      component: 'Only components and grouping boundary boxes can be added or copied to Component diagrams.',
+      deployment:
+        'Only physical nodes («device»), execution environments («executionEnvironment»), components, and grouping boundaries can be added or copied to Deployment diagrams.',
+      layered:
+        'Only packages and grouping boundary boxes can be added or copied to Layered diagrams.',
+      component:
+        'Only components and grouping boundary boxes can be added or copied to Component diagrams.',
     },
     canvas: {
       connectTop: 'Connect from top',
@@ -522,8 +533,8 @@ export const en = {
     tableNameLabel: 'Table Name (Optional)',
     attributesTitle: 'Attributes (Fields)',
     methodsTitle: 'Methods (Operations)',
-    addAttribute: '+ Add Attribute',
-    addMethod: '+ Add Method',
+    addAttribute: ' Add Attribute',
+    addMethod: ' Add Method',
     attrName: 'Name',
     attrType: 'Type',
     attrNullable: 'Nullable',
@@ -537,15 +548,34 @@ export const en = {
     confirmClearTitle: 'Clear Canvas',
     confirmClearMessage: 'Are you sure you want to remove all elements from the diagram?',
     nodeModal: {
-      title: 'UML Class Properties',
-      className: 'Class Name',
+      title: 'Element Properties',
+      className: 'Element Name',
       attributes: 'Attributes (-)',
-      addAttribute: '+ Add Attribute',
+      addAttribute: ' Add Attribute',
       operations: 'Operations / Methods (+)',
-      addOperation: '+ Add Operation',
+      addOperation: ' Add Operation',
       save: 'Save Changes',
       deleteAttribute: 'Delete attribute',
       deleteOperation: 'Delete method',
+      tabGeneral: 'General & Attributes',
+      tabStyle: 'Style & Dimensions',
+      nodeColor: 'Element Background Color',
+      colorDefault: 'Reset to Default',
+      customColor: 'Custom Color',
+      nodeDimensions: 'Node Dimensions',
+      sizeModeAuto: 'Automatic (Adaptive)',
+      sizeModeCustom: 'Custom (Fixed)',
+      sizeModeHelp:
+        'Automatic mode dynamically adapts width and height based on text and attributes.',
+      width: 'Width (W)',
+      height: 'Height (H)',
+      heightAuto: 'Auto',
+      autoSizeBtn: 'Reset to Automatic',
+      presetCompact: 'Compact',
+      presetStandard: 'Standard',
+      presetWide: 'Wide',
+      preview: 'Dimensions & Style Preview',
+      lifelineHeightNote: 'Lifeline header has a fixed standard height of 60px.',
     },
     connModal: {
       title: 'Relationship Properties',
@@ -559,7 +589,8 @@ export const en = {
     jsonModal: {
       exportTitle: 'JSON Structure of Class Diagram',
       importTitle: 'Import Class Diagram from JSON',
-      exportDesc: 'JSON structure to transfer classes and relationships with Enterprise Architect or your backend.',
+      exportDesc:
+        'JSON structure to transfer classes and relationships with Enterprise Architect or your backend.',
       importDesc: 'Paste the structured JSON to load classes onto canvas:',
       placeholder: 'Paste JSON here...',
       copy: 'Copy to clipboard',
@@ -583,7 +614,8 @@ export const en = {
     springBootTab: 'Spring Boot',
     flutterTab: 'Flutter BLoC',
     warningTitle: '⚠️ Attention:',
-    warningDesc: 'You must save the diagram on the server before generating architecture and downloading the project.',
+    warningDesc:
+      'You must save the diagram on the server before generating architecture and downloading the project.',
     packageBase: 'Base Package',
     artifactId: 'Artifact / App ID',
     javaVersion: 'Java Version',
@@ -624,7 +656,8 @@ export const en = {
     hasAuthInfo: 'JWT authentication module automatically detected from User class.',
     noAuthInfo: 'Standard CRUD mode generation without authentication.',
     featuresList: {
-      springBoot: 'Spring Boot 3.4 + Java 21 + Spring Data JPA + Flyway + PostgreSQL + OpenAPI Swagger',
+      springBoot:
+        'Spring Boot 3.4 + Java 21 + Spring Data JPA + Flyway + PostgreSQL + OpenAPI Swagger',
       flutter: 'Flutter + Clean Architecture + BLoC + Dio + SharedPreferences + Material 3',
     },
   },
@@ -634,7 +667,8 @@ export const en = {
     chatTab: 'AI Chat',
     historyTab: 'History',
     hideTooltip: 'Hide AI panel (Ctrl+I)',
-    promptPlaceholder: 'Describe your system (e.g. "Sales system with clients, products and invoices")...',
+    promptPlaceholder:
+      'Describe your system (e.g. "Sales system with clients, products and invoices")...',
     generateButton: 'Generate Diagram',
     generating: 'Analyzing and generating...',
     suggestionsTitle: 'Quick Suggestions',

@@ -1,299 +1,777 @@
 @if (isOpen() && editingNode()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-    <div class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150">
-      
-      <!-- Header -->
-      <div class="border-b border-slate-100 dark:border-slate-800 px-5 py-3.5 flex items-center justify-between">
-        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">
-          {{ editingNode()!.nodeType === 'actor' ? 'Editar Actor' : editingNode()!.nodeType === 'use_case' ? 'Editar Caso de Uso' : editingNode()!.nodeType === 'package' ? 'Editar Paquete' : editingNode()!.nodeType === 'boundary' ? 'Editar Boundary (Interfaz)' : editingNode()!.nodeType === 'control' ? 'Editar Control (Gestor)' : editingNode()!.nodeType === 'entity' ? 'Editar Entidad' : ('editor.nodeModal.title' | translate) }}
-        </h3>
-        <button (click)="onClose()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
-      </div>
-
-      <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
-        
-        <!-- Nombre del Elemento / Clase -->
-        <div>
-          <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">
-            {{ editingNode()!.nodeType === 'actor' ? 'Nombre del Actor' : editingNode()!.nodeType === 'use_case' ? 'Nombre del Caso de Uso' : editingNode()!.nodeType === 'package' ? 'Nombre del Paquete (Pestaña)' : editingNode()!.nodeType === 'boundary' ? 'Nombre del Boundary / Pantalla' : editingNode()!.nodeType === 'control' ? 'Nombre del Control / Gestor' : editingNode()!.nodeType === 'entity' ? 'Nombre de la Entidad' : ('editor.nodeModal.className' | translate) }}
-          </label>
-          <input
-            type="text"
-            [(ngModel)]="editingNode()!.name"
-            [placeholder]="editingNode()!.nodeType === 'actor' ? 'e.g. Cliente, Administrador' : editingNode()!.nodeType === 'use_case' ? 'e.g. Realizar Pedido, Iniciar Sesión' : editingNode()!.nodeType === 'package' ? 'e.g. AI-assistant, Auth, Billing' : editingNode()!.nodeType === 'boundary' ? 'e.g. FormVenta, VistaLogin' : editingNode()!.nodeType === 'control' ? 'e.g. GestorVenta, Validador' : editingNode()!.nodeType === 'entity' ? 'e.g. Producto, Factura' : 'e.g. Usuario, Pedido'"
-            class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all font-mono"
-          />
-        </div>
-
-        <!-- Estereotipo UML -->
-        @if (canHaveStereotype()) {
-          @if (isCommunicationDiagram()) {
-            <!-- En Diagramas de Comunicación: Estereotipo fijo e inmutable por tipo de elemento -->
-            <div>
-              <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">
-                Estereotipo UML (Fijo en Diagrama de Comunicación)
-              </label>
-              <div class="px-3.5 py-2 bg-slate-100/80 dark:bg-[#12162B]/60 border border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 font-mono text-xs flex items-center justify-between">
-                <span>&laquo;{{ editingNode()!.stereotype }}&raquo;</span>
-                <span class="text-[10px] text-slate-400 uppercase font-semibold">Predeterminado (No modificable)</span>
-              </div>
-            </div>
-          } @else {
-            <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <label class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]">
-                  Estereotipo UML (Opcional)
-                </label>
-                @if (editingNode()!.stereotype) {
-                  <button
-                    type="button"
-                    (click)="clearStereotype()"
-                    class="text-[10px] text-red-500 hover:underline cursor-pointer font-medium">
-                    Quitar estereotipo
-                  </button>
-                }
-              </div>
-              <select
-                [ngModel]="editingNode()!.stereotype || ''"
-                (ngModelChange)="onStereotypeSelect($event)"
-                class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all font-mono">
-                <option value="">(Ninguno)</option>
-                @for (st of availableStereotypes(); track st.value) {
-                  <option [value]="st.value">{{ st.label }}</option>
-                }
-              </select>
-            </div>
-          }
-        }
-
-        @if (editingNode()!.nodeType === 'package') {
+  <!-- Overlay Backdrop con aislamiento total de eventos de ratón para proteger el lienzo inferior -->
+  <div
+    class="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs select-none"
+    (click)="onBackdropClick($event)"
+    (mousedown)="$event.stopPropagation()"
+    (pointerdown)="$event.stopPropagation()"
+    (mouseup)="$event.stopPropagation()"
+    (pointerup)="$event.stopPropagation()"
+    (wheel)="$event.stopPropagation()"
+    (dblclick)="$event.stopPropagation()"
+    (contextmenu)="$event.stopPropagation(); $event.preventDefault()"
+  >
+    <!-- Contenedor del Modal -->
+    <div
+      (click)="$event.stopPropagation()"
+      (mousedown)="$event.stopPropagation()"
+      (pointerdown)="$event.stopPropagation()"
+      class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden text-xs animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[88vh] select-text"
+    >
+      <!-- Cabecera -->
+      <div
+        class="border-b border-slate-100 dark:border-slate-800 px-5 py-3.5 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-[#0E1225]"
+      >
+        <div class="flex items-center gap-2.5">
+          <div
+            class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center"
+          >
+            @if (activeTab() === 'general') {
+              <ng-icon name="heroDocumentText" class="text-base"></ng-icon>
+            } @else {
+              <ng-icon name="heroSwatch" class="text-base"></ng-icon>
+            }
+          </div>
           <div>
-            <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">
-              Descripción / Contenido del Paquete (Cuerpo)
-            </label>
-            <input
-              type="text"
-              [ngModel]="getPackageDescription()"
-              (ngModelChange)="setPackageDescription($event)"
-              placeholder="e.g. Asistente Inteligente IA, Módulos y servicios de la capa"
-              class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all"
-            />
-          </div>
-        }
-
-        @if (!editingNode()!.nodeType || editingNode()!.nodeType === 'class') {
-        <!-- Atributos con Tipos Estrictamente Predefinidos y Metadatos de BD -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <label class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]">{{ 'editor.nodeModal.attributes' | translate }}</label>
-              <span class="text-[10px] text-slate-400 font-normal">({{ editingNode()!.attributes.length }}) &bull; Nullable, Unique, Length, Default</span>
-            </div>
-            <button
-              (click)="addAttribute()"
-              class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold text-[11px] rounded-lg border border-blue-200/60 dark:border-blue-800/50 cursor-pointer transition-colors">
-              {{ 'editor.nodeModal.addAttribute' | translate }}
-            </button>
-          </div>
-          <div class="space-y-2">
-            @for (attr of editingNode()!.attributes; track $index) {
-              <div class="p-2 bg-slate-50/70 dark:bg-[#151A33] border border-slate-200/70 dark:border-slate-800 rounded-xl space-y-1.5 transition-all hover:border-blue-400/40">
-                <!-- Fila Principal: Nombre y Tipo -->
-                <div class="flex items-center gap-2">
-                  <span class="font-mono font-bold text-slate-400 select-none text-xs pl-1">-</span>
-                  <input
-                    type="text"
-                    [(ngModel)]="attr.name"
-                    placeholder="nombreCampo"
-                    class="flex-1 min-w-[130px] px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-mono font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <span class="text-slate-400 font-mono">:</span>
-                  
-                  <select
-                    [(ngModel)]="attr.type"
-                    class="w-36 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-mono font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
-                    @for (t of predefinedTypes; track t) {
-                      <option [value]="t">{{ t }}</option>
-                    }
-                  </select>
-
-                  <button
-                    (click)="removeAttribute($index)"
-                    [title]="'editor.nodeModal.deleteAttribute' | translate"
-                    class="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5 rounded-lg font-bold text-sm cursor-pointer leading-none transition-colors">
-                    &times;
-                  </button>
-                </div>
-
-                <!-- Fila Secundaria: Metadatos para Generación (Nullable, Unique, Length, Default) -->
-                <div class="flex flex-wrap items-center gap-2.5 pl-4 pt-0.5 text-[11px] text-slate-600 dark:text-slate-300">
-                  <!-- Nullable (default: true) -->
-                  <label class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white dark:bg-[#0E1225] border border-slate-200/80 dark:border-slate-700/70 rounded-md cursor-pointer select-none hover:border-blue-400 transition-colors" title="Permite valores nulos en BD (default: true)">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="attr.nullable"
-                      class="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    />
-                    <span class="font-medium text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300">Nullable</span>
-                  </label>
-
-                  <!-- Unique (default: false) -->
-                  <label class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white dark:bg-[#0E1225] border border-slate-200/80 dark:border-slate-700/70 rounded-md cursor-pointer select-none hover:border-blue-400 transition-colors" title="Restricción de valor único en BD (default: false)">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="attr.unique"
-                      class="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    />
-                    <span class="font-medium text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300">Unique</span>
-                  </label>
-
-                  <!-- Length (default: 255) -->
-                  <div class="inline-flex items-center gap-1 bg-white dark:bg-[#0E1225] border border-slate-200/80 dark:border-slate-700/70 rounded-md px-1.5 py-0.5" title="Longitud de columna / varchar (default: 255)">
-                    <span class="text-[10px] uppercase font-semibold text-slate-400 select-none">Len:</span>
-                    <input
-                      type="number"
-                      [(ngModel)]="attr.length"
-                      placeholder="255"
-                      min="1"
-                      max="65535"
-                      class="w-14 bg-transparent text-[11px] font-mono text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
-                    />
-                  </div>
-
-                  <!-- Default Value (default: null) -->
-                  <div class="flex-1 min-w-[130px] inline-flex items-center gap-1 bg-white dark:bg-[#0E1225] border border-slate-200/80 dark:border-slate-700/70 rounded-md px-1.5 py-0.5" title="Valor por defecto en BD (default: null)">
-                    <span class="text-[10px] uppercase font-semibold text-slate-400 select-none">Def:</span>
-                    <input
-                      type="text"
-                      [(ngModel)]="attr.defaultValue"
-                      placeholder="null"
-                      class="w-full bg-transparent text-[11px] font-mono text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            }
+            <h3
+              class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight leading-tight"
+            >
+              {{
+                editingNode()!.nodeType === 'actor'
+                  ? 'Editar Actor'
+                  : editingNode()!.nodeType === 'use_case'
+                    ? 'Editar Caso de Uso'
+                    : editingNode()!.nodeType === 'package'
+                      ? 'Editar Paquete'
+                      : editingNode()!.nodeType === 'boundary'
+                        ? 'Editar Boundary (Interfaz)'
+                        : editingNode()!.nodeType === 'control'
+                          ? 'Editar Control (Gestor)'
+                          : editingNode()!.nodeType === 'entity'
+                            ? 'Editar Entidad'
+                            : editingNode()!.nodeType === 'lifeline'
+                              ? 'Editar Línea de Vida'
+                              : editingNode()!.nodeType === 'component'
+                                ? 'Editar Componente'
+                                : editingNode()!.nodeType === 'deployment'
+                                  ? 'Editar Nodo Despliegue'
+                                  : ('editor.nodeModal.title' | translate)
+              }}
+            </h3>
+            <span class="text-[10px] text-slate-400 font-mono">ID: {{ editingNode()!.id }}</span>
           </div>
         </div>
-
-        <!-- Métodos con Retorno Estrictamente Predefinido -->
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <label class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]">{{ 'editor.nodeModal.operations' | translate }}</label>
-            <button
-              (click)="addMethod()"
-              class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold text-[11px] rounded-lg border border-blue-200/60 dark:border-blue-800/50 cursor-pointer transition-colors">
-              {{ 'editor.nodeModal.addOperation' | translate }}
-            </button>
-          </div>
-          <div class="space-y-2">
-            @for (m of editingNode()!.methods; track $index) {
-              <div class="flex items-center gap-2 p-1.5 bg-slate-50/60 dark:bg-[#151A33] border border-slate-200/70 dark:border-slate-800 rounded-xl">
-                <span class="font-mono font-bold text-slate-400 select-none text-xs pl-1">+</span>
-                <input
-                  type="text"
-                  [(ngModel)]="m.name"
-                  placeholder="método"
-                  class="flex-1 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <span class="text-slate-400 font-mono text-xs">(</span>
-                <input
-                  type="text"
-                  [(ngModel)]="m.parameters"
-                  placeholder="params"
-                  class="w-24 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-mono text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <span class="text-slate-400 font-mono text-xs">):</span>
-                
-                <select
-                  [(ngModel)]="m.returnType"
-                  class="w-32 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-mono font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer">
-                  @for (rt of predefinedReturnTypes; track rt) {
-                    <option [value]="rt">{{ rt }}</option>
-                  }
-                </select>
-
-                <button
-                  (click)="removeMethod($index)"
-                  [title]="'editor.nodeModal.deleteOperation' | translate"
-                  class="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5 rounded-lg font-bold text-sm cursor-pointer leading-none transition-colors">
-                  &times;
-                </button>
-              </div>
-            }
-          </div>
-        </div>
-        }
-
-        <!-- Selector de Color de Relleno del Elemento -->
-        <div>
-          <label class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5">
-            Color de Relleno del Elemento
-          </label>
-          <div class="flex items-center gap-3">
-            <input
-              #modalColorInput
-              type="color"
-              (focus)="onColorPickerFocus()"
-              (blur)="onColorPickerBlur()"
-              (click)="onColorPickerFocus()"
-              (input)="onColorInput($event)"
-              (change)="onColorChange($event)"
-              (keydown)="$event.stopPropagation()"
-              (pointerdown)="$event.stopPropagation()"
-              class="w-9 h-8 p-0 border border-slate-300 dark:border-slate-700 rounded-lg cursor-pointer bg-transparent"
-            />
-            <div class="flex items-center gap-1.5">
-              <button
-                type="button"
-                (click)="setColor('#FDFAF3')"
-                class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                style="background-color: #FDFAF3"
-                title="Clase UML (#FDFAF3)"></button>
-              <button
-                type="button"
-                (click)="setColor('#DDF4F5')"
-                class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                style="background-color: #DDF4F5"
-                title="BCE / Lifeline (#DDF4F5)"></button>
-              <button
-                type="button"
-                (click)="setColor('#E9F5EC')"
-                class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                style="background-color: #E9F5EC"
-                title="Verde Suave"></button>
-              <button
-                type="button"
-                (click)="setColor('#F5EBF7')"
-                class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                style="background-color: #F5EBF7"
-                title="Púrpura Suave"></button>
-              <button
-                type="button"
-                (click)="setColor('#FFFFFF')"
-                class="w-6 h-6 rounded-md border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                style="background-color: #FFFFFF"
-                title="Blanco"></button>
-            </div>
-            <span class="text-xs font-mono text-slate-500">{{ editingNode()!.color || '#FDFAF3' }}</span>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5">
         <button
           (click)="onClose()"
-          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#1C2242] dark:hover:bg-[#252E56] text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer">
+          type="button"
+          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          title="Cerrar modal"
+        >
+          <ng-icon name="heroXMark" class="text-base"></ng-icon>
+        </button>
+      </div>
+
+      <!-- Barra de Pestañas (Segmented Tab Bar) -->
+      <div
+        class="flex border-b border-slate-200 dark:border-slate-800 px-5 bg-slate-50/70 dark:bg-[#0E1224] shrink-0 gap-2"
+      >
+        <button
+          type="button"
+          (click)="activeTab.set('general')"
+          class="flex items-center gap-2 py-2.5 px-4 text-xs font-semibold border-b-2 transition-all cursor-pointer"
+          [class.border-blue-600]="activeTab() === 'general'"
+          [class.text-blue-600]="activeTab() === 'general'"
+          [class.dark:text-blue-400]="activeTab() === 'general'"
+          [class.dark:border-blue-500]="activeTab() === 'general'"
+          [class.border-transparent]="activeTab() !== 'general'"
+          [class.text-slate-500]="activeTab() !== 'general'"
+          [class.hover:text-slate-700]="activeTab() !== 'general'"
+          [class.dark:text-slate-400]="activeTab() !== 'general'"
+          [class.dark:hover:text-slate-200]="activeTab() !== 'general'"
+        >
+          <ng-icon name="heroDocumentText" class="text-sm"></ng-icon>
+          <span>{{ 'editor.nodeModal.tabGeneral' | translate }}</span>
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('style')"
+          class="flex items-center gap-2 py-2.5 px-4 text-xs font-semibold border-b-2 transition-all cursor-pointer"
+          [class.border-blue-600]="activeTab() === 'style'"
+          [class.text-blue-600]="activeTab() === 'style'"
+          [class.dark:text-blue-400]="activeTab() === 'style'"
+          [class.dark:border-blue-500]="activeTab() === 'style'"
+          [class.border-transparent]="activeTab() !== 'style'"
+          [class.text-slate-500]="activeTab() !== 'style'"
+          [class.hover:text-slate-700]="activeTab() !== 'style'"
+          [class.dark:text-slate-400]="activeTab() !== 'style'"
+          [class.dark:hover:text-slate-200]="activeTab() !== 'style'"
+        >
+          <ng-icon name="heroSwatch" class="text-sm"></ng-icon>
+          <span>{{ 'editor.nodeModal.tabStyle' | translate }}</span>
+        </button>
+      </div>
+
+      <!-- Cuerpo del Modal -->
+      <div class="p-5 overflow-y-auto flex-1 min-h-0 space-y-4">
+        <!-- ================================================================= -->
+        <!-- SECCIÓN 1: GENERAL & ATRIBUTOS (MODELO)                          -->
+        <!-- ================================================================= -->
+        @if (activeTab() === 'general') {
+          <div class="space-y-4 animate-in fade-in duration-100">
+            <!-- Nombre del Elemento / Clase -->
+            <div>
+              <label
+                class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5"
+              >
+                {{
+                  editingNode()!.nodeType === 'actor'
+                    ? 'Nombre del Actor'
+                    : editingNode()!.nodeType === 'use_case'
+                      ? 'Nombre del Caso de Uso'
+                      : editingNode()!.nodeType === 'package'
+                        ? 'Nombre del Paquete (Pestaña)'
+                        : editingNode()!.nodeType === 'boundary'
+                          ? 'Nombre del Boundary / Pantalla'
+                          : editingNode()!.nodeType === 'control'
+                            ? 'Nombre del Control / Gestor'
+                            : editingNode()!.nodeType === 'entity'
+                              ? 'Nombre de la Entidad'
+                              : editingNode()!.nodeType === 'lifeline'
+                                ? 'Nombre de la Línea de Vida'
+                                : ('editor.nodeModal.className' | translate)
+                }}
+              </label>
+              <input
+                type="text"
+                [(ngModel)]="editingNode()!.name"
+                [placeholder]="
+                  editingNode()!.nodeType === 'actor'
+                    ? 'e.g. Cliente, Administrador'
+                    : editingNode()!.nodeType === 'use_case'
+                      ? 'e.g. Realizar Pedido, Iniciar Sesión'
+                      : editingNode()!.nodeType === 'package'
+                        ? 'e.g. AI-assistant, Auth, Billing'
+                        : editingNode()!.nodeType === 'boundary'
+                          ? 'e.g. FormVenta, VistaLogin'
+                          : editingNode()!.nodeType === 'control'
+                            ? 'e.g. GestorVenta, Validador'
+                            : editingNode()!.nodeType === 'entity'
+                              ? 'e.g. Producto, Factura'
+                              : editingNode()!.nodeType === 'lifeline'
+                                ? 'e.g. ServicioAutenticacion'
+                                : 'e.g. Usuario, Pedido'
+                "
+                class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all font-mono"
+              />
+            </div>
+
+            <!-- Estereotipo UML -->
+            @if (canHaveStereotype()) {
+              @if (isCommunicationDiagram()) {
+                <div>
+                  <label
+                    class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5"
+                  >
+                    Estereotipo UML (Fijo en Diagrama de Comunicación)
+                  </label>
+                  <div
+                    class="px-3.5 py-2 bg-slate-100/80 dark:bg-[#12162B]/60 border border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 font-mono text-xs flex items-center justify-between"
+                  >
+                    <span>&laquo;{{ editingNode()!.stereotype }}&raquo;</span>
+                    <span class="text-[10px] text-slate-400 uppercase font-semibold"
+                      >Predeterminado (No modificable)</span
+                    >
+                  </div>
+                </div>
+              } @else {
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label
+                      class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]"
+                    >
+                      Estereotipo UML (Opcional)
+                    </label>
+                    @if (editingNode()!.stereotype) {
+                      <button
+                        type="button"
+                        (click)="clearStereotype()"
+                        class="text-[10px] text-red-500 hover:underline cursor-pointer font-medium"
+                      >
+                        Quitar estereotipo
+                      </button>
+                    }
+                  </div>
+                  <select
+                    [ngModel]="editingNode()!.stereotype || ''"
+                    (ngModelChange)="onStereotypeSelect($event)"
+                    class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all font-mono"
+                  >
+                    <option value="">(Ninguno)</option>
+                    @for (st of availableStereotypes(); track st.value) {
+                      <option [value]="st.value">{{ st.label }}</option>
+                    }
+                  </select>
+                </div>
+              }
+            }
+
+            @if (editingNode()!.nodeType === 'package') {
+              <div>
+                <label
+                  class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5"
+                >
+                  Descripción / Contenido del Paquete (Cuerpo)
+                </label>
+                <input
+                  type="text"
+                  [ngModel]="getPackageDescription()"
+                  (ngModelChange)="setPackageDescription($event)"
+                  placeholder="e.g. Asistente Inteligente IA, Módulos y servicios de la capa"
+                  class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all"
+                />
+              </div>
+            }
+
+            @if (!editingNode()!.nodeType || editingNode()!.nodeType === 'class') {
+              <!-- Atributos con Tipos Estrictamente Predefinidos y Metadatos de BD -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <label
+                      class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]"
+                      >{{ 'editor.nodeModal.attributes' | translate }}</label
+                    >
+                    <span class="text-[10px] text-slate-400 font-normal"
+                      >({{ editingNode()!.attributes.length }}) &bull; Nullable, Unique, Length,
+                      Default</span
+                    >
+                  </div>
+                  <button
+                    (click)="addAttribute()"
+                    type="button"
+                    class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold text-[11px] rounded-lg border border-blue-200/60 dark:border-blue-800/50 cursor-pointer transition-colors flex items-center gap-1"
+                  >
+                    <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+                    <span>{{ 'editor.nodeModal.addAttribute' | translate }}</span>
+                  </button>
+                </div>
+                <div class="space-y-2">
+                  @for (attr of editingNode()!.attributes; track $index) {
+                    <div
+                      class="p-2 bg-slate-50/70 dark:bg-[#151A33] border border-slate-200/70 dark:border-slate-800 rounded-xl space-y-1.5 transition-all hover:border-blue-400/40"
+                    >
+                      <!-- Fila Principal: Nombre y Tipo -->
+                      <div class="flex items-center gap-2">
+                        <span class="font-mono font-bold text-slate-400 select-none text-xs pl-1"
+                          >-</span
+                        >
+                        <input
+                          type="text"
+                          [(ngModel)]="attr.name"
+                          placeholder="nombreCampo"
+                          class="flex-1 min-w-32.5 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-mono font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <span class="text-slate-400 font-mono">:</span>
+
+                        <select
+                          [(ngModel)]="attr.type"
+                          class="w-36 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-mono font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                        >
+                          @for (t of predefinedTypes; track t) {
+                            <option [value]="t">{{ t }}</option>
+                          }
+                        </select>
+
+                        <button
+                          (click)="removeAttribute($index)"
+                          type="button"
+                          [title]="'editor.nodeModal.deleteAttribute' | translate"
+                          class="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5 rounded-lg font-bold text-sm cursor-pointer leading-none transition-colors"
+                        >
+                          <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                        </button>
+                      </div>
+
+                      <!-- Fila Secundaria: Metadatos para Generación (Nullable, Unique, Length, Default) -->
+                      <div
+                        class="flex flex-wrap items-center gap-2.5 pl-4 pt-0.5 text-[11px] text-slate-600 dark:text-slate-300"
+                      >
+                        <label
+                          class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white dark:bg-[#0E1225] border border-slate-200/80 dark:border-slate-700/70 rounded-md cursor-pointer select-none hover:border-blue-400 transition-colors"
+                          title="Permite valores nulos en BD (default: true)"
+                        >
+                          <input
+                            type="checkbox"
+                            [(ngModel)]="attr.nullable"
+                            class="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span
+                            class="font-medium text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300"
+                            >Nullable</span
+                          >
+                        </label>
+
+                        <label
+                          class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-white dark:bg-[#0E1225] border border-slate-200/80 dark:border-slate-700/70 rounded-md cursor-pointer select-none hover:border-blue-400 transition-colors"
+                          title="Restricción de valor único en BD (default: false)"
+                        >
+                          <input
+                            type="checkbox"
+                            [(ngModel)]="attr.unique"
+                            class="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span
+                            class="font-medium text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-300"
+                            >Unique</span
+                          >
+                        </label>
+
+                        <div
+                          class="inline-flex items-center gap-1 bg-white dark:bg-[#0E1225] border border-slate-200/80 dark:border-slate-700/70 rounded-md px-1.5 py-0.5"
+                          title="Longitud de columna / varchar (default: 255)"
+                        >
+                          <span
+                            class="text-[10px] uppercase font-semibold text-slate-400 select-none"
+                            >Len:</span
+                          >
+                          <input
+                            type="number"
+                            [(ngModel)]="attr.length"
+                            placeholder="255"
+                            min="1"
+                            max="65535"
+                            class="w-14 bg-transparent text-[11px] font-mono text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
+                          />
+                        </div>
+
+                        <div
+                          class="flex-1 min-w-[130px] inline-flex items-center gap-1 bg-white dark:bg-[#0E1225] border border-slate-200/80 dark:border-slate-700/70 rounded-md px-1.5 py-0.5"
+                          title="Valor por defecto en BD (default: null)"
+                        >
+                          <span
+                            class="text-[10px] uppercase font-semibold text-slate-400 select-none"
+                            >Def:</span
+                          >
+                          <input
+                            type="text"
+                            [(ngModel)]="attr.defaultValue"
+                            placeholder="null"
+                            class="w-full bg-transparent text-[11px] font-mono text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Métodos con Retorno Estrictamente Predefinido -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label
+                    class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]"
+                    >{{ 'editor.nodeModal.operations' | translate }}</label
+                  >
+                  <button
+                    (click)="addMethod()"
+                    type="button"
+                    class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold text-[11px] rounded-lg border border-blue-200/60 dark:border-blue-800/50 cursor-pointer transition-colors flex items-center gap-1"
+                  >
+                    <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+                    <span>{{ 'editor.nodeModal.addOperation' | translate }}</span>
+                  </button>
+                </div>
+                <div class="space-y-2">
+                  @for (m of editingNode()!.methods; track $index) {
+                    <div
+                      class="flex items-center gap-2 p-1.5 bg-slate-50/60 dark:bg-[#151A33] border border-slate-200/70 dark:border-slate-800 rounded-xl"
+                    >
+                      <span class="font-mono font-bold text-slate-400 select-none text-xs pl-1"
+                        >+</span
+                      >
+                      <input
+                        type="text"
+                        [(ngModel)]="m.name"
+                        placeholder="método"
+                        class="flex-1 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <span class="text-slate-400 font-mono text-xs">(</span>
+                      <input
+                        type="text"
+                        [(ngModel)]="m.parameters"
+                        placeholder="params"
+                        class="w-24 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-mono text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <span class="text-slate-400 font-mono text-xs">):</span>
+
+                      <select
+                        [(ngModel)]="m.returnType"
+                        class="w-32 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-mono font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                      >
+                        @for (rt of predefinedReturnTypes; track rt) {
+                          <option [value]="rt">{{ rt }}</option>
+                        }
+                      </select>
+
+                      <button
+                        (click)="removeMethod($index)"
+                        type="button"
+                        [title]="'editor.nodeModal.deleteOperation' | translate"
+                        class="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 p-1.5 rounded-lg font-bold text-sm cursor-pointer leading-none transition-colors"
+                      >
+                        <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ================================================================= -->
+        <!-- SECCIÓN 2: ESTILO & DIMENSIONES (TÉCNICA & ESTÉTICA)             -->
+        <!-- ================================================================= -->
+        @if (activeTab() === 'style') {
+          <div class="space-y-5 animate-in fade-in duration-100">
+            <!-- Bloque 1: Color de Fondo del Elemento -->
+            <div
+              class="bg-slate-50/70 dark:bg-[#12162B] border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 space-y-3"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <ng-icon
+                    name="heroSwatch"
+                    class="text-blue-600 dark:text-blue-400 text-sm"
+                  ></ng-icon>
+                  <label
+                    class="font-semibold text-slate-700 dark:text-slate-200 uppercase text-[11px] tracking-wide"
+                  >
+                    {{ 'editor.nodeModal.nodeColor' | translate }}
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  (click)="resetColor()"
+                  class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium flex items-center gap-1"
+                >
+                  <ng-icon name="heroArrowPath" class="text-xs"></ng-icon>
+                  <span>{{ 'editor.nodeModal.colorDefault' | translate }}</span>
+                </button>
+              </div>
+
+              <!-- Paleta de Colores Rápidos -->
+              <div class="flex flex-wrap items-center gap-2.5">
+                @for (preset of colorPalette; track preset.hex) {
+                  <button
+                    type="button"
+                    (click)="setColor(preset.hex)"
+                    class="relative w-8 h-8 rounded-lg border-2 shadow-2xs cursor-pointer transition-all hover:scale-110 flex items-center justify-center"
+                    [style.background-color]="preset.hex"
+                    [class.border-blue-600]="
+                      (editingNode()!.color || getDefaultColorForNode()).toUpperCase() ===
+                      preset.hex.toUpperCase()
+                    "
+                    [class.ring-2]="
+                      (editingNode()!.color || getDefaultColorForNode()).toUpperCase() ===
+                      preset.hex.toUpperCase()
+                    "
+                    [class.ring-blue-500/30]="
+                      (editingNode()!.color || getDefaultColorForNode()).toUpperCase() ===
+                      preset.hex.toUpperCase()
+                    "
+                    [class.border-slate-300]="
+                      (editingNode()!.color || getDefaultColorForNode()).toUpperCase() !==
+                      preset.hex.toUpperCase()
+                    "
+                    [class.dark:border-slate-700]="
+                      (editingNode()!.color || getDefaultColorForNode()).toUpperCase() !==
+                      preset.hex.toUpperCase()
+                    "
+                    [title]="preset.name + ' (' + preset.hex + ')'"
+                  >
+                    @if (
+                      (editingNode()!.color || getDefaultColorForNode()).toUpperCase() ===
+                      preset.hex.toUpperCase()
+                    ) {
+                      <ng-icon
+                        name="heroCheck"
+                        class="text-xs"
+                        [class.text-slate-900]="preset.hex !== '#1E293B'"
+                        [class.text-white]="preset.hex === '#1E293B'"
+                      ></ng-icon>
+                    }
+                  </button>
+                }
+
+                <!-- Selector Personalizado (Color Picker Nativo) -->
+                <div
+                  class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800"
+                >
+                  <input
+                    #modalColorInput
+                    type="color"
+                    (focus)="onColorPickerFocus()"
+                    (blur)="onColorPickerBlur()"
+                    (click)="onColorPickerFocus()"
+                    (input)="onColorInput($event)"
+                    (change)="onColorChange($event)"
+                    (keydown)="$event.stopPropagation()"
+                    (pointerdown)="$event.stopPropagation()"
+                    class="w-8 h-8 p-0 border border-slate-300 dark:border-slate-700 rounded-lg cursor-pointer bg-transparent"
+                    title="Seleccionar color personalizado"
+                  />
+                  <div
+                    class="px-2.5 py-1 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300"
+                  >
+                    {{ editingNode()!.color || getDefaultColorForNode() }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bloque 2: Dimensiones del Nodo (Tamaño) -->
+            <div
+              class="bg-slate-50/70 dark:bg-[#12162B] border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 space-y-3.5"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <ng-icon
+                    name="heroArrowsPointingOut"
+                    class="text-blue-600 dark:text-blue-400 text-sm"
+                  ></ng-icon>
+                  <label
+                    class="font-semibold text-slate-700 dark:text-slate-200 uppercase text-[11px] tracking-wide"
+                  >
+                    {{ 'editor.nodeModal.nodeDimensions' | translate }}
+                  </label>
+                </div>
+
+                <!-- Toggle Modo Automático vs Personalizado -->
+                <div
+                  class="inline-flex rounded-lg bg-slate-200/80 dark:bg-[#0A0D1B] p-0.5 border border-slate-200 dark:border-slate-700/60"
+                >
+                  <button
+                    type="button"
+                    (click)="toggleCustomSize(false)"
+                    class="px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all cursor-pointer"
+                    [class.bg-white]="!isCustomSize()"
+                    [class.dark:bg-[#161B33]]="!isCustomSize()"
+                    [class.text-blue-600]="!isCustomSize()"
+                    [class.dark:text-blue-400]="!isCustomSize()"
+                    [class.shadow-2xs]="!isCustomSize()"
+                    [class.text-slate-500]="isCustomSize()"
+                    [class.dark:text-slate-400]="isCustomSize()"
+                  >
+                    {{ 'editor.nodeModal.sizeModeAuto' | translate }}
+                  </button>
+                  <button
+                    type="button"
+                    (click)="toggleCustomSize(true)"
+                    class="px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all cursor-pointer"
+                    [class.bg-white]="isCustomSize()"
+                    [class.dark:bg-[#161B33]]="isCustomSize()"
+                    [class.text-blue-600]="isCustomSize()"
+                    [class.dark:text-blue-400]="isCustomSize()"
+                    [class.shadow-2xs]="isCustomSize()"
+                    [class.text-slate-500]="!isCustomSize()"
+                    [class.dark:text-slate-400]="!isCustomSize()"
+                  >
+                    {{ 'editor.nodeModal.sizeModeCustom' | translate }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Explicación de dimensiones -->
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {{ 'editor.nodeModal.sizeModeHelp' | translate }}
+              </p>
+
+              <!-- Controles de Ancho y Alto -->
+              <div class="grid grid-cols-2 gap-3 pt-1">
+                <!-- Ancho -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between">
+                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                      {{ 'editor.nodeModal.width' | translate }}
+                    </label>
+                    <span class="text-[10px] text-slate-400 font-mono">px (min: 60)</span>
+                  </div>
+                  <div
+                    class="flex items-center px-3 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-xl focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500"
+                  >
+                    <span class="text-[11px] font-bold text-slate-400 font-mono mr-2">W:</span>
+                    <input
+                      type="number"
+                      [ngModel]="nodeWidth()"
+                      (ngModelChange)="onWidthChange($event)"
+                      min="60"
+                      max="1200"
+                      step="10"
+                      placeholder="200"
+                      class="w-full bg-transparent text-xs font-mono font-medium text-slate-800 dark:text-slate-100 focus:outline-none"
+                    />
+                    <span class="text-[10px] text-slate-400 select-none">px</span>
+                  </div>
+                </div>
+
+                <!-- Alto -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between">
+                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                      {{ 'editor.nodeModal.height' | translate }}
+                    </label>
+                    <span class="text-[10px] text-slate-400 font-mono">px (min: 40)</span>
+                  </div>
+                  <div
+                    class="flex items-center px-3 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-xl focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500"
+                  >
+                    <span class="text-[11px] font-bold text-slate-400 font-mono mr-2">H:</span>
+                    <input
+                      type="number"
+                      [ngModel]="nodeHeight()"
+                      (ngModelChange)="onHeightChange($event)"
+                      min="40"
+                      max="1200"
+                      step="10"
+                      [placeholder]="'editor.nodeModal.heightAuto' | translate"
+                      class="w-full bg-transparent text-xs font-mono font-medium text-slate-800 dark:text-slate-100 focus:outline-none"
+                    />
+                    <span class="text-[10px] text-slate-400 select-none">px</span>
+                  </div>
+                </div>
+              </div>
+
+              @if (editingNode()!.nodeType === 'lifeline') {
+                <p class="text-[10px] text-amber-600 dark:text-amber-400 italic">
+                  * {{ 'editor.nodeModal.lifelineHeightNote' | translate }}
+                </p>
+              }
+
+              <!-- Presets Rápidos de Tamaño -->
+              <div class="pt-1 flex flex-wrap items-center gap-2">
+                <span class="text-[10px] uppercase font-semibold text-slate-400 select-none"
+                  >Presets:</span
+                >
+                <button
+                  type="button"
+                  (click)="applyPreset('compact')"
+                  class="px-2.5 py-1 bg-white dark:bg-[#0E1225] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 cursor-pointer transition-colors"
+                >
+                  {{ 'editor.nodeModal.presetCompact' | translate }} (180&times;90)
+                </button>
+                <button
+                  type="button"
+                  (click)="applyPreset('standard')"
+                  class="px-2.5 py-1 bg-white dark:bg-[#0E1225] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 cursor-pointer transition-colors"
+                >
+                  {{ 'editor.nodeModal.presetStandard' | translate }} (240&times;130)
+                </button>
+                <button
+                  type="button"
+                  (click)="applyPreset('wide')"
+                  class="px-2.5 py-1 bg-white dark:bg-[#0E1225] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 cursor-pointer transition-colors"
+                >
+                  {{ 'editor.nodeModal.presetWide' | translate }} (320&times;190)
+                </button>
+                <button
+                  type="button"
+                  (click)="resetToAutoSize()"
+                  class="px-2.5 py-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer ml-auto flex items-center gap-1"
+                >
+                  <ng-icon name="heroArrowPath" class="text-xs"></ng-icon>
+                  <span>{{ 'editor.nodeModal.autoSizeBtn' | translate }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Bloque 3: Miniatura de Previsualización Proporcional -->
+            <div
+              class="bg-slate-50/50 dark:bg-[#0E1225]/70 border border-slate-200/80 dark:border-slate-800 rounded-xl p-4 space-y-2"
+            >
+              <label
+                class="block font-semibold text-slate-600 dark:text-slate-400 uppercase text-[10px] tracking-wider"
+              >
+                {{ 'editor.nodeModal.preview' | translate }}
+              </label>
+
+              <div
+                class="w-full h-36 bg-white dark:bg-[#090D1A] border border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex items-center justify-center p-3 overflow-hidden relative"
+              >
+                <!-- Miniatura Simulada del Nodo -->
+                <div
+                  class="border border-[#796354] dark:border-slate-600 rounded-xs shadow-md flex flex-col justify-between p-2 transition-all duration-150"
+                  [style.background-color]="editingNode()!.color || getDefaultColorForNode()"
+                  [style.width.px]="Math.min(260, Math.max(90, nodeWidth() * 0.7))"
+                  [style.height.px]="
+                    nodeHeight() ? Math.min(110, Math.max(50, nodeHeight()! * 0.55)) : 75
+                  "
+                >
+                  <!-- Cabecera de la miniatura -->
+                  <div class="text-center border-b border-slate-300/80 pb-1">
+                    @if (editingNode()!.stereotype) {
+                      <div class="text-[8px] font-mono text-slate-500 italic leading-none">
+                        &laquo;{{ editingNode()!.stereotype }}&raquo;
+                      </div>
+                    }
+                    <div
+                      class="font-bold text-[10px] text-slate-800 dark:text-slate-900 truncate font-mono"
+                    >
+                      {{ editingNode()!.name || 'Nodo' }}
+                    </div>
+                  </div>
+                  <!-- Atributos simulados -->
+                  <div
+                    class="space-y-0.5 py-0.5 text-[8px] text-slate-600 dark:text-slate-700 font-mono truncate"
+                  >
+                    @if (editingNode()!.attributes.length > 0) {
+                      <div>
+                        - {{ editingNode()!.attributes[0].name }}:
+                        {{ editingNode()!.attributes[0].type }}
+                      </div>
+                    } @else {
+                      <div class="italic text-slate-400 text-[8px]">(sin atributos)</div>
+                    }
+                  </div>
+                  <!-- Tag de tamaño -->
+                  <div
+                    class="text-right text-[7px] text-slate-500 font-mono font-semibold pt-0.5 border-t border-slate-200/60"
+                  >
+                    {{ nodeWidth() }}px &times;
+                    {{
+                      nodeHeight()
+                        ? nodeHeight() + 'px'
+                        : ('editor.nodeModal.heightAuto' | translate)
+                    }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Pie del Modal con Acciones -->
+      <div
+        class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5 shrink-0 bg-slate-50/50 dark:bg-[#0E1225]"
+      >
+        <button
+          (click)="onClose()"
+          type="button"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#1C2242] dark:hover:bg-[#252E56] text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+        >
           {{ 'common.cancel' | translate }}
         </button>
         <button
           (click)="onSave()"
-          class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-all">
-          {{ 'editor.nodeModal.save' | translate }}
+          type="button"
+          class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-all flex items-center gap-1.5"
+        >
+          <ng-icon name="heroCheck" class="text-xs"></ng-icon>
+          <span>{{ 'editor.nodeModal.save' | translate }}</span>
         </button>
       </div>
-
     </div>
   </div>
 }

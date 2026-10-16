@@ -36,9 +36,11 @@ export const es = {
       cancel: 'Cancelar',
       incompatibleTitle: 'Elemento Incompatible',
       deleteDiagramTitle: 'Eliminar Diagrama',
-      deleteDiagramMessage: '¿Estás seguro de que deseas eliminar el diagrama "{{name}}"? Esta acción es irreversible y eliminará todos sus elementos.',
+      deleteDiagramMessage:
+        '¿Estás seguro de que deseas eliminar el diagrama "{{name}}"? Esta acción es irreversible y eliminará todos sus elementos.',
       deleteProjectTitle: 'Eliminar Proyecto',
-      deleteProjectMessage: '¿Estás seguro de que deseas eliminar el proyecto "{{name}}" y todos sus diagramas asociados? Esta acción no se puede deshacer.',
+      deleteProjectMessage:
+        '¿Estás seguro de que deseas eliminar el proyecto "{{name}}" y todos sus diagramas asociados? Esta acción no se puede deshacer.',
       removeMemberTitle: 'Remover Miembro',
       removeMemberMessage: '¿Estás seguro de que deseas remover a este miembro del proyecto?',
     },
@@ -111,7 +113,8 @@ export const es = {
     openCanvas: 'Abrir Lienzo',
     membersCount: '{{count}} miembro(s)',
     deleteConfirmTitle: 'Confirmar Eliminación',
-    deleteConfirmMessage: '¿Estás seguro de que deseas eliminar el proyecto "{{name}}"? Esta acción no se puede deshacer.',
+    deleteConfirmMessage:
+      '¿Estás seguro de que deseas eliminar el proyecto "{{name}}"? Esta acción no se puede deshacer.',
     deleteTooltip: 'Eliminar Proyecto',
     noDescription: 'Sin descripción detallada.',
     createModal: {
@@ -125,7 +128,8 @@ export const es = {
       basePackageLabel: 'Paquete Base Java',
       basePackageRequired: 'El paquete base es requerido (ej: com.miempresa.app).',
       requiredBadge: 'Requerido',
-      requiredFieldsWarning: 'Por favor completa todos los campos requeridos marcados con asterisco (*).',
+      requiredFieldsWarning:
+        'Por favor completa todos los campos requeridos marcados con asterisco (*).',
       createError: 'Error al crear el proyecto. Verifica los datos ingresados.',
       submit: 'Crear Proyecto',
       creating: 'Creando...',
@@ -138,7 +142,8 @@ export const es = {
       basePackageLabel: 'Paquete Base Java',
       basePackageRequired: 'El paquete base es requerido (ej: com.miempresa.app).',
       requiredBadge: 'Requerido',
-      requiredFieldsWarning: 'Por favor completa todos los campos requeridos marcados con asterisco (*).',
+      requiredFieldsWarning:
+        'Por favor completa todos los campos requeridos marcados con asterisco (*).',
       editError: 'Error al actualizar el proyecto.',
       submit: 'Guardar Cambios',
     },
@@ -179,9 +184,12 @@ export const es = {
     exportXmi: 'Estándar OMG XMI 2.1 (CASE)',
     import: 'Importar',
     importXmi: 'Importar Archivo XMI (UML)',
-    multiUserExportBlocked: 'No se permite exportar el diagrama mientras existen 2 o más usuarios editándolo simultáneamente.',
-    multiUserImportBlocked: 'No se permite importar en el diagrama mientras existen 2 o más usuarios editándolo simultáneamente.',
-    multiUserBanner: 'Edición concurrente activa (2+ usuarios): Exportación e importación bloqueadas temporalmente para evitar inconsistencias.',
+    multiUserExportBlocked:
+      'No se permite exportar el diagrama mientras existen 2 o más usuarios editándolo simultáneamente.',
+    multiUserImportBlocked:
+      'No se permite importar en el diagrama mientras existen 2 o más usuarios editándolo simultáneamente.',
+    multiUserBanner:
+      'Edición concurrente activa (2+ usuarios): Exportación e importación bloqueadas temporalmente para evitar inconsistencias.',
     generateCode: 'Generar Full Stack',
     generateTooltip: 'Generar microservicio Spring Boot y app móvil Flutter',
     aiAssistant: 'Asistente IA',
@@ -333,15 +341,23 @@ export const es = {
     },
     incompatible: {
       title: 'Elemento No Compatible',
-      useCase: 'Solo se pueden agregar o copiar actores y casos de uso en diagramas de Casos de Uso.',
-      package: 'Solo se pueden agregar o copiar paquetes, casos de uso y actores en diagramas de Paquetes.',
-      communication: 'Solo se pueden agregar o copiar actores, boundaries, controles y entidades en diagramas de Comunicación.',
-      sequence: 'Solo se pueden agregar o copiar actores, líneas de vida o participantes en diagramas de Secuencia.',
+      useCase:
+        'Solo se pueden agregar o copiar actores y casos de uso en diagramas de Casos de Uso.',
+      package:
+        'Solo se pueden agregar o copiar paquetes, casos de uso y actores en diagramas de Paquetes.',
+      communication:
+        'Solo se pueden agregar o copiar actores, boundaries, controles y entidades en diagramas de Comunicación.',
+      sequence:
+        'Solo se pueden agregar o copiar actores, líneas de vida o participantes en diagramas de Secuencia.',
       class: 'Solo se pueden agregar o copiar clases en diagramas de Clases.',
-      classAnalysis: 'Solo se pueden agregar o copiar clases y actores en diagramas de Análisis de Clases.',
-      deployment: 'Solo se pueden agregar o copiar nodos físicos («device»), entornos de ejecución («executionEnvironment»), componentes y recuadros agrupadores en diagramas de Despliegue.',
-      layered: 'Solo se pueden agregar o copiar paquetes y recuadros agrupadores en diagramas de Capas.',
-      component: 'Solo se pueden agregar o copiar componentes y recuadros de agrupación en diagramas de Componentes.',
+      classAnalysis:
+        'Solo se pueden agregar o copiar clases y actores en diagramas de Análisis de Clases.',
+      deployment:
+        'Solo se pueden agregar o copiar nodos físicos («device»), entornos de ejecución («executionEnvironment»), componentes y recuadros agrupadores en diagramas de Despliegue.',
+      layered:
+        'Solo se pueden agregar o copiar paquetes y recuadros agrupadores en diagramas de Capas.',
+      component:
+        'Solo se pueden agregar o copiar componentes y recuadros de agrupación en diagramas de Componentes.',
     },
     canvas: {
       connectTop: 'Conectar por arriba',
@@ -487,7 +503,8 @@ export const es = {
       typeLabel: 'Tipo de Diagrama',
       lockedByFolder: 'Fijado por carpeta',
       targetDirectory: 'Directorio de Destino',
-      strictRule: 'Los diagramas se organizan estrictamente según su tipo UML en su respectivo directorio.',
+      strictRule:
+        'Los diagramas se organizan estrictamente según su tipo UML en su respectivo directorio.',
       create: 'Crear Diagrama',
       cancel: 'Cancelar',
       types: {
@@ -522,8 +539,8 @@ export const es = {
     tableNameLabel: 'Nombre de Tabla (Opcional)',
     attributesTitle: 'Atributos (Campos)',
     methodsTitle: 'Métodos (Operaciones)',
-    addAttribute: '+ Agregar Atributo',
-    addMethod: '+ Agregar Método',
+    addAttribute: ' Agregar Atributo',
+    addMethod: ' Agregar Método',
     attrName: 'Nombre',
     attrType: 'Tipo',
     attrNullable: 'Nulo',
@@ -537,15 +554,33 @@ export const es = {
     confirmClearTitle: 'Limpiar Lienzo',
     confirmClearMessage: '¿Estás seguro de que deseas eliminar todos los elementos del diagrama?',
     nodeModal: {
-      title: 'Propiedades de la Clase UML',
-      className: 'Nombre de la Clase',
+      title: 'Propiedades del Elemento',
+      className: 'Nombre del Elemento',
       attributes: 'Atributos (-)',
-      addAttribute: '+ Agregar Atributo',
+      addAttribute: ' Agregar Atributo',
       operations: 'Operaciones / Métodos (+)',
-      addOperation: '+ Agregar Operación',
+      addOperation: ' Agregar Operación',
       save: 'Guardar Cambios',
       deleteAttribute: 'Eliminar atributo',
       deleteOperation: 'Eliminar método',
+      tabGeneral: 'General y Atributos',
+      tabStyle: 'Estilo y Dimensiones',
+      nodeColor: 'Color de Relleno del Elemento',
+      colorDefault: 'Restaurar Predeterminado',
+      customColor: 'Color Personalizado',
+      nodeDimensions: 'Dimensiones del Nodo',
+      sizeModeAuto: 'Automático (Adaptable)',
+      sizeModeCustom: 'Personalizado (Fijo)',
+      sizeModeHelp: 'El modo automático adapta el ancho y alto dinámicamente al texto y atributos.',
+      width: 'Ancho (W)',
+      height: 'Alto (H)',
+      heightAuto: 'Auto',
+      autoSizeBtn: 'Restablecer a Automático',
+      presetCompact: 'Compacto',
+      presetStandard: 'Estándar',
+      presetWide: 'Amplio',
+      preview: 'Previsualización de Dimensiones y Estilo',
+      lifelineHeightNote: 'La cabecera de la línea de vida tiene un alto fijo estándar de 60px.',
     },
     connModal: {
       title: 'Propiedades de la Relación',
@@ -559,7 +594,8 @@ export const es = {
     jsonModal: {
       exportTitle: 'Estructura JSON del Diagrama de Clases',
       importTitle: 'Importar Diagrama de Clases desde JSON',
-      exportDesc: 'Estructura JSON para transferir las clases y relaciones con Enterprise Architect o tu backend.',
+      exportDesc:
+        'Estructura JSON para transferir las clases y relaciones con Enterprise Architect o tu backend.',
       importDesc: 'Pega el JSON estructurado para cargar las clases en el lienzo:',
       placeholder: 'Pegar JSON aquí...',
       copy: 'Copiar al portapapeles',
@@ -583,7 +619,8 @@ export const es = {
     springBootTab: 'Spring Boot',
     flutterTab: 'Flutter BLoC',
     warningTitle: '⚠️ Atención:',
-    warningDesc: 'Debes guardar el diagrama en el servidor antes de generar la arquitectura y descargar el proyecto.',
+    warningDesc:
+      'Debes guardar el diagrama en el servidor antes de generar la arquitectura y descargar el proyecto.',
     packageBase: 'Package Base',
     artifactId: 'Artifact / App ID',
     javaVersion: 'Versión Java',
@@ -621,10 +658,12 @@ export const es = {
       flutter: 'Flutter App lista con BLoC, Dio, GetIt y consumo local vía USB / 10.0.2.2',
       springBoot: 'Spring Boot microservicio listo con PostgreSQL 16 y Flyway en puerto {{port}}',
     },
-    hasAuthInfo: 'Módulo de autenticación JWT detectado automáticamente a partir de la clase Usuario.',
+    hasAuthInfo:
+      'Módulo de autenticación JWT detectado automáticamente a partir de la clase Usuario.',
     noAuthInfo: 'Generación en modo CRUD estándar sin autenticación.',
     featuresList: {
-      springBoot: 'Spring Boot 3.4 + Java 21 + Spring Data JPA + Flyway + PostgreSQL + OpenAPI Swagger',
+      springBoot:
+        'Spring Boot 3.4 + Java 21 + Spring Data JPA + Flyway + PostgreSQL + OpenAPI Swagger',
       flutter: 'Flutter + Clean Architecture + BLoC + Dio + SharedPreferences + Material 3',
     },
   },
@@ -634,7 +673,8 @@ export const es = {
     chatTab: 'Chat IA',
     historyTab: 'Historial',
     hideTooltip: 'Ocultar panel IA (Ctrl+I)',
-    promptPlaceholder: 'Describe tu sistema (ej: "Sistema de ventas con clientes, productos y facturas")...',
+    promptPlaceholder:
+      'Describe tu sistema (ej: "Sistema de ventas con clientes, productos y facturas")...',
     generateButton: 'Generar Diagrama',
     generating: 'Analizando y generando...',
     suggestionsTitle: 'Sugerencias Rápidas',
