@@ -1,0 +1,25 @@
+<div
+  (click)="onToggle()"
+  class="bg-linear-to-b from-[#EFEFEF] to-[#DCDCDC] dark:from-[#1E2442] dark:to-[#161B33] px-2.5 py-1.5 font-bold text-[#1E293B] dark:text-slate-200 flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] dark:border-[#283256] hover:from-[#F5F5F5] hover:to-[#E2E2E2] dark:hover:from-[#252E56] dark:hover:to-[#1D2240] select-none transition-colors"
+>
+  <span class="flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-slate-100">
+    <ng-icon
+      [name]="isOpen ? 'heroChevronDown' : 'heroChevronRight'"
+      class="text-xs text-slate-600 dark:text-slate-400 shrink-0"
+    ></ng-icon>
+    @if (icon) {
+      <ng-icon [name]="icon" class="text-xs text-blue-500 shrink-0"></ng-icon>
+    }
+    <span>{{ title }}</span>
+  </span>
+
+  @if (actionText) {
+    <span
+      (click)="onActionClick($event)"
+      [title]="actionTitle || actionText"
+      class="text-[10px] text-slate-700 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 font-normal cursor-pointer transition-colors"
+    >
+      {{ actionText }}
+    </span>
+  }
+</div>

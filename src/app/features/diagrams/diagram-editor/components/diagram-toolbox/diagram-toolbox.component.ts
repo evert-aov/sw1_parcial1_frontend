@@ -21,13 +21,20 @@ import {
   UML_RELATION_TYPES,
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
-import { TranslatePipe } from '../../../../../core/i18n';
 import { UML_SVG_COMPONENTS } from '../uml-svg';
+import { SHARED_DIAGRAM_UI_COMPONENTS } from '../shared-ui';
+import { TranslatePipe } from '../../../../../core/i18n';
 
 @Component({
   selector: 'app-diagram-toolbox',
   standalone: true,
-  imports: [CommonModule, NgIconComponent, TranslatePipe, ...UML_SVG_COMPONENTS],
+  imports: [
+    CommonModule,
+    NgIconComponent,
+    TranslatePipe,
+    ...UML_SVG_COMPONENTS,
+    ...SHARED_DIAGRAM_UI_COMPONENTS,
+  ],
   providers: [
     provideIcons({
       heroBars3,

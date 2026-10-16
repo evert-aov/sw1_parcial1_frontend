@@ -216,7 +216,10 @@ frontend/
 │                   │   ├── diagram-floating-label/# Etiquetas flotantes con offset arrastrable
 │                   │   ├── diagram-tabs/          # Barra de pestañas multi-diagrama
 │                   │   ├── diagram-toolbox/       # Paleta contextual filtrada por tipo de diagrama
-│                   │   ├── diagram-sidebar/       # Panel lateral de propiedades y navegación
+│                   │   ├── diagram-sidebar/       # Panel lateral multi-diagrama UML
+│                   │   ├── shared-ui/             # Suite de componentes UI reutilizables (Zoom, LineRouting, ToolButtons)
+│                   │   ├── uml-svg/               # Componentes de renderizado vectorial SVG (UML 2.5)
+│                   │   ├── uml-webgl/             # Canvas interactivos WebGL acelerados por GPU
 │                   │   ├── spring-boot-modal/
 │                   │   ├── user-profile-modal/
 │                   │   ├── xmi-import-modal/
@@ -462,6 +465,12 @@ El editor de diagramas ha sido reestructurado desde un archivo monolítico de m�
    - **`DiagramTabsComponent`**: Barra de pestañas reactiva para conmutación fluida entre múltiples diagramas abiertos.
    - **`AutofocusInputDirective`**: Directiva de auto-enfoque y selección de texto para renombrado in-place sin retrasos visuales.
    - **`diagram-editor.icons.ts`**: Centralización de iconos HeroIcons organizados por propósito y optimizados para empaquetado mínimo.
+   - **`shared-ui/` (Suite de Controles Reutilizables)**:
+     - **`DiagramZoomControlsComponent`**: Controles de zoom unificados (`ZoomIn`, `ZoomOut`, `1:1`, `FitView`) con variantes `grid` (sidebar) y `flex` (toolbox).
+     - **`DiagramLineRoutingSelectorComponent`**: Selector estandarizado de estilo de líneas (`segment`, `straight`, `bezier`, `adaptive-curve`) con enlaces a `UML_LINE_STYLES` e i18n reactivo.
+     - **`DiagramRelationshipButtonComponent`**: Botón de relación UML estilizado con previsualización SVG reactiva y esquemas de color por diagrama (`blue`, `amber`, `cyan`, `rose`).
+     - **`DiagramToolItemButtonComponent`**: Tarjeta reutilizable para entidades UML con soporte de proyección de iconos, drag-and-drop y badges de interacción.
+     - **`DiagramToolSectionHeaderComponent`**: Encabezado colapsable para paneles de acordeón con soporte para deselección de puntero y chevrons dinámicos.
 
 * **`ComponentSvgComponent`**: Componente visual standalone para la representación gráfica precisa de componentes UML conforme al estándar.
 * **`DeploymentNodeSvgComponent`**: Componente visual standalone para nodos tridimensionales isométricos de despliegue (`node`, `device`, `executionEnvironment`).

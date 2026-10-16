@@ -58,11 +58,20 @@ import {
 import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
 import { UML_SVG_COMPONENTS } from '../uml-svg';
 import { UML_WEBGL_COMPONENTS } from '../uml-webgl';
+import { SHARED_DIAGRAM_UI_COMPONENTS } from '../shared-ui';
 
 @Component({
   selector: 'app-diagram-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe, ...UML_SVG_COMPONENTS, ...UML_WEBGL_COMPONENTS],
+  imports: [
+    CommonModule,
+    FormsModule,
+    NgIconComponent,
+    TranslatePipe,
+    ...UML_SVG_COMPONENTS,
+    ...UML_WEBGL_COMPONENTS,
+    ...SHARED_DIAGRAM_UI_COMPONENTS,
+  ],
   providers: [
     provideIcons({
       heroBars3,

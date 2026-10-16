@@ -223,41 +223,11 @@
             @if (isRelationshipsOpen()) {
               <div class="p-2 space-y-1">
                 @for (rel of currentRelations(); track rel.id) {
-                  <button
-                    (click)="onSelectRelation(rel.id)"
-                    [ngClass]="{
-                      'bg-blue-50 dark:bg-blue-950/70 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-2xs':
-                        selectedRelationType() === rel.id,
-                      'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent':
-                        selectedRelationType() !== rel.id,
-                    }"
-                    class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group"
-                  >
-                    <div
-                      class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5"
-                    >
-                      <app-relationship-svg
-                        [type]="$any(rel.id)"
-                        mode="icon"
-                        width="28"
-                        height="14"
-                        strokeColor="currentColor"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100"
-                      >
-                        {{ getRelationLabel(rel) }}
-                      </div>
-                      <div
-                        class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5"
-                        [title]="getRelationDescription(rel)"
-                      >
-                        {{ getRelationDescription(rel) }}
-                      </div>
-                    </div>
-                  </button>
+                  <app-diagram-relationship-button
+                    [relationship]="rel"
+                    [isSelected]="selectedRelationType() === rel.id"
+                    (select)="onSelectRelation($event)"
+                  />
                 }
               </div>
             }
@@ -283,57 +253,17 @@
 
             @if (isLineStylesOpen()) {
               <div class="p-3 space-y-2.5">
-                <select
-                  [value]="defaultLineStyle()"
-                  (change)="onSetLineStyle($any($event.target).value)"
-                  class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="segment">
-                    {{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}
-                  </option>
-                  <option value="straight">
-                    {{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}
-                  </option>
-                  <option value="bezier">
-                    {{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}
-                  </option>
-                  <option value="adaptive-curve">
-                    {{
-                      getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)')
-                    }}
-                  </option>
-                </select>
-
-                <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-                  <button
-                    (click)="zoomOut.emit()"
-                    [title]="'toolbar.canvas.zoomOut' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="zoomIn.emit()"
-                    [title]="'toolbar.canvas.zoomIn' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="resetView.emit()"
-                    [title]="'toolbar.canvas.oneToOne' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    1:1
-                  </button>
-                  <button
-                    (click)="fitView.emit()"
-                    [title]="'toolbar.canvas.fitView' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-                  </button>
-                </div>
+                <app-diagram-line-routing-selector
+                  [selectedStyle]="defaultLineStyle()"
+                  (styleChange)="onSetLineStyle($event)"
+                />
+                <app-diagram-zoom-controls
+                  variant="grid"
+                  (zoomIn)="zoomIn.emit()"
+                  (zoomOut)="zoomOut.emit()"
+                  (resetView)="resetView.emit()"
+                  (fitView)="fitView.emit()"
+                />
               </div>
             }
           </div>
@@ -552,41 +482,11 @@
             @if (isRelationshipsOpen()) {
               <div class="p-2 space-y-1">
                 @for (rel of currentRelations(); track rel.id) {
-                  <button
-                    (click)="onSelectRelation(rel.id)"
-                    [ngClass]="{
-                      'bg-blue-50 dark:bg-blue-950/70 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-2xs':
-                        selectedRelationType() === rel.id,
-                      'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent':
-                        selectedRelationType() !== rel.id,
-                    }"
-                    class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group"
-                  >
-                    <div
-                      class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5"
-                    >
-                      <app-relationship-svg
-                        [type]="$any(rel.id)"
-                        mode="icon"
-                        width="28"
-                        height="14"
-                        strokeColor="currentColor"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100"
-                      >
-                        {{ rel.label }}
-                      </div>
-                      <div
-                        class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5"
-                        [title]="rel.description"
-                      >
-                        {{ rel.description }}
-                      </div>
-                    </div>
-                  </button>
+                  <app-diagram-relationship-button
+                    [relationship]="rel"
+                    [isSelected]="selectedRelationType() === rel.id"
+                    (select)="onSelectRelation($event)"
+                  />
                 }
               </div>
             }
@@ -612,48 +512,17 @@
 
             @if (isLineStylesOpen()) {
               <div class="p-3 space-y-2.5">
-                <select
-                  [value]="defaultLineStyle()"
-                  (change)="onSetLineStyle($any($event.target).value)"
-                  class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="segment">Línea Personalizada (EA Default / Segmentos)</option>
-                  <option value="straight">Direct (Directa / Recta)</option>
-                  <option value="bezier">Bezier (Curva Suave)</option>
-                  <option value="adaptive-curve">Orthogonal - Rounded (Curva Adaptativa)</option>
-                </select>
-
-                <!-- Quick Zoom Buttons: [ 🔍- ] [ 🔍+ ] [ 1:1 ] [ ⛶ ] -->
-                <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-                  <button
-                    (click)="zoomOut.emit()"
-                    title="Alejar"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="zoomIn.emit()"
-                    title="Acercar"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="resetView.emit()"
-                    title="1:1"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    1:1
-                  </button>
-                  <button
-                    (click)="fitView.emit()"
-                    title="Ajustar"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-                  </button>
-                </div>
+                <app-diagram-line-routing-selector
+                  [selectedStyle]="defaultLineStyle()"
+                  (styleChange)="onSetLineStyle($event)"
+                />
+                <app-diagram-zoom-controls
+                  variant="grid"
+                  (zoomIn)="zoomIn.emit()"
+                  (zoomOut)="zoomOut.emit()"
+                  (resetView)="resetView.emit()"
+                  (fitView)="fitView.emit()"
+                />
               </div>
             }
           </div>
@@ -806,41 +675,12 @@
             @if (isRelationshipsOpen()) {
               <div class="p-2 space-y-1">
                 @for (rel of currentRelations(); track rel.id) {
-                  <button
-                    (click)="onSelectRelation(rel.id)"
-                    [ngClass]="{
-                      'bg-amber-50 dark:bg-amber-950/70 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100 shadow-2xs':
-                        selectedRelationType() === rel.id,
-                      'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent':
-                        selectedRelationType() !== rel.id,
-                    }"
-                    class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group"
-                  >
-                    <div
-                      class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5"
-                    >
-                      <app-relationship-svg
-                        [type]="$any(rel.id)"
-                        mode="icon"
-                        width="28"
-                        height="14"
-                        strokeColor="currentColor"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100"
-                      >
-                        {{ getRelationLabel(rel) }}
-                      </div>
-                      <div
-                        class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5"
-                        [title]="getRelationDescription(rel)"
-                      >
-                        {{ getRelationDescription(rel) }}
-                      </div>
-                    </div>
-                  </button>
+                  <app-diagram-relationship-button
+                    themeColor="amber"
+                    [relationship]="rel"
+                    [isSelected]="selectedRelationType() === rel.id"
+                    (select)="onSelectRelation($event)"
+                  />
                 }
               </div>
             }
@@ -866,57 +706,17 @@
 
             @if (isLineStylesOpen()) {
               <div class="p-3 space-y-2.5">
-                <select
-                  [value]="defaultLineStyle()"
-                  (change)="onSetLineStyle($any($event.target).value)"
-                  class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="segment">
-                    {{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}
-                  </option>
-                  <option value="straight">
-                    {{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}
-                  </option>
-                  <option value="bezier">
-                    {{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}
-                  </option>
-                  <option value="adaptive-curve">
-                    {{
-                      getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)')
-                    }}
-                  </option>
-                </select>
-
-                <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-                  <button
-                    (click)="zoomOut.emit()"
-                    [title]="'toolbar.canvas.zoomOut' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="zoomIn.emit()"
-                    [title]="'toolbar.canvas.zoomIn' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="resetView.emit()"
-                    [title]="'toolbar.canvas.oneToOne' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    1:1
-                  </button>
-                  <button
-                    (click)="fitView.emit()"
-                    [title]="'toolbar.canvas.fitView' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-                  </button>
-                </div>
+                <app-diagram-line-routing-selector
+                  [selectedStyle]="defaultLineStyle()"
+                  (styleChange)="onSetLineStyle($event)"
+                />
+                <app-diagram-zoom-controls
+                  variant="grid"
+                  (zoomIn)="zoomIn.emit()"
+                  (zoomOut)="zoomOut.emit()"
+                  (resetView)="resetView.emit()"
+                  (fitView)="fitView.emit()"
+                />
               </div>
             }
           </div>
@@ -1105,41 +905,12 @@
             @if (isRelationshipsOpen()) {
               <div class="p-2 space-y-1">
                 @for (rel of currentRelations(); track rel.id) {
-                  <button
-                    (click)="onSelectRelation(rel.id)"
-                    [ngClass]="{
-                      'bg-cyan-50 dark:bg-cyan-950/70 border-cyan-300 dark:border-cyan-700 text-cyan-900 dark:text-cyan-100 shadow-2xs':
-                        selectedRelationType() === rel.id,
-                      'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent':
-                        selectedRelationType() !== rel.id,
-                    }"
-                    class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group"
-                  >
-                    <div
-                      class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5"
-                    >
-                      <app-relationship-svg
-                        [type]="$any(rel.id)"
-                        mode="icon"
-                        width="28"
-                        height="14"
-                        strokeColor="currentColor"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100"
-                      >
-                        {{ getRelationLabel(rel) }}
-                      </div>
-                      <div
-                        class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5"
-                        [title]="getRelationDescription(rel)"
-                      >
-                        {{ getRelationDescription(rel) }}
-                      </div>
-                    </div>
-                  </button>
+                  <app-diagram-relationship-button
+                    themeColor="cyan"
+                    [relationship]="rel"
+                    [isSelected]="selectedRelationType() === rel.id"
+                    (select)="onSelectRelation($event)"
+                  />
                 }
               </div>
             }
@@ -1165,57 +936,17 @@
 
             @if (isLineStylesOpen()) {
               <div class="p-3 space-y-2.5">
-                <select
-                  [value]="defaultLineStyle()"
-                  (change)="onSetLineStyle($any($event.target).value)"
-                  class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="segment">
-                    {{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}
-                  </option>
-                  <option value="straight">
-                    {{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}
-                  </option>
-                  <option value="bezier">
-                    {{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}
-                  </option>
-                  <option value="adaptive-curve">
-                    {{
-                      getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)')
-                    }}
-                  </option>
-                </select>
-
-                <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-                  <button
-                    (click)="zoomOut.emit()"
-                    [title]="'toolbar.canvas.zoomOut' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="zoomIn.emit()"
-                    [title]="'toolbar.canvas.zoomIn' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="resetView.emit()"
-                    [title]="'toolbar.canvas.oneToOne' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    1:1
-                  </button>
-                  <button
-                    (click)="fitView.emit()"
-                    [title]="'toolbar.canvas.fitView' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-                  </button>
-                </div>
+                <app-diagram-line-routing-selector
+                  [selectedStyle]="defaultLineStyle()"
+                  (styleChange)="onSetLineStyle($event)"
+                />
+                <app-diagram-zoom-controls
+                  variant="grid"
+                  (zoomIn)="zoomIn.emit()"
+                  (zoomOut)="zoomOut.emit()"
+                  (resetView)="resetView.emit()"
+                  (fitView)="fitView.emit()"
+                />
               </div>
             }
           </div>
@@ -1335,41 +1066,11 @@
             @if (isRelationshipsOpen()) {
               <div class="p-2 space-y-1">
                 @for (rel of currentRelations(); track rel.id) {
-                  <button
-                    (click)="onSelectRelation(rel.id)"
-                    [ngClass]="{
-                      'bg-blue-50 dark:bg-blue-950/70 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-2xs':
-                        selectedRelationType() === rel.id,
-                      'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent':
-                        selectedRelationType() !== rel.id,
-                    }"
-                    class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group"
-                  >
-                    <div
-                      class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5"
-                    >
-                      <app-relationship-svg
-                        [type]="$any(rel.id)"
-                        mode="icon"
-                        width="28"
-                        height="14"
-                        strokeColor="currentColor"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100"
-                      >
-                        {{ getRelationLabel(rel) }}
-                      </div>
-                      <div
-                        class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5"
-                        [title]="getRelationDescription(rel)"
-                      >
-                        {{ getRelationDescription(rel) }}
-                      </div>
-                    </div>
-                  </button>
+                  <app-diagram-relationship-button
+                    [relationship]="rel"
+                    [isSelected]="selectedRelationType() === rel.id"
+                    (select)="onSelectRelation($event)"
+                  />
                 }
               </div>
             }
@@ -1560,41 +1261,11 @@
             @if (isRelationshipsOpen()) {
               <div class="p-2 space-y-1">
                 @for (rel of currentRelations(); track rel.id) {
-                  <button
-                    (click)="onSelectRelation(rel.id)"
-                    [ngClass]="{
-                      'bg-blue-50 dark:bg-blue-950/70 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-2xs':
-                        selectedRelationType() === rel.id,
-                      'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent':
-                        selectedRelationType() !== rel.id,
-                    }"
-                    class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group"
-                  >
-                    <div
-                      class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5"
-                    >
-                      <app-relationship-svg
-                        [type]="$any(rel.id)"
-                        mode="icon"
-                        width="28"
-                        height="14"
-                        strokeColor="currentColor"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100"
-                      >
-                        {{ getRelationLabel(rel) }}
-                      </div>
-                      <div
-                        class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5"
-                        [title]="getRelationDescription(rel)"
-                      >
-                        {{ getRelationDescription(rel) }}
-                      </div>
-                    </div>
-                  </button>
+                  <app-diagram-relationship-button
+                    [relationship]="rel"
+                    [isSelected]="selectedRelationType() === rel.id"
+                    (select)="onSelectRelation($event)"
+                  />
                 }
               </div>
             }
@@ -1620,57 +1291,17 @@
 
             @if (isLineStylesOpen()) {
               <div class="p-3 space-y-2.5">
-                <select
-                  [value]="defaultLineStyle()"
-                  (change)="onSetLineStyle($any($event.target).value)"
-                  class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="segment">
-                    {{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}
-                  </option>
-                  <option value="straight">
-                    {{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}
-                  </option>
-                  <option value="bezier">
-                    {{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}
-                  </option>
-                  <option value="adaptive-curve">
-                    {{
-                      getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)')
-                    }}
-                  </option>
-                </select>
-
-                <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-                  <button
-                    (click)="zoomOut.emit()"
-                    [title]="'toolbar.canvas.zoomOut' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="zoomIn.emit()"
-                    [title]="'toolbar.canvas.zoomIn' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="resetView.emit()"
-                    [title]="'toolbar.canvas.oneToOne' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    1:1
-                  </button>
-                  <button
-                    (click)="fitView.emit()"
-                    [title]="'toolbar.canvas.fitView' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-                  </button>
-                </div>
+                <app-diagram-line-routing-selector
+                  [selectedStyle]="defaultLineStyle()"
+                  (styleChange)="onSetLineStyle($event)"
+                />
+                <app-diagram-zoom-controls
+                  variant="grid"
+                  (zoomIn)="zoomIn.emit()"
+                  (zoomOut)="zoomOut.emit()"
+                  (resetView)="resetView.emit()"
+                  (fitView)="fitView.emit()"
+                />
               </div>
             }
           </div>
@@ -1791,41 +1422,12 @@
             @if (isRelationshipsOpen()) {
               <div class="p-2 space-y-1">
                 @for (rel of currentRelations(); track rel.id) {
-                  <button
-                    (click)="onSelectRelation(rel.id)"
-                    [ngClass]="{
-                      'bg-amber-50 dark:bg-amber-950/70 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100 shadow-2xs':
-                        selectedRelationType() === rel.id,
-                      'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent':
-                        selectedRelationType() !== rel.id,
-                    }"
-                    class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group"
-                  >
-                    <div
-                      class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5"
-                    >
-                      <app-relationship-svg
-                        [type]="$any(rel.id)"
-                        mode="icon"
-                        width="28"
-                        height="14"
-                        strokeColor="currentColor"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100"
-                      >
-                        {{ getRelationLabel(rel) }}
-                      </div>
-                      <div
-                        class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5"
-                        [title]="getRelationDescription(rel)"
-                      >
-                        {{ getRelationDescription(rel) }}
-                      </div>
-                    </div>
-                  </button>
+                  <app-diagram-relationship-button
+                    themeColor="amber"
+                    [relationship]="rel"
+                    [isSelected]="selectedRelationType() === rel.id"
+                    (select)="onSelectRelation($event)"
+                  />
                 }
               </div>
             }
@@ -1851,57 +1453,17 @@
 
             @if (isLineStylesOpen()) {
               <div class="p-3 space-y-2.5">
-                <select
-                  [value]="defaultLineStyle()"
-                  (change)="onSetLineStyle($any($event.target).value)"
-                  class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="segment">
-                    {{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}
-                  </option>
-                  <option value="straight">
-                    {{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}
-                  </option>
-                  <option value="bezier">
-                    {{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}
-                  </option>
-                  <option value="adaptive-curve">
-                    {{
-                      getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)')
-                    }}
-                  </option>
-                </select>
-
-                <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-                  <button
-                    (click)="zoomOut.emit()"
-                    [title]="'toolbar.canvas.zoomOut' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="zoomIn.emit()"
-                    [title]="'toolbar.canvas.zoomIn' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="resetView.emit()"
-                    [title]="'toolbar.canvas.oneToOne' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    1:1
-                  </button>
-                  <button
-                    (click)="fitView.emit()"
-                    [title]="'toolbar.canvas.fitView' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-                  </button>
-                </div>
+                <app-diagram-line-routing-selector
+                  [selectedStyle]="defaultLineStyle()"
+                  (styleChange)="onSetLineStyle($event)"
+                />
+                <app-diagram-zoom-controls
+                  variant="grid"
+                  (zoomIn)="zoomIn.emit()"
+                  (zoomOut)="zoomOut.emit()"
+                  (resetView)="resetView.emit()"
+                  (fitView)="fitView.emit()"
+                />
               </div>
             }
           </div>
@@ -2056,41 +1618,12 @@
             @if (isRelationshipsOpen()) {
               <div class="p-2 space-y-1">
                 @for (rel of currentRelations(); track rel.id) {
-                  <button
-                    (click)="onSelectRelation(rel.id)"
-                    [ngClass]="{
-                      'bg-rose-50 dark:bg-rose-950/70 border-rose-300 dark:border-rose-700 text-rose-900 dark:text-rose-100 shadow-2xs':
-                        selectedRelationType() === rel.id,
-                      'hover:bg-slate-50 dark:hover:bg-[#151A32] text-slate-800 dark:text-slate-200 border-transparent':
-                        selectedRelationType() !== rel.id,
-                    }"
-                    class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border transition-all cursor-pointer group"
-                  >
-                    <div
-                      class="w-9 h-7 flex items-center justify-center bg-slate-50 dark:bg-[#161B34] border border-slate-200/80 dark:border-slate-700/60 rounded-md shrink-0 text-slate-700 dark:text-slate-300 group-hover:border-slate-300 dark:group-hover:border-slate-600 transition-colors p-0.5"
-                    >
-                      <app-relationship-svg
-                        [type]="$any(rel.id)"
-                        mode="icon"
-                        width="28"
-                        height="14"
-                        strokeColor="currentColor"
-                      />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div
-                        class="text-[11.5px] leading-tight font-medium text-slate-800 dark:text-slate-100"
-                      >
-                        {{ getRelationLabel(rel) }}
-                      </div>
-                      <div
-                        class="text-[9.5px] text-slate-400 dark:text-slate-400 truncate mt-0.5"
-                        [title]="getRelationDescription(rel)"
-                      >
-                        {{ getRelationDescription(rel) }}
-                      </div>
-                    </div>
-                  </button>
+                  <app-diagram-relationship-button
+                    themeColor="rose"
+                    [relationship]="rel"
+                    [isSelected]="selectedRelationType() === rel.id"
+                    (select)="onSelectRelation($event)"
+                  />
                 }
               </div>
             }
@@ -2116,57 +1649,17 @@
 
             @if (isLineStylesOpen()) {
               <div class="p-3 space-y-2.5">
-                <select
-                  [value]="defaultLineStyle()"
-                  (change)="onSetLineStyle($any($event.target).value)"
-                  class="w-full px-2.5 py-1.5 text-[11px] bg-slate-50 dark:bg-[#14182E] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="segment">
-                    {{ getLineStyleLabel('segment', 'Línea Personalizada (Segmentos)') }}
-                  </option>
-                  <option value="straight">
-                    {{ getLineStyleLabel('straight', 'Direct (Directa / Recta)') }}
-                  </option>
-                  <option value="bezier">
-                    {{ getLineStyleLabel('bezier', 'Bezier (Curva Suave)') }}
-                  </option>
-                  <option value="adaptive-curve">
-                    {{
-                      getLineStyleLabel('adaptive-curve', 'Orthogonal - Rounded (Curva Adaptativa)')
-                    }}
-                  </option>
-                </select>
-
-                <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-                  <button
-                    (click)="zoomOut.emit()"
-                    [title]="'toolbar.canvas.zoomOut' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="zoomIn.emit()"
-                    [title]="'toolbar.canvas.zoomIn' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-                  </button>
-                  <button
-                    (click)="resetView.emit()"
-                    [title]="'toolbar.canvas.oneToOne' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-200 font-mono text-[10.5px] font-semibold flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    1:1
-                  </button>
-                  <button
-                    (click)="fitView.emit()"
-                    [title]="'toolbar.canvas.fitView' | translate"
-                    class="p-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-[#14182E] dark:hover:bg-[#1B213D] border border-slate-200 dark:border-slate-700 rounded-md text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-                  </button>
-                </div>
+                <app-diagram-line-routing-selector
+                  [selectedStyle]="defaultLineStyle()"
+                  (styleChange)="onSetLineStyle($event)"
+                />
+                <app-diagram-zoom-controls
+                  variant="grid"
+                  (zoomIn)="zoomIn.emit()"
+                  (zoomOut)="zoomOut.emit()"
+                  (resetView)="resetView.emit()"
+                  (fitView)="fitView.emit()"
+                />
               </div>
             }
           </div>

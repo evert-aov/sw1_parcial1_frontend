@@ -1,0 +1,33 @@
+<button
+  type="button"
+  (click)="onClick($event)"
+  [disabled]="disabled"
+  [draggable]="draggable && !disabled"
+  (dragstart)="onDragStart($event)"
+  [title]="title || ('editor.toolbox.dragHint' | translate)"
+  [ngClass]="buttonHoverClass"
+  class="w-full text-left px-2.5 py-2 rounded-lg flex items-center gap-2.5 border border-slate-200/80 dark:border-slate-700/60 text-slate-800 dark:text-slate-200 transition-all select-none group disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+  [class.cursor-grab]="draggable && !disabled"
+  [class.active:cursor-grabbing]="draggable && !disabled"
+  [class.cursor-pointer]="!draggable && !disabled"
+>
+  <div
+    [ngClass]="iconContainerClass"
+    class="w-9 h-8 flex items-center justify-center border rounded-md shrink-0 group-hover:scale-105 transition-transform p-0.5 shadow-2xs"
+  >
+    <ng-content select="[icon]"></ng-content>
+  </div>
+  <div class="min-w-0 flex-1">
+    <div class="text-[11.5px] leading-tight font-semibold text-slate-800 dark:text-slate-100 truncate">
+      {{ label }}
+    </div>
+    @if (description) {
+      <div class="text-[9.5px] text-slate-400 dark:text-slate-500 truncate mt-0.5" [title]="description">
+        {{ description }}
+      </div>
+    }
+  </div>
+  @if (badgeText) {
+    <span [ngClass]="badgeClass" class="text-xs font-bold px-1 shrink-0">{{ badgeText }}</span>
+  }
+</button>

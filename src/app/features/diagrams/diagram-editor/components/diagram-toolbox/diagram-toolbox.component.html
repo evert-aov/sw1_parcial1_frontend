@@ -21,34 +21,20 @@
 
     <!-- Panel 1: Class Relationships -->
     <div class="border-b border-[#C8C8C8] dark:border-[#283256]">
-      <div
-        (click)="isRelationshipsOpen.set(!isRelationshipsOpen())"
-        class="bg-linear-to-b from-[#EFEFEF] to-[#DCDCDC] dark:from-[#1E2442] dark:to-[#161B33] px-2.5 py-1.5 font-bold text-[#1E293B] dark:text-slate-200 flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] dark:border-[#283256] hover:from-[#F5F5F5] hover:to-[#E2E2E2] dark:hover:from-[#252E56] dark:hover:to-[#1D2240]"
-      >
-        <span
-          class="flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-slate-100"
-        >
-          <ng-icon
-            [name]="isRelationshipsOpen() ? 'heroChevronDown' : 'heroChevronRight'"
-            class="text-xs text-slate-600 dark:text-slate-400"
-          ></ng-icon>
-          {{ 'toolbar.relationships.title' | translate }}
-        </span>
-        @if (selectedRelationType()) {
-          <span
-            (click)="$event.stopPropagation(); onSelectPointer()"
-            [title]="'toolbar.relationships.deselect' | translate"
-            class="text-[10px] text-slate-700 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 font-normal cursor-pointer"
-          >
-            {{ 'toolbar.relationships.deselect' | translate }}
-          </span>
-        }
-      </div>
+      <app-diagram-tool-section-header
+        [title]="'toolbar.relationships.title' | translate"
+        [isOpen]="isRelationshipsOpen()"
+        [actionText]="selectedRelationType() ? ('toolbar.relationships.deselect' | translate) : ''"
+        [actionTitle]="'toolbar.relationships.deselect' | translate"
+        (toggle)="isRelationshipsOpen.set(!isRelationshipsOpen())"
+        (actionClick)="onSelectPointer()"
+      />
 
       @if (isRelationshipsOpen()) {
         <div class="p-1.5 space-y-1 bg-[#F5F5F5] dark:bg-[#0E1222]">
           <!-- Herramienta Puntero / Mover -->
           <button
+            type="button"
             (click)="onSelectPointer()"
             [ngClass]="{
               'bg-white dark:bg-[#151A30] border-slate-400 dark:border-[#2D3762] font-semibold shadow-xs text-slate-900 dark:text-slate-100':
@@ -76,39 +62,13 @@
 
           <!-- Lista de relaciones UML 2.5 -->
           @for (rel of relationTypes(); track rel.id) {
-            <button
-              (click)="onSelectRelation(rel.id)"
-              [ngClass]="{
-                'bg-blue-100 dark:bg-indigo-950/80 border-blue-500 dark:border-indigo-400 font-semibold shadow-xs text-blue-900 dark:text-indigo-200':
-                  selectedRelationType() === rel.id,
-                'hover:bg-[#E8EEF5] dark:hover:bg-[#1C2242] text-slate-700 dark:text-slate-300 border-transparent':
-                  selectedRelationType() !== rel.id,
-              }"
-              class="w-full text-left px-2 py-1 rounded flex items-center justify-between border transition-all cursor-pointer group"
-            >
-              <div class="flex items-center gap-2 min-w-0">
-                <span
-                  class="shrink-0 w-11 h-6 flex items-center justify-center bg-white/80 dark:bg-[#151A30] px-1 py-0.5 border border-slate-300 dark:border-[#2D3762] rounded-xs text-slate-800 dark:text-slate-200"
-                >
-                  <app-relationship-svg
-                    [type]="$any(rel.id)"
-                    mode="icon"
-                    width="34"
-                    height="14"
-                    strokeColor="currentColor"
-                  />
-                </span>
-                <div class="truncate">
-                  <div class="text-[11.5px] leading-tight font-medium">{{ rel.label }}</div>
-                  <div
-                    class="text-[9.5px] text-slate-500 dark:text-slate-400 truncate"
-                    [title]="rel.description"
-                  >
-                    {{ rel.description }}
-                  </div>
-                </div>
-              </div>
-            </button>
+            <app-diagram-relationship-button
+              [relationshipId]="rel.id"
+              [label]="rel.label"
+              [description]="rel.description"
+              [isSelected]="selectedRelationType() === rel.id"
+              (selectRelation)="onSelectRelation($event)"
+            />
           }
         </div>
       }
@@ -116,25 +76,17 @@
 
     <!-- Panel 2: Line Style (Routing) -->
     <div class="border-b border-[#C8C8C8] dark:border-[#283256]">
-      <div
-        (click)="isLineStylesOpen.set(!isLineStylesOpen())"
-        class="bg-linear-to-b from-[#EFEFEF] to-[#DCDCDC] dark:from-[#1E2442] dark:to-[#161B33] px-2.5 py-1.5 font-bold text-[#1E293B] dark:text-slate-200 flex items-center justify-between cursor-pointer border-b border-[#CCCCCC] dark:border-[#283256] hover:from-[#F5F5F5] hover:to-[#E2E2E2] dark:hover:from-[#252E56] dark:hover:to-[#1D2240]"
-      >
-        <span
-          class="flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-slate-100"
-        >
-          <ng-icon
-            [name]="isLineStylesOpen() ? 'heroChevronDown' : 'heroChevronRight'"
-            class="text-xs text-slate-600 dark:text-slate-400"
-          ></ng-icon>
-          {{ 'toolbar.lineStylesTitle' | translate }}
-        </span>
-      </div>
+      <app-diagram-tool-section-header
+        [title]="'toolbar.lineStylesTitle' | translate"
+        [isOpen]="isLineStylesOpen()"
+        (toggle)="isLineStylesOpen.set(!isLineStylesOpen())"
+      />
 
       @if (isLineStylesOpen()) {
         <div class="p-1.5 space-y-1 bg-[#F5F5F5] dark:bg-[#0E1222]">
           @for (style of lineStyles(); track style.id) {
             <button
+              type="button"
               (click)="onSetLineStyle(style.id)"
               [ngClass]="{
                 'bg-white dark:bg-[#151A30] border-slate-400 dark:border-[#2D3762] font-semibold shadow-xs text-slate-900 dark:text-slate-100':
@@ -159,36 +111,13 @@
 
     <!-- Panel 3: Zoom y Vistas Rápidas -->
     <div class="p-2 border-b border-[#C8C8C8] dark:border-[#283256] bg-[#F5F5F5] dark:bg-[#0E1222]">
-      <div class="flex items-center justify-between gap-1">
-        <button
-          (click)="zoomIn.emit()"
-          [title]="'toolbar.canvas.zoomIn' | translate"
-          class="p-1 bg-white dark:bg-[#151A30] hover:bg-slate-200 dark:hover:bg-[#20274A] border border-slate-300 dark:border-[#2D3762] text-slate-700 dark:text-slate-200 rounded flex-1 flex items-center justify-center cursor-pointer"
-        >
-          <ng-icon name="heroMagnifyingGlassPlus" class="text-xs"></ng-icon>
-        </button>
-        <button
-          (click)="zoomOut.emit()"
-          [title]="'toolbar.canvas.zoomOut' | translate"
-          class="p-1 bg-white dark:bg-[#151A30] hover:bg-slate-200 dark:hover:bg-[#20274A] border border-slate-300 dark:border-[#2D3762] text-slate-700 dark:text-slate-200 rounded flex-1 flex items-center justify-center cursor-pointer"
-        >
-          <ng-icon name="heroMagnifyingGlassMinus" class="text-xs"></ng-icon>
-        </button>
-        <button
-          (click)="resetView.emit()"
-          title="1:1"
-          class="p-1 bg-white dark:bg-[#151A30] hover:bg-slate-200 dark:hover:bg-[#20274A] border border-slate-300 dark:border-[#2D3762] text-slate-700 dark:text-slate-200 rounded flex-1 text-[10px] font-mono leading-none cursor-pointer"
-        >
-          1:1
-        </button>
-        <button
-          (click)="fitView.emit()"
-          [title]="'toolbar.canvas.fitView' | translate"
-          class="p-1 bg-white dark:bg-[#151A30] hover:bg-slate-200 dark:hover:bg-[#20274A] border border-slate-300 dark:border-[#2D3762] text-slate-700 dark:text-slate-200 rounded flex-1 flex items-center justify-center cursor-pointer"
-        >
-          <ng-icon name="heroArrowsPointingOut" class="text-xs"></ng-icon>
-        </button>
-      </div>
+      <app-diagram-zoom-controls
+        variant="flex"
+        (zoomIn)="zoomIn.emit()"
+        (zoomOut)="zoomOut.emit()"
+        (resetView)="resetView.emit()"
+        (fitView)="fitView.emit()"
+      />
     </div>
 
     <!-- Botón Agregar Nueva Clase UML -->
