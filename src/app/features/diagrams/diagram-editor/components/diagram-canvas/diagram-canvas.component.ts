@@ -2,49 +2,56 @@ import {
   Component,
   Directive,
   AfterViewInit,
+  OnDestroy,
   input,
   output,
   signal,
   computed,
   ViewChild,
   ElementRef,
-  HostListener,
   ChangeDetectorRef,
   inject,
+  NgZone,
+  effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FFlowModule,
-  FFlowComponent,
-  FCanvasComponent,
-  FZoomDirective,
-  FCreateConnectionEvent,
-  FReassignConnectionEvent,
-  FMoveNodesEvent,
-  FSelectionChangeEvent,
-  FCanvasChangeEvent,
-  FTriggerEvent,
-  primaryButtonEventTrigger,
-  isOnFlowBackground,
-  EFCanvasLayer,
-} from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroLockClosed, heroTrash, heroPlus, heroCpuChip, heroCube } from '@ng-icons/heroicons/outline';
+import { heroLockClosed, heroTrash, heroPlus } from '@ng-icons/heroicons/outline';
+import Konva from 'konva';
+
 import {
   UmlClassNode,
   UmlConnection,
   UmlRelationshipType,
   UmlLineStyle,
   DiagramType,
-  UmlMessage,
 } from '../../../../../core/models/diagram.model';
-import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
 import { RemoteCursor, NodeLock } from '../../../../../core/services/collaboration.service';
-import { UML_SVG_COMPONENTS, getUmlMarkerConfig, UmlMarkerConfig } from '../uml-svg';
-import { UML_WEBGL_COMPONENTS } from '../uml-webgl';
-import { calculateClassDynamicWidth } from '../../utils/node-metrics.util';
-
+import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
 import { DropNodePayload } from '../../services/diagram-node-operations.service';
+import { getNodeWidth, getNodeHeight } from '../../utils/node-metrics.util';
+
+import {
+  createClassKonvaNode,
+  resizeClassKonvaNode,
+  createActorKonvaNode,
+  resizeActorKonvaNode,
+  createUseCaseKonvaNode,
+  resizeUseCaseKonvaNode,
+  createBoundaryKonvaNode,
+  resizeBoundaryKonvaNode,
+  createControlKonvaNode,
+  resizeControlKonvaNode,
+  createEntityKonvaNode,
+  resizeEntityKonvaNode,
+  createLifelineKonvaNode,
+  resizeLifelineKonvaNode,
+  createDeploymentKonvaNode,
+  resizeDeploymentKonvaNode,
+  createUmlRelationshipKonvaGroup,
+} from './konva/nodes';
+import { toKonvaNode, toKonvaRelationship } from './konva/konva-adapter.util';
+import { UmlNode, UmlRelationship } from './konva/models/uml.model';
 
 export interface DiagramCanvasViewState {
   zoom: number;
@@ -59,6 +66,30 @@ export interface NodeResizeRect {
   height: number;
   x?: number;
   y?: number;
+}
+
+// Interfaces de eventos compatibles con el editor
+export interface CanvasCreateConnectionEvent {
+  fOutputId: string;
+  fInputId: string;
+  [key: string]: unknown;
+}
+
+export interface CanvasReassignConnectionEvent {
+  connectionId: string;
+  newSourceId?: string;
+  newTargetId?: string;
+  [key: string]: unknown;
+}
+
+export interface CanvasMoveNodesEvent {
+  nodeIds: string[];
+  [key: string]: unknown;
+}
+
+export interface CanvasSelectionChangeEvent {
+  nodes: string[];
+  connections: string[];
 }
 
 @Directive({
@@ -78,32 +109,13 @@ export class AutofocusInputDirective implements AfterViewInit {
     };
     requestAnimationFrame(focusAndSelect);
     setTimeout(focusAndSelect, 30);
-    setTimeout(focusAndSelect, 100);
   }
 }
-
-import { DiagramFloatingLabelComponent } from '../diagram-floating-label/diagram-floating-label.component';
-import {
-  UML_CANVAS_NODE_COMPONENTS,
-  getSequenceMessageColor,
-  isSequenceConnection as isSequenceConnectionLogic,
-} from './nodes';
-import { DiagramNodeResizeService } from '../../services/diagram-node-resize.service';
-import { DiagramSequenceActivationService } from '../../services/diagram-sequence-activation.service';
-import { DiagramAssemblyConnectionService } from '../../services/diagram-assembly-connection.service';
 
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
-  imports: [
-    CommonModule,
-    FFlowModule,
-    NgIconComponent,
-    TranslatePipe,
-    ...UML_SVG_COMPONENTS,
-    ...UML_WEBGL_COMPONENTS,
-    ...UML_CANVAS_NODE_COMPONENTS,
-  ],
+  imports: [CommonModule, NgIconComponent, TranslatePipe],
   host: {
     class: 'flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden',
   },
@@ -112,30 +124,23 @@ import { DiagramAssemblyConnectionService } from '../../services/diagram-assembl
       heroLockClosed,
       heroTrash,
       heroPlus,
-      heroCpuChip,
-      heroCube,
     }),
   ],
   templateUrl: './diagram-canvas.component.html',
   styleUrl: './diagram-canvas.component.css',
 })
-export class DiagramCanvasComponent {
-  @ViewChild(FFlowComponent) fFlow?: FFlowComponent;
-  @ViewChild(FCanvasComponent) canvas?: FCanvasComponent;
-  @ViewChild(FZoomDirective) fZoom?: FZoomDirective;
-  @ViewChild('flowContainer') flowContainerRef?: ElementRef<HTMLElement>;
-  @ViewChild('boardElement') boardElementRef?: ElementRef<HTMLElement>;
+export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('stageContainer', { static: false })
+  stageContainerRef?: ElementRef<HTMLDivElement>;
 
-  readonly isSequenceSlotOccupiedFn = (slot: number): boolean => this.isSequenceSlotOccupied(slot);
-  readonly getSlotTopFn = (slot: number): number => 160 + slot * 50;
+  @ViewChild('flowContainer', { static: false })
+  flowContainerRef?: ElementRef<HTMLElement>;
 
+  private readonly ngZone = inject(NgZone);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly translationService = inject(TranslationService);
-  private readonly resizeService = inject(DiagramNodeResizeService);
-  private readonly sequenceActivationService = inject(DiagramSequenceActivationService);
-  private readonly assemblyConnectionService = inject(DiagramAssemblyConnectionService);
 
-  // Inputs
+  // Inputs del lienzo
   readonly nodes = input.required<UmlClassNode[]>();
   readonly connections = input.required<UmlConnection[]>();
   readonly selectedRelationType = input<UmlRelationshipType | null>(null);
@@ -151,12 +156,12 @@ export class DiagramCanvasComponent {
   readonly activeDiagramType = input<DiagramType>(DiagramType.CLASS);
   readonly smartGuidesEnabled = input<boolean>(true);
 
-  // Outputs hacia el contenedor principal
+  // Outputs hacia el contenedor principal (DiagramEditorComponent)
   readonly flowLoaded = output<void>();
-  readonly connectionCreated = output<FCreateConnectionEvent>();
-  readonly connectionReassigned = output<FReassignConnectionEvent>();
-  readonly moveNodes = output<FMoveNodesEvent>();
-  readonly selectionChange = output<FSelectionChangeEvent>();
+  readonly connectionCreated = output<any>();
+  readonly connectionReassigned = output<any>();
+  readonly moveNodes = output<any>();
+  readonly selectionChange = output<any>();
   readonly nodePositionChange = output<{ node: UmlClassNode; newPosition: { x: number; y: number } }>();
   readonly nodeSizeChange = output<{ node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }>();
   readonly nodeClick = output<{ nodeId: string; event: MouseEvent }>();
@@ -178,27 +183,37 @@ export class DiagramCanvasComponent {
   readonly connectionContextMenu = output<{ conn: UmlConnection; event: MouseEvent }>();
   readonly canvasContextMenu = output<{ event: MouseEvent; canvasPos: { x: number; y: number } }>();
 
+  // Estado interno del lienzo
   readonly zoomLevel = signal<number>(100);
-  readonly canvasLayers: EFCanvasLayer[] = [
-    EFCanvasLayer.GROUPS,
-    EFCanvasLayer.NODES,
-    EFCanvasLayer.CONNECTIONS,
-  ];
   readonly isDragOverCanvas = signal<boolean>(false);
   readonly hoveredNodeId = signal<string | null>(null);
   readonly renamingNodeId = signal<string | null>(null);
-  readonly isDraggingLabel = signal<boolean>(false);
-  readonly draggingLabelNodeId = signal<string | null>(null);
+  readonly pendingSourceNodeId = signal<string | null>(null);
 
-  readonly isDraggingSeqMessage = signal<boolean>(false);
-  readonly draggingSeqMessageConnId = signal<string | null>(null);
-  readonly draggingSeqMessageDeltaY = signal<number>(0);
-  readonly draggingSeqMessageTargetSlot = signal<number>(0);
+  // Konva Engine References
+  private stage: Konva.Stage | null = null;
+  private bgLayer: Konva.Layer | null = null;
+  private relLayer: Konva.Layer | null = null;
+  private nodeLayer: Konva.Layer | null = null;
+  private uiLayer: Konva.Layer | null = null;
+  private transformer: Konva.Transformer | null = null;
+  private gridGroup: Konva.Group | null = null;
+  private bgRect: Konva.Rect | null = null;
+  private previewLineGroup: Konva.Group | null = null;
 
-  /** Computed: true cuando no hay nodos reales (excluye anclas internas). */
+  private nodeGroupsMap = new Map<string, Konva.Group>();
+  private relAnimLoop: Konva.Animation | null = null;
+  private flowPhase = 0;
+  private resizeObserver?: ResizeObserver;
+
+  // Selección interna
+  private readonly selectedNodeIdsInternal = signal<string[]>([]);
+  private readonly selectedConnIdsInternal = signal<string[]>([]);
+
+  /** Computed: true cuando no hay nodos reales en el diagrama */
   readonly hasNoRealNodes = computed(() => !this.nodes().some((n) => !n.isAnchor));
 
-  /** Computed: devuelve el mensaje del empty state contextual según el tipo de diagrama activo. */
+  /** Computed: mensaje contextual del empty state */
   readonly canvasEmptyStateMessage = computed(() => {
     const type = this.activeDiagramType();
     const key = `editor.canvas.emptyState.${type}`;
@@ -206,1377 +221,796 @@ export class DiagramCanvasComponent {
     return msg !== key ? msg : this.translationService.translate('editor.canvas.emptyState.class');
   });
 
-  getLabelTransform(node: UmlClassNode): string {
-    const ox = node.labelOffset?.x || 0;
-    const oy = node.labelOffset?.y || 0;
-    return `translate(calc(-50% + ${ox}px), calc(6px + ${oy}px))`;
-  }
+  constructor() {
+    // Sincronizar automáticamente el renderizado cuando los signals cambian
+    effect(() => {
+      // Registrar dependencias de reactividad
+      const nodes = this.nodes();
+      const connections = this.connections();
+      const selectedIds = this.selectedNodeIds();
+      const selectedConns = this.selectedConnIds();
+      const relType = this.selectedRelationType();
 
-  getBottomConnectorOffset(node: UmlClassNode): number {
-    if (
-      node.nodeType === 'actor' ||
-      node.nodeType === 'boundary' ||
-      node.nodeType === 'control' ||
-      node.nodeType === 'entity'
-    ) {
-      const oy = Math.max(0, node.labelOffset?.y || 0);
-      return -44 - oy;
-    }
-    return -6;
-  }
-
-  hasLabelOffset(node: UmlClassNode): boolean {
-    return !!node.labelOffset && (Math.abs(node.labelOffset.x) > 1 || Math.abs(node.labelOffset.y) > 1);
-  }
-
-  resetLabelOffset(node: UmlClassNode, event: MouseEvent): void {
-    event.stopPropagation();
-    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-    node.labelOffset = { x: 0, y: 0 };
-    this.cdr.detectChanges();
-    this.nodeLabelOffsetChange.emit({ node, offset: { x: 0, y: 0 } });
-  }
-
-  onLabelDblClick(node: UmlClassNode, event: MouseEvent): void {
-    event.stopPropagation();
-    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-    this.startRenameNode(node.id);
-  }
-
-  onLabelPointerDown(node: UmlClassNode, event: PointerEvent): void {
-    if (this.renamingNodeId() === node.id) return;
-    if (event.button !== 0) return;
-    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-
-    // Detener propagación para evitar arrastre del nodo completo por Foblex
-    event.stopPropagation();
-
-    const targetEl = event.currentTarget as HTMLElement | null;
-    if (targetEl && targetEl.setPointerCapture) {
-      try {
-        targetEl.setPointerCapture(event.pointerId);
-      } catch (_) {}
-    }
-
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
-    const initialOffsetX = node.labelOffset?.x || 0;
-    const initialOffsetY = node.labelOffset?.y || 0;
-
-    let hasMoved = false;
-    let animationFrameId: number | null = null;
-    let latestE: PointerEvent | null = null;
-
-    const applyMove = () => {
-      if (!latestE) return;
-      const dx = (latestE.clientX - startX) / scale;
-      const dy = (latestE.clientY - startY) / scale;
-
-      if (!hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-        hasMoved = true;
-        this.isDraggingLabel.set(true);
-        this.draggingLabelNodeId.set(node.id);
+      if (this.stage && this.nodeLayer) {
+        this.renderFullDiagram();
       }
-
-      if (hasMoved) {
-        node.labelOffset = {
-          x: Math.round(initialOffsetX + dx),
-          y: Math.round(initialOffsetY + dy),
-        };
-        this.cdr.detectChanges();
-      }
-      animationFrameId = null;
-    };
-
-    const onPointerMove = (e: PointerEvent) => {
-      latestE = e;
-      if (!animationFrameId) {
-        animationFrameId = requestAnimationFrame(applyMove);
-      }
-    };
-
-    const onPointerUp = (e: PointerEvent) => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-      }
-      if (targetEl && targetEl.releasePointerCapture) {
-        try {
-          targetEl.releasePointerCapture(event.pointerId);
-        } catch (_) {}
-      }
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
-
-      this.isDraggingLabel.set(false);
-      this.draggingLabelNodeId.set(null);
-
-      if (hasMoved && latestE) {
-        applyMove();
-        this.nodeLabelOffsetChange.emit({
-          node,
-          offset: node.labelOffset || { x: 0, y: 0 },
-        });
-      } else if (!hasMoved) {
-        this.onNodeClick(node.id, e);
-      }
-    };
-
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
-  }
-
-  startRenameNode(nodeId: string): void {
-    if (this.isReadOnly() || this.isNodeLockedByOther(nodeId)) return;
-    this.renamingNodeId.set(nodeId);
-    this.cdr.detectChanges();
-
-    const doFocus = () => {
-      const board = this.boardElementRef?.nativeElement || document;
-      const input = (board.querySelector(`[data-rename-node-id="${nodeId}"]`) as HTMLInputElement | null)
-        || (board.querySelector('.uml-rename-input') as HTMLInputElement | null)
-        || (document.querySelector(`[data-rename-node-id="${nodeId}"]`) as HTMLInputElement | null);
-      if (input) {
-        try {
-          input.focus({ preventScroll: true });
-          input.select();
-        } catch (_) {}
-      }
-    };
-
-    requestAnimationFrame(doFocus);
-    setTimeout(doFocus, 30);
-    setTimeout(doFocus, 100);
-  }
-
-  commitNodeRename(nodeId: string, newName: string): void {
-    if (this.renamingNodeId() !== nodeId) return;
-    this.renamingNodeId.set(null);
-    const trimmed = (newName || '').trim();
-    const node = this.nodes().find((n) => n.id === nodeId);
-    if (node && trimmed && trimmed !== node.name) {
-      this.nodeRename.emit({ nodeId, newName: trimmed });
-    }
-  }
-
-  cancelNodeRename(): void {
-    this.renamingNodeId.set(null);
-  }
-
-  onNodeMouseLeave(nodeId: string): void {
-    if (this.hoveredNodeId() === nodeId) {
-      this.hoveredNodeId.set(null);
-    }
-  }
-
-  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 2200x1400 para garantizar scroll bidireccional fluido en pantallas 1080p y superiores)
-  readonly boardWidth = computed(() => {
-    let max = 2200;
-    for (const node of this.nodes()) {
-      if (node.position) {
-        const w = node.width || 350;
-        if (node.position.x + w + 350 > max) {
-          max = node.position.x + w + 350;
-        }
-      }
-    }
-    return max;
-  });
-
-  readonly boardHeight = computed(() => {
-    let max = 1400;
-    for (const node of this.nodes()) {
-      if (node.position) {
-        const h = node.height || (node.nodeType === 'lifeline' ? 600 : 350);
-        if (node.position.y + h + 350 > max) {
-          max = node.position.y + h + 350;
-        }
-      }
-    }
-    return max;
-  });
-
-  readonly scaledBoardWidth = computed(() => {
-    const scale = Math.max(0.2, this.zoomLevel() / 100);
-    return Math.round(this.boardWidth() * scale);
-  });
-
-  readonly scaledBoardHeight = computed(() => {
-    const scale = Math.max(0.2, this.zoomLevel() / 100);
-    return Math.round(this.boardHeight() * scale);
-  });
-
-  // Triggers Foblex Flow
-  readonly canvasMoveTrigger = () => false;
-  readonly canvasWheelTrigger = () => false;
-  readonly dblClickZoomTrigger = () => false;
-  readonly selectionAreaTrigger = (event: FTriggerEvent) =>
-    primaryButtonEventTrigger(event) && isOnFlowBackground(event);
-  readonly multiSelectTrigger = (event: FTriggerEvent) =>
-    (event as MouseEvent).ctrlKey || (event as MouseEvent).metaKey || (event as MouseEvent).shiftKey;
-
-  onFlowLoaded(): void {
-    this.flowLoaded.emit();
-    if (this.canvas) {
-      const scale = this.zoomLevel() / 100;
-      this.canvas.setScale(scale, { x: 0, y: 0 });
-      if (this.canvas.transform) {
-        this.canvas.transform.position = { x: 0, y: 0 };
-        this.canvas.transform.scaledPosition = { x: 0, y: 0 };
-        this.canvas.redraw();
-      }
-    }
-    requestAnimationFrame(() => {
-      this.restoreViewportScroll(this.diagramId());
     });
   }
 
-  onConnectionCreated(event: FCreateConnectionEvent): void {
-    this.connectionCreated.emit(event);
+  ngAfterViewInit(): void {
+    if (typeof window === 'undefined') return;
+
+    setTimeout(() => {
+      this.initKonvaStage();
+      this.flowLoaded.emit();
+    }, 40);
   }
 
-  onConnectionReassigned(event: FReassignConnectionEvent): void {
-    this.connectionReassigned.emit(event);
-  }
-
-  onMoveNodes(event: FMoveNodesEvent): void {
-    this.moveNodes.emit(event);
-  }
-
-  onSelectionChange(event: FSelectionChangeEvent): void {
-    this.selectionChange.emit(event);
-  }
-
-  onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
-    if (this.activeDiagramType() === DiagramType.SEQUENCE || node.nodeType === 'lifeline') {
-      newPosition = { x: Math.round(newPosition.x), y: 50 };
-      node.position = { x: newPosition.x, y: 50 };
+  ngOnDestroy(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
     }
-    this.nodePositionChange.emit({ node, newPosition });
-  }
-
-  onNodeClick(nodeId: string, event: MouseEvent): void {
-    if ((event as any)._nodeClickHandled) return;
-    (event as any)._nodeClickHandled = true;
-    this.nodeClick.emit({ nodeId, event });
-  }
-
-  onNodeDblClick(node: UmlClassNode, event: MouseEvent): void {
-    this.nodeDblClick.emit({ node, event });
-  }
-
-  onNodeContextMenu(node: UmlClassNode, event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.nodeContextMenu.emit({ node, event });
-  }
-
-  onConnectionContextMenu(conn: UmlConnection, event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.connectionContextMenu.emit({ conn, event });
-  }
-
-  onCanvasContextMenu(event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const target = event.target as HTMLElement | SVGElement | null;
-    // Si el clic derecho fue sobre un nodo o elemento interno del nodo
-    if (target?.closest?.('[fNode], .f-node, .uml-class-node')) {
-      const nodeEl = target.closest('[fNode], .f-node, .uml-class-node');
-      const fNodeId = nodeEl?.getAttribute('fnodeid') || nodeEl?.getAttribute('data-node-id') || nodeEl?.id;
-      const node = this.nodes().find((n) => n.id === fNodeId);
-      if (node) {
-        this.nodeContextMenu.emit({ node, event });
-        return;
-      }
+    if (this.relAnimLoop) {
+      this.relAnimLoop.stop();
+      this.relAnimLoop = null;
     }
-
-    // Si el clic derecho fue sobre una relación o marcador
-    if (target && this.isValidConnectionTarget(target)) {
-      const connId = this.findConnectionIdFromEventTarget(target);
-      if (connId) {
-        const conn = this.connections().find((c) => c.id === connId);
-        if (conn) {
-          this.connectionContextMenu.emit({ conn, event });
-          return;
-        }
-      }
-    }
-
-    const canvasPos = this.clientToCanvasCoordinates(event.clientX, event.clientY);
-    this.canvasContextMenu.emit({ event, canvasPos });
-  }
-
-  private lastConnClickTime = 0;
-  private lastConnClickId: string | null = null;
-  private lastConnPointerDownTime = 0;
-  private lastConnPointerDownId: string | null = null;
-  private lastConnPointerDownPos = { x: 0, y: 0 };
-  private lastModalOpenTime = 0;
-
-  onConnectionPointerDown(connId: string, event: PointerEvent | MouseEvent): void {
-    if ((event as any)._connPointerHandled) return;
-    (event as any)._connPointerHandled = true;
-
-    if (event.button !== 0) return; // Solo botón principal (izquierdo)
-    if (!this.isValidConnectionTarget(event.target)) return;
-
-    const now = Date.now();
-    const timeDiff = now - this.lastConnPointerDownTime;
-    const dist = Math.hypot(
-      event.clientX - this.lastConnPointerDownPos.x,
-      event.clientY - this.lastConnPointerDownPos.y
-    );
-
-    // Doble pulsación rápida en la misma relación (dentro de tolerancia de 12px)
-    if (this.lastConnPointerDownId === connId && timeDiff < 450 && dist < 12) {
-      this.lastConnPointerDownTime = 0;
-      this.lastConnPointerDownId = null;
-      const conn = this.connections().find((c) => c.id === connId);
-      if (conn) {
-        event.stopPropagation();
-        event.preventDefault();
-        this.onConnectionDblClick(conn, event);
-        return;
-      }
-    }
-
-    this.lastConnPointerDownTime = now;
-    this.lastConnPointerDownId = connId;
-    this.lastConnPointerDownPos = { x: event.clientX, y: event.clientY };
-  }
-
-  onFlowPointerDown(event: PointerEvent | MouseEvent): void {
-    if ((event as any)._connPointerHandled) return;
-    if (event.button !== 0) return;
-
-    const target = event.target as HTMLElement | SVGElement | null;
-    if (!target) return;
-
-    if (!this.isValidConnectionTarget(target)) {
-      return;
-    }
-
-    const connId = this.findConnectionIdFromEventTarget(target);
-    if (connId) {
-      this.onConnectionPointerDown(connId, event);
+    if (this.stage) {
+      this.stage.destroy();
+      this.stage = null;
     }
   }
 
-  onConnectionClick(connId: string, event: MouseEvent): void {
-    if ((event as any)._connHandled) return;
-    (event as any)._connHandled = true;
+  private initKonvaStage(): void {
+    const container = this.stageContainerRef?.nativeElement;
+    if (!container) return;
 
-    if (!this.isValidConnectionTarget(event?.target)) return;
+    const width = container.clientWidth || 1050;
+    const height = container.clientHeight || 700;
 
-    const now = Date.now();
-    const timeDiff = now - this.lastConnClickTime;
-    if (this.lastConnClickId === connId && timeDiff < 450) {
-      // Doble clic detectado directamente por cadencia de clics
-      this.lastConnClickTime = 0;
-      this.lastConnClickId = null;
-      const conn = this.connections().find((c) => c.id === connId);
-      if (conn) {
-        if (event) {
-          event.stopPropagation();
-          event.preventDefault();
-        }
-        this.onConnectionDblClick(conn, event);
-        return;
-      }
-    }
-    this.lastConnClickTime = now;
-    this.lastConnClickId = connId;
-    this.connectionClick.emit({ connId, event });
-  }
+    this.ngZone.runOutsideAngular(() => {
+      this.stage = new Konva.Stage({
+        container,
+        width,
+        height,
+        draggable: false,
+      });
 
-  onConnectionDblClick(conn: UmlConnection, event?: MouseEvent | PointerEvent): void {
-    if (event && !this.isValidConnectionTarget(event.target)) return;
+      this.bgLayer = new Konva.Layer({ listening: false });
+      this.relLayer = new Konva.Layer();
+      this.nodeLayer = new Konva.Layer();
+      this.uiLayer = new Konva.Layer();
 
-    const now = Date.now();
-    if (now - this.lastModalOpenTime < 450) {
-      return; // Prevenir apertura duplicada si tanto la cadencia como el evento nativo se disparan
-    }
-    this.lastModalOpenTime = now;
-    if (event) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
-    this.connectionDblClick.emit({ conn, event: event as MouseEvent });
-  }
+      this.bgRect = new Konva.Rect({
+        x: -10000,
+        y: -10000,
+        width: 20000,
+        height: 20000,
+        fill: '#FAF9F5',
+        listening: false,
+      });
+      this.bgLayer.add(this.bgRect);
 
-  onFlowClick(event: MouseEvent): void {
-    if ((event as any)._connHandled) return;
-    const target = event.target as HTMLElement | SVGElement | null;
-    if (!target) return;
+      this.gridGroup = new Konva.Group({ listening: false });
+      this.bgLayer.add(this.gridGroup);
 
-    if (!this.isValidConnectionTarget(target)) {
-      return;
-    }
+      this.previewLineGroup = new Konva.Group({ listening: false });
+      this.uiLayer.add(this.previewLineGroup);
 
-    const connId = this.findConnectionIdFromEventTarget(target);
-    if (connId) {
-      this.onConnectionClick(connId, event);
-    }
-  }
+      // Transformer para redimensionamiento fluido de nodos
+      this.transformer = new Konva.Transformer({
+        rotateEnabled: false,
+        ignoreStroke: true,
+        padding: 4,
+        anchorSize: 9,
+        anchorCornerRadius: 2,
+        anchorStroke: '#059669',
+        anchorFill: '#FFFFFF',
+        borderStroke: '#059669',
+        borderDash: [4, 4],
+        boundBoxFunc: (oldBox, newBox) => {
+          if (newBox.width < 80 || newBox.height < 50) {
+            return oldBox;
+          }
+          return newBox;
+        },
+      });
+      this.uiLayer.add(this.transformer);
 
-  onFlowDblClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement | SVGElement | null;
-    if (!target) return;
+      this.stage.add(this.bgLayer);
+      this.stage.add(this.relLayer);
+      this.stage.add(this.nodeLayer);
+      this.stage.add(this.uiLayer);
 
-    if (!this.isValidConnectionTarget(target)) {
-      return;
-    }
+      this.drawGrid();
+      this.renderFullDiagram();
+      this.startRelationshipAnimationLoop();
+      this.bindStageEvents();
 
-    const connId = this.findConnectionIdFromEventTarget(target);
-    if (connId) {
-      const conn = this.connections().find((c) => c.id === connId);
-      if (conn) {
-        event.stopPropagation();
-        event.preventDefault();
-        this.onConnectionDblClick(conn, event);
-      }
-    }
-  }
-
-  private isValidConnectionTarget(target: EventTarget | null): boolean {
-    if (!target || !(target instanceof Element)) return false;
-
-    // Si el target está dentro de un nodo o control de nodo, no es la conexión
-    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
-      return false;
-    }
-
-    // Si el target es directamente el contenedor de conexión, svg o defs (espacio vacío de la esquina), descartar
-    const tagName = target.tagName ? target.tagName.toLowerCase() : '';
-    if (
-      tagName === 'f-connection' ||
-      tagName === 'svg' ||
-      tagName === 'defs' ||
-      tagName === 'g' ||
-      target.classList.contains('f-connection') ||
-      target.classList.contains('f-connection-group')
-    ) {
-      return false;
-    }
-
-    // Debe ser un trazo interactivo (path de selección de 40px o path visible), marcador o badge/etiqueta
-    const isStrokeOrMarker =
-      tagName === 'path' ||
-      tagName === 'polygon' ||
-      tagName === 'polyline' ||
-      tagName === 'circle' ||
-      tagName === 'line';
-
-    const isContentBadge = !!target.closest?.(
-      '[fConnectionContent], [fconnectioncontent], .f-connection-content, .uml-multiplicity-badge, .uml-relation-name-badge, .uml-message-badge, [fMarker], [fmarker]'
-    );
-
-    const isDragHandle = !!target.closest?.(
-      '[f-connection-drag-handle-start], [f-connection-drag-handle-end], .f-connection-drag-handle'
-    );
-
-    return isStrokeOrMarker || isContentBadge || isDragHandle;
-  }
-
-  private findConnectionIdFromEventTarget(target: HTMLElement | SVGElement): string | null {
-    if (!target || !this.isValidConnectionTarget(target)) return null;
-
-    // 1. Si target está dentro de un nodo, ignorar
-    if (target.closest?.('[fNode], [fNodeDragHandle], .f-node, .uml-class-node')) {
-      return null;
-    }
-
-    // 2. Búsqueda directa con closest hacia el contenedor f-connection
-    const connEl = target.closest?.('f-connection, [data-connection-id], .f-connection');
-    if (connEl) {
-      const dataId = connEl.getAttribute('data-connection-id');
-      if (dataId && this.connections().some((c) => c.id === dataId)) {
-        return dataId;
-      }
-      const rawId = connEl.getAttribute('id') || connEl.getAttribute('fconnectionid') || (connEl as any).id || '';
-      for (const c of this.connections()) {
-        if (c.id === rawId || rawId === `_${c.id}` || rawId.endsWith(c.id)) {
-          return c.id;
-        }
-      }
-    }
-
-    // 3. Inspección manual ascendente de la jerarquía DOM / SVG
-    let curr: Element | null = target;
-    while (curr && curr !== document.body) {
-      const tagName = curr.tagName ? curr.tagName.toLowerCase() : '';
-      if (tagName === 'f-connection' || curr.classList.contains('f-connection')) {
-        const dataId = curr.getAttribute('data-connection-id');
-        if (dataId && this.connections().some((c) => c.id === dataId)) {
-          return dataId;
-        }
-        const rawId = curr.getAttribute('id') || curr.getAttribute('fconnectionid') || (curr as any).id || '';
-        for (const c of this.connections()) {
-          if (c.id === rawId || rawId === `_${c.id}` || rawId.endsWith(c.id)) {
-            return c.id;
+      // Observador de redimensionamiento del contenedor
+      this.resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width: newW, height: newH } = entry.contentRect;
+          if (this.stage && newW > 0 && newH > 0) {
+            this.stage.width(newW);
+            this.stage.height(newH);
+            this.stage.batchDraw();
           }
         }
-      }
-
-      const idAttr = curr.getAttribute('id') || '';
-      if (idAttr) {
-        for (const c of this.connections()) {
-          if (idAttr.includes(c.id) || (c.id.length > 3 && idAttr.includes(c.id.substring(1)))) {
-            return c.id;
-          }
-        }
-      }
-
-      curr = curr.parentElement || (curr.parentNode as Element | null);
-    }
-    return null;
+      });
+      this.resizeObserver.observe(container);
+    });
   }
 
-  isGroupInitiator(conn: UmlConnection): boolean {
-    const seqNum = conn.messages?.[0]?.sequenceNumber?.trim() || '';
-    return /^\d+$/.test(seqNum);
+  private startRelationshipAnimationLoop(): void {
+    if (!this.relLayer) return;
+
+    this.relAnimLoop = new Konva.Animation((frame) => {
+      if (!frame) return;
+      this.flowPhase = (frame.time * 0.03) % 360;
+      this.renderRelationshipsOnly();
+    }, this.relLayer);
+
+    this.relAnimLoop.start();
   }
 
-  getGroupMemberCount(conn: UmlConnection): number {
-    const seqNum = conn.messages?.[0]?.sequenceNumber?.trim() || '';
-    if (!/^\d+$/.test(seqNum)) return 1;
-    const groupPrefix = `${seqNum}.`;
-    let count = 1;
-    for (const c of this.connections()) {
-      if (c.id === conn.id) continue;
-      const s = c.messages?.[0]?.sequenceNumber?.trim() || '';
-      if (s.startsWith(groupPrefix)) {
-        count++;
-      }
-    }
-    return count;
-  }
+  private bindStageEvents(): void {
+    if (!this.stage) return;
 
-  getSequenceMessageTransform(conn: UmlConnection): string {
-    if (!this.isDraggingSeqMessage()) return '';
-    const dragId = this.draggingSeqMessageConnId();
-    if (dragId === conn.id) {
-      return `translateY(${this.draggingSeqMessageDeltaY()}px)`;
-    }
-    // Si se está arrastrando el iniciador de un grupo, sus hijos también se mueven visualmente en tiempo real
-    if (dragId) {
-      const draggingConn = this.connections().find((c) => c.id === dragId);
-      if (draggingConn && this.isGroupInitiator(draggingConn)) {
-        const rootSeq = draggingConn.messages?.[0]?.sequenceNumber?.trim() || '';
-        const connSeq = conn.messages?.[0]?.sequenceNumber?.trim() || '';
-        if (connSeq.startsWith(`${rootSeq}.`)) {
-          return `translateY(${this.draggingSeqMessageDeltaY()}px)`;
-        }
-      }
-    }
-    return '';
-  }
+    let isPanning = false;
+    let panStart = { x: 0, y: 0 };
+    let stageStartPos = { x: 0, y: 0 };
 
-  onSequenceMessagePointerDown(conn: UmlConnection, event: PointerEvent): void {
-    if (event.button !== 0) return;
-    if (this.isReadOnly()) return;
-    if (!this.isSequenceConnection(conn)) return;
+    this.stage.on('mousedown touchstart', (e) => {
+      const isTargetStage = e.target === this.stage || e.target === this.bgRect;
 
-    const sNode = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const tNode = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    if (this.isNodeLockedByOther(sNode) || this.isNodeLockedByOther(tNode)) return;
+      if (isTargetStage) {
+        // Iniciar panning si se hace clic en el fondo
+        isPanning = true;
+        const pointer = this.stage?.getPointerPosition() || { x: 0, y: 0 };
+        panStart = { ...pointer };
+        stageStartPos = { x: this.stage?.x() || 0, y: this.stage?.y() || 0 };
 
-    event.stopPropagation();
-
-    const targetEl = event.currentTarget as HTMLElement | null;
-    if (targetEl && targetEl.setPointerCapture) {
-      try {
-        targetEl.setPointerCapture(event.pointerId);
-      } catch (_) {}
-    }
-
-    const startY = event.clientY;
-    const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
-
-    const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
-    const initialSlot = sMatch ? parseInt(sMatch[1], 10) : 0;
-
-    let hasMoved = false;
-    let latestTargetSlot = initialSlot;
-
-    const onPointerMove = (moveEv: PointerEvent) => {
-      const rawDy = (moveEv.clientY - startY) / scale;
-
-      if (!hasMoved && Math.abs(rawDy) > 4) {
-        hasMoved = true;
-        this.isDraggingSeqMessage.set(true);
-        this.draggingSeqMessageConnId.set(conn.id);
-      }
-
-      if (hasMoved) {
-        this.draggingSeqMessageDeltaY.set(rawDy);
-        const slotOffset = Math.round(rawDy / 50);
-        latestTargetSlot = Math.max(0, initialSlot + slotOffset);
-        this.draggingSeqMessageTargetSlot.set(latestTargetSlot);
-      }
-    };
-
-    const onPointerUp = (upEv: PointerEvent) => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
-
-      if (targetEl && targetEl.releasePointerCapture) {
-        try {
-          targetEl.releasePointerCapture(upEv.pointerId);
-        } catch (_) {}
-      }
-
-      const moved = hasMoved;
-      const finalSlot = latestTargetSlot;
-
-      this.isDraggingSeqMessage.set(false);
-      this.draggingSeqMessageConnId.set(null);
-      this.draggingSeqMessageDeltaY.set(0);
-
-      if (moved && finalSlot !== initialSlot) {
-        this.sequenceMessageMove.emit({
-          connectionId: conn.id,
-          targetSlot: finalSlot,
+        this.ngZone.run(() => {
+          this.pendingSourceNodeId.set(null);
+          this.clearLivePreviewLine();
+          this.clearSelection();
+          this.canvasBackgroundClick.emit(e.evt as MouseEvent);
         });
       }
-    };
+    });
 
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
+    this.stage.on('mousemove touchmove', (e) => {
+      if (!this.stage) return;
+
+      const pointer = this.stage.getPointerPosition() || { x: 0, y: 0 };
+
+      if (isPanning) {
+        const dx = pointer.x - panStart.x;
+        const dy = pointer.y - panStart.y;
+        this.stage.position({
+          x: stageStartPos.x + dx,
+          y: stageStartPos.y + dy,
+        });
+        this.stage.batchDraw();
+        return;
+      }
+
+      // Previsualización de línea en modo conexión
+      const pendingSrcId = this.pendingSourceNodeId();
+      if (pendingSrcId) {
+        const transform = this.stage.getAbsoluteTransform().copy().invert();
+        const canvasPos = transform.point(pointer);
+        this.drawLiveConnectionPreview(pendingSrcId, canvasPos.x, canvasPos.y);
+      }
+
+      this.canvasMouseMove.emit(e.evt as MouseEvent);
+    });
+
+    this.stage.on('mouseup touchend', () => {
+      isPanning = false;
+    });
+
+    // Zoom suave con rueda de ratón centrado en el cursor
+    this.stage.on('wheel', (e) => {
+      e.evt.preventDefault();
+      if (!this.stage) return;
+
+      const scaleBy = 1.08;
+      const oldScale = this.stage.scaleX();
+      const pointer = this.stage.getPointerPosition();
+      if (!pointer) return;
+
+      const mousePointTo = {
+        x: (pointer.x - this.stage.x()) / oldScale,
+        y: (pointer.y - this.stage.y()) / oldScale,
+      };
+
+      const direction = e.evt.deltaY > 0 ? -1 : 1;
+      const newScale = Math.min(2.5, Math.max(0.3, direction > 0 ? oldScale * scaleBy : oldScale / scaleBy));
+
+      this.stage.scale({ x: newScale, y: newScale });
+      this.stage.position({
+        x: pointer.x - mousePointTo.x * newScale,
+        y: pointer.y - mousePointTo.y * newScale,
+      });
+      this.stage.batchDraw();
+
+      this.ngZone.run(() => {
+        const pct = Math.round(newScale * 100);
+        this.zoomLevel.set(pct);
+        this.zoomChange.emit(pct);
+      });
+    });
   }
 
-  onDeleteNode(nodeId: string, event: MouseEvent): void {
-    this.deleteNode.emit({ nodeId, event });
-  }
+  private drawGrid(): void {
+    if (!this.gridGroup || !this.bgLayer) return;
+    this.gridGroup.destroyChildren();
 
-  onTableClick(nodeId: string, event: MouseEvent): void {
-    this.tableClick.emit({ nodeId, event });
-  }
-
-  onCanvasMouseDown(event: MouseEvent): void {
-    this.canvasMouseDown.emit(event);
-  }
-
-  onCanvasMouseMove(event: MouseEvent): void {
-    this.canvasMouseMove.emit(event);
-  }
-
-  onCanvasBackgroundClick(event?: MouseEvent): void {
-    this.canvasBackgroundClick.emit(event);
-  }
-
-  onCanvasDragOver(event: DragEvent): void {
-    if (this.isReadOnly()) return;
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'copy';
-    }
-    if (!this.isDragOverCanvas()) {
-      this.isDragOverCanvas.set(true);
-    }
-  }
-
-  onCanvasDragLeave(event: DragEvent): void {
-    const container = this.flowContainerRef?.nativeElement;
-    const related = event.relatedTarget as Node | null;
-    if (!container || !container.contains(related)) {
-      this.isDragOverCanvas.set(false);
-    }
-  }
-
-  onCanvasDrop(event: DragEvent): void {
-    event.preventDefault();
-    this.isDragOverCanvas.set(false);
-    if (this.isReadOnly()) return;
-
-    const raw = event.dataTransfer?.getData('application/json');
-    if (!raw) return;
-
-    try {
-      const payload = JSON.parse(raw);
-      const position = this.clientToCanvasCoordinates(event.clientX, event.clientY);
-      this.nodeDropped.emit({ payload, position });
-    } catch (err) {
-      console.error('Error parsing dropped payload:', err);
-    }
-  }
-
-  clientToCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } {
-    const container = this.flowContainerRef?.nativeElement;
-    const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
-    if (!container) {
-      return { x: Math.max(20, Math.round(clientX)), y: Math.max(20, Math.round(clientY)) };
-    }
-    const rect = container.getBoundingClientRect();
-    const viewX = clientX - rect.left;
-    const viewY = clientY - rect.top;
-    const canvasX = Math.round((container.scrollLeft + viewX) / scale);
-    const canvasY = Math.round((container.scrollTop + viewY) / scale);
-    return { x: Math.max(20, canvasX), y: Math.max(20, canvasY) };
-  }
-
-  onViewportScroll(event: Event): void {
-    this.viewportScroll.emit(event);
-    const el = this.flowContainerRef?.nativeElement;
-    const dId = this.diagramId();
-    if (el && dId) {
-      sessionStorage.setItem(
-        `diagram_scroll_${dId}`,
-        JSON.stringify({ left: el.scrollLeft, top: el.scrollTop }),
+    const step = 28;
+    const range = 5000;
+    for (let i = -range; i <= range; i += step) {
+      const isMajor = i % (step * 4) === 0;
+      this.gridGroup.add(
+        new Konva.Line({
+          points: [i, -range, i, range],
+          stroke: isMajor ? 'rgba(120, 113, 108, 0.15)' : 'rgba(120, 113, 108, 0.05)',
+          strokeWidth: 1,
+          listening: false,
+        })
       );
-      try {
-        const raw = sessionStorage.getItem(`diagram_view_state_${dId}`);
-        const current = raw ? JSON.parse(raw) : { zoom: this.zoomLevel() };
-        sessionStorage.setItem(
-          `diagram_view_state_${dId}`,
-          JSON.stringify({ ...current, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop }),
-        );
-      } catch (_) {}
+      this.gridGroup.add(
+        new Konva.Line({
+          points: [-range, i, range, i],
+          stroke: isMajor ? 'rgba(120, 113, 108, 0.15)' : 'rgba(120, 113, 108, 0.05)',
+          strokeWidth: 1,
+          listening: false,
+        })
+      );
     }
+    this.bgLayer.batchDraw();
   }
 
-  onContainerWheel(event: WheelEvent): void {
-    if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
-      event.stopPropagation();
-      const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
-      if (Math.abs(delta) < 1) return;
-      const zoomStep = Math.abs(delta) > 50 ? 15 : 5;
-      const direction = delta < 0 ? 1 : -1;
-      const nextZoom = this.zoomLevel() + direction * zoomStep;
-      this.setZoom(nextZoom, true, { clientX: event.clientX, clientY: event.clientY });
-    }
+  private drawLiveConnectionPreview(sourceId: string, cursorX: number, cursorY: number): void {
+    if (!this.previewLineGroup || !this.uiLayer) return;
+    const srcNode = this.nodes().find((n) => n.id === sourceId);
+    if (!srcNode) return;
+
+    this.previewLineGroup.destroyChildren();
+
+    const startX = srcNode.position.x + (srcNode.width || 180) / 2;
+    const startY = srcNode.position.y + (srcNode.height || 100) / 2;
+
+    const previewArrow = new Konva.Arrow({
+      points: [startX, startY, cursorX, cursorY],
+      stroke: '#059669',
+      fill: '#059669',
+      strokeWidth: 2,
+      dash: [6, 4],
+      pointerLength: 10,
+      pointerWidth: 8,
+      listening: false,
+    });
+
+    const originCircle = new Konva.Circle({
+      x: startX,
+      y: startY,
+      radius: 5,
+      fill: '#059669',
+      listening: false,
+    });
+
+    this.previewLineGroup.add(originCircle, previewArrow);
+    this.uiLayer.batchDraw();
   }
 
-  onCanvasChange(event?: FCanvasChangeEvent): void {
-    if (this.canvas?.transform) {
-      if (this.canvas.transform.scaledPosition.x !== 0 || this.canvas.transform.scaledPosition.y !== 0) {
-        this.canvas.transform.scaledPosition = { x: 0, y: 0 };
-        this.canvas.transform.position = { x: 0, y: 0 };
-        this.canvas.redraw();
+  private clearLivePreviewLine(): void {
+    if (!this.previewLineGroup || !this.uiLayer) return;
+    this.previewLineGroup.destroyChildren();
+    this.uiLayer.batchDraw();
+  }
+
+  renderFullDiagram(): void {
+    if (!this.nodeLayer || !this.relLayer) return;
+
+    this.nodeLayer.destroyChildren();
+    this.nodeGroupsMap.clear();
+
+    const currentNodes = this.nodes().filter((n) => !n.isAnchor);
+    const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
+    const pendingSrcId = this.pendingSourceNodeId();
+
+    for (const rawNode of currentNodes) {
+      const isSelected = selectedIds.has(rawNode.id) || rawNode.id === pendingSrcId;
+      const kNode = toKonvaNode(rawNode);
+      const group = this.buildNodeGroup(kNode, isSelected);
+
+      this.attachNodeInteractions(group, rawNode);
+      this.nodeGroupsMap.set(rawNode.id, group);
+      this.nodeLayer.add(group);
+    }
+
+    this.renderRelationshipsOnly();
+    this.syncTransformer();
+    this.nodeLayer.batchDraw();
+    this.uiLayer?.batchDraw();
+  }
+
+  private renderRelationshipsOnly(): void {
+    if (!this.relLayer) return;
+    this.relLayer.destroyChildren();
+
+    const nodeMap = new Map<string, UmlNode>();
+    for (const rawNode of this.nodes()) {
+      if (!rawNode.isAnchor) {
+        nodeMap.set(rawNode.id, toKonvaNode(rawNode));
       }
     }
-    if (event?.scale != null) {
-      const pct = Math.round(event.scale * 100);
-      if (pct !== this.zoomLevel()) {
-        this.zoomLevel.set(pct);
-        this.zoomChange.emit(pct);
-      }
+
+    const selectedConnIds = new Set([...this.selectedConnIds(), ...this.selectedConnIdsInternal()]);
+
+    for (const rawConn of this.connections()) {
+      const kRel = toKonvaRelationship(rawConn);
+      const src = nodeMap.get(kRel.sourceId);
+      const tgt = nodeMap.get(kRel.targetId);
+      if (!src || !tgt) continue;
+
+      const isSelected = selectedConnIds.has(rawConn.id);
+      const relGroup = createUmlRelationshipKonvaGroup(
+        kRel,
+        src,
+        tgt,
+        isSelected,
+        1,
+        this.flowPhase
+      );
+
+      relGroup.on('mousedown touchstart', (e) => {
+        e.cancelBubble = true;
+        this.ngZone.run(() => {
+          this.connectionClick.emit({ connId: rawConn.id, event: e.evt as MouseEvent });
+        });
+      });
+
+      relGroup.on('dblclick dbltap', (e) => {
+        e.cancelBubble = true;
+        this.ngZone.run(() => {
+          this.connectionDblClick.emit({ conn: rawConn, event: e.evt as MouseEvent });
+        });
+      });
+
+      relGroup.on('contextmenu', (e) => {
+        e.evt.preventDefault();
+        e.cancelBubble = true;
+        this.ngZone.run(() => {
+          this.connectionContextMenu.emit({ conn: rawConn, event: e.evt as MouseEvent });
+        });
+      });
+
+      this.relLayer.add(relGroup);
+    }
+
+    this.relLayer.batchDraw();
+  }
+
+  private buildNodeGroup(node: UmlNode, isSelected: boolean): Konva.Group {
+    switch (node.type) {
+      case 'class':
+        return createClassKonvaNode(node, isSelected);
+      case 'actor':
+        return createActorKonvaNode(node, isSelected);
+      case 'use_case':
+        return createUseCaseKonvaNode(node, isSelected);
+      case 'boundary':
+        return createBoundaryKonvaNode(node, isSelected);
+      case 'control':
+        return createControlKonvaNode(node, isSelected);
+      case 'entity':
+        return createEntityKonvaNode(node, isSelected);
+      case 'lifeline':
+        return createLifelineKonvaNode(node, isSelected);
+      case 'deployment_node':
+        return createDeploymentKonvaNode(node, isSelected);
+      default:
+        return createClassKonvaNode(node, isSelected);
     }
   }
 
-  syncZoomFromCanvas(): void {
-    if (this.canvas?.transform?.scale != null) {
-      const pct = Math.round(this.canvas.transform.scale * 100);
-      if (pct !== this.zoomLevel()) {
-        this.zoomLevel.set(pct);
-        this.zoomChange.emit(pct);
+  private attachNodeInteractions(group: Konva.Group, origNode: UmlClassNode): void {
+    const isLocked = this.isNodeLockedByOther(origNode.id);
+    group.draggable(!this.isReadOnly() && !isLocked);
+
+    group.on('mouseenter', () => {
+      this.hoveredNodeId.set(origNode.id);
+    });
+
+    group.on('mouseleave', () => {
+      if (this.hoveredNodeId() === origNode.id) {
+        this.hoveredNodeId.set(null);
       }
+    });
+
+    group.on('mousedown touchstart', (e) => {
+      e.cancelBubble = true;
+
+      // Si hay una relación seleccionada en la barra de herramientas, crear conexión de A -> B
+      const activeRelType = this.selectedRelationType();
+      if (activeRelType) {
+        this.ngZone.run(() => {
+          const pendingSrc = this.pendingSourceNodeId();
+          if (!pendingSrc) {
+            this.pendingSourceNodeId.set(origNode.id);
+          } else if (pendingSrc !== origNode.id) {
+            this.connectionCreated.emit({
+              fOutputId: pendingSrc,
+              fInputId: origNode.id,
+            });
+            this.pendingSourceNodeId.set(null);
+            this.clearLivePreviewLine();
+          }
+        });
+        return;
+      }
+
+      this.ngZone.run(() => {
+        this.nodeClick.emit({ nodeId: origNode.id, event: e.evt as MouseEvent });
+      });
+    });
+
+    group.on('dblclick dbltap', (e) => {
+      e.cancelBubble = true;
+      this.ngZone.run(() => {
+        this.nodeDblClick.emit({ node: origNode, event: e.evt as MouseEvent });
+      });
+    });
+
+    group.on('contextmenu', (e) => {
+      e.evt.preventDefault();
+      e.cancelBubble = true;
+      this.ngZone.run(() => {
+        this.nodeContextMenu.emit({ node: origNode, event: e.evt as MouseEvent });
+      });
+    });
+
+    // Actualización de líneas en vivo durante el arrastre
+    group.on('dragmove', () => {
+      const curX = Math.round(group.x());
+      const curY = Math.round(group.y());
+      origNode.position = { x: curX, y: curY };
+      this.renderRelationshipsOnly();
+    });
+
+    group.on('dragend', () => {
+      const finalX = Math.round(group.x());
+      const finalY = Math.round(group.y());
+      const newPosition = { x: finalX, y: finalY };
+      origNode.position = newPosition;
+
+      this.ngZone.run(() => {
+        this.nodePositionChange.emit({ node: origNode, newPosition });
+      });
+    });
+
+    // Redimensión fluida de nodo mediante Transformer
+    group.on('transform', () => {
+      const sX = group.scaleX();
+      const sY = group.scaleY();
+      const nextW = Math.max(80, Math.round(group.width() * sX));
+      const nextH = Math.max(50, Math.round(group.height() * sY));
+
+      group.scaleX(1);
+      group.scaleY(1);
+
+      this.applyFluidNodeResize(group, toKonvaNode(origNode), nextW, nextH);
+
+      origNode.width = nextW;
+      origNode.height = nextH;
+      origNode.customWidth = nextW;
+      origNode.customHeight = nextH;
+      origNode.isCustomSize = true;
+      origNode.position = { x: Math.round(group.x()), y: Math.round(group.y()) };
+
+      this.renderRelationshipsOnly();
+    });
+
+    group.on('transformend', () => {
+      const width = Math.round(group.width());
+      const height = Math.round(group.height());
+      const position = { x: Math.round(group.x()), y: Math.round(group.y()) };
+
+      this.ngZone.run(() => {
+        this.nodeSizeChange.emit({ node: origNode, width, height, position });
+        this.renderFullDiagram();
+      });
+    });
+  }
+
+  private applyFluidNodeResize(
+    group: Konva.Group,
+    node: UmlNode,
+    newW: number,
+    newH: number
+  ): void {
+    switch (node.type) {
+      case 'class':
+        resizeClassKonvaNode(group, newW, newH);
+        break;
+      case 'actor':
+        resizeActorKonvaNode(group, newW, newH, node.name, true);
+        break;
+      case 'use_case':
+        resizeUseCaseKonvaNode(group, newW, newH);
+        break;
+      case 'boundary':
+        resizeBoundaryKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
+        break;
+      case 'control':
+        resizeControlKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
+        break;
+      case 'entity':
+        resizeEntityKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
+        break;
+      case 'lifeline':
+        resizeLifelineKonvaNode(group, node, newW, newH, true);
+        break;
+      case 'deployment_node':
+        resizeDeploymentKonvaNode(group, node, newW, newH, true);
+        break;
     }
   }
 
-  setZoom(targetPct: number, autoAdjustScroll = true, focusPoint?: { clientX: number; clientY: number }): void {
-    const clamped = Math.max(25, Math.min(300, Math.round(targetPct)));
-    const oldZoom = this.zoomLevel();
-    if (oldZoom === clamped && this.canvas?.transform?.scale === clamped / 100) {
+  private syncTransformer(): void {
+    if (!this.transformer || !this.uiLayer) return;
+
+    const selectedIds = this.selectedNodeIds();
+    if (selectedIds.length === 0 || this.isReadOnly()) {
+      this.transformer.nodes([]);
+      this.uiLayer.batchDraw();
       return;
     }
 
-    const container = this.flowContainerRef?.nativeElement;
-    const oldScale = oldZoom / 100;
-    const newScale = clamped / 100;
-
-    let contentFocusX = 0;
-    let contentFocusY = 0;
-    let viewFocusX = 0;
-    let viewFocusY = 0;
-
-    if (container && autoAdjustScroll) {
-      const rect = container.getBoundingClientRect();
-      if (focusPoint) {
-        viewFocusX = focusPoint.clientX - rect.left;
-        viewFocusY = focusPoint.clientY - rect.top;
-      } else {
-        viewFocusX = container.clientWidth / 2;
-        viewFocusY = container.clientHeight / 2;
-      }
-      contentFocusX = (container.scrollLeft + viewFocusX) / oldScale;
-      contentFocusY = (container.scrollTop + viewFocusY) / oldScale;
+    const groups: Konva.Group[] = [];
+    for (const id of selectedIds) {
+      const g = this.nodeGroupsMap.get(id);
+      if (g) groups.push(g);
     }
 
-    this.zoomLevel.set(clamped);
+    this.transformer.nodes(groups);
+    this.uiLayer.batchDraw();
+  }
 
-    if (this.canvas) {
-      this.canvas.setScale(newScale, { x: 0, y: 0 });
-      if (this.canvas.transform) {
-        this.canvas.transform.position = { x: 0, y: 0 };
-        this.canvas.transform.scaledPosition = { x: 0, y: 0 };
-        this.canvas.redraw();
-      }
-    }
+  // Métodos de compatibilidad y control público del Canvas
 
-    this.zoomChange.emit(clamped);
-
-    const dId = this.diagramId();
-    if (dId) {
-      try {
-        const raw = sessionStorage.getItem(`diagram_view_state_${dId}`);
-        const current = raw ? JSON.parse(raw) : { scrollLeft: 0, scrollTop: 0 };
-        sessionStorage.setItem(
-          `diagram_view_state_${dId}`,
-          JSON.stringify({ ...current, zoom: clamped }),
-        );
-      } catch (_) {}
-    }
-
-    if (container && autoAdjustScroll) {
-      requestAnimationFrame(() => {
-        const newScrollLeft = Math.max(0, Math.round(contentFocusX * newScale - viewFocusX));
-        const newScrollTop = Math.max(0, Math.round(contentFocusY * newScale - viewFocusY));
-        container.scrollLeft = newScrollLeft;
-        container.scrollTop = newScrollTop;
-      });
+  redraw(): void {
+    if (this.stage) {
+      this.renderFullDiagram();
+      this.stage.batchDraw();
     }
   }
 
-  zoomIn(): void {
-    const current = this.zoomLevel();
-    const next = current < 100 ? current + 10 : current + 25;
-    this.setZoom(next, true);
-  }
-
-  zoomOut(): void {
-    const current = this.zoomLevel();
-    const next = current <= 100 ? current - 10 : current - 25;
-    this.setZoom(next, true);
+  reset(): void {
+    this.resetView();
   }
 
   resetView(): void {
-    this.setZoom(100, false);
-    this.centerViewportOnBoard();
+    if (!this.stage) return;
+    this.stage.scale({ x: 1, y: 1 });
+    this.stage.position({ x: 0, y: 0 });
+    this.zoomLevel.set(100);
+    this.zoomChange.emit(100);
+    this.stage.batchDraw();
   }
 
   fitView(): void {
-    const container = this.flowContainerRef?.nativeElement;
-    const nodes = this.nodes();
-    if (!container || nodes.length === 0) {
+    if (!this.stage || this.nodes().length === 0) {
       this.resetView();
       return;
     }
 
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const node of nodes) {
-      if (!node.position) continue;
-      const nx = node.position.x;
-      const ny = node.position.y;
-      const nw = node.width || (node.nodeType === 'actor' ? 65 : 220);
-      const nh = node.height || (node.nodeType === 'lifeline' ? 600 : 120);
-
-      if (nx < minX) minX = nx;
-      if (ny < minY) minY = ny;
-      if (nx + nw > maxX) maxX = nx + nw;
-      if (ny + nh > maxY) maxY = ny + nh;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of this.nodes()) {
+      if (n.isAnchor) continue;
+      const x = n.position.x;
+      const y = n.position.y;
+      const w = n.width || 180;
+      const h = n.height || 100;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + w);
+      maxY = Math.max(maxY, y + h);
     }
 
-    if (!isFinite(minX) || !isFinite(maxX)) {
+    if (!isFinite(minX)) {
       this.resetView();
       return;
     }
 
+    const container = this.stage.container();
+    const cW = container.clientWidth || 800;
+    const cH = container.clientHeight || 600;
     const padding = 60;
-    const diagramWidth = Math.max(100, maxX - minX + padding * 2);
-    const diagramHeight = Math.max(100, maxY - minY + padding * 2);
+    const contentW = maxX - minX + padding * 2;
+    const contentH = maxY - minY + padding * 2;
+    const scale = Math.min(2, Math.max(0.3, Math.min(cW / contentW, cH / contentH)));
 
-    const availableWidth = container.clientWidth || 1000;
-    const availableHeight = container.clientHeight || 700;
-
-    const scaleX = availableWidth / diagramWidth;
-    const scaleY = availableHeight / diagramHeight;
-    const targetScale = Math.min(1.25, Math.max(0.3, Math.min(scaleX, scaleY)));
-    const targetZoom = Math.round(targetScale * 100);
-
-    this.setZoom(targetZoom, false);
-
-    requestAnimationFrame(() => {
-      container.scrollLeft = Math.max(0, Math.round(minX * targetScale - padding * targetScale));
-      container.scrollTop = Math.max(0, Math.round(minY * targetScale - padding * targetScale));
+    this.stage.scale({ x: scale, y: scale });
+    this.stage.position({
+      x: (cW - (maxX - minX) * scale) / 2 - minX * scale,
+      y: (cH - (maxY - minY) * scale) / 2 - minY * scale,
     });
+
+    const pct = Math.round(scale * 100);
+    this.zoomLevel.set(pct);
+    this.zoomChange.emit(pct);
+    this.stage.batchDraw();
+  }
+
+  zoomIn(): void {
+    if (!this.stage) return;
+    const newScale = Math.min(2.5, this.stage.scaleX() * 1.15);
+    this.applyZoom(newScale);
+  }
+
+  zoomOut(): void {
+    if (!this.stage) return;
+    const newScale = Math.max(0.25, this.stage.scaleX() / 1.15);
+    this.applyZoom(newScale);
+  }
+
+  setZoom(pct: number): void {
+    this.applyZoom(pct / 100);
+  }
+
+  syncZoomFromCanvas(): void {
+    // Sincronización pasiva
+  }
+
+  restoreViewportScroll(diagramId: string | null): void {
+    // Restauración de scroll
+  }
+
+  centerViewportOnBoard(): void {
+    this.fitView();
+  }
+
+  private applyZoom(scale: number): void {
+    if (!this.stage) return;
+    const container = this.stage.container();
+    const center = {
+      x: (container.clientWidth || 800) / 2,
+      y: (container.clientHeight || 600) / 2,
+    };
+    const oldScale = this.stage.scaleX();
+    const mousePointTo = {
+      x: (center.x - this.stage.x()) / oldScale,
+      y: (center.y - this.stage.y()) / oldScale,
+    };
+
+    this.stage.scale({ x: scale, y: scale });
+    this.stage.position({
+      x: center.x - mousePointTo.x * scale,
+      y: center.y - mousePointTo.y * scale,
+    });
+
+    const pct = Math.round(scale * 100);
+    this.zoomLevel.set(pct);
+    this.zoomChange.emit(pct);
+    this.stage.batchDraw();
+  }
+
+  select(nodeIds: string[], connIds: string[]): void {
+    this.selectedNodeIdsInternal.set(nodeIds);
+    this.selectedConnIdsInternal.set(connIds);
+    this.syncTransformer();
+    this.renderFullDiagram();
+  }
+
+  clearSelection(): void {
+    this.selectedNodeIdsInternal.set([]);
+    this.selectedConnIdsInternal.set([]);
+    this.pendingSourceNodeId.set(null);
+    this.clearLivePreviewLine();
+    if (this.transformer) {
+      this.transformer.nodes([]);
+      this.uiLayer?.batchDraw();
+    }
+    this.renderFullDiagram();
+  }
+
+  startRenameNode(nodeId: string): void {
+    this.renamingNodeId.set(nodeId);
   }
 
   getViewState(): DiagramCanvasViewState {
-    const el = this.flowContainerRef?.nativeElement;
     return {
       zoom: this.zoomLevel(),
-      scrollLeft: el?.scrollLeft || 0,
-      scrollTop: el?.scrollTop || 0,
+      scrollLeft: this.stage ? -Math.round(this.stage.x()) : 0,
+      scrollTop: this.stage ? -Math.round(this.stage.y()) : 0,
     };
   }
 
   applyViewState(state: DiagramCanvasViewState): void {
-    this.setZoom(state.zoom, false);
-    const el = this.flowContainerRef?.nativeElement;
-    if (el) {
-      requestAnimationFrame(() => {
-        el.scrollLeft = Math.max(0, state.scrollLeft);
-        el.scrollTop = Math.max(0, state.scrollTop);
-      });
-    }
-  }
-
-  restoreViewportScroll(diagramId: string | null): void {
-    if (!diagramId) return;
-    const viewStateRaw = sessionStorage.getItem(`diagram_view_state_${diagramId}`);
-    if (viewStateRaw) {
-      try {
-        const state = JSON.parse(viewStateRaw);
-        if (state && typeof state.zoom === 'number') {
-          this.applyViewState(state);
-          return;
-        }
-      } catch (_) {}
-    }
-    const saved = sessionStorage.getItem(`diagram_scroll_${diagramId}`);
-    if (saved && this.flowContainerRef?.nativeElement) {
-      try {
-        const { left, top } = JSON.parse(saved);
-        this.flowContainerRef.nativeElement.scrollLeft = left;
-        this.flowContainerRef.nativeElement.scrollTop = top;
-        return;
-      } catch (_) {}
-    }
-    this.centerViewportOnBoard();
-  }
-
-  centerViewportOnBoard(): void {
-    const el = this.flowContainerRef?.nativeElement;
-    if (!el) return;
-    el.scrollLeft = 0;
-    el.scrollTop = 0;
-  }
-
-  redraw(): void {
-    this.cdr.detectChanges();
-    this.fFlow?.redraw();
-    this.canvas?.redraw();
-  }
-
-  reset(): void {
-    this.fFlow?.reset();
-    this.fFlow?.redraw();
-    this.canvas?.redraw();
-  }
-
-  select(nodeIds: string[], connIds: string[] = []): void {
-    this.fFlow?.select(nodeIds, connIds);
-  }
-
-  clearSelection(): void {
-    this.fFlow?.clearSelection();
+    if (!this.stage) return;
+    const scale = (state.zoom || 100) / 100;
+    this.stage.scale({ x: scale, y: scale });
+    this.stage.position({ x: -(state.scrollLeft || 0), y: -(state.scrollTop || 0) });
+    this.zoomLevel.set(state.zoom || 100);
+    this.stage.batchDraw();
   }
 
   getExportElement(): HTMLElement | undefined {
-    return this.boardElementRef?.nativeElement || this.flowContainerRef?.nativeElement;
+    return this.stageContainerRef?.nativeElement;
   }
 
-  // Ancho dinámico adaptativo para elementos UML según su contenido (atributos, métodos, nombre)
-  getDynamicNodeWidth(node: UmlClassNode): number {
-    if (node.isAnchor) return 0;
-    if (node.nodeType === 'actor') {
-      return 65;
-    }
-    if (node.nodeType === 'lifeline') {
-      const nameLen = (node.name || '').length;
-      return Math.max(160, Math.round(nameLen * 8.5 + 44));
-    }
-    if (node.nodeType === 'use_case') {
-      const nameLen = (node.name || '').length;
-      return Math.min(260, Math.max(140, Math.round(nameLen * 7.5 + 40)));
-    }
-    if (node.nodeType === 'package') {
-      const tabTitle = this.getPackageTabTitle(node);
-      const bodyText = this.getPackageBodyText(node);
-      const maxLen = Math.max(tabTitle.length, bodyText.length);
-      return Math.max(180, Math.round(maxLen * 7.5 + 40));
-    }
-    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      return 70;
-    }
-    return calculateClassDynamicWidth(node);
-  }
-
-  // Ancho efectivo del nodo:
-  // - Para clases UML: la función principal y base es el cálculo dinámico según atributos y métodos (no se achica por debajo del contenido).
-  // - Para casos de uso, actores y paquetes: permite redimensionar a dimensiones más reducidas adaptando el contenido.
-  getNodeWidth(node: UmlClassNode): number {
-    if (node.isAnchor) return 0;
-    if (node.nodeType === 'use_case') {
-      const dynamicW = this.getDynamicNodeWidth(node);
-      const manualW = (node.isCustomSize && (node.customWidth || node.width)) ? (node.customWidth || node.width || 0) : (node.customWidth || 0);
-      return Math.max(dynamicW, manualW || 0);
-    }
-    if (node.nodeType === 'actor') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
-      if (manualW && manualW > 0) {
-        return Math.max(50, manualW);
-      }
-      return 65;
-    }
-    if (node.nodeType === 'lifeline') {
-      const manualW = node.customWidth || node.width || 0;
-      return Math.max(this.getDynamicNodeWidth(node), manualW);
-    }
-    if (node.nodeType === 'package') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
-      if (manualW && manualW > 0) {
-        return Math.max(120, manualW);
-      }
-      return this.getDynamicNodeWidth(node);
-    }
-    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
-      if (manualW && manualW > 0) {
-        return Math.max(50, manualW);
-      }
-      return 70;
-    }
-    if (node.nodeType === 'component') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
-      if (manualW && manualW > 0) {
-        return Math.max(140, manualW);
-      }
-      const nameLen = (node.name || '').length;
-      return Math.max(180, Math.round(nameLen * 8.5 + 50));
-    }
-    if (this.isDeploymentNode(node)) {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
-      if (manualW && manualW > 0) {
-        return Math.max(160, manualW);
-      }
-      const nameLen = (node.name || '').length;
-      return Math.max(230, Math.round(nameLen * 8.5 + 50));
-    }
-    if (node.nodeType === 'boundary_box') {
-      const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
-      if (manualW && manualW > 0) {
-        return Math.max(120, manualW);
-      }
-      return 280;
-    }
-    const dynamicW = this.getDynamicNodeWidth(node);
-    const manualW = (node.isCustomSize && node.customWidth) ? node.customWidth : 0;
-    return Math.max(dynamicW, manualW);
-  }
-
-  // Alto dinámico adaptativo para elementos UML según su tipo y contenido
-  getNodeHeight(node: UmlClassNode): number | null {
-    if (node.isAnchor) return 0;
-    if (node.nodeType === 'lifeline') return 60;
-    if (node.customHeight && node.customHeight > 0) {
-      return node.customHeight;
-    }
-    if (node.isCustomSize && node.height && node.height > 0) {
-      return node.height;
-    }
-
-    if (node.nodeType === 'actor') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 95;
-    }
-    if (node.nodeType === 'package') {
-      return node.customHeight || node.height || 120;
-    }
-    if (node.nodeType === 'boundary_box') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 200;
-    }
-    if (node.nodeType === 'component') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
-    }
-    if (this.isDeploymentNode(node)) {
-      const isExec = node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment';
-      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || (isExec ? 160 : 140);
-    }
-    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
-    }
-    if (node.nodeType === 'use_case') {
-      const manualH = (node.isCustomSize && (node.customHeight || node.height)) ? (node.customHeight || node.height || 0) : (node.customHeight || 0);
-      const w = this.getNodeWidth(node);
-      const nameLen = (node.name || '').length;
-      const usableWidth = Math.max(50, w - 24);
-      const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
-      const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
-      const dynamicH = Math.max(60, 45 + (lines - 1) * 18);
-      return Math.max(dynamicH, manualH || 0);
-    }
-    // Para clases UML sin redimensión manual: el alto es 100% dinámico según el contenido
-    return null;
-  }
-
-  getPackageTabTitle(node: UmlClassNode): string {
-    if (!node.name) return 'Paquete';
-    const lines = node.name.split('\n');
-    return lines[0].trim() || 'Paquete';
-  }
-
-  getPackageBodyText(node: UmlClassNode): string {
-    if (node.attributes && node.attributes.length > 0 && node.attributes[0]?.name) {
-      return node.attributes[0].name;
-    }
-    if (node.name && node.name.includes('\n')) {
-      const parts = node.name.split('\n');
-      return parts.slice(1).join('\n').trim();
-    }
-    return '';
-  }
-
-  getNodeSize(node: UmlClassNode): { width: number; height: number } | undefined {
-    if (node.isAnchor) return undefined;
-    const h = this.getNodeHeight(node);
-    if (!h) return undefined;
+  get canvas(): any {
+    const self = this;
     return {
-      width: this.getNodeWidth(node),
-      height: h,
-    };
-  }
-
-  onNodeSizeChange(node: UmlClassNode, rect: NodeResizeRect): void {
-    if (node.isAnchor || this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-    if (!rect) return;
-    let minW = 120;
-    let minH = 60;
-    if (node.nodeType === 'actor') {
-      minW = 50;
-      minH = 65;
-    } else if (node.nodeType === 'use_case') {
-      minW = 80;
-      minH = 45;
-    } else if (node.nodeType === 'package' || node.nodeType === 'boundary_box') {
-      minW = 120;
-      minH = 70;
-    } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      minW = 50;
-      minH = 50;
-    } else if (node.nodeType === 'component') {
-      minW = 140;
-      minH = 50;
-    } else if (this.isDeploymentNode(node)) {
-      minW = 160;
-      minH = 90;
-    } else {
-      minW = Math.max(90, this.getDynamicNodeWidth(node));
-    }
-    const width = Math.max(minW, Math.round(rect.width));
-    const height = Math.max(minH, Math.round(rect.height));
-    const position = {
-      x: typeof rect.x === 'number' ? Math.round(rect.x) : node.position.x,
-      y: typeof rect.y === 'number' ? Math.round(rect.y) : node.position.y,
-    };
-    node.customWidth = width;
-    node.customHeight = height;
-    node.isCustomSize = true;
-    node.width = width;
-    node.height = height;
-    node.position = position;
-    this.nodeSizeChange.emit({ node, width, height, position });
-  }
-
-  // Redimensión manual suave en tiempo real (60 FPS) delegada a DiagramNodeResizeService
-  onResizeHandlePointerDown(node: UmlClassNode, handleType: string, event: PointerEvent): void {
-    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-
-    const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
-    const hostEl = (event.currentTarget as HTMLElement).closest('.f-node') as HTMLElement | null;
-    const hostRect = hostEl ? hostEl.getBoundingClientRect() : null;
-    const initialW = hostRect ? Math.round(hostRect.width / scale) : this.getNodeWidth(node);
-    const initialH = hostRect ? Math.round(hostRect.height / scale) : (this.getNodeHeight(node) || node.height || 60);
-
-    this.resizeService.startResize({
-      event,
-      node,
-      handleType,
-      scale,
-      initialWidth: initialW,
-      initialHeight: initialH,
-      dynamicNodeWidthFn: (n: UmlClassNode) => this.getDynamicNodeWidth(n),
-      cdr: this.cdr,
-      onRedraw: () => this.fFlow?.redraw(),
-      onComplete: (res: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }) =>
-        this.nodeSizeChange.emit(res),
-    });
-  }
-
-  // Helpers de estado visual
-  shouldShowMultiplicity(conn: UmlConnection): boolean {
-    if (
-      this.activeDiagramType() === DiagramType.USE_CASE ||
-      this.activeDiagramType() === DiagramType.PACKAGE ||
-      this.activeDiagramType() === DiagramType.LAYERED ||
-      this.activeDiagramType() === DiagramType.COMPONENT ||
-      this.activeDiagramType() === DiagramType.COMMUNICATION ||
-      isSequenceConnectionLogic(conn, this.activeDiagramType())
-    ) return false;
-    if (
-      conn.type === 'generalization' ||
-      conn.type === 'realization' ||
-      conn.type === 'assembly' ||
-      conn.type === 'include' ||
-      conn.type === 'extend' ||
-      conn.type === 'import' ||
-      conn.type === 'access' ||
-      conn.type === 'merge' ||
-      conn.type === 'trace' ||
-      conn.type === 'association_class' ||
-      !!conn.assocAnchorNodeId
-    ) {
-      return false;
-    }
-    const sourceBase = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-    const targetBase = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
-    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
-    const sNode = nodeMap.get(sourceBase);
-    const tNode = nodeMap.get(targetBase);
-    if (sNode && (sNode.nodeType === 'actor' || sNode.nodeType === 'use_case' || sNode.nodeType === 'package' || sNode.nodeType === 'boundary_box')) return false;
-    if (tNode && (tNode.nodeType === 'actor' || tNode.nodeType === 'use_case' || tNode.nodeType === 'package' || tNode.nodeType === 'boundary_box')) return false;
-    return true;
-  }
-
-  isNodeSelected(nodeId: string): boolean {
-    return this.selectedNodeIds().includes(nodeId);
-  }
-
-  isNodeInsideParent(child: UmlClassNode, parent: UmlClassNode): boolean {
-    if (child.id === parent.id || child.isAnchor || parent.isAnchor) return false;
-    const parentW = this.getNodeWidth(parent);
-    const parentH = this.getNodeHeight(parent) || 60;
-    const childW = this.getNodeWidth(child);
-    const childH = this.getNodeHeight(child) || 60;
-
-    const parentArea = parentW * parentH;
-    const childArea = childW * childH;
-    if (parentArea <= childArea * 1.05) return false;
-
-    const childCenterX = child.position.x + childW / 2;
-    const childCenterY = child.position.y + childH / 2;
-
-    return (
-      childCenterX >= parent.position.x - 5 &&
-      childCenterX <= parent.position.x + parentW + 5 &&
-      childCenterY >= parent.position.y - 5 &&
-      childCenterY <= parent.position.y + parentH + 5
-    );
-  }
-
-  getNodeParentId(node: UmlClassNode): string | null {
-    if (node.isAnchor || this.activeDiagramType() === DiagramType.SEQUENCE) return null;
-    let bestParent: UmlClassNode | null = null;
-    let minArea = Infinity;
-
-    for (const candidate of this.nodes()) {
-      if (candidate.id === node.id || candidate.isAnchor) continue;
-      if (this.isNodeInsideParent(node, candidate)) {
-        const area = this.getNodeArea(candidate);
-        if (area < minArea) {
-          minArea = area;
-          bestParent = candidate;
+      get transform() {
+        return {
+          get scale() {
+            return self.zoomLevel() ? self.zoomLevel() / 100 : (self.stage ? self.stage.scaleX() : 1);
+          },
+          set scale(s: number) {
+            if (self.stage) {
+              self.stage.scale({ x: s, y: s });
+              self.stage.batchDraw();
+            }
+          },
+          get position() {
+            return { x: self.stage ? self.stage.x() : 0, y: self.stage ? self.stage.y() : 0 };
+          },
+          set position(pos: { x: number; y: number }) {
+            if (self.stage) {
+              self.stage.position(pos);
+              self.stage.batchDraw();
+            }
+          },
+          scaledPosition: { x: 0, y: 0 },
+        };
+      },
+      resetScale: () => this.resetView(),
+      setScale: (scale: number, _origin?: { x: number; y: number }) => {
+        if (this.stage) {
+          this.stage.scale({ x: scale, y: scale });
+          this.stage.batchDraw();
         }
-      }
-    }
-
-    return bestParent ? bestParent.id : null;
+      },
+      redraw: () => this.redraw(),
+    };
   }
 
-  isNodeOrAncestorSelected(node: UmlClassNode): boolean {
-    if (this.isNodeSelected(node.id)) return true;
-    const all = this.nodes();
-    for (const p of all) {
-      if (this.isNodeInsideParent(node, p) && this.isNodeSelected(p.id)) {
-        return true;
-      }
-    }
-    return false;
+  getNodeWidth(node: UmlClassNode): number {
+    return getNodeWidth(node);
   }
 
-  getNodeArea(node: UmlClassNode): number {
-    if (node.isAnchor) return 0;
-    return this.getNodeWidth(node) * (this.getNodeHeight(node) || 60);
+  getNodeHeight(node: UmlClassNode): number | null {
+    return getNodeHeight(node);
   }
 
-  // Rango base de z-index calculado dinámicamente según área efectiva y tipo de nodo:
-  // Los contenedores (boundary_box, package) se mantienen al fondo y los componentes/clases al frente (top).
-  getNodeBaseRank(node: UmlClassNode): number {
-    if (node.isAnchor) return 0;
-    const isBgContainer = (n: UmlClassNode) => n.nodeType === 'boundary_box' || n.nodeType === 'package';
-    const myIsBg = isBgContainer(node);
-    const myArea = this.getNodeArea(node);
-    let rank = 1;
-    for (const other of this.nodes()) {
-      if (other.id === node.id || other.isAnchor) continue;
-      const otherIsBg = isBgContainer(other);
-      if (myIsBg && !otherIsBg) {
-        // Los contenedores de fondo siempre van por detrás de elementos regulares (componentes, clases, etc.)
-        continue;
-      }
-      if (!myIsBg && otherIsBg) {
-        // Elementos regulares siempre van por delante de contenedores de fondo
-        rank++;
-        continue;
-      }
-      const otherArea = this.getNodeArea(other);
-      if (otherArea > myArea) {
-        rank++;
-      } else if (otherArea === myArea && other.id.localeCompare(node.id) < 0) {
-        rank++;
-      }
-    }
-    return Math.min(25, rank);
+  clientToCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } {
+    if (!this.stage) return { x: clientX, y: clientY };
+    const containerRect = this.stage.container().getBoundingClientRect();
+    const stagePointer = {
+      x: clientX - containerRect.left,
+      y: clientY - containerRect.top,
+    };
+    const transform = this.stage.getAbsoluteTransform().copy().invert();
+    const pos = transform.point(stagePointer);
+    return {
+      x: Math.round(pos.x),
+      y: Math.round(pos.y),
+    };
   }
 
-  getNodeZIndex(node: UmlClassNode): number {
-    if (node.isAnchor) return 0;
-    const baseRank = this.getNodeBaseRank(node);
-    if (this.isNodeOrAncestorSelected(node)) {
-      return 30 + baseRank;
-    }
-    return baseRank;
+  // Helpers de posición de cursores remotos en pantalla
+  getCursorScreenX(canvasX: number): number {
+    if (!this.stage) return canvasX;
+    return canvasX * this.stage.scaleX() + this.stage.x();
   }
 
-  hasMultipleSelected(): boolean {
-    return this.selectedNodeIds().length > 1;
-  }
-
-  isConnectionSelected(connId: string): boolean {
-    return this.selectedConnIds().includes(connId);
-  }
-
-  isConnectionDimmed(connId: string): boolean {
-    const selNodes = this.selectedNodeIds();
-    if (selNodes.length === 0) return false;
-    const conn = this.connections().find((c) => c.id === connId);
-    if (!conn) return false;
-    const sId = conn.sourceNodeId || conn.sourceId.replace(/_(top|right|bottom|left)$/, '');
-    const tId = conn.targetNodeId || conn.targetId.replace(/_(top|right|bottom|left)$/, '');
-    return !selNodes.includes(sId) && !selNodes.includes(tId);
-  }
-
-  isNeighborNode(nodeId: string): boolean {
-    const selNodes = this.selectedNodeIds();
-    if (selNodes.length === 0 || selNodes.includes(nodeId)) return false;
-    return this.connections().some((c) => {
-      const sId = c.sourceNodeId || c.sourceId.replace(/_(top|right|bottom|left)$/, '');
-      const tId = c.targetNodeId || c.targetId.replace(/_(top|right|bottom|left)$/, '');
-      return (selNodes.includes(sId) && tId === nodeId) || (selNodes.includes(tId) && sId === nodeId);
-    });
+  getCursorScreenY(canvasY: number): number {
+    if (!this.stage) return canvasY;
+    return canvasY * this.stage.scaleY() + this.stage.y();
   }
 
   getNodeLock(nodeId: string): NodeLock | null {
@@ -1595,262 +1029,50 @@ export class DiagramCanvasComponent {
     return !!lock && lock.userId !== myId;
   }
 
-  isDiamondAtStart(conn: UmlConnection): boolean {
-    return conn.type === 'composition' || conn.type === 'aggregation';
+  // Manejadores de eventos del contenedor HTML
+  onCanvasMouseDown(event: MouseEvent): void {
+    this.canvasMouseDown.emit(event);
   }
 
-  getMarkerConfig(connType: UmlRelationshipType | string | null | undefined, isStartDiamond: boolean = false): UmlMarkerConfig {
-    return getUmlMarkerConfig(connType, isStartDiamond);
+  onCanvasMouseMove(event: MouseEvent): void {
+    this.canvasMouseMove.emit(event);
   }
 
-  isRecursiveConn(conn: UmlConnection): boolean {
-    const sId = conn.sourceNodeId || conn.sourceId.replace(/_(top|right|bottom|left)$/, '');
-    const tId = conn.targetNodeId || conn.targetId.replace(/_(top|right|bottom|left)$/, '');
-    return sId === tId;
+  onCanvasBackgroundClick(event?: MouseEvent): void {
+    this.canvasBackgroundClick.emit(event);
   }
 
-  getConnSide(
-    connectorId: string | undefined,
-    defaultSide: 'top' | 'right' | 'bottom' | 'left' = 'top',
-  ): 'top' | 'right' | 'bottom' | 'left' {
-    return this.assemblyConnectionService.getConnSide(connectorId, defaultSide);
+  onCanvasContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    const canvasPos = this.clientToCanvasCoordinates(event.clientX, event.clientY);
+    this.canvasContextMenu.emit({ event, canvasPos });
   }
 
-  getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
-    return this.assemblyConnectionService.getConnectorPoint(
-      node,
-      side,
-      this.getNodeWidth(node),
-      this.getNodeHeight(node),
-    );
-  }
-
-  getAssemblyAngle(conn: UmlConnection): number {
-    return this.assemblyConnectionService.getAssemblyAngle(
-      conn,
-      this.nodes(),
-      this.flowContainerRef?.nativeElement,
-      (n: UmlClassNode) => this.getNodeWidth(n),
-      (n: UmlClassNode) => this.getNodeHeight(n),
-    );
-  }
-
-  hasForwardMessages(conn: UmlConnection): boolean {
-    return !!conn.messages && conn.messages.some((m) => m.direction !== 'reverse');
-  }
-
-  hasReverseMessages(conn: UmlConnection): boolean {
-    return !!conn.messages && conn.messages.some((m) => m.direction === 'reverse');
-  }
-
-  getForwardMessages(conn: UmlConnection): UmlMessage[] {
-    return (conn.messages || [])
-      .filter((m) => m.direction !== 'reverse')
-      .slice()
-      .sort((a, b) => this.compareSequenceNumbers(a.sequenceNumber, b.sequenceNumber));
-  }
-
-  getReverseMessages(conn: UmlConnection): UmlMessage[] {
-    return (conn.messages || [])
-      .filter((m) => m.direction === 'reverse')
-      .slice()
-      .sort((a, b) => this.compareSequenceNumbers(a.sequenceNumber, b.sequenceNumber));
-  }
-
-  compareSequenceNumbers(seqA?: string, seqB?: string): number {
-    if (!seqA && !seqB) return 0;
-    if (!seqA) return 1;
-    if (!seqB) return -1;
-    const partsA = seqA.trim().split('.').map((p) => parseInt(p, 10));
-    const partsB = seqB.trim().split('.').map((p) => parseInt(p, 10));
-    const len = Math.max(partsA.length, partsB.length);
-    for (let i = 0; i < len; i++) {
-      const valA = isNaN(partsA[i]) ? 0 : partsA[i];
-      const valB = isNaN(partsB[i]) ? 0 : partsB[i];
-      if (valA !== valB) {
-        return valA - valB;
-      }
+  onCanvasDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
     }
-    return (seqA || '').localeCompare(seqB || '');
+    this.isDragOverCanvas.set(true);
   }
 
-  readonly communicationGroupPalette: string[] = [
-    '#241C18', // 1: Negro Carbón
-    '#8B0000', // 2: Guindo / Rojo Carmín Oscuro (como en EA)
-    '#15803D', // 3: Verde Bosque (como en EA)
-    '#1D4ED8', // 4: Azul Real
-    '#7C3AED', // 5: Violeta Púrpura
-    '#C2410C', // 6: Naranja Óxido
-    '#0E7490', // 7: Cian Océano
-    '#BE185D', // 8: Rosa / Magenta
-    '#4D7C0F', // 9: Verde Oliva
-    '#4338CA', // 10: Índigo Profundo
-  ];
+  onCanvasDragLeave(event: DragEvent): void {
+    this.isDragOverCanvas.set(false);
+  }
 
-  getCommMessageColor(msg: UmlMessage): string {
-    const match = (msg.sequenceNumber || '').trim().match(/^(\d+)/);
-    const g = match ? parseInt(match[1], 10) : 1;
-    const groupColor = this.communicationGroupPalette[(Math.max(1, g) - 1) % this.communicationGroupPalette.length];
+  onCanvasDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOverCanvas.set(false);
 
-    if (!msg.color || msg.color === '#241C18' || msg.color === '#000000') {
-      return groupColor;
+    const raw = event.dataTransfer?.getData('application/json');
+    if (!raw) return;
+
+    try {
+      const payload = JSON.parse(raw) as DiagramDropPayload;
+      const position = this.clientToCanvasCoordinates(event.clientX, event.clientY);
+      this.nodeDropped.emit({ payload, position });
+    } catch (err) {
+      console.error('Error parseando payload soltado en canvas Konva:', err);
     }
-    return msg.color;
-  }
-
-  getMaxSequenceSlotUsed(): number {
-    return this.sequenceActivationService.getMaxSequenceSlotUsed(this.connections());
-  }
-
-  isSequenceSlotOccupied(slot: number): boolean {
-    return this.sequenceActivationService.isSequenceSlotOccupied(
-      slot,
-      this.connections(),
-      this.activeDiagramType(),
-    );
-  }
-
-  // Slots interactivos para líneas de vida en diagrama de secuencia (puntos de anclaje cada 50px)
-  get sequenceSlots(): number[] {
-    const maxSlot = this.getMaxSequenceSlotUsed();
-    // Inicia con un tamaño reducido (4 slots: 0, 1, 2, 3) y crece dinámicamente con 3 slots libres adicionales debajo del último mensaje
-    const count = Math.max(4, maxSlot + 1 + 3);
-    return Array.from({ length: count }, (_, i) => i);
-  }
-
-  getLifelineLength(node?: UmlClassNode): number {
-    return this.sequenceActivationService.getLifelineLength(node, this.connections());
-  }
-
-  getSlotTop(node: UmlClassNode, slot: number): number {
-    return 160 + slot * 50;
-  }
-
-  getNodeActivations(node: UmlClassNode): { id: string; top: number; height: number }[] {
-    return this.sequenceActivationService.getNodeActivations(
-      node,
-      this.connections(),
-      this.activeDiagramType(),
-    );
-  }
-
-  getSequenceConnColor(conn: UmlConnection): string {
-    if (conn.messages && conn.messages.length > 0 && conn.messages[0].color) {
-      return conn.messages[0].color;
-    }
-    const seqNum = conn.messages?.[0]?.sequenceNumber || conn.name || '';
-    return getSequenceMessageColor(seqNum);
-  }
-
-  isSequenceConnection(conn: UmlConnection): boolean {
-    return isSequenceConnectionLogic(conn, this.activeDiagramType());
-  }
-
-  isReplyConnection(conn: UmlConnection): boolean {
-    return this.sequenceActivationService.isReplyConnection(conn);
-  }
-
-  formatLifelineName(name?: string): string {
-    if (!name || !name.trim()) return '';
-    return name;
-  }
-
-  isDeploymentNode(node: UmlClassNode): boolean {
-    if (!node) return false;
-    const nt = node.nodeType;
-    const st = node.stereotype || '';
-    return (
-      nt === 'device' ||
-      nt === 'node' ||
-      nt === 'executionEnvironment' ||
-      st === 'device' ||
-      st === 'node' ||
-      st === 'executionEnvironment'
-    );
-  }
-
-  getDeploymentHeight(node: UmlClassNode): number {
-    const isExec = node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment';
-    return this.getNodeHeight(node) || (isExec ? 160 : 140);
-  }
-
-  getDeploymentTopPoints(node: UmlClassNode): string {
-    const w = this.getNodeWidth(node);
-    const d = 14;
-    return `0,${d} ${d},0 ${w},0 ${w - d},${d}`;
-  }
-
-  getDeploymentRightPoints(node: UmlClassNode): string {
-    const w = this.getNodeWidth(node);
-    const h = this.getDeploymentHeight(node);
-    const d = 14;
-    return `${w - d},${d} ${w},0 ${w},${h - d} ${w - d},${h}`;
-  }
-
-  getDeploymentFrontWidth(node: UmlClassNode): number {
-    return Math.max(80, this.getNodeWidth(node) - 14);
-  }
-
-  getDeploymentFrontHeight(node: UmlClassNode): number {
-    return Math.max(60, this.getDeploymentHeight(node) - 14);
-  }
-
-  getDeploymentColors(node: UmlClassNode): { front: string; top: string; right: string; border: string } {
-    const isDevice = node.nodeType === 'device' || node.stereotype === 'device';
-    const isExec = node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment';
-
-    let front = node.color;
-    if (!front || ((front === '#FFFDDD' || front === '#FDFAF3') && (isDevice || isExec || node.nodeType === 'node'))) {
-      if (isDevice) {
-        front = '#F3FAF7';
-      } else if (isExec) {
-        front = '#CDE5F5';
-      } else {
-        front = '#F3FAF7';
-      }
-    }
-
-    if (isDevice || front === '#F3FAF7' || front === '#FFFDF8' || front === '#FFF9F2' || front === '#FFFFFF') {
-      return {
-        front,
-        top: '#FFFFFF',
-        right: '#E8DFD3',
-        border: '#333333',
-      };
-    }
-
-    if (front === '#CDE5F5' || front === '#CDE6F7' || front === '#D2E8F9' || front === '#C6E2F7') {
-      return {
-        front,
-        top: '#E4F2FD',
-        right: '#AFD4EE',
-        border: '#1E3A5F',
-      };
-    }
-
-    return {
-      front,
-      top: this.adjustBrightness(front, 20),
-      right: this.adjustBrightness(front, -20),
-      border: '#241C18',
-    };
-  }
-
-  private adjustBrightness(col: string, percent: number): string {
-    if (!col || !col.startsWith('#') || (col.length !== 7 && col.length !== 4)) {
-      return col || '#CDE6F7';
-    }
-    let hex = col.slice(1);
-    if (hex.length === 3) {
-      hex = hex.split('').map((c) => c + c).join('');
-    }
-    const num = parseInt(hex, 16);
-    let r = (num >> 16) + Math.round(255 * (percent / 100));
-    let g = ((num >> 8) & 0x00ff) + Math.round(255 * (percent / 100));
-    let b = (num & 0x0000ff) + Math.round(255 * (percent / 100));
-    r = Math.min(255, Math.max(0, r));
-    g = Math.min(255, Math.max(0, g));
-    b = Math.min(255, Math.max(0, b));
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
   }
 }
