@@ -228,6 +228,52 @@ export class DiagramPersistenceService {
     return { restored: false };
   }
 
+  /**
+   * Resuelve los datos del diagrama dando prioridad a un borrador local no guardado
+   * si este es más reciente que el timestamp del servidor, o mapeando el AST del servidor.
+   */
+  resolveDiagramData(
+    diagram: any,
+    options: {
+      getDefaultColor?: (nodeType?: string, stereotype?: string | null) => string;
+      normalizeDataType?: (type: string) => string;
+      normalizeReturnType?: (type: string) => string;
+    },
+  ): {
+    nodes: UmlClassNode[];
+    connections: UmlConnection[];
+    defaultLineStyle?: UmlLineStyle;
+    fromDraft: boolean;
+  } {
+    const isSequence = diagram.type === 'sequence';
+    const draftResult = this.restoreDraftIfNewer(
+      diagram.id,
+      diagram.updatedAt,
+      isSequence,
+      options.getDefaultColor,
+    );
+    if (draftResult.restored && draftResult.nodes) {
+      return {
+        nodes: draftResult.nodes,
+        connections: draftResult.connections || [],
+        defaultLineStyle: draftResult.defaultLineStyle,
+        fromDraft: true,
+      };
+    }
+    const { nodes, connections } = this.mapServerDiagramToLocal(
+      diagram,
+      options.getDefaultColor,
+      options.normalizeDataType,
+      options.normalizeReturnType,
+    );
+    return {
+      nodes,
+      connections,
+      defaultLineStyle: diagram.defaultLineStyle as UmlLineStyle | undefined,
+      fromDraft: false,
+    };
+  }
+
   mapServerDiagramToLocal(
     diagram: any,
     getDefaultColor?: (nodeType?: string, stereotype?: string | null) => string,

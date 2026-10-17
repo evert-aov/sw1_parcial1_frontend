@@ -94,6 +94,7 @@ import {
   computeBoardHeight,
 } from './utils/node-metrics.util';
 import { calculateCanvasCoordinates, isDragMovement } from './utils/canvas-coordinates.util';
+import { resolveUserRoleInProject } from './utils/project-role.util';
 
 export interface UmlDiagramProject {
   version: string;
@@ -280,7 +281,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   saveDiagramViewState(diagramId: string, state?: Partial<DiagramCanvasViewState>): void {
     this.viewportService.saveDiagramViewState(diagramId, state);
   }
-
   getDiagramViewState(diagramId: string): DiagramCanvasViewState {
     return this.viewportService.getDiagramViewState(diagramId);
   }
@@ -296,16 +296,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         defaultLineStyle: this.defaultLineStyle(),
       },
     );
-  }
-
-  private saveLocalDraft(): void {
-    const diagramId = this.currentDiagramId();
-    if (!diagramId) return;
-    this.persistenceService.saveLocalDraft(diagramId, {
-      nodes: this.nodes(),
-      connections: this.connections(),
-      defaultLineStyle: this.defaultLineStyle(),
-    });
   }
 
   private clearLocalDraft(diagramId: string): void {
@@ -500,19 +490,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.projectService.getProject(projectId).subscribe({
         next: (project) => {
           this.currentProject.set(project);
-          const user = this.authService.currentUser();
-          if (user && project) {
-            if (project.userRole) {
-              this.currentUserRole.set(project.userRole);
-            } else if (project.createdBy === user.id) {
-              this.currentUserRole.set('OWNER');
-            } else if (project.members) {
-              const myMember = project.members.find((m: any) => m.userId === user.id);
-              if (myMember) {
-                this.currentUserRole.set(myMember.role);
-              }
-            }
-          }
+          this.currentUserRole.set(resolveUserRoleInProject(project, this.authService.currentUser()?.id));
         },
         error: () => {},
       });
@@ -557,64 +535,34 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         this.defaultLineStyle.set(diagram.defaultLineStyle as UmlLineStyle);
       }
 
-      const isSequence = diagram.type === 'sequence';
+      const resolved = this.persistenceService.resolveDiagramData(diagram, {
+        getDefaultColor: (nt, st) => this.getDefaultColorForNodeType(nt, st),
+        normalizeDataType: (t) => this.normalizeDataType(t),
+        normalizeReturnType: (t) => this.normalizeReturnType(t),
+      });
 
-      // Restaurar borrador local no guardado si es más reciente
-      const draftResult = this.persistenceService.restoreDraftIfNewer(
-        diagramId,
-        diagram.updatedAt,
-        isSequence,
-        (nt, st) => this.getDefaultColorForNodeType(nt, st),
-      );
+      this.nodes.set(resolved.nodes);
+      this.connections.set(this.recalculateSequenceNumbers(resolved.connections, true));
+      if (resolved.defaultLineStyle) {
+        this.defaultLineStyle.set(resolved.defaultLineStyle);
+      }
 
-      if (draftResult.restored && draftResult.nodes) {
-        console.log('Restaurando borrador local no guardado por desconexión previa...');
-        this.nodes.set(draftResult.nodes);
-        this.connections.set(this.recalculateSequenceNumbers(draftResult.connections || [], true));
-        if (draftResult.defaultLineStyle) {
-          this.defaultLineStyle.set(draftResult.defaultLineStyle);
-        }
+      if (resolved.fromDraft) {
         this.markAsUnsaved();
         this.updateConnectionEndpoints();
         return;
       }
 
-      const { nodes, connections } = this.persistenceService.mapServerDiagramToLocal(
-        diagram,
-        (nt, st) => this.getDefaultColorForNodeType(nt, st),
-        (t) => this.normalizeDataType(t),
-        (t) => this.normalizeReturnType(t),
-      );
-
-      this.nodes.set(nodes);
-      this.connections.set(this.recalculateSequenceNumbers(connections, true));
-
-      // Limpiar selecciones previas y pila de deshacer/rehacer al cambiar de diagrama
       this.selectionService.clearSelection();
       this.selectedSourceNodeId.set(null);
       this.diagramHistoryService.clear();
 
-      // Sincronizar pestaña activa en la barra de pestañas (tabs)
       const diagType = (diagram.type as DiagramType) || DiagramType.CLASS;
       this.tabManager.addTab({ id: diagram.id, name: diagram.name, type: diagType });
       this.tabManager.updateTabName(diagram.id, diagram.name);
-
       this.collabCoordinator.switchRoom(this.collabCoordinator.getCurrentDiagramId(), diagramId);
 
-      if (diagram.projectId) {
-        if (!this.currentProject()) {
-          this.currentProjectId.set(diagram.projectId);
-          this.projectService.getProject(diagram.projectId).subscribe({
-            next: (proj) => {
-              this.currentProject.set(proj);
-            },
-            error: () => {},
-          });
-        }
-        if (this.diagramService.projectDiagrams().length === 0) {
-          this.diagramService.loadDiagramsByProject(diagram.projectId).subscribe();
-        }
-      }
+      this.syncProjectInfo(diagram.projectId);
 
       this.hasUnsavedChanges.set(false);
       requestAnimationFrame(() => {
@@ -629,6 +577,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         });
       });
     });
+  }
+
+  private syncProjectInfo(projectId?: string | null): void {
+    if (!projectId) return;
+    if (!this.currentProject()) {
+      this.currentProjectId.set(projectId);
+      this.projectService.getProject(projectId).subscribe({
+        next: (proj) => this.currentProject.set(proj),
+        error: () => {},
+      });
+    }
+    if (this.diagramService.projectDiagrams().length === 0) {
+      this.diagramService.loadDiagramsByProject(projectId).subscribe();
+    }
   }
 
   normalizeDataType(type: string): string {
@@ -787,14 +749,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   selectRelationType(type: UmlRelationshipType): void {
     if (this.isReadOnly()) return;
-
-    if (this.selectedRelationType() === type) {
-      this.selectedRelationType.set(null);
-      this.selectedSourceNodeId.set(null);
-    } else {
-      this.selectedRelationType.set(type);
-      this.selectedSourceNodeId.set(null);
-    }
+    this.selectedRelationType.set(this.selectedRelationType() === type ? null : type);
+    this.selectedSourceNodeId.set(null);
   }
 
   setPointerMode(): void {
@@ -885,17 +841,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.mouseCanvasPos.set(coords);
   }
 
-  getDynamicNodeWidth(node: UmlClassNode): number {
-    return getDynamicNodeWidth(node);
-  }
-
-  getNodeWidth(node: UmlClassNode): number {
-    return getNodeWidth(node);
-  }
-
-  getNodeHeight(node: UmlClassNode): number {
-    return getNodeHeight(node);
-  }
+  getDynamicNodeWidth(node: UmlClassNode): number { return getDynamicNodeWidth(node); }
+  getNodeWidth(node: UmlClassNode): number { return getNodeWidth(node); }
+  getNodeHeight(node: UmlClassNode): number { return getNodeHeight(node); }
 
 
 
@@ -1000,9 +948,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
   }
 
-  isRecursiveConn(conn: UmlConnection): boolean {
-    return this.connectionLayoutService.isRecursiveConn(conn);
-  }
+  isRecursiveConn(conn: UmlConnection): boolean { return this.connectionLayoutService.isRecursiveConn(conn); }
 
   getConnSide(connectorId: string | undefined, defaultSide: 'top' | 'right' | 'bottom' | 'left' = 'top'): 'top' | 'right' | 'bottom' | 'left' {
     return this.connectionLayoutService.getConnSide(connectorId, defaultSide);
@@ -1024,22 +970,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onCanvasMouseDown(event: MouseEvent): void {
-    if (this.contextMenu()) {
-      this.closeContextMenu();
-    }
+    if (this.contextMenu()) this.closeContextMenu();
     this.canvasMouseDownPos = { x: event.clientX, y: event.clientY };
   }
 
   onCanvasBackgroundClick(event?: MouseEvent): void {
-    if (this.contextMenu()) {
-      this.closeContextMenu();
-    }
     if (event && isDragMovement(this.canvasMouseDownPos.x, this.canvasMouseDownPos.y, event.clientX, event.clientY)) {
       return;
     }
-    this.selectedSourceNodeId.set(null);
-    this.selectionService.clearSelection();
-    this.diagramCanvas?.clearSelection();
+    this.deselectAll();
   }
 
   deselectAll(): void {
@@ -1086,9 +1025,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onConnectionSelect(connId: string, event: MouseEvent): void {
-    if (this.contextMenu()) {
-      this.closeContextMenu();
-    }
+    if (this.contextMenu()) this.closeContextMenu();
     this.selectionService.onConnectionSelect(
       connId,
       event,
@@ -1098,9 +1035,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onNodeSelect(nodeId: string, event: MouseEvent): void {
-    if (this.contextMenu()) {
-      this.closeContextMenu();
-    }
+    if (this.contextMenu()) this.closeContextMenu();
     this.selectionService.onNodeSelect(
       nodeId,
       event,
@@ -1764,19 +1699,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
   }
 
-  async downloadBmpFile(): Promise<void> {
-    await this.exportDiagramImage('bmp');
-  }
-
-  async downloadPngFile(): Promise<void> {
-    await this.exportDiagramImage('png');
-  }
-
-  private async exportDiagramImage(format: 'bmp' | 'png'): Promise<void> {
+  private checkExportBlocked(): boolean {
     if (this.hasMultipleActiveUsers()) {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      return;
+      return true;
     }
+    return false;
+  }
+
+  async downloadBmpFile(): Promise<void> { await this.exportDiagramImage('bmp'); }
+  async downloadPngFile(): Promise<void> { await this.exportDiagramImage('png'); }
+
+  private async exportDiagramImage(format: 'bmp' | 'png'): Promise<void> {
+    if (this.checkExportBlocked()) return;
     await this.diagramExportService.exportDiagramImage(
       this.diagramCanvas,
       format,
@@ -1788,10 +1723,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   downloadXmiFile(): void {
-    if (this.hasMultipleActiveUsers()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      return;
-    }
+    if (this.checkExportBlocked()) return;
     const diagId = this.currentDiagramId();
     if (!diagId) {
       alert('Debes guardar el diagrama antes de exportar XMI.');
@@ -1814,10 +1746,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   downloadJsonFile(): void {
-    if (this.hasMultipleActiveUsers()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      return;
-    }
+    if (this.checkExportBlocked()) return;
     this.diagramExportService.downloadJsonFile(
       this.currentDiagramName(),
       this.defaultLineStyle(),
@@ -1827,10 +1756,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   openExportModal(): void {
-    if (this.hasMultipleActiveUsers()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      return;
-    }
+    if (this.checkExportBlocked()) return;
     const project = this.diagramExportService.buildProjectJson(
       this.currentDiagramName(),
       this.defaultLineStyle(),
@@ -1999,13 +1925,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // --- MÉTODOS DEL EXPLORADOR DE DIAGRAMAS POR TIPO ---
 
-  openCreateDiagramModal(lockedType: DiagramType | null = null): void {
-    this.modalService.openCreateDiagramModal(lockedType);
-  }
-
-  closeCreateDiagramModal(): void {
-    this.modalService.closeCreateDiagramModal();
-  }
+  openCreateDiagramModal(lockedType: DiagramType | null = null): void { this.modalService.openCreateDiagramModal(lockedType); }
+  closeCreateDiagramModal(): void { this.modalService.closeCreateDiagramModal(); }
 
   handleCreateDiagram(data: { name: string; type: DiagramType }): void {
     this.tabManager.handleCreateDiagram(
@@ -2023,13 +1944,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onSelectDiagram(diagramId: string): void {
     if (this.currentDiagramId() === diagramId) return;
 
-    // Guardar el estado de vista del lienzo del diagrama saliente
     const outgoingId = this.currentDiagramId();
     if (outgoingId && this.diagramCanvas) {
       this.saveDiagramViewState(outgoingId, this.diagramCanvas.getViewState());
     }
 
-    // Si hay cambios sin guardar en el diagrama actual, persistirlos antes de cambiar
     if (this.hasUnsavedChanges() && !this.isReadOnly()) {
       this.saveToBackend(true);
     }
@@ -2043,9 +1962,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.loadDiagramFromBackend(diagramId);
   }
 
-  getTabTypeShort(type: DiagramType): string {
-    return this.tabManager.getTabTypeShort(type);
-  }
+  getTabTypeShort(type: DiagramType): string { return this.tabManager.getTabTypeShort(type); }
 
   closeTab(tabId: string, event: MouseEvent): void {
     event.stopPropagation();
