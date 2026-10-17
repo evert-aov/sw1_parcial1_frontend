@@ -29,6 +29,7 @@ export class DiagramSelectionService {
   });
 
   lastSelectionChangeTime = 0;
+  hasMovedDuringPointerDown = false;
 
   clearSelection(): void {
     this.selectedNodeId.set(null);
@@ -156,7 +157,7 @@ export class DiagramSelectionService {
     nodeId: string,
     event: MouseEvent,
     selectedRelationType: UmlRelationshipType | null,
-    hasMovedDuringPointerDown: boolean,
+    hasMovedDuringPointerDown: boolean = this.hasMovedDuringPointerDown,
     selectOnCanvas?: (nodeIds: string[], connIds: string[]) => void,
     clearCanvasSelection?: () => void,
   ): void {

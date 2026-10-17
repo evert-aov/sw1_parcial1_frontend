@@ -306,4 +306,26 @@ export class DiagramClipboardService {
       methods: (node.methods || []).map((m: any) => ({ ...m })),
     };
   }
+
+  /**
+   * Genera el mensaje de toast para una operación de copia
+   */
+  formatCopyToast(result: { copiedNodesCount: number; copiedConnsCount: number; sampleName: string }): string {
+    let toast = result.copiedNodesCount === 1 ? `"${result.sampleName}" copiado` : `${result.copiedNodesCount} elementos copiados`;
+    if (result.copiedConnsCount > 0) {
+      toast += ` (${result.copiedConnsCount} ${result.copiedConnsCount === 1 ? 'relación' : 'relaciones'})`;
+    }
+    return toast;
+  }
+
+  /**
+   * Genera el mensaje de toast para una operación de pegado
+   */
+  formatPasteToast(newNodes: UmlClassNode[], newConnections: UmlConnection[]): string {
+    let toast = newNodes.length === 1 ? `"${newNodes[0].name}" pegado en el lienzo` : `${newNodes.length} elementos pegados`;
+    if (newConnections.length > 0) {
+      toast += ` con ${newConnections.length} ${newConnections.length === 1 ? 'relación' : 'relaciones'}`;
+    }
+    return toast;
+  }
 }
