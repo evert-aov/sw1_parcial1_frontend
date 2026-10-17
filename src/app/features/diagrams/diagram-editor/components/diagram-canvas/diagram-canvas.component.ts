@@ -30,6 +30,8 @@ import { RemoteCursor, NodeLock } from '../../../../../core/services/collaborati
 import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
 import { DropNodePayload } from '../../services/diagram-node-operations.service';
 import { getNodeWidth, getNodeHeight } from '../../utils/node-metrics.util';
+import { DiagramSequenceActivationService } from '../../services/diagram-sequence-activation.service';
+import { isSequenceRelationshipType, findNextAvailableSlot } from './nodes/uml-lifeline-node/uml-lifeline.logic';
 
 import {
   createClassKonvaNode,
@@ -139,6 +141,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   private readonly ngZone = inject(NgZone);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly translationService = inject(TranslationService);
+  private readonly sequenceActivationService = inject(DiagramSequenceActivationService);
 
   // Inputs del lienzo
   readonly nodes = input.required<UmlClassNode[]>();
@@ -478,8 +481,9 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.previewLineGroup.destroyChildren();
 
-    const startX = srcNode.position.x + (srcNode.width || 180) / 2;
-    const startY = srcNode.position.y + (srcNode.height || 100) / 2;
+    const isSeq = this.activeDiagramType() === DiagramType.SEQUENCE;
+    const startX = srcNode.position.x + (srcNode.width || 120) / 2;
+    const startY = isSeq ? cursorY : srcNode.position.y + (srcNode.height || 100) / 2;
 
     const previewArrow = new Konva.Arrow({
       points: [startX, startY, cursorX, cursorY],
@@ -522,7 +526,12 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
     for (const rawNode of currentNodes) {
       const isSelected = selectedIds.has(rawNode.id) || rawNode.id === pendingSrcId;
-      const kNode = toKonvaNode(rawNode);
+      const kNode = toKonvaNode(
+        rawNode,
+        this.activeDiagramType(),
+        this.connections(),
+        this.sequenceActivationService
+      );
       const group = this.buildNodeGroup(kNode, isSelected);
 
       this.attachNodeInteractions(group, rawNode);
@@ -543,14 +552,23 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     const nodeMap = new Map<string, UmlNode>();
     for (const rawNode of this.nodes()) {
       if (!rawNode.isAnchor) {
-        nodeMap.set(rawNode.id, toKonvaNode(rawNode));
+        nodeMap.set(
+          rawNode.id,
+          toKonvaNode(
+            rawNode,
+            this.activeDiagramType(),
+            this.connections(),
+            this.sequenceActivationService
+          )
+        );
       }
     }
 
     const selectedConnIds = new Set([...this.selectedConnIds(), ...this.selectedConnIdsInternal()]);
+    const isSequenceDiag = this.activeDiagramType() === DiagramType.SEQUENCE;
 
     for (const rawConn of this.connections()) {
-      const kRel = toKonvaRelationship(rawConn);
+      const kRel = toKonvaRelationship(rawConn, this.activeDiagramType());
       const src = nodeMap.get(kRel.sourceId);
       const tgt = nodeMap.get(kRel.targetId);
       if (!src || !tgt) continue;
@@ -564,6 +582,31 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         1,
         this.flowPhase
       );
+
+      // Si es un mensaje de secuencia, permitir moverlo verticalmente entre slots
+      const isSeqConn = isSequenceDiag || ['sync_message', 'return_message'].includes(kRel.type);
+      if (isSeqConn && !this.isReadOnly()) {
+        relGroup.draggable(true);
+        relGroup.dragBoundFunc((pos) => ({
+          x: relGroup.absolutePosition().x,
+          y: pos.y,
+        }));
+
+        relGroup.on('dragend', () => {
+          const deltaY = relGroup.y();
+          relGroup.y(0);
+          const origY = kRel.yOffset || 160;
+          const finalY = origY + deltaY;
+          const targetSlot = Math.max(0, Math.round((finalY - 160) / 50));
+
+          this.ngZone.run(() => {
+            this.sequenceMessageMove.emit({
+              connectionId: rawConn.id,
+              targetSlot,
+            });
+          });
+        });
+      }
 
       relGroup.on('mousedown touchstart', (e) => {
         e.cancelBubble = true;
@@ -618,7 +661,8 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
   private attachNodeInteractions(group: Konva.Group, origNode: UmlClassNode): void {
     const isLocked = this.isNodeLockedByOther(origNode.id);
-    group.draggable(!this.isReadOnly() && !isLocked);
+    const canDrag = !this.isReadOnly() && !isLocked && this.selectedRelationType() === null;
+    group.draggable(canDrag);
 
     group.on('mouseenter', () => {
       this.hoveredNodeId.set(origNode.id);
@@ -641,10 +685,21 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
           if (!pendingSrc) {
             this.pendingSourceNodeId.set(origNode.id);
           } else if (pendingSrc !== origNode.id) {
-            this.connectionCreated.emit({
-              fOutputId: pendingSrc,
-              fInputId: origNode.id,
-            });
+            const isSeq =
+              this.activeDiagramType() === DiagramType.SEQUENCE ||
+              isSequenceRelationshipType(activeRelType);
+            if (isSeq) {
+              const nextSlot = findNextAvailableSlot(this.connections());
+              this.connectionCreated.emit({
+                fOutputId: `${pendingSrc}_slot_${nextSlot}`,
+                fInputId: `${origNode.id}_slot_${nextSlot}`,
+              });
+            } else {
+              this.connectionCreated.emit({
+                fOutputId: pendingSrc,
+                fInputId: origNode.id,
+              });
+            }
             this.pendingSourceNodeId.set(null);
             this.clearLivePreviewLine();
           }
@@ -672,15 +727,73 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       });
     });
 
+    // Control de arrastre robusto individual y sincronizado (multi-selección y secuencial)
+    let dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
+    const siblingStartPositions = new Map<string, { x: number; y: number }>();
+
+    group.on('dragstart', (e) => {
+      dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
+      siblingStartPositions.clear();
+
+      if (!this.selectedNodeIds().includes(origNode.id)) {
+        this.ngZone.run(() => {
+          this.nodeClick.emit({ nodeId: origNode.id, event: e.evt as MouseEvent });
+        });
+      }
+
+      for (const id of this.selectedNodeIds()) {
+        const otherG = this.nodeGroupsMap.get(id);
+        if (otherG) {
+          siblingStartPositions.set(id, { x: Math.round(otherG.x()), y: Math.round(otherG.y()) });
+        }
+      }
+    });
+
     // Actualización de líneas en vivo durante el arrastre
     group.on('dragmove', () => {
+      // En diagramas de secuencia, la línea de vida solo se mueve horizontalmente en X
+      if (this.activeDiagramType() === DiagramType.SEQUENCE || origNode.nodeType === 'lifeline') {
+        group.y(origNode.position ? origNode.position.y : 30);
+      }
+
       const curX = Math.round(group.x());
       const curY = Math.round(group.y());
+      const dx = curX - dragStartPos.x;
+      const dy = curY - dragStartPos.y;
+
       origNode.position = { x: curX, y: curY };
+
+      // Mover los demás nodos seleccionados de manera coordinada
+      if (siblingStartPositions.size > 1 && siblingStartPositions.has(origNode.id)) {
+        for (const [id, start] of siblingStartPositions.entries()) {
+          if (id !== origNode.id) {
+            const otherG = this.nodeGroupsMap.get(id);
+            const otherNode = this.nodes().find((n) => n.id === id);
+            if (otherG && otherNode) {
+              const targetX = Math.round(start.x + dx);
+              const targetY =
+                this.activeDiagramType() === DiagramType.SEQUENCE || otherNode.nodeType === 'lifeline'
+                  ? (otherNode.position ? otherNode.position.y : 30)
+                  : Math.round(start.y + dy);
+              otherG.position({ x: targetX, y: targetY });
+              otherNode.position = { x: targetX, y: targetY };
+            }
+          }
+        }
+      }
+
+      // Propagar posición al editor para WebSockets y sincronización reactiva en tiempo real
+      this.ngZone.run(() => {
+        this.nodePositionChange.emit({ node: origNode, newPosition: { x: curX, y: curY } });
+      });
+
       this.renderRelationshipsOnly();
     });
 
     group.on('dragend', () => {
+      if (this.activeDiagramType() === DiagramType.SEQUENCE || origNode.nodeType === 'lifeline') {
+        group.y(origNode.position ? origNode.position.y : 30);
+      }
       const finalX = Math.round(group.x());
       const finalY = Math.round(group.y());
       const newPosition = { x: finalX, y: finalY };
@@ -688,6 +801,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
       this.ngZone.run(() => {
         this.nodePositionChange.emit({ node: origNode, newPosition });
+        this.syncTransformer();
       });
     });
 
@@ -701,7 +815,17 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       group.scaleX(1);
       group.scaleY(1);
 
-      this.applyFluidNodeResize(group, toKonvaNode(origNode), nextW, nextH);
+      this.applyFluidNodeResize(
+        group,
+        toKonvaNode(
+          origNode,
+          this.activeDiagramType(),
+          this.connections(),
+          this.sequenceActivationService
+        ),
+        nextW,
+        nextH
+      );
 
       origNode.width = nextW;
       origNode.height = nextH;

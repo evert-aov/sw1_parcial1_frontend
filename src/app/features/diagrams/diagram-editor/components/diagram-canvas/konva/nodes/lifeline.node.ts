@@ -149,13 +149,15 @@ function drawLifelineGeometry(
   group.add(stem);
 
   // Execution Specification / Activation Bars
-  const activations = node.activations || [
-    { id: 'act-default', startY: headerH + 28, height: Math.max(60, height - headerH - 65) },
-  ];
+  const activations =
+    node.activations && node.activations.length > 0
+      ? node.activations
+      : [{ id: 'act-default', startY: headerH + 28, height: Math.max(60, height - headerH - 65) }];
 
   const barFill = node.isActorLifeline ? '#FDF3E1' : '#DCEEF2';
   activations.forEach((act) => {
-    const clampedStart = Math.min(height - 25, Math.max(headerH + 8, act.startY));
+    const actStart = act.startY ?? (act as any).top ?? headerH + 28;
+    const clampedStart = Math.min(height - 25, Math.max(headerH + 8, actStart));
     const clampedH = Math.max(20, Math.min(act.height, height - clampedStart - 8));
     const bar = new Konva.Rect({
       name: 'lifeline-part',
