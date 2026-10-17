@@ -277,4 +277,44 @@ export class DiagramNodeOperationsService {
     }
     return savedNode;
   }
+
+  /**
+   * Valida la compatibilidad de añadir un tipo de nodo según el tipo de diagrama actual
+   */
+  validateNodeAddition(
+    nodeType: string,
+    currentType: DiagramType,
+  ): { allowed: boolean; redirectType?: string } {
+    if (nodeType === 'class') {
+      if (currentType === DiagramType.COMMUNICATION) {
+        return { allowed: false };
+      }
+      if (currentType === DiagramType.COMPONENT) {
+        return { allowed: true, redirectType: 'component' };
+      }
+      if (currentType === DiagramType.DEPLOYMENT) {
+        return { allowed: true, redirectType: 'executionEnvironment' };
+      }
+      if (currentType === DiagramType.LAYERED) {
+        return { allowed: true, redirectType: 'package' };
+      }
+      return { allowed: true };
+    }
+
+    if (nodeType === 'actor') {
+      if (currentType === DiagramType.CLASS) {
+        return { allowed: false };
+      }
+      return { allowed: true };
+    }
+
+    if (nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') {
+      if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
+        return { allowed: false };
+      }
+      return { allowed: true };
+    }
+
+    return { allowed: true };
+  }
 }

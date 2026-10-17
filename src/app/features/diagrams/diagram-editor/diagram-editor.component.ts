@@ -404,6 +404,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private animationTimers: any[] = [];
 
   ngOnInit(): void {
+    this.initCollaborationSubscriptions();
+    this.initPersistencePipelines();
+    this.route.queryParams.subscribe((params) => this.handleRouteQueryParams(params));
+    this.updateConnectionEndpoints();
+  }
+
+  private initCollaborationSubscriptions(): void {
     this.collabCoordinator.setupSubscriptions({
       onRemoteNodeDrag: (data) => {
         this.nodes.update((list) =>
@@ -459,15 +466,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         }
       },
     });
+  }
 
-    // Pipeline de auto-guardado en tiempo real estilo Google Docs
+  private initPersistencePipelines(): void {
     this.persistenceService.setupAutoSave(() => {
       if (this.hasUnsavedChanges() && !this.isReadOnly() && this.currentDiagramId()) {
         this.saveToBackend(true);
       }
     });
 
-    // Sincronización y persistencia al terminar arrastre de nodos
     this.persistenceService.setupNodeDragEnd(() => {
       this.containmentService.resetDragState();
       if (!this.isReadOnly() && this.currentDiagramId()) {
@@ -480,10 +487,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         this.persistenceService.triggerAutoSave();
       }
     });
-
-    this.route.queryParams.subscribe((params) => this.handleRouteQueryParams(params));
-
-    this.updateConnectionEndpoints();
   }
 
   private handleRouteQueryParams(params: any): void {
@@ -892,23 +895,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     return getNodeHeight(node);
   }
 
-  isNodeInsideParent(child: UmlClassNode, parent: UmlClassNode): boolean {
-    return this.containmentService.isNodeInsideParent(
-      child,
-      parent,
-      (n) => this.getNodeWidth(n),
-      (n) => this.getNodeHeight(n),
-    );
-  }
 
-  getDescendantNodeIds(parentNodeId: string): Set<string> {
-    return this.containmentService.getDescendantNodeIds(
-      parentNodeId,
-      this.nodes(),
-      (n) => this.getNodeWidth(n),
-      (n) => this.getNodeHeight(n),
-    );
-  }
 
   onNodeSizeChanged(event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(event.node.id)) return;
@@ -943,11 +930,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.smartGuidesEnabled.update((val) => !val);
   }
 
-  alignNodes(direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'): void {
-    if (this.isReadOnly()) return;
-    if (this.selectedNodeIds().size < 2) return;
-
+  private applyNodesTransformation(modified: UmlClassNode[], action: string): void {
+    if (modified.length === 0) return;
     this.pushSnapshot();
+    for (const n of modified) {
+      this.collabCoordinator.sendNodeDrag(n.id, n.position);
+    }
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.diagramCanvas?.redraw();
+    this.collabCoordinator.sendDiagramSync(
+      this.nodes(),
+      this.connections(),
+      action,
+      this.defaultLineStyle(),
+    );
+  }
+
+  alignNodes(direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'): void {
+    if (this.isReadOnly() || this.selectedNodeIds().size < 2) return;
     const modified = this.alignmentService.alignNodes(
       this.nodes(),
       this.selectedNodeIds(),
@@ -955,27 +956,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       (n: UmlClassNode) => this.getNodeWidth(n),
       (n: UmlClassNode) => this.getNodeHeight(n),
     );
-    if (modified.length === 0) return;
-
-    for (const n of modified) {
-      this.collabCoordinator.sendNodeDrag(n.id, n.position);
-    }
-    this.markAsUnsaved();
-    this.updateConnectionEndpoints();
-    this.diagramCanvas?.redraw();
-    this.collabCoordinator.sendDiagramSync(
-      this.nodes(),
-      this.connections(),
-      'align_nodes',
-      this.defaultLineStyle(),
-    );
+    this.applyNodesTransformation(modified, 'align_nodes');
   }
 
   distributeNodes(direction: 'horizontal' | 'vertical'): void {
-    if (this.isReadOnly()) return;
-    if (this.selectedNodeIds().size < 3) return;
-
-    this.pushSnapshot();
+    if (this.isReadOnly() || this.selectedNodeIds().size < 3) return;
     const modified = this.alignmentService.distributeNodes(
       this.nodes(),
       this.selectedNodeIds(),
@@ -983,20 +968,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       (n: UmlClassNode) => this.getNodeWidth(n),
       (n: UmlClassNode) => this.getNodeHeight(n),
     );
-    if (modified.length === 0) return;
-
-    for (const n of modified) {
-      this.collabCoordinator.sendNodeDrag(n.id, n.position);
-    }
-    this.markAsUnsaved();
-    this.updateConnectionEndpoints();
-    this.diagramCanvas?.redraw();
-    this.collabCoordinator.sendDiagramSync(
-      this.nodes(),
-      this.connections(),
-      'distribute_nodes',
-      this.defaultLineStyle(),
-    );
+    this.applyNodesTransformation(modified, 'distribute_nodes');
   }
 
   snapSelectedToGrid(gridSize = 20): void {
@@ -1006,21 +978,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.selectedNodeIds(),
       gridSize,
     );
-    if (modified.length === 0) return;
-
-    this.pushSnapshot();
-    for (const n of modified) {
-      this.collabCoordinator.sendNodeDrag(n.id, n.position);
-    }
-    this.markAsUnsaved();
-    this.updateConnectionEndpoints();
-    this.diagramCanvas?.redraw();
-    this.collabCoordinator.sendDiagramSync(
-      this.nodes(),
-      this.connections(),
-      'snap_grid',
-      this.defaultLineStyle(),
-    );
+    this.applyNodesTransformation(modified, 'snap_grid');
   }
 
   getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
@@ -1098,13 +1056,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
   }
 
-  isNodeSelected(nodeId: string): boolean {
-    return this.selectionService.isNodeSelected(nodeId);
-  }
 
-  hasMultipleSelected(): boolean {
-    return this.selectionService.hasMultipleSelected();
-  }
 
   selectAllClasses(): void {
     this.selectionService.selectAllClasses(
@@ -1206,27 +1158,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (next) this.applyHistorySnapshot(next, 'redo');
   }
 
-  isConnectionSelected(connId: string): boolean {
-    return this.connectionOps.isConnectionSelected(connId, this.connections(), this.selectedNodeId());
-  }
 
-  isConnectionDimmed(connId: string): boolean {
-    return this.connectionOps.isConnectionDimmed(connId, this.connections(), this.selectedNodeId(), this.hasMultipleSelected());
-  }
-
-  isDiamondAtStart(conn: UmlConnection): boolean {
-    return this.connectionOps.isDiamondAtStart(conn);
-  }
-
-  swapEditingConnectionDirection(): void {
-    const c = this.editingConnection();
-    if (!c) return;
-    this.connectionOps.swapConnectionDirection(c);
-  }
-
-  isNeighborNode(nodeId: string): boolean {
-    return this.connectionOps.isNeighborNode(nodeId, this.connections(), this.selectedNodeId(), this.hasMultipleSelected());
-  }
 
   private generateNextSequenceMessage(
     sourceNode?: UmlClassNode,
@@ -1460,26 +1392,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.commitNewNode(newNode, autoRename);
   }
 
-  addClass(position?: { x: number; y: number }, stereotype?: UmlStereotype | string | null): void {
+  private addValidatedNode(
+    type: string,
+    position?: { x: number; y: number },
+    autoRename = true,
+    stereotype?: UmlStereotype | string | null,
+  ): void {
     if (this.isReadOnly()) return;
     const currentType = this.activeDiagramType();
-    if (currentType === DiagramType.COMMUNICATION) {
+    const validation = this.nodeOps.validateNodeAddition(type, currentType);
+    if (!validation.allowed) {
       this.showIncompatibleElementModal(currentType);
       return;
     }
-    if (currentType === DiagramType.COMPONENT) {
-      this.addComponent(position);
-      return;
-    }
-    if (currentType === DiagramType.DEPLOYMENT) {
-      this.addExecutionEnvironment(position);
-      return;
-    }
-    if (currentType === DiagramType.LAYERED) {
-      this.addPackage(position);
-      return;
-    }
-    this.addTypedNode('class', position, true, stereotype);
+    const finalType = validation.redirectType || type;
+    this.addTypedNode(finalType, position, autoRename, stereotype);
+  }
+
+  addClass(position?: { x: number; y: number }, stereotype?: UmlStereotype | string | null): void {
+    this.addValidatedNode('class', position, true, stereotype);
   }
 
   addComponent(position?: { x: number; y: number }): void {
@@ -1499,13 +1430,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   addActor(position?: { x: number; y: number }): void {
-    if (this.isReadOnly()) return;
-    const currentType = this.activeDiagramType();
-    if (currentType === DiagramType.CLASS) {
-      this.showIncompatibleElementModal(currentType);
-      return;
-    }
-    this.addTypedNode('actor', position);
+    this.addValidatedNode('actor', position);
   }
 
   addUseCase(position?: { x: number; y: number }): void {
@@ -1517,33 +1442,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   addBoundary(position?: { x: number; y: number }): void {
-    if (this.isReadOnly()) return;
-    const currentType = this.activeDiagramType();
-    if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
-      this.showIncompatibleElementModal(currentType);
-      return;
-    }
-    this.addTypedNode('boundary', position);
+    this.addValidatedNode('boundary', position);
   }
 
   addControl(position?: { x: number; y: number }): void {
-    if (this.isReadOnly()) return;
-    const currentType = this.activeDiagramType();
-    if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
-      this.showIncompatibleElementModal(currentType);
-      return;
-    }
-    this.addTypedNode('control', position);
+    this.addValidatedNode('control', position);
   }
 
   addEntity(position?: { x: number; y: number }): void {
-    if (this.isReadOnly()) return;
-    const currentType = this.activeDiagramType();
-    if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
-      this.showIncompatibleElementModal(currentType);
-      return;
-    }
-    this.addTypedNode('entity', position);
+    this.addValidatedNode('entity', position);
   }
 
   addLifeline(position?: { x: number; y: number }): void {
@@ -1821,34 +1728,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  saveEditedNode(): void {
-    const edited = this.editingNode();
-    if (!edited) return;
-
-    this.pushSnapshot();
-    this.nodes.update((list) => list.map((n) => (n.id === edited.id ? edited : n)));
-    this.markAsUnsaved();
-    this.closeEditNodeModal();
-    this.updateConnectionEndpoints();
-    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_node');
-  }
-
-  addAttributeToEditingNode(): void {
-    this.modalService.addAttributeToEditingNode();
-  }
-
-  removeAttributeFromEditingNode(index: number): void {
-    this.modalService.removeAttributeFromEditingNode(index);
-  }
-
-  addMethodToEditingNode(): void {
-    this.modalService.addMethodToEditingNode();
-  }
-
-  removeMethodFromEditingNode(index: number): void {
-    this.modalService.removeMethodFromEditingNode(index);
-  }
-
   openEditConnModal(conn: UmlConnection, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
@@ -1858,20 +1737,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   closeEditConnModal(): void {
     this.modalService.closeEditConnModal();
-  }
-
-  saveEditedConnection(): void {
-    const edited = this.editingConnection();
-    if (!edited) return;
-
-    this.connectionOps.prepareSavedEditedConnection(edited, this.activeDiagramType());
-
-    this.pushSnapshot();
-    this.connections.update((list) => this.recalculateSequenceNumbers(list.map((c) => (c.id === edited.id ? edited : c)), true));
-    this.markAsUnsaved();
-    this.closeEditConnModal();
-    this.updateConnectionEndpoints();
-    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_conn');
   }
 
   removeConnection(connId: string, event?: MouseEvent): void {
@@ -1955,22 +1820,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   async downloadBmpFile(): Promise<void> {
-    if (this.hasMultipleActiveUsers()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      return;
-    }
     await this.exportDiagramImage('bmp');
   }
 
   async downloadPngFile(): Promise<void> {
-    if (this.hasMultipleActiveUsers()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
-      return;
-    }
     await this.exportDiagramImage('png');
   }
 
   private async exportDiagramImage(format: 'bmp' | 'png'): Promise<void> {
+    if (this.hasMultipleActiveUsers()) {
+      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
     await this.diagramExportService.exportDiagramImage(
       this.diagramCanvas,
       format,
