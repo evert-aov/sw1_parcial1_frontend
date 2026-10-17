@@ -1,13 +1,12 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RelationshipSvgComponent } from '../../uml-svg/relationship-svg.component';
 import { TranslationService } from '../../../../../../core/i18n';
 import { UmlRelationshipType, UmlRelationTypeItem } from '../../../../../../core/models/diagram.model';
 
 @Component({
   selector: 'app-diagram-relationship-button',
   standalone: true,
-  imports: [CommonModule, RelationshipSvgComponent],
+  imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './diagram-relationship-button.component.html',
 })

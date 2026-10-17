@@ -24,7 +24,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css", "node_modules/@foblex/flow/styles/default.scss"]
+            "styles": ["src/styles.css"]
           },
           "configurations": {
             "production": {
@@ -47,13 +47,13 @@
                 }
               ],
               "outputHashing": "all",
-              "styles": ["src/styles.css", "node_modules/@foblex/flow/styles/default.scss"]
+              "styles": ["src/styles.css"]
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
-              "styles": ["src/styles.css", "node_modules/@foblex/flow/styles/default.scss"]
+              "styles": ["src/styles.css"]
             },
             "electron-local": {
               "fileReplacements": [
@@ -68,7 +68,7 @@
               "namedChunks": false,
               "aot": true,
               "extractLicenses": false,
-              "styles": ["src/styles.css", "node_modules/@foblex/flow/styles/default.scss"]
+              "styles": ["src/styles.css"]
             },
             "electron-prod": {
               "fileReplacements": [
@@ -83,7 +83,7 @@
               "namedChunks": false,
               "aot": true,
               "extractLicenses": false,
-              "styles": ["src/styles.css", "node_modules/@foblex/flow/styles/default.scss"]
+              "styles": ["src/styles.css"]
             }
           },
           "defaultConfiguration": "production"

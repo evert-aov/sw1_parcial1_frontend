@@ -5,39 +5,6 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Quitar contenedor/marco y sockets azules por defecto de foblex flow */
-:root {
-  --ff-connection-hit-width: 40px !important;
-  --ff-connection-hover-color: rgba(0, 0, 0, 0.001) !important;
-  --ff-connection-drag-handle-stroke: transparent;
-  --ff-connection-drag-handle-fill: transparent;
-  --ff-node-padding: 0px !important;
-  --ff-node-border-radius: 0px !important;
-  --ff-node-border-color: transparent !important;
-  --ff-node-background-color: transparent !important;
-  --ff-node-shadow: none !important;
-  --ff-canvas-background-color: #FFFFFF !important;
-  --ff-flow-background-color: #FFFFFF !important;
-  --ff-color-surface-canvas: #FFFFFF !important;
-  --ff-color-surface-page: #FFFFFF !important;
-}
-
-.dark {
-  --ff-connection-hit-width: 40px !important;
-  --ff-connection-hover-color: rgba(255, 255, 255, 0.001) !important;
-  --ff-connection-drag-handle-stroke: transparent;
-  --ff-connection-drag-handle-fill: transparent;
-  --ff-node-padding: 0px !important;
-  --ff-node-border-radius: 0px !important;
-  --ff-node-border-color: transparent !important;
-  --ff-node-background-color: transparent !important;
-  --ff-node-shadow: none !important;
-  --ff-canvas-background-color: #FFFFFF !important;
-  --ff-flow-background-color: #FFFFFF !important;
-  --ff-color-surface-canvas: #FFFFFF !important;
-  --ff-color-surface-page: #FFFFFF !important;
-}
-
 html.dark {
   color-scheme: dark;
 }

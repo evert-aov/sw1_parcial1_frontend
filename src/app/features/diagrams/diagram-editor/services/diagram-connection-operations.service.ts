@@ -1,5 +1,4 @@
 import { Injectable, inject } from '@angular/core';
-import { FCreateConnectionEvent, FReassignConnectionEvent } from '@foblex/flow';
 import { ToastService } from '../../../../core/services/toast.service';
 import {
   DiagramType,
@@ -16,6 +15,17 @@ import {
   getSequenceMessageColor,
 } from '../components/diagram-canvas/nodes';
 import { DiagramConnectionLayoutService } from './diagram-connection-layout.service';
+
+export interface DiagramCreateConnectionEvent {
+  fOutputId: string;
+  fInputId: string;
+}
+
+export interface DiagramReassignConnectionEvent {
+  connectionId: string;
+  nextSourceId?: string;
+  nextTargetId?: string;
+}
 
 export interface CreateConnectionParams {
   fOutputId: string;
@@ -675,7 +685,7 @@ export class DiagramConnectionOperationsService {
    * Maneja el ciclo completo del evento onConnectionCreated
    */
   handleConnectionCreated(
-    event: FCreateConnectionEvent,
+    event: DiagramCreateConnectionEvent,
     options: {
       isReadOnly: boolean;
       selectedRelationType: UmlRelationshipType | null;
@@ -722,7 +732,7 @@ export class DiagramConnectionOperationsService {
    * Maneja el evento onConnectionReassigned
    */
   handleConnectionReassigned(
-    event: FReassignConnectionEvent,
+    event: DiagramReassignConnectionEvent,
     options: {
       isReadOnly: boolean;
       connections: UmlConnection[];

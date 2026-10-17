@@ -21,7 +21,6 @@ import {
   UML_RELATION_TYPES,
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
-import { UML_SVG_COMPONENTS } from '../uml-svg';
 import { SHARED_DIAGRAM_UI_COMPONENTS } from '../shared-ui';
 import { TranslatePipe } from '../../../../../core/i18n';
 
@@ -32,7 +31,6 @@ import { TranslatePipe } from '../../../../../core/i18n';
     CommonModule,
     NgIconComponent,
     TranslatePipe,
-    ...UML_SVG_COMPONENTS,
     ...SHARED_DIAGRAM_UI_COMPONENTS,
   ],
   providers: [

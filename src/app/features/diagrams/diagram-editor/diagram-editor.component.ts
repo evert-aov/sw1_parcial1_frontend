@@ -12,11 +12,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  FCreateConnectionEvent,
-  FReassignConnectionEvent,
-  FMoveNodesEvent,
-  FSelectionChangeEvent,
-} from '@foblex/flow';
+  DiagramCreateConnectionEvent,
+  DiagramReassignConnectionEvent,
+} from './services/diagram-connection-operations.service';
+import { DiagramMoveNodesEvent } from './services/diagram-canvas-interaction.service';
+import { DiagramSelectionChangeEvent } from './services/diagram-selection.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { DIAGRAM_EDITOR_ICONS } from './diagram-editor.icons';
 
@@ -699,7 +699,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  onMoveNodes(event: FMoveNodesEvent): void {
+  onMoveNodes(event: DiagramMoveNodesEvent): void {
     if (this.isReadOnly()) return;
     const { anyMoved } = this.interactionService.handleMoveNodes({
       event,
@@ -832,7 +832,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.closeContextMenu();
   }
 
-  onSelectionChange(event: FSelectionChangeEvent): void {
+  onSelectionChange(event: DiagramSelectionChangeEvent): void {
     this.selectionService.onSelectionChange(event, this.nodes(), this.connections(), this.selectedRelationType());
   }
 
@@ -984,7 +984,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.syncZoomFromCanvas();
   }
 
-  onConnectionCreated(event: FCreateConnectionEvent): void {
+  onConnectionCreated(event: DiagramCreateConnectionEvent): void {
     this.connectionOps.handleConnectionCreated(event, {
       isReadOnly: this.isReadOnly(),
       selectedRelationType: this.selectedRelationType(),
@@ -999,7 +999,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  onConnectionReassigned(event: FReassignConnectionEvent): void {
+  onConnectionReassigned(event: DiagramReassignConnectionEvent): void {
     this.connectionOps.handleConnectionReassigned(event, {
       isReadOnly: this.isReadOnly(),
       connections: this.connections(),

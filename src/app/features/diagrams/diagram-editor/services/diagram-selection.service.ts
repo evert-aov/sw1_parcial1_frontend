@@ -1,6 +1,10 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { FSelectionChangeEvent } from '@foblex/flow';
 import { UmlClassNode, UmlConnection, UmlRelationshipType } from '../../../../core/models/diagram.model';
+
+export interface DiagramSelectionChangeEvent {
+  nodeIds?: string[];
+  connectionIds?: string[];
+}
 
 @Injectable({
   providedIn: 'root',
@@ -72,7 +76,7 @@ export class DiagramSelectionService {
   }
 
   onSelectionChange(
-    event: FSelectionChangeEvent,
+    event: DiagramSelectionChangeEvent,
     nodes: UmlClassNode[],
     connections: UmlConnection[],
     selectedRelationType: UmlRelationshipType | null,

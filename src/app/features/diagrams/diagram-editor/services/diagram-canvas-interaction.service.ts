@@ -1,8 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { FMoveNodesEvent } from '@foblex/flow';
 import { DiagramType, UmlClassNode } from '../../../../core/models/diagram.model';
 import { calculateCanvasCoordinates, isDragMovement } from '../utils/canvas-coordinates.util';
 import { DiagramContainmentService } from './diagram-containment.service';
+
+export interface DiagramMoveNodesEvent {
+  nodes: Array<{ id: string; position: { x: number; y: number } }>;
+}
 
 export interface NodePositionChangeParams {
   node: UmlClassNode;
@@ -19,7 +22,7 @@ export interface NodePositionChangeParams {
 }
 
 export interface MoveNodesParams {
-  event: FMoveNodesEvent;
+  event: DiagramMoveNodesEvent;
   nodes: UmlClassNode[];
   activeDiagramType: DiagramType;
   getNodeWidth: (n: UmlClassNode) => number;

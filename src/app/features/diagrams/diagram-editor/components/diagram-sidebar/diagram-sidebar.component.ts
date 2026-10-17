@@ -56,8 +56,7 @@ import {
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
-import { UML_SVG_COMPONENTS } from '../uml-svg';
-import { UML_WEBGL_COMPONENTS } from '../uml-webgl';
+import { DiagramSidebarIconComponent } from './diagram-sidebar-icon/diagram-sidebar-icon.component';
 import { SHARED_DIAGRAM_UI_COMPONENTS } from '../shared-ui';
 
 @Component({
@@ -68,8 +67,7 @@ import { SHARED_DIAGRAM_UI_COMPONENTS } from '../shared-ui';
     FormsModule,
     NgIconComponent,
     TranslatePipe,
-    ...UML_SVG_COMPONENTS,
-    ...UML_WEBGL_COMPONENTS,
+    DiagramSidebarIconComponent,
     ...SHARED_DIAGRAM_UI_COMPONENTS,
   ],
   providers: [
