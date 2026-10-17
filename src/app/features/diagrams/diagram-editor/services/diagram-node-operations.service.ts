@@ -317,4 +317,39 @@ export class DiagramNodeOperationsService {
 
     return { allowed: true };
   }
+
+  /**
+   * Actualiza las dimensiones y posición de un nodo tras redimensionamiento en lienzo
+   */
+  updateNodeSize(
+    nodes: UmlClassNode[],
+    event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } },
+  ): UmlClassNode[] {
+    const isLifeline = event.node.nodeType === 'lifeline';
+    const finalHeight = isLifeline ? 60 : event.height;
+    return nodes.map((n) =>
+      n.id === event.node.id
+        ? {
+            ...n,
+            customWidth: event.width,
+            customHeight: finalHeight,
+            isCustomSize: true,
+            width: event.width,
+            height: finalHeight,
+            position: event.position,
+          }
+        : n,
+    );
+  }
+
+  /**
+   * Actualiza el desplazamiento de etiqueta libre de un nodo
+   */
+  updateNodeLabelOffset(
+    nodes: UmlClassNode[],
+    nodeId: string,
+    offset: { x: number; y: number },
+  ): UmlClassNode[] {
+    return nodes.map((n) => (n.id === nodeId ? { ...n, labelOffset: { ...offset } } : n));
+  }
 }

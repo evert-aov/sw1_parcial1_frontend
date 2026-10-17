@@ -408,54 +408,57 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         );
         this.updateConnectionEndpoints();
       },
-      onRemoteDiagramSync: (data) => {
-        if (data.action === 'ai_mutation' && data.nodes) {
-          this.applyAiMutationWithAnimation(data.nodes, data.connections || []);
-        } else if (data.nodes) {
-          const cleanNodes = this.applyAiNodesMutation(data.nodes);
-          this.nodes.set(cleanNodes);
-          const cleanConns = this.sanitizeClientConnections(data.connections || [], cleanNodes);
-          this.connections.set(cleanConns);
-          this.updateConnectionEndpoints();
-          requestAnimationFrame(() => {
-            this.updateConnectionEndpoints();
-            this.diagramCanvas?.redraw();
-          });
-        }
-      },
-      onNodeLockRejected: (data) => {
-        if (this.editingNode()?.id === data.nodeId) {
-          this.isEditNodeModalOpen.set(false);
-          this.editingNode.set(null);
-          alert(`🔒 La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
-        }
-      },
+      onRemoteDiagramSync: (data) => this.applyRemoteDiagramSync(data),
+      onNodeLockRejected: (data) => this.handleNodeLockRejected(data),
       onServerSave: (data) => {
         if (data.diagramId === this.currentDiagramId()) {
           this.diagramService.isSaving.set(false);
           this.diagramService.lastSavedAt.set(new Date(data.savedAt));
-          if (!this.hasUnsavedChanges()) {
-            this.persistenceService.notifySaveSuccess(2000);
-          }
+          if (!this.hasUnsavedChanges()) this.persistenceService.notifySaveSuccess(2000);
         }
       },
-      onReconnected: () => {
-        const diagramId = this.currentDiagramId();
-        if (diagramId) {
-          if (this.hasUnsavedChanges()) {
-            this.collabCoordinator.sendDiagramSync(
-              this.nodes(),
-              this.connections(),
-              'reconnect_sync',
-              this.defaultLineStyle(),
-            );
-            this.saveToBackend(true);
-          } else {
-            this.loadDiagramFromBackend(diagramId);
-          }
-        }
-      },
+      onReconnected: () => this.handleReconnection(),
     });
+  }
+
+  private applyRemoteDiagramSync(data: { action: string; nodes?: UmlClassNode[]; connections?: UmlConnection[] }): void {
+    if (data.action === 'ai_mutation' && data.nodes) {
+      this.applyAiMutationWithAnimation(data.nodes, data.connections || []);
+    } else if (data.nodes) {
+      const cleanNodes = this.applyAiNodesMutation(data.nodes);
+      this.nodes.set(cleanNodes);
+      const cleanConns = this.sanitizeClientConnections(data.connections || [], cleanNodes);
+      this.connections.set(cleanConns);
+      this.updateConnectionEndpoints();
+      requestAnimationFrame(() => {
+        this.updateConnectionEndpoints();
+        this.diagramCanvas?.redraw();
+      });
+    }
+  }
+
+  private handleNodeLockRejected(data: { nodeId: string; lockedBy: { userId: string; userName: string } }): void {
+    if (this.editingNode()?.id === data.nodeId) {
+      this.isEditNodeModalOpen.set(false);
+      this.editingNode.set(null);
+      alert(`🔒 La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
+    }
+  }
+
+  private handleReconnection(): void {
+    const diagramId = this.currentDiagramId();
+    if (!diagramId) return;
+    if (this.hasUnsavedChanges()) {
+      this.collabCoordinator.sendDiagramSync(
+        this.nodes(),
+        this.connections(),
+        'reconnect_sync',
+        this.defaultLineStyle(),
+      );
+      this.saveToBackend(true);
+    } else {
+      this.loadDiagramFromBackend(diagramId);
+    }
   }
 
   private initPersistencePipelines(): void {
@@ -799,9 +802,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onNodeLabelOffsetChange(node: UmlClassNode, offset: { x: number; y: number }): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
     this.pushSnapshot();
-    this.nodes.update((list) =>
-      list.map((n) => (n.id === node.id ? { ...n, labelOffset: { ...offset } } : n))
-    );
+    this.nodes.set(this.nodeOps.updateNodeLabelOffset(this.nodes(), node.id, offset));
     this.markAsUnsaved();
     this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'move_node');
   }
@@ -845,26 +846,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   getNodeWidth(node: UmlClassNode): number { return getNodeWidth(node); }
   getNodeHeight(node: UmlClassNode): number { return getNodeHeight(node); }
 
-
-
   onNodeSizeChanged(event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(event.node.id)) return;
     this.pushSnapshot();
-    this.nodes.update((list) =>
-      list.map((n) =>
-        n.id === event.node.id
-          ? {
-              ...n,
-              customWidth: event.width,
-              customHeight: n.nodeType === 'lifeline' ? 60 : event.height,
-              isCustomSize: true,
-              width: event.width,
-              height: n.nodeType === 'lifeline' ? 60 : event.height,
-              position: event.position,
-            }
-          : n
-      )
-    );
+    this.nodes.set(this.nodeOps.updateNodeSize(this.nodes(), event));
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.collabCoordinator.sendDiagramSync(
@@ -1380,9 +1365,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollLeft = scrollEl?.scrollLeft || 0;
-    const scrollTop = scrollEl?.scrollTop || 0;
+    const { scrollLeft, scrollTop } = this.getScrollOffset();
 
     const { newNodes, newConnections, newPastedIds } = this.diagramClipboardService.createPastedElements(
       clip,
@@ -1453,39 +1436,30 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.contextMenuService.onCanvasContextMenu(data);
   }
 
-  reverseConnection(conn: UmlConnection): void {
-    if (this.isReadOnly()) return;
+  private syncUpdatedConnections(toastMsg: string): void {
     this.pushSnapshot();
-    this.connectionOps.reverseConnection(conn);
     this.connections.update((conns) => [...conns]);
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
     this.closeContextMenu();
-    this.showQuickToast('Dirección de relación invertida');
+    this.showQuickToast(toastMsg);
+  }
+
+  reverseConnection(conn: UmlConnection): void {
+    if (this.isReadOnly()) return;
+    this.connectionOps.reverseConnection(conn);
+    this.syncUpdatedConnections('Dirección de relación invertida');
   }
 
   setConnectionLineStyle(conn: UmlConnection, style: UmlLineStyle): void {
     if (this.isReadOnly()) return;
-    this.pushSnapshot();
     conn.lineStyle = style;
-    this.connections.update((conns) => [...conns]);
-    this.markAsUnsaved();
-    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_connection');
-    this.closeContextMenu();
-    this.showQuickToast(`Estilo de línea cambiado a ${style}`);
+    this.syncUpdatedConnections(`Estilo de línea cambiado a ${style}`);
   }
 
   private showIncompatibleElementModal(diagType: DiagramType): void {
-    const message = this.modalService?.getIncompatibleElementMessageKey
-      ? this.modalService.getIncompatibleElementMessageKey(diagType)
-      : 'editor.incompatible.class';
-    this.confirmDialogService?.alert({
-      title: 'editor.incompatible.title',
-      message,
-      type: 'warning',
-      confirmText: 'common.confirmModal.understood',
-    });
+    this.modalService.showIncompatibleElementModal(diagType, this.confirmDialogService);
   }
 
   handleCopyNodeFromExplorer(event: { node: any; sourceDiagramId: string; sourceDiagramType?: DiagramType; position?: { x: number; y: number } }): void {
@@ -1501,11 +1475,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     this.pushSnapshot();
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    const scrollOffset = {
-      scrollLeft: scrollEl?.scrollLeft || 0,
-      scrollTop: scrollEl?.scrollTop || 0,
-    };
+    const scrollOffset = this.getScrollOffset();
 
     const newNode = this.diagramClipboardService.createExplorerCopiedNode(
       node,
@@ -1619,14 +1589,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   openEditConnModal(conn: UmlConnection, event?: MouseEvent): void {
     if (event) event.stopPropagation();
-    if (this.isReadOnly()) return;
-
-    this.modalService.openEditConnModal(conn);
+    if (!this.isReadOnly()) this.modalService.openEditConnModal(conn);
   }
-
-  closeEditConnModal(): void {
-    this.modalService.closeEditConnModal();
-  }
+  closeEditConnModal(): void { this.modalService.closeEditConnModal(); }
 
   removeConnection(connId: string, event?: MouseEvent): void {
     if (event) event.stopPropagation();
