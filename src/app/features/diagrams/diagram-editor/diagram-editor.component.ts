@@ -711,32 +711,34 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       duplicate: () => this.duplicateSelected(),
       selectAll: () => this.selectAllClasses(),
       deleteSelected: () => this.deleteSelected(),
-      escape: () => {
-        this.selectedNodeId.set(null);
-        this.selectedNodeIds.set(new Set());
-        this.selectedConnId.set(null);
-        this.selectedConnIds.set(new Set());
-        this.setPointerMode();
-        this.closeEditNodeModal();
-        this.closeEditConnModal();
-        this.showJsonModal.set(false);
-        this.showSpringBootModal.set(false);
-        this.isExportDropdownOpen.set(false);
-      },
+      escape: () => this.handleEscapeKey(),
       hasContextMenu: () => !!this.contextMenu(),
       closeContextMenu: () => this.closeContextMenu(),
-      getRenameTargetNodeId: () => {
-        const isExplorerHovered =
-          this.isSidebarOpen() &&
-          this.diagramSidebar?.activeTab() === 'explorer' &&
-          !!this.diagramSidebar?.hoveredDiagramId();
-        if (isExplorerHovered) return null;
-        return this.diagramCanvas?.hoveredNodeId() || this.selectedNodeId();
-      },
-      startRenameNode: (targetNodeId: string) => {
-        this.diagramCanvas?.startRenameNode(targetNodeId);
-      },
+      getRenameTargetNodeId: () => this.getRenameTargetNodeId(),
+      startRenameNode: (targetNodeId: string) => this.diagramCanvas?.startRenameNode(targetNodeId),
     });
+  }
+
+  private handleEscapeKey(): void {
+    this.selectedNodeId.set(null);
+    this.selectedNodeIds.set(new Set());
+    this.selectedConnId.set(null);
+    this.selectedConnIds.set(new Set());
+    this.setPointerMode();
+    this.closeEditNodeModal();
+    this.closeEditConnModal();
+    this.showJsonModal.set(false);
+    this.showSpringBootModal.set(false);
+    this.isExportDropdownOpen.set(false);
+  }
+
+  private getRenameTargetNodeId(): string | null {
+    const isExplorerHovered =
+      this.isSidebarOpen() &&
+      this.diagramSidebar?.activeTab() === 'explorer' &&
+      !!this.diagramSidebar?.hoveredDiagramId();
+    if (isExplorerHovered) return null;
+    return this.diagramCanvas?.hoveredNodeId() || this.selectedNodeId();
   }
 
   buildSaveAstPayload(): SaveDiagramAstRequest {
@@ -1222,19 +1224,37 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         return;
       }
 
-      if (!result.newConn) return;
-
-      this.pushSnapshot();
-      this.connections.update((list) => this.recalculateSequenceNumbers([...list, result.newConn!]));
-      this.markAsUnsaved();
-      this.setPointerMode();
-      this.updateConnectionEndpoints();
-      this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
-      if (result.isSeqRel) {
-        const created = this.connections().find((c) => c.id === result.newConn!.id) || result.newConn!;
-        setTimeout(() => this.openEditConnModal(created), 100);
+      if (result.newConn) {
+        this.applyNewConnection(result.newConn, !!result.isSeqRel);
       }
     }
+  }
+
+  private applyNewConnection(newConn: UmlConnection, isSeqRel: boolean): void {
+    this.pushSnapshot();
+    this.connections.update((list) => this.recalculateSequenceNumbers([...list, newConn]));
+    this.markAsUnsaved();
+    this.setPointerMode();
+    this.updateConnectionEndpoints();
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
+    if (isSeqRel) {
+      const created = this.connections().find((c) => c.id === newConn.id) || newConn;
+      setTimeout(() => this.openEditConnModal(created), 100);
+    }
+  }
+
+  private applyCreatedAssociationClass(result: { nodes: UmlClassNode[]; connections: UmlConnection[] }): void {
+    this.pushSnapshot();
+    this.nodes.set(result.nodes);
+    this.connections.set(result.connections);
+    this.markAsUnsaved();
+    this.setPointerMode();
+    this.updateConnectionEndpoints();
+    requestAnimationFrame(() => {
+      this.updateConnectionEndpoints();
+      this.diagramCanvas?.reset();
+    });
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
   }
 
   onFlowLoaded(): void {
@@ -1264,32 +1284,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
 
     if (result.createdAssociationClass) {
-      this.pushSnapshot();
-      this.nodes.set(result.createdAssociationClass.nodes);
-      this.connections.set(result.createdAssociationClass.connections);
-      this.markAsUnsaved();
-      this.setPointerMode();
-      this.updateConnectionEndpoints();
-      requestAnimationFrame(() => {
-        this.updateConnectionEndpoints();
-        this.diagramCanvas?.reset();
-      });
-      this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
+      this.applyCreatedAssociationClass(result.createdAssociationClass);
       return;
     }
 
-    if (!result.newConnection) return;
-
-    this.pushSnapshot();
-    this.connections.update((list) => this.recalculateSequenceNumbers([...list, result.newConnection!]));
-    this.markAsUnsaved();
-    this.setPointerMode();
-    this.updateConnectionEndpoints();
-
-    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_conn');
-    if (result.isSeqRel) {
-      const created = this.connections().find((c) => c.id === result.newConnection!.id) || result.newConnection!;
-      setTimeout(() => this.openEditConnModal(created), 100);
+    if (result.newConnection) {
+      this.applyNewConnection(result.newConnection, !!result.isSeqRel);
     }
   }
 
@@ -1337,24 +1337,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   createAssociationClassBetween(sourceNode: UmlClassNode, targetNode: UmlClassNode): void {
-    this.pushSnapshot();
     const result = this.connectionOps.createAssociationClassBetween(
       sourceNode,
       targetNode,
       this.nodes(),
       this.connections(),
     );
-
-    this.nodes.set(result.nodes);
-    this.connections.set(result.connections);
-    this.markAsUnsaved();
-    this.setPointerMode();
-    this.updateConnectionEndpoints();
-    requestAnimationFrame(() => {
-      this.updateConnectionEndpoints();
-      this.diagramCanvas?.reset();
-    });
-    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'create_assoc_class');
+    this.applyCreatedAssociationClass(result);
   }
 
   private getScrollOffset(): { scrollLeft: number; scrollTop: number } {
@@ -1412,50 +1401,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   addClass(position?: { x: number; y: number }, stereotype?: UmlStereotype | string | null): void {
     this.addValidatedNode('class', position, true, stereotype);
   }
-
-  addComponent(position?: { x: number; y: number }): void {
-    this.addTypedNode('component', position);
-  }
-
-  addDevice(position?: { x: number; y: number }): void {
-    this.addTypedNode('device', position);
-  }
-
-  addExecutionEnvironment(position?: { x: number; y: number }): void {
-    this.addTypedNode('executionEnvironment', position);
-  }
-
-  addBoundaryBox(position?: { x: number; y: number }): void {
-    this.addTypedNode('boundary_box', position, false);
-  }
-
-  addActor(position?: { x: number; y: number }): void {
-    this.addValidatedNode('actor', position);
-  }
-
-  addUseCase(position?: { x: number; y: number }): void {
-    this.addTypedNode('use_case', position);
-  }
-
-  addPackage(position?: { x: number; y: number }): void {
-    this.addTypedNode('package', position);
-  }
-
-  addBoundary(position?: { x: number; y: number }): void {
-    this.addValidatedNode('boundary', position);
-  }
-
-  addControl(position?: { x: number; y: number }): void {
-    this.addValidatedNode('control', position);
-  }
-
-  addEntity(position?: { x: number; y: number }): void {
-    this.addValidatedNode('entity', position);
-  }
-
-  addLifeline(position?: { x: number; y: number }): void {
-    this.addTypedNode('lifeline', position);
-  }
+  addComponent(pos?: { x: number; y: number }): void { this.addTypedNode('component', pos); }
+  addDevice(pos?: { x: number; y: number }): void { this.addTypedNode('device', pos); }
+  addExecutionEnvironment(pos?: { x: number; y: number }): void { this.addTypedNode('executionEnvironment', pos); }
+  addBoundaryBox(pos?: { x: number; y: number }): void { this.addTypedNode('boundary_box', pos, false); }
+  addActor(pos?: { x: number; y: number }): void { this.addValidatedNode('actor', pos); }
+  addUseCase(pos?: { x: number; y: number }): void { this.addTypedNode('use_case', pos); }
+  addPackage(pos?: { x: number; y: number }): void { this.addTypedNode('package', pos); }
+  addBoundary(pos?: { x: number; y: number }): void { this.addValidatedNode('boundary', pos); }
+  addControl(pos?: { x: number; y: number }): void { this.addValidatedNode('control', pos); }
+  addEntity(pos?: { x: number; y: number }): void { this.addValidatedNode('entity', pos); }
+  addLifeline(pos?: { x: number; y: number }): void { this.addTypedNode('lifeline', pos); }
 
   copySelectedNodes(): void {
     const result = this.diagramClipboardService.copyNodes(
@@ -1641,22 +1597,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     const { payload, position } = event;
 
     if (payload.type === 'toolbox_node') {
-      const actions: Record<string, () => void> = {
-        class: () => this.addClass(position, payload.stereotype),
-        component: () => this.addComponent(position),
-        device: () => this.addDevice(position),
-        executionEnvironment: () => this.addExecutionEnvironment(position),
-        node: () => this.addExecutionEnvironment(position),
-        actor: () => this.addActor(position),
-        use_case: () => this.addUseCase(position),
-        package: () => this.addPackage(position),
-        boundary_box: () => this.addBoundaryBox(position),
-        boundary: () => this.addBoundary(position),
-        control: () => this.addControl(position),
-        entity: () => this.addEntity(position),
-        lifeline: () => this.addLifeline(position),
-      };
-      actions[payload.nodeType]?.();
+      this.dropToolboxNode(payload.nodeType, position, payload.stereotype);
     } else if (payload.type === 'explorer_node') {
       const node = payload.nodeData || payload.node;
       this.handleCopyNodeFromExplorer({
@@ -1665,6 +1606,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         sourceDiagramType: payload.sourceDiagramType,
         position,
       });
+    }
+  }
+
+  private dropToolboxNode(nodeType: string, position: { x: number; y: number }, stereotype?: any): void {
+    const type = nodeType === 'node' ? 'executionEnvironment' : nodeType;
+    if (type === 'class') {
+      this.addClass(position, stereotype);
+    } else if (['actor', 'boundary', 'control', 'entity'].includes(type)) {
+      this.addValidatedNode(type, position);
+    } else if (type === 'boundary_box') {
+      this.addBoundaryBox(position);
+    } else {
+      this.addTypedNode(type, position);
     }
   }
 
@@ -1782,20 +1736,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.connections.set(cleanConns);
     this.markAsUnsaved();
 
-    // Redibujado secuencial: frame 1 tras cambio de señal, frame 2 tras layout del DOM, y frame 3 post-fitView
-    requestAnimationFrame(() => {
-      this.updateConnectionEndpoints();
-      requestAnimationFrame(() => {
-        this.updateConnectionEndpoints();
-        this.diagramCanvas?.reset();
-        setTimeout(() => {
-          this.updateConnectionEndpoints();
-          this.fitView();
-          setTimeout(() => {
-            this.diagramCanvas?.redraw();
-          }, 80);
-        }, 80);
-      });
+    this.aiSyncService.schedulePostMutationRedraw({
+      updateEndpoints: () => this.updateConnectionEndpoints(),
+      resetCanvas: () => this.diagramCanvas?.reset(),
+      fitView: () => this.fitView(),
+      redrawCanvas: () => this.diagramCanvas?.redraw(),
     });
   }
 
@@ -1886,14 +1831,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       alert(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
-    const project: UmlDiagramProject = {
-      version: '1.0',
-      name: this.currentDiagramName(),
-      createdDate: new Date().toISOString(),
-      defaultLineStyle: this.defaultLineStyle(),
-      nodes: this.nodes(),
-      connections: this.connections(),
-    };
+    const project = this.diagramExportService.buildProjectJson(
+      this.currentDiagramName(),
+      this.defaultLineStyle(),
+      this.nodes(),
+      this.connections(),
+    );
     this.modalService.openExportModal(JSON.stringify(project, null, 2));
   }
 
@@ -1981,36 +1924,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.viewportService.onZoomChanged(zoom, this.currentDiagramId());
   }
 
-  zoomIn(): void {
-    this.viewportService.zoomIn(this.diagramCanvas);
-  }
-
-  zoomOut(): void {
-    this.viewportService.zoomOut(this.diagramCanvas);
-  }
-
+  zoomIn(): void { this.viewportService.zoomIn(this.diagramCanvas); }
+  zoomOut(): void { this.viewportService.zoomOut(this.diagramCanvas); }
   onViewportScroll(event: Event): void {
-    if (this.contextMenu()) {
-      this.closeContextMenu();
-    }
+    if (this.contextMenu()) this.closeContextMenu();
     this.viewportService.onViewportScroll(event, this.currentDiagramId());
   }
-
-  restoreViewportScroll(diagramId: string | null): void {
-    this.viewportService.restoreViewportScroll(this.diagramCanvas, diagramId);
-  }
-
-  centerViewportOnBoard(): void {
-    this.viewportService.centerViewportOnBoard(this.diagramCanvas);
-  }
-
-  resetView(): void {
-    this.viewportService.resetView(this.diagramCanvas);
-  }
-
-  fitView(): void {
-    this.viewportService.fitView(this.diagramCanvas);
-  }
+  restoreViewportScroll(diagramId: string | null): void { this.viewportService.restoreViewportScroll(this.diagramCanvas, diagramId); }
+  centerViewportOnBoard(): void { this.viewportService.centerViewportOnBoard(this.diagramCanvas); }
+  resetView(): void { this.viewportService.resetView(this.diagramCanvas); }
+  fitView(): void { this.viewportService.fitView(this.diagramCanvas); }
 
   onDiagramTypeChange(type: DiagramType): void {
     this.activeDiagramType.set(type);

@@ -73,6 +73,32 @@ export class DiagramAiSyncService {
     }
   }
 
+  /**
+   * Redibujado secuencial de tres fases tras mutaciones estructurales por IA
+   * (Fase 1: cálculo de extremos; Fase 2: reset del layout DOM; Fase 3: encuadre y refresco final).
+   */
+  schedulePostMutationRedraw(callbacks: {
+    updateEndpoints: () => void;
+    resetCanvas?: () => void;
+    fitView?: () => void;
+    redrawCanvas?: () => void;
+  }): void {
+    requestAnimationFrame(() => {
+      callbacks.updateEndpoints();
+      requestAnimationFrame(() => {
+        callbacks.updateEndpoints();
+        callbacks.resetCanvas?.();
+        setTimeout(() => {
+          callbacks.updateEndpoints();
+          callbacks.fitView?.();
+          setTimeout(() => {
+            callbacks.redrawCanvas?.();
+          }, 80);
+        }, 80);
+      });
+    });
+  }
+
   normalizeDataType(type: string): string {
     if (!type) return 'String';
     const found = PREDEFINED_DATA_TYPES.find((t) => t.toLowerCase() === type.trim().toLowerCase());

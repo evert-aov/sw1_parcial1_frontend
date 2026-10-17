@@ -107,6 +107,25 @@ export class DiagramExportService {
   }
 
   /**
+   * Construye el objeto JSON exportable del proyecto de diagrama.
+   */
+  buildProjectJson(
+    diagramName: string,
+    defaultLineStyle: UmlLineStyle,
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+  ): UmlDiagramExportJson {
+    return {
+      version: '1.0',
+      name: diagramName,
+      createdDate: new Date().toISOString(),
+      defaultLineStyle,
+      nodes,
+      connections,
+    };
+  }
+
+  /**
    * Genera y descarga el archivo JSON del diagrama.
    */
   downloadJsonFile(
@@ -115,15 +134,7 @@ export class DiagramExportService {
     nodes: UmlClassNode[],
     connections: UmlConnection[],
   ): void {
-    const project: UmlDiagramExportJson = {
-      version: '1.0',
-      name: diagramName,
-      createdDate: new Date().toISOString(),
-      defaultLineStyle,
-      nodes,
-      connections,
-    };
-
+    const project = this.buildProjectJson(diagramName, defaultLineStyle, nodes, connections);
     const blob = new Blob([JSON.stringify(project, null, 2)], {
       type: 'application/json',
     });
