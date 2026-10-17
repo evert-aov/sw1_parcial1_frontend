@@ -73,6 +73,7 @@ import { DiagramViewportService } from './services/diagram-viewport.service';
 import { DiagramModalService } from './services/diagram-modal.service';
 import { DiagramPersistenceService } from './services/diagram-persistence.service';
 import { DiagramContainmentService } from './services/diagram-containment.service';
+import { DiagramCanvasInteractionService } from './services/diagram-canvas-interaction.service';
 import { DiagramCollaborationCoordinatorService } from './services/diagram-collaboration-coordinator.service';
 import { DiagramContextMenuService } from './services/diagram-context-menu.service';
 import { TranslatePipe, TranslationService } from '../../../core/i18n';
@@ -84,7 +85,6 @@ import {
   computeBoardWidth,
   computeBoardHeight,
 } from './utils/node-metrics.util';
-import { calculateCanvasCoordinates, isDragMovement } from './utils/canvas-coordinates.util';
 import { resolveUserRoleInProject } from './utils/project-role.util';
 
 export interface UmlDiagramProject {
@@ -153,6 +153,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly diagramModalService = inject(DiagramModalService, { optional: true }) ?? new DiagramModalService();
   readonly diagramPersistenceService = inject(DiagramPersistenceService, { optional: true }) ?? new DiagramPersistenceService();
   readonly diagramContainmentService = inject(DiagramContainmentService, { optional: true }) ?? new DiagramContainmentService();
+  readonly diagramCanvasInteractionService = inject(DiagramCanvasInteractionService, { optional: true }) ?? new DiagramCanvasInteractionService(this.containmentService);
   readonly diagramCollaborationCoordinatorService = inject(DiagramCollaborationCoordinatorService, { optional: true }) ?? new DiagramCollaborationCoordinatorService();
   readonly diagramContextMenuService = inject(DiagramContextMenuService, { optional: true }) ?? new DiagramContextMenuService(this.selectionService);
 
@@ -171,6 +172,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   private get modalService(): DiagramModalService { return this.diagramModalService || new DiagramModalService(); }
   private get persistenceService(): DiagramPersistenceService { return this.diagramPersistenceService || new DiagramPersistenceService(); }
   private get containmentService(): DiagramContainmentService { return this.diagramContainmentService || new DiagramContainmentService(); }
+  private get interactionService(): DiagramCanvasInteractionService { return this.diagramCanvasInteractionService || new DiagramCanvasInteractionService(this.containmentService); }
   private get collabCoordinator(): DiagramCollaborationCoordinatorService { return this.diagramCollaborationCoordinatorService || new DiagramCollaborationCoordinatorService(); }
   private get contextMenuService(): DiagramContextMenuService { return this.diagramContextMenuService || new DiagramContextMenuService(this.selectionService); }
 
@@ -271,11 +273,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
   smartGuidesEnabled = signal<boolean>(true);
 
-  private canvasMouseDownPos = { x: 0, y: 0 };
-
-  // Historial de cambios (Deshacer Ctrl+Z / Rehacer Ctrl+Y)
   private isApplyingHistory = false;
-  private hasMovedDuringPointerDown = false;
+  get hasMovedDuringPointerDown(): boolean { return this.interactionService.hasMovedDuringPointerDown; }
+  set hasMovedDuringPointerDown(val: boolean) { this.interactionService.hasMovedDuringPointerDown = val; }
 
   historyUndoCount = computed(() => this.diagramHistoryService.undoCount());
   historyRedoCount = computed(() => this.diagramHistoryService.redoCount());
@@ -577,15 +577,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   @HostListener('window:mousedown')
   onWindowMouseDown(): void {
-    this.hasMovedDuringPointerDown = false;
+    this.interactionService.handleWindowMouseDown();
   }
 
   @HostListener('window:mouseup')
   onWindowMouseUp(): void {
-    this.containmentService.resetDragState();
-    setTimeout(() => {
-      this.hasMovedDuringPointerDown = false;
-    }, 50);
+    this.interactionService.handleWindowMouseUp();
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -696,9 +693,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-    this.hasMovedDuringPointerDown = true;
-
-    const { shouldRedraw } = this.containmentService.processNodePositionChange({
+    const { shouldRedraw } = this.interactionService.handleNodePositionChange({
       node,
       newPosition,
       nodes: this.nodes(),
@@ -708,17 +703,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       getNodeWidth: (n) => this.getNodeWidth(n),
       getNodeHeight: (n) => this.getNodeHeight(n),
       onStartDrag: () => this.pushSnapshot(),
-      onSelectNode: (id) => {
-        this.selectedNodeIds.set(new Set([id]));
-        this.selectedNodeId.set(id);
-      },
+      onSelectNode: (id) => this.selectionService.setNodeSelection([id]),
       sendNodeDrag: (id, pos) => this.collabCoordinator.sendNodeDrag(id, pos),
     });
-
-    if (shouldRedraw) {
-      this.diagramCanvas?.redraw();
-    }
-
+    if (shouldRedraw) this.diagramCanvas?.redraw();
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
     this.persistenceService.triggerNodeDragEnd();
@@ -734,10 +722,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onMoveNodes(event: FMoveNodesEvent): void {
     if (this.isReadOnly()) return;
-    this.hasMovedDuringPointerDown = true;
-
-    const { anyMoved } = this.containmentService.processMoveNodes({
-      eventNodes: event.nodes,
+    const { anyMoved } = this.interactionService.handleMoveNodes({
+      event,
       nodes: this.nodes(),
       activeDiagramType: this.activeDiagramType(),
       getNodeWidth: (n) => this.getNodeWidth(n),
@@ -745,7 +731,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       onStartDrag: () => this.pushSnapshot(),
       sendNodeDrag: (id, pos) => this.collabCoordinator.sendNodeDrag(id, pos),
     });
-
     if (anyMoved) {
       this.nodes.set([...this.nodes()]);
       this.markAsUnsaved();
@@ -756,15 +741,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onCanvasMouseMove(event: MouseEvent): void {
-    const coords = calculateCanvasCoordinates(
+    const coords = this.interactionService.handleCanvasMouseMove(
       event,
       this.diagramCanvas?.getExportElement(),
       this.diagramCanvas?.canvas?.transform,
+      (x, y) => this.collabCoordinator.sendCursorPosition(x, y),
     );
-    if (!coords) return;
-
-    this.collabCoordinator.sendCursorPosition(coords.x, coords.y);
-    this.mouseCanvasPos.set(coords);
+    if (coords) this.mouseCanvasPos.set(coords);
   }
 
   getDynamicNodeWidth(node: UmlClassNode): number { return getDynamicNodeWidth(node); }
@@ -842,20 +825,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
-    return this.connectionLayoutService.getOptimalConnectorId(
-      sourceNode,
-      targetNode,
-      (n: UmlClassNode) => this.getNodeWidth(n),
-      (n: UmlClassNode) => this.getNodeHeight(n),
-    );
+    return this.connectionLayoutService.getOptimalConnectorId(sourceNode, targetNode, (n) => this.getNodeWidth(n), (n) => this.getNodeHeight(n));
   }
 
   getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
-    return this.connectionLayoutService.getConnectorPoint(
-      node,
-      side,
-      (n: UmlClassNode) => this.getNodeHeight(n),
-    );
+    return this.connectionLayoutService.getConnectorPoint(node, side, (n) => this.getNodeHeight(n));
   }
 
   isRecursiveConn(conn: UmlConnection): boolean { return this.connectionLayoutService.isRecursiveConn(conn); }
@@ -870,25 +844,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.connections(),
       this.activeDiagramType(),
       this.defaultLineStyle(),
-      (n: UmlClassNode) => this.getNodeWidth(n),
-      (n: UmlClassNode) => this.getNodeHeight(n),
+      (n) => this.getNodeWidth(n),
+      (n) => this.getNodeHeight(n),
     );
-    if (result.anchorMoved) {
-      this.nodes.set(result.updatedNodes);
-    }
+    if (result.anchorMoved) this.nodes.set(result.updatedNodes);
     this.connections.set(result.updatedConnections);
   }
 
   onCanvasMouseDown(event: MouseEvent): void {
-    if (this.contextMenu()) this.closeContextMenu();
-    this.canvasMouseDownPos = { x: event.clientX, y: event.clientY };
+    this.interactionService.handleCanvasMouseDown(event, () => this.closeContextMenu());
   }
 
   onCanvasBackgroundClick(event?: MouseEvent): void {
-    if (event && isDragMovement(this.canvasMouseDownPos.x, this.canvasMouseDownPos.y, event.clientX, event.clientY)) {
-      return;
-    }
-    this.deselectAll();
+    this.interactionService.handleCanvasBackgroundClick(event, () => this.deselectAll());
   }
 
   deselectAll(): void {
@@ -899,22 +867,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onSelectionChange(event: FSelectionChangeEvent): void {
-    this.selectionService.onSelectionChange(
-      event,
-      this.nodes(),
-      this.connections(),
-      this.selectedRelationType(),
-    );
+    this.selectionService.onSelectionChange(event, this.nodes(), this.connections(), this.selectedRelationType());
   }
 
-
-
   selectAllClasses(): void {
-    this.selectionService.selectAllClasses(
-      this.nodes(),
-      this.selectedRelationType(),
-      (allIds) => this.diagramCanvas?.select(allIds, []),
-    );
+    this.selectionService.selectAllClasses(this.nodes(), this.selectedRelationType(), (allIds) => this.diagramCanvas?.select(allIds, []));
   }
 
   deleteSelected(): void {
@@ -931,12 +888,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onConnectionSelect(connId: string, event: MouseEvent): void {
     if (this.contextMenu()) this.closeContextMenu();
-    this.selectionService.onConnectionSelect(
-      connId,
-      event,
-      this.selectedRelationType(),
-      (nodeIds, connIds) => this.diagramCanvas?.select(nodeIds, connIds),
-    );
+    this.selectionService.onConnectionSelect(connId, event, this.selectedRelationType(), (n, c) => this.diagramCanvas?.select(n, c));
   }
 
   onNodeSelect(nodeId: string, event: MouseEvent): void {
@@ -946,7 +898,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       event,
       this.selectedRelationType(),
       this.hasMovedDuringPointerDown,
-      (nodeIds, connIds) => this.diagramCanvas?.select(nodeIds, connIds),
+      (n, c) => this.diagramCanvas?.select(n, c),
       () => this.diagramCanvas?.clearSelection(),
     );
   }
