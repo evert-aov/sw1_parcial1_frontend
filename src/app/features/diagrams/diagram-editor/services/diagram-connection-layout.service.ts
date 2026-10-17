@@ -4,10 +4,19 @@ import {
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
-  UmlMessage,
   UmlRelationshipType,
 } from '../../../../core/models/diagram.model';
-import { XmiClientParser } from '../../../../core/services/xmi-client-parser';
+import {
+  buildAssociationClassElements as buildAssociationClassElementsLogic,
+  computeSequenceMessageMove as computeSequenceMessageMoveLogic,
+  findNextAvailableSlot as findNextAvailableSlotLogic,
+  formatPackageRelation,
+  formatUseCaseRelation,
+  getActorBottomExtra,
+  isSequenceConnection as isSequenceConnectionLogic,
+  isSequenceSlotOccupied as isSequenceSlotOccupiedLogic,
+  recalculateSequenceNumbers as recalculateSequenceNumbersLogic,
+} from '../components/diagram-canvas/nodes';
 
 @Injectable({
   providedIn: 'root',
@@ -203,8 +212,7 @@ export class DiagramConnectionLayoutService {
         if (
           conn.sourceId.includes('_slot_') ||
           conn.targetId.includes('_slot_') ||
-          activeDiagramType === DiagramType.SEQUENCE ||
-          ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type)
+          isSequenceConnectionLogic(conn, activeDiagramType)
         ) {
           const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
           const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
@@ -271,97 +279,7 @@ export class DiagramConnectionLayoutService {
     mainConnection: UmlConnection;
     dashedConnection: UmlConnection;
   } {
-    const anchorId = `anchor_${timestamp}`;
-    const assocNodeId = `node_${timestamp}_assoc`;
-    const assocName = `${sourceNode.name}_${targetNode.name}`;
-
-    const anchorNode: UmlClassNode = {
-      id: anchorId,
-      name: '',
-      position: {
-        x: Math.round((sourceNode.position.x + targetNode.position.x) / 2),
-        y: Math.round((sourceNode.position.y + targetNode.position.y) / 2),
-      },
-      width: 0,
-      height: 0,
-      attributes: [],
-      methods: [],
-      isAnchor: true,
-    };
-
-    const mainConnId = `conn_${timestamp}_assoc_main`;
-    const mainConnection: UmlConnection = {
-      id: mainConnId,
-      sourceNodeId: sourceNode.id,
-      targetNodeId: targetNode.id,
-      sourceId: `${sourceNode.id}_right`,
-      targetId: `${targetNode.id}_left`,
-      type: 'association',
-      lineStyle: 'straight',
-      name: assocName,
-      sourceMultiplicity: '',
-      targetMultiplicity: '',
-      assocAnchorNodeId: anchorId,
-    };
-
-    // Extraer atributos ID de las tablas a las que se asocia
-    const getEntityFk = (node: UmlClassNode): { name: string; type: string } => {
-      const pkAttr = (node.attributes || []).find((a) =>
-        /^(id|.*_id|.*id)$/i.test(a.name.trim()),
-      ) || (node.attributes || [])[0];
-
-      const pkType = pkAttr?.type || 'UUID';
-
-      let base = node.name.trim();
-      if (base.toLowerCase().endsWith('es') && base.length > 3) {
-        base = base.slice(0, -2);
-      } else if (base.toLowerCase().endsWith('s') && base.length > 2 && !base.toLowerCase().endsWith('ss')) {
-        base = base.slice(0, -1);
-      }
-      const camelBase = base.charAt(0).toLowerCase() + base.slice(1);
-
-      let fkName = `${camelBase}Id`;
-      if (pkAttr && pkAttr.name.trim().toLowerCase() !== 'id') {
-        fkName = pkAttr.name.trim();
-      }
-
-      return { name: fkName, type: pkType };
-    };
-
-    const sourceFk = getEntityFk(sourceNode);
-    const targetFk = getEntityFk(targetNode);
-
-    if (sourceFk.name.toLowerCase() === targetFk.name.toLowerCase()) {
-      sourceFk.name = `${sourceNode.name.toLowerCase()}Id`;
-      targetFk.name = `${targetNode.name.toLowerCase()}Id`;
-    }
-
-    const assocNode: UmlClassNode = {
-      id: assocNodeId,
-      name: assocName,
-      position: {
-        x: anchorNode.position.x - 110,
-        y: anchorNode.position.y + 120,
-      },
-      width: 220,
-      attributes: [sourceFk, targetFk],
-      methods: [],
-      assocMainConnId: mainConnId,
-    };
-
-    const dashedConnId = `conn_${timestamp}_assoc_dashed`;
-    const dashedConnection: UmlConnection = {
-      id: dashedConnId,
-      sourceNodeId: anchorId,
-      targetNodeId: assocNodeId,
-      sourceId: anchorId,
-      targetId: `${assocNodeId}_top`,
-      type: 'association_class',
-      lineStyle: 'straight',
-      name: '«link»',
-    };
-
-    return { anchorNode, assocNode, mainConnection, dashedConnection };
+    return buildAssociationClassElementsLogic(sourceNode, targetNode, timestamp);
   }
 
   /**
@@ -374,123 +292,14 @@ export class DiagramConnectionLayoutService {
     targetSlot: number,
     activeDiagramType: DiagramType,
   ): UmlConnection[] {
-    const movingConn = conns.find((c) => c.id === connectionId);
-    if (!movingConn) return conns;
-
-    const sMatch = movingConn.sourceId?.match(/_slot_(\d+)$/);
-    const fromSlot = sMatch ? parseInt(sMatch[1], 10) : 0;
-    const toSlot = Math.max(0, targetSlot);
-
-    if (fromSlot === toSlot) return conns;
-
-    const isSeqConn = (c: UmlConnection) =>
-      activeDiagramType === DiagramType.SEQUENCE ||
-      ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
-
-    const getSlot = (c: UmlConnection) => {
-      const m = c.sourceId?.match(/_slot_(\d+)$/);
-      return m ? parseInt(m[1], 10) : 0;
-    };
-
-    const movingSeqNum = movingConn.messages?.[0]?.sequenceNumber?.trim() || '';
-    const isInitiator = /^\d+$/.test(movingSeqNum);
-
-    interface MoveItem {
-      conn: UmlConnection;
-      originalSlot: number;
-      relativeOffset: number;
-      targetSlot: number;
-    }
-
-    const moveItems: MoveItem[] = [];
-
-    if (isInitiator) {
-      const groupPrefix = `${movingSeqNum}.`;
-      const groupMembers = conns.filter(
-        (c) =>
-          isSeqConn(c) &&
-          (c.id === connectionId || (c.messages?.[0]?.sequenceNumber?.trim() || '').startsWith(groupPrefix))
-      );
-
-      groupMembers.sort((a, b) => getSlot(a) - getSlot(b));
-
-      for (const m of groupMembers) {
-        const origSlot = getSlot(m);
-        const relOffset = origSlot - fromSlot;
-        moveItems.push({
-          conn: m,
-          originalSlot: origSlot,
-          relativeOffset: relOffset,
-          targetSlot: toSlot + relOffset,
-        });
-      }
-    } else {
-      moveItems.push({
-        conn: movingConn,
-        originalSlot: fromSlot,
-        relativeOffset: 0,
-        targetSlot: toSlot,
-      });
-    }
-
-    const movingIds = new Set(moveItems.map((mi) => mi.conn.id));
-    const targetSlotMap = new Map<string, number>(moveItems.map((mi) => [mi.conn.id, mi.targetSlot]));
-
-    const deltaSlot = toSlot - fromSlot;
-    const numMovedItems = moveItems.length;
-
-    return conns.map((c) => {
-      if (!isSeqConn(c)) return c;
-
-      const currentSlot = getSlot(c);
-      const baseSrc = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-      const baseTgt = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-
-      let newSlot = currentSlot;
-
-      if (movingIds.has(c.id)) {
-        newSlot = targetSlotMap.get(c.id)!;
-      } else {
-        if (deltaSlot > 0) {
-          const maxTargetSlot = Math.max(...moveItems.map((mi) => mi.targetSlot));
-          if (currentSlot > fromSlot && currentSlot <= maxTargetSlot) {
-            newSlot = currentSlot - numMovedItems;
-          }
-        } else {
-          const minTargetSlot = Math.min(...moveItems.map((mi) => mi.targetSlot));
-          if (currentSlot >= minTargetSlot && currentSlot < fromSlot) {
-            newSlot = currentSlot + numMovedItems;
-          }
-        }
-      }
-
-      if (newSlot !== currentSlot) {
-        return {
-          ...c,
-          sourceId: `${baseSrc}_slot_${newSlot}`,
-          targetId: `${baseTgt}_slot_${newSlot}`,
-        };
-      }
-      return c;
-    });
+    return computeSequenceMessageMoveLogic(conns, connectionId, targetSlot, activeDiagramType);
   }
 
   /**
    * Encuentra el siguiente índice numérico de slot temporal disponible en un diagrama de secuencia.
    */
   findNextAvailableSlot(connections: UmlConnection[]): string {
-    const usedSlots = new Set<number>();
-    for (const c of connections) {
-      const m1 = c.sourceId?.match(/_slot_(\d+)$/);
-      const m2 = c.targetId?.match(/_slot_(\d+)$/);
-      if (m1) usedSlots.add(parseInt(m1[1], 10));
-      if (m2) usedSlots.add(parseInt(m2[1], 10));
-    }
-    let nextSlot = 0;
-    while (usedSlots.has(nextSlot)) {
-      nextSlot++;
-    }
-    return nextSlot.toString();
+    return findNextAvailableSlotLogic(connections);
   }
 
   /**
@@ -502,16 +311,7 @@ export class DiagramConnectionLayoutService {
     activeDiagramType: DiagramType,
     ignoreConnectionId?: string,
   ): boolean {
-    return connections.some((c) => {
-      if (ignoreConnectionId && c.id === ignoreConnectionId) return false;
-      const isSeq =
-        activeDiagramType === DiagramType.SEQUENCE ||
-        ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
-      if (!isSeq) return false;
-      const m1 = c.sourceId?.match(/_slot_(\d+)$/);
-      const m2 = c.targetId?.match(/_slot_(\d+)$/);
-      return (m1 && parseInt(m1[1], 10) === targetSlotNum) || (m2 && parseInt(m2[1], 10) === targetSlotNum);
-    });
+    return isSequenceSlotOccupiedLogic(connections, targetSlotNum, activeDiagramType, ignoreConnectionId);
   }
 
   /**
@@ -528,24 +328,12 @@ export class DiagramConnectionLayoutService {
     messages?: any[];
   }): UmlConnection {
     const { sourceNode, targetNode, relType, sourceId, targetId, defaultLineStyle, activeDiagramType, messages } = params;
-    const isSeqRel =
-      ['sync', 'reply', 'async', 'create', 'self'].includes(relType as any) ||
-      activeDiagramType === DiagramType.SEQUENCE;
+    const isSeqRel = isSequenceConnectionLogic(relType, activeDiagramType);
 
     const relName =
-      relType === 'include'
-        ? '«include»'
-        : relType === 'extend'
-        ? '«extend»'
-        : relType === 'import'
-        ? '«import»'
-        : relType === 'access'
-        ? '«access»'
-        : relType === 'merge'
-        ? '«merge»'
-        : relType === 'trace'
-        ? '«trace»'
-        : undefined;
+      formatUseCaseRelation(relType) ||
+      formatPackageRelation(relType) ||
+      (relType === 'trace' ? '«trace»' : undefined);
 
     return {
       id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -571,127 +359,11 @@ export class DiagramConnectionLayoutService {
     activeDiagramType: DiagramType,
     preserveSequenceNumbers = false,
   ): UmlConnection[] {
-    const isSeq = activeDiagramType === DiagramType.SEQUENCE;
-    if (!isSeq) {
-      return connectionsList;
-    }
-
-    const palette = [
-      '#0284C7', // Grupo 1: Azul cielo
-      '#7C3AED', // Grupo 2: Violeta
-      '#059669', // Grupo 3: Esmeralda
-      '#D97706', // Grupo 4: Ámbar
-      '#DC2626', // Grupo 5: Rojo carmesí
-      '#0891B2', // Grupo 6: Cyan
-      '#4F46E5', // Grupo 7: Índigo
-      '#C026D3', // Grupo 8: Magenta
-    ];
-
-    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-
-    interface SeqConnMeta {
-      conn: UmlConnection;
-      slot: number;
-      index: number;
-    }
-
-    const seqMetas: SeqConnMeta[] = [];
-    connectionsList.forEach((c, idx) => {
-      const isConnSeq =
-        isSeq || ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
-      if (isConnSeq) {
-        const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
-        const tMatch = c.targetId?.match(/_slot_(\d+)$/);
-        const slot = sMatch
-          ? parseInt(sMatch[1], 10)
-          : tMatch
-          ? parseInt(tMatch[1], 10)
-          : c.messages?.[0]?.orderIndex ?? idx;
-        seqMetas.push({ conn: c, slot, index: idx });
-      }
-    });
-
-    if (seqMetas.length === 0) {
-      return connectionsList;
-    }
-
-    // Ordenar cronológicamente de arriba hacia abajo según el slot
-    seqMetas.sort((a, b) => a.slot - b.slot || a.index - b.index);
-
-    let currentGroup = 0;
-    let childIndex = 0;
-
-    const updatedConnMap = new Map<string, UmlConnection>();
-
-    let globalOrderIndex = 0;
-    for (const meta of seqMetas) {
-      const c = meta.conn;
-      const baseSourceId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-      const baseTargetId = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-      const sourceNode = nodeMap.get(baseSourceId);
-
-      // Una nueva interacción/grupo inicia cuando el Actor envía un mensaje hacia una línea de vida
-      const isActorSource = sourceNode?.nodeType === 'actor';
-
-      let seqNum: string;
-      if (isActorSource || currentGroup === 0) {
-        currentGroup++;
-        childIndex = 0;
-        seqNum = `${currentGroup}`;
-      } else {
-        childIndex++;
-        seqNum = `${currentGroup}.${childIndex}`;
-      }
-
-      // Cargar/importar no debe convertir etiquetas EA explícitas en grupos por actor.
-      const explicitNumber = c.messages?.[0]?.sequenceNumber?.trim();
-      if (preserveSequenceNumbers && explicitNumber) seqNum = explicitNumber;
-      const color = preserveSequenceNumbers
-        ? XmiClientParser.getGroupColor(seqNum)
-        : palette[(currentGroup - 1) % palette.length];
-
-      let updatedMessages: UmlMessage[];
-      if (c.messages && c.messages.length > 0) {
-        updatedMessages = c.messages.map((m, mIdx) => {
-          if (mIdx === 0) {
-            return {
-              ...m,
-              sequenceNumber: seqNum,
-              direction: m.direction ?? 'forward',
-              type: m.type ?? (['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync'),
-              isReturn: m.isReturn ?? c.type === 'reply',
-              orderIndex: globalOrderIndex++,
-              color,
-            };
-          }
-          return { ...m, orderIndex: globalOrderIndex++ };
-        });
-      } else {
-        updatedMessages = [
-          {
-            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-            sequenceNumber: seqNum,
-            functionName: 'msj',
-            parameters: '',
-            returnType: '',
-            isReturn: c.type === 'reply',
-            direction: 'forward',
-            orderIndex: globalOrderIndex++,
-            type: ['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync',
-            color,
-          },
-        ];
-      }
-
-      const updatedConn: UmlConnection = {
-        ...c,
-        name: c.name && /^\d+(\.\d+)*$/.test(c.name.trim()) ? seqNum : c.name,
-        messages: updatedMessages,
-      };
-
-      updatedConnMap.set(c.id, updatedConn);
-    }
-
-    return connectionsList.map((c) => updatedConnMap.get(c.id) || c);
+    return recalculateSequenceNumbersLogic(
+      connectionsList,
+      nodes,
+      activeDiagramType,
+      preserveSequenceNumbers,
+    );
   }
 }

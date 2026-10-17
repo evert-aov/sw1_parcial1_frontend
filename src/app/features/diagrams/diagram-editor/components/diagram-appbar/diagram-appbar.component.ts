@@ -46,6 +46,7 @@ import { UserGuideService } from '../../../../../core/services/user-guide.servic
 import { TranslatePipe, LanguageSelectorComponent, TranslationService } from '../../../../../core/i18n';
 import { ThemeToggleComponent } from '../../../../../core/components/theme-toggle/theme-toggle.component';
 import { hexToRgb, rgbToHex } from '../../../../../core/models/diagram.model';
+import { ToastService } from '../../../../../core/services/toast.service';
 
 export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'start';
 
@@ -100,6 +101,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
   readonly collaborationService = inject(CollaborationService);
   readonly guideService = inject(UserGuideService);
   readonly translationService = inject(TranslationService);
+  readonly toastService = inject(ToastService);
 
   // Tab activo en el Ribbon al estilo Enterprise Architect
   readonly activeTab = signal<RibbonTab>('design');
@@ -196,7 +198,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   handleExportBmp(): void {
     if (this.multiUserBlocked()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
     this.exportBmp.emit();
@@ -204,7 +206,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   handleExportPng(): void {
     if (this.multiUserBlocked()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
     this.exportPng.emit();
@@ -212,7 +214,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   handleExportXmi(): void {
     if (this.multiUserBlocked()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
     this.exportXmi.emit();
@@ -220,7 +222,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   handleExportJson(): void {
     if (this.multiUserBlocked()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
     this.exportJson.emit();
@@ -228,7 +230,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   handleViewJson(): void {
     if (this.multiUserBlocked()) {
-      alert(this.translationService.translate('appbar.multiUserExportBlocked'));
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
       return;
     }
     this.viewJson.emit();
@@ -236,7 +238,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   handleOpenImportJson(): void {
     if (this.multiUserBlocked()) {
-      alert(this.translationService.translate('appbar.multiUserImportBlocked'));
+      this.toastService.warning(this.translationService.translate('appbar.multiUserImportBlocked'));
       return;
     }
     this.openImportJson.emit();
@@ -244,7 +246,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
 
   triggerFileInput(): void {
     if (this.multiUserBlocked()) {
-      alert(this.translationService.translate('appbar.multiUserImportBlocked'));
+      this.toastService.warning(this.translationService.translate('appbar.multiUserImportBlocked'));
       return;
     }
     this.fileInputRef?.nativeElement?.click();
@@ -254,7 +256,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
     const code = this.collaborationService.activeRoomCode();
     if (code) {
       navigator.clipboard.writeText(code).then(() => {
-        alert(`Código de sala "${code}" copiado al portapapeles.`);
+        this.toastService.success(`Código de sala "${code}" copiado al portapapeles.`);
       });
     }
   }

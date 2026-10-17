@@ -62,12 +62,30 @@ export function measureTextWidth(text: string, font: string = '11px ui-sans-seri
   return fallback;
 }
 
+const classDynamicWidthCache = new Map<string, number>();
+
+function getClassDynamicWidthCacheKey(node: UmlClassNode): string {
+  const attrs = node.attributes;
+  const methods = node.methods;
+  const attrsHash = attrs && attrs.length > 0
+    ? attrs.map((a) => `${a.name || ''}:${a.type || ''}`).join('|')
+    : '0';
+  const methodsHash = methods && methods.length > 0
+    ? methods.map((m) => `${m.name || ''}:${m.parameters || ''}:${m.returnType || ''}`).join('|')
+    : '0';
+  return `${node.id || ''}#${node.name || ''}#${node.stereotype || ''}#${attrsHash}#${methodsHash}`;
+}
+
 /**
  * Calcula el ancho dinámico óptimo y simétrico para una clase UML.
  * Garantiza que el espacio desde el borde izquierdo al símbolo '+/-' (10px de padding)
  * sea exactamente igual al espacio desde el final de ': tipo' / ': void' al borde derecho (10px).
  */
 export function calculateClassDynamicWidth(node: UmlClassNode): number {
+  const cacheKey = getClassDynamicWidthCacheKey(node);
+  const cached = classDynamicWidthCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   const padW = 20; // 10px padding-left + 10px padding-right (px-2.5 de Tailwind)
   const symW = 6;  // Ancho estimado del símbolo '-' o '+'
   const mrW = 6;   // Margen derecho del símbolo mr-1.5 (6px)
@@ -108,7 +126,10 @@ export function calculateClassDynamicWidth(node: UmlClassNode): number {
   }
 
   // Ancho mínimo base de 90px para asegurar interacción táctil/puntero adecuada
-  return Math.max(90, Math.ceil(maxNeededWidth));
+  const result = Math.max(90, Math.ceil(maxNeededWidth));
+  if (classDynamicWidthCache.size > 2000) classDynamicWidthCache.clear();
+  classDynamicWidthCache.set(cacheKey, result);
+  return result;
 }
 
 export function getDefaultColorForNodeType(nodeType?: string | null, stereotype?: string | null): string {
@@ -266,4 +287,12 @@ export function computeBoardHeight(nodes: UmlClassNode[], minHeight = 1400): num
     }
   }
   return max;
+}
+
+/**
+ * Limpia todas las cachés en memoria asociadas al cálculo de métricas de texto y nodos.
+ */
+export function clearNodeMetricsCache(): void {
+  textWidthCache.clear();
+  classDynamicWidthCache.clear();
 }

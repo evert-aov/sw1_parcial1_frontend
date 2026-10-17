@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { heroUserCircle, heroXMark, heroCheck } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { TranslatePipe } from '../../../../../core/i18n';
 
 @Component({
@@ -21,6 +22,7 @@ import { TranslatePipe } from '../../../../../core/i18n';
 })
 export class UserProfileModalComponent {
   readonly authService = inject(AuthService);
+  private readonly toastService = inject(ToastService);
 
   readonly isOpen = input<boolean>(false);
   readonly close = output<void>();
@@ -92,13 +94,13 @@ export class UserProfileModalComponent {
   saveProfile(): void {
     const fullName = this.editFullName().trim();
     if (!fullName) {
-      alert('El nombre completo no puede estar vacío.');
+      this.toastService.warning('El nombre completo no puede estar vacío.');
       return;
     }
 
     const password = this.editPassword().trim();
     if (password && password.length < 6) {
-      alert('La contraseña debe tener al menos 6 caracteres.');
+      this.toastService.warning('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
 
@@ -113,12 +115,13 @@ export class UserProfileModalComponent {
         this.isSaving.set(false);
         this.isDirty.set(false);
         this.editPassword.set('');
+        this.toastService.success('¡Perfil y datos actualizados con éxito!');
         this.saveSuccessMessage.set('¡Perfil y datos actualizados con éxito!');
         setTimeout(() => this.saveSuccessMessage.set(null), 3000);
       },
       error: (err) => {
         this.isSaving.set(false);
-        alert('Error al actualizar el perfil: ' + (err.error?.message || err.message));
+        this.toastService.error('Error al actualizar el perfil: ' + (err.error?.message || err.message));
       },
     });
   }

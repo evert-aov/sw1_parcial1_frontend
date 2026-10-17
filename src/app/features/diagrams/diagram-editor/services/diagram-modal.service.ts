@@ -96,54 +96,6 @@ export class DiagramModalService {
     this.editingNode.set(null);
   }
 
-  addAttributeToEditingNode(): void {
-    const n = this.editingNode();
-    if (!n) return;
-    const attrs = n.attributes || [];
-    n.attributes = [
-      ...attrs,
-      {
-        name: 'nuevoCampo',
-        type: 'String',
-        nullable: true,
-        unique: false,
-        length: 255,
-        defaultValue: null,
-        default: null,
-      },
-    ];
-    this.editingNode.set({ ...n });
-  }
-
-  removeAttributeFromEditingNode(index: number): void {
-    const n = this.editingNode();
-    if (!n || !n.attributes) return;
-    n.attributes = n.attributes.filter((_, i) => i !== index);
-    this.editingNode.set({ ...n });
-  }
-
-  addMethodToEditingNode(): void {
-    const n = this.editingNode();
-    if (!n) return;
-    const methods = n.methods || [];
-    n.methods = [
-      ...methods,
-      {
-        name: 'nuevaOperacion',
-        parameters: '',
-        returnType: 'void',
-      },
-    ];
-    this.editingNode.set({ ...n });
-  }
-
-  removeMethodFromEditingNode(index: number): void {
-    const n = this.editingNode();
-    if (!n || !n.methods) return;
-    n.methods = n.methods.filter((_, i) => i !== index);
-    this.editingNode.set({ ...n });
-  }
-
   openEditConnModal(conn: UmlConnection): void {
     this.editingConnection.set(JSON.parse(JSON.stringify(conn)));
     this.isEditConnModalOpen.set(true);

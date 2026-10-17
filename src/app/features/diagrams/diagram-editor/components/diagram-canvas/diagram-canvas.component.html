@@ -48,6 +48,33 @@
       </div>
     }
 
+    <!-- EMPTY STATE WATERMARK: Guía visual cuando el lienzo está vacío -->
+    @if (hasNoRealNodes()) {
+      <div
+        class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 select-none"
+        aria-hidden="true">
+        <div class="flex flex-col items-center gap-3 opacity-25 dark:opacity-20">
+          <!-- Icono SVG de lienzo vacío -->
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="text-slate-400 dark:text-slate-500">
+            <rect x="8" y="8" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 3" fill="none"/>
+            <line x1="8" y1="22" x2="56" y2="22" stroke="currentColor" stroke-width="2"/>
+            <rect x="18" y="52" width="28" height="6" rx="3" fill="currentColor" opacity="0.5"/>
+            <line x1="32" y1="44" x2="32" y2="52" stroke="currentColor" stroke-width="2"/>
+            <circle cx="22" cy="15" r="2" fill="currentColor" opacity="0.7"/>
+            <circle cx="28" cy="15" r="2" fill="currentColor" opacity="0.4"/>
+          </svg>
+
+          <!-- Mensaje contextual según tipo de diagrama -->
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400 text-center max-w-xs leading-relaxed px-4">
+            {{ canvasEmptyStateMessage() }}
+          </p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 text-center">
+            {{ 'editor.canvas.emptyState.shortcutHint' | translate }}
+          </p>
+        </div>
+      </div>
+    }
+
     <!-- FOBLEX FLOW INTERACTIVE CANVAS -->
     <f-flow
       fDraggable

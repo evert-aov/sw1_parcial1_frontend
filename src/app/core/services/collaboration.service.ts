@@ -66,8 +66,9 @@ export class CollaborationService {
   readonly onConnect$ = new Subject<void>();
   readonly lastServerSave$ = new Subject<{ diagramId: string; savedAt: string }>();
 
-  // Control de frecuencia de cursores
+  // Control de frecuencia de cursores y drag colaborativo
   private lastCursorSent = 0;
+  private readonly lastNodeDragSent = new Map<string, number>();
 
   private getCurrentUser(): User | null {
     const fromAuth = this.authService.currentUser();
@@ -298,6 +299,7 @@ export class CollaborationService {
   }
 
   releaseNodeLock(nodeId: string): void {
+    this.lastNodeDragSent.delete(nodeId);
     const user = this.getCurrentUser();
     const diagramId = this.currentDiagramId();
     const roomCode = this.activeRoomCode();
@@ -340,6 +342,11 @@ export class CollaborationService {
   }
 
   sendNodeDrag(nodeId: string, position: { x: number; y: number }): void {
+    const now = Date.now();
+    const last = this.lastNodeDragSent.get(nodeId) || 0;
+    if (now - last < 33) return; // ~30 fps throttle por nodo para evitar saturación de WebSocket
+    this.lastNodeDragSent.set(nodeId, now);
+
     const user = this.getCurrentUser();
     const diagramId = this.currentDiagramId();
     const roomCode = this.activeRoomCode();
@@ -349,7 +356,10 @@ export class CollaborationService {
       diagramId,
       roomCode,
       nodeId,
-      position,
+      position: {
+        x: Math.round(position.x),
+        y: Math.round(position.y),
+      },
       userId: user?.id || 'anon',
     });
   }
@@ -394,6 +404,7 @@ export class CollaborationService {
   }
 
   disconnect(): void {
+    this.lastNodeDragSent.clear();
     this.leaveRoom();
     if (this.socket) {
       this.socket.disconnect();

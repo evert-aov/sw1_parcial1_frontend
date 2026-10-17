@@ -130,6 +130,92 @@ export class DiagramPersistenceService {
     }, durationMs);
   }
 
+  /**
+   * Ejecuta el guardado del AST en backend con sincronización y notificaciones
+   */
+  executeSaveToBackend(
+    diagramService: { saveAst: (id: string, payload: any) => any },
+    diagramId: string,
+    payload: any,
+    silent: boolean,
+    onSaveSuccessSync?: () => void,
+  ): void {
+    diagramService.saveAst(diagramId, payload).subscribe({
+      next: () => {
+        this.markAsSaved(diagramId);
+        this.notifySaveSuccess(2500);
+        if (!silent) onSaveSuccessSync?.();
+      },
+      error: (err: any) => {
+        console.warn('Auto-save no pudo completarse en servidor (borrador local protegido):', err);
+      },
+    });
+  }
+
+  /**
+   * Ejecuta la carga y resolución de un diagrama desde el backend con manejo de borradores locales
+   */
+  executeLoadDiagram(
+    diagramService: { loadDiagram: (id: string) => any },
+    diagramId: string,
+    options: {
+      getDefaultColor: (nodeType?: string, stereotype?: string | null) => string;
+      normalizeDataType: (type: string) => string;
+      normalizeReturnType: (type: string) => string;
+      recalculateSequenceNumbers: (conns: UmlConnection[], preserveOrder?: boolean) => UmlConnection[];
+      onLoaded: (diagram: any, resolved: {
+        nodes: UmlClassNode[];
+        connections: UmlConnection[];
+        defaultLineStyle?: UmlLineStyle;
+        fromDraft: boolean;
+      }) => void;
+    },
+  ): Subscription {
+    return diagramService.loadDiagram(diagramId).subscribe((diagram: any) => {
+      const resolved = this.resolveDiagramData(diagram, {
+        getDefaultColor: options.getDefaultColor,
+        normalizeDataType: options.normalizeDataType,
+        normalizeReturnType: options.normalizeReturnType,
+      });
+
+      const processedConnections = options.recalculateSequenceNumbers(resolved.connections, true);
+
+      options.onLoaded(diagram, {
+        nodes: resolved.nodes,
+        connections: processedConnections,
+        defaultLineStyle: resolved.defaultLineStyle,
+        fromDraft: resolved.fromDraft,
+      });
+    });
+  }
+
+  /**
+   * Sincroniza la información del proyecto y sus diagramas si aún no están en memoria
+   */
+  syncProjectInfo(
+    projectId: string | undefined | null,
+    context: {
+      hasCurrentProject: boolean;
+      projectDiagramsCount: number;
+      setCurrentProjectId: (id: string) => void;
+      fetchProject: (id: string) => any;
+      fetchProjectDiagrams: (id: string) => any;
+      onProjectLoaded: (proj: any) => void;
+    },
+  ): void {
+    if (!projectId) return;
+    if (!context.hasCurrentProject) {
+      context.setCurrentProjectId(projectId);
+      context.fetchProject(projectId).subscribe({
+        next: (proj: any) => context.onProjectLoaded(proj),
+        error: () => {},
+      });
+    }
+    if (context.projectDiagramsCount === 0) {
+      context.fetchProjectDiagrams(projectId).subscribe();
+    }
+  }
+
   setupAutoSave(onAutoSave: () => void, debounceMs = 1000): Subscription {
     return this.autoSave$.pipe(debounceTime(debounceMs)).subscribe(onAutoSave);
   }

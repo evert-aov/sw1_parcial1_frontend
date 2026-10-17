@@ -1,4 +1,6 @@
 import { Injectable, inject } from '@angular/core';
+import { FCreateConnectionEvent, FReassignConnectionEvent } from '@foblex/flow';
+import { ToastService } from '../../../../core/services/toast.service';
 import {
   DiagramType,
   UmlClassNode,
@@ -7,6 +9,12 @@ import {
   UmlMessage,
   UmlRelationshipType,
 } from '../../../../core/models/diagram.model';
+import {
+  createAssociationClassBetween as createAssociationClassBetweenLogic,
+  generateNextSequenceMessage as generateNextSequenceMessageLogic,
+  isSequenceConnection as isSequenceConnectionLogic,
+  getSequenceMessageColor,
+} from '../components/diagram-canvas/nodes';
 import { DiagramConnectionLayoutService } from './diagram-connection-layout.service';
 
 export interface CreateConnectionParams {
@@ -40,8 +48,9 @@ export interface CreateConnectionResult {
 })
 export class DiagramConnectionOperationsService {
   private readonly layoutService: DiagramConnectionLayoutService;
+  private readonly toastService?: ToastService | null;
 
-  constructor(layoutService?: DiagramConnectionLayoutService) {
+  constructor(layoutService?: DiagramConnectionLayoutService, toastService?: ToastService) {
     if (layoutService) {
       this.layoutService = layoutService;
     } else {
@@ -52,6 +61,16 @@ export class DiagramConnectionOperationsService {
         // Outside Angular DI context
       }
       this.layoutService = injected ?? new DiagramConnectionLayoutService();
+    }
+
+    if (toastService !== undefined) {
+      this.toastService = toastService;
+    } else {
+      try {
+        this.toastService = inject(ToastService, { optional: true });
+      } catch {
+        this.toastService = null;
+      }
     }
   }
 
@@ -72,9 +91,7 @@ export class DiagramConnectionOperationsService {
     } = params;
 
     const relType = selectedRelationType || 'association';
-    const isSeqRel =
-      ['sync', 'reply', 'async', 'create', 'self'].includes(relType) ||
-      activeDiagramType === DiagramType.SEQUENCE;
+    const isSeqRel = isSequenceConnectionLogic(relType, activeDiagramType);
 
     if (isSeqRel) {
       const sHasSlot = fOutputId.includes('_slot_');
@@ -203,13 +220,7 @@ export class DiagramConnectionOperationsService {
     currentNodes: UmlClassNode[],
     currentConns: UmlConnection[],
   ): { nodes: UmlClassNode[]; connections: UmlConnection[] } {
-    const { anchorNode, assocNode, mainConnection, dashedConnection } =
-      this.layoutService.buildAssociationClassElements(sourceNode, targetNode);
-
-    return {
-      nodes: [...currentNodes, anchorNode, assocNode],
-      connections: [...currentConns, mainConnection, dashedConnection],
-    };
+    return createAssociationClassBetweenLogic(sourceNode, targetNode, currentNodes, currentConns);
   }
 
   /**
@@ -227,7 +238,7 @@ export class DiagramConnectionOperationsService {
       if (c.id === event.connectionId) {
         let sId = event.nextSourceId || c.sourceId;
         let tId = event.nextTargetId || c.targetId;
-        if (isSeq || ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any)) {
+        if (isSequenceConnectionLogic(c, activeDiagramType)) {
           const sMatch = event.nextSourceId ? event.nextSourceId.match(/_slot_(\d+)$/) : null;
           const tMatch = event.nextTargetId ? event.nextTargetId.match(/_slot_(\d+)$/) : null;
           const slotNum = sMatch ? sMatch[1] : (tMatch ? tMatch[1] : null);
@@ -401,9 +412,7 @@ export class DiagramConnectionOperationsService {
     activeDiagramType: DiagramType,
     normalizeUmlMessage?: (m: any, defaultSeq?: string) => UmlMessage,
   ): { isSeq: boolean; prepared: UmlConnection } {
-    const isSeq =
-      activeDiagramType === DiagramType.SEQUENCE ||
-      ['sync', 'reply', 'async', 'create', 'self'].includes(edited.type as any);
+    const isSeq = isSequenceConnectionLogic(edited, activeDiagramType);
 
     if (isSeq || edited.type === 'generalization' || edited.type === 'realization') {
       edited.sourceMultiplicity = '';
@@ -416,13 +425,8 @@ export class DiagramConnectionOperationsService {
         norm.orderIndex = 0;
         edited.messages = [norm];
       }
-      const palette = ['#0284C7', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0891B2', '#4F46E5', '#C026D3'];
       const m = edited.messages[0];
-      const match = m.sequenceNumber?.trim().match(/^(\d+)(?:\.|$)/);
-      if (match) {
-        const g = parseInt(match[1], 10);
-        m.color = palette[(Math.max(1, g) - 1) % palette.length];
-      }
+      m.color = getSequenceMessageColor(m.sequenceNumber);
     }
 
     return { isSeq, prepared: edited };
@@ -547,9 +551,7 @@ export class DiagramConnectionOperationsService {
       return { isAssocClass: true };
     }
 
-    const isSeqRel =
-      ['sync', 'reply', 'async', 'create', 'self'].includes(activeRel) ||
-      activeDiagramType === DiagramType.SEQUENCE;
+    const isSeqRel = isSequenceConnectionLogic(activeRel, activeDiagramType);
 
     let sourceId: string;
     let targetId: string;
@@ -593,18 +595,176 @@ export class DiagramConnectionOperationsService {
     targetNode?: UmlClassNode,
     isReturn: boolean = false,
   ): UmlMessage[] {
-    return [
-      {
-        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        sequenceNumber: '',
-        functionName: 'msj',
-        parameters: '',
-        returnType: '',
-        isReturn,
-        direction: 'forward',
-        orderIndex: 0,
-        color: '#0284C7',
-      },
-    ];
+    return generateNextSequenceMessageLogic(sourceNode, targetNode, isReturn);
+  }
+
+  /**
+   * Maneja el ciclo completo del evento onTableClick
+   */
+  handleTableClick(
+    nodeId: string,
+    event: MouseEvent,
+    options: {
+      isReadOnly: boolean;
+      isLocked: boolean;
+      activeRel: UmlRelationshipType | null;
+      currentSource: string | null;
+      setSourceNodeId: (id: string | null) => void;
+      onMouseMove: (e: MouseEvent) => void;
+      activeDiagramType: DiagramType;
+      nodes: UmlClassNode[];
+      connections: UmlConnection[];
+      defaultLineStyle: UmlLineStyle;
+      getOptimalConnectorId: (sourceNode: UmlClassNode, targetNode: UmlClassNode) => { sourceId: string; targetId: string };
+      generateNextSequenceMessage: (sourceNode: UmlClassNode, targetNode: UmlClassNode, isReturn: boolean) => UmlMessage[];
+      onApplyNewConnection: (newConn: UmlConnection, isSeqRel: boolean) => void;
+      onApplyAssociationClass: (assocResult: { nodes: UmlClassNode[]; connections: UmlConnection[] }) => void;
+    },
+  ): void {
+    if (options.isReadOnly || options.isLocked || !options.activeRel) return;
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (options.currentSource === null) {
+      options.setSourceNodeId(nodeId);
+      options.onMouseMove(event);
+      return;
+    }
+
+    const result = this.processTableClickConnection({
+      currentSource: options.currentSource,
+      targetNodeId: nodeId,
+      activeRel: options.activeRel,
+      activeDiagramType: options.activeDiagramType,
+      nodes: options.nodes,
+      connections: options.connections,
+      defaultLineStyle: options.defaultLineStyle,
+      getOptimalConnectorId: options.getOptimalConnectorId,
+      generateNextSequenceMessage: options.generateNextSequenceMessage,
+    });
+
+    if (result.error) {
+      this.toastService?.warning(result.error);
+      options.setSourceNodeId(null);
+      return;
+    }
+
+    if (result.isAssocClass) {
+      const nodeMap = new Map(options.nodes.map((n) => [n.id, n]));
+      const sourceNode = nodeMap.get(options.currentSource);
+      const targetNode = nodeMap.get(nodeId);
+      if (sourceNode && targetNode) {
+        const assocResult = this.createAssociationClassBetween(
+          sourceNode,
+          targetNode,
+          options.nodes,
+          options.connections,
+        );
+        options.onApplyAssociationClass(assocResult);
+      }
+      return;
+    }
+
+    if (result.newConn) {
+      options.onApplyNewConnection(result.newConn, !!result.isSeqRel);
+    }
+  }
+
+  /**
+   * Maneja el ciclo completo del evento onConnectionCreated
+   */
+  handleConnectionCreated(
+    event: FCreateConnectionEvent,
+    options: {
+      isReadOnly: boolean;
+      selectedRelationType: UmlRelationshipType | null;
+      activeDiagramType: DiagramType;
+      defaultLineStyle: UmlLineStyle;
+      nodes: UmlClassNode[];
+      connections: UmlConnection[];
+      isNodeLockedByOther: (nodeId: string) => boolean;
+      generateNextSequenceMessage: (src: UmlClassNode, tgt: UmlClassNode, isReturn: boolean) => UmlMessage[];
+      onApplyNewConnection: (newConn: UmlConnection, isSeqRel: boolean) => void;
+      onApplyAssocClass: (result: { nodes: UmlClassNode[]; connections: UmlConnection[] }) => void;
+    },
+  ): void {
+    if (options.isReadOnly || !event.fInputId) return;
+
+    const result = this.processCreateConnection({
+      fOutputId: event.fOutputId,
+      fInputId: event.fInputId,
+      selectedRelationType: options.selectedRelationType,
+      activeDiagramType: options.activeDiagramType,
+      defaultLineStyle: options.defaultLineStyle,
+      nodes: options.nodes,
+      connections: options.connections,
+      isNodeLockedByOther: options.isNodeLockedByOther,
+      generateNextSequenceMessage: options.generateNextSequenceMessage,
+    });
+
+    if (result.errorMessage) {
+      this.toastService?.warning(result.errorMessage);
+      return;
+    }
+
+    if (result.createdAssociationClass) {
+      options.onApplyAssocClass(result.createdAssociationClass);
+      return;
+    }
+
+    if (result.newConnection) {
+      options.onApplyNewConnection(result.newConnection, !!result.isSeqRel);
+    }
+  }
+
+  /**
+   * Maneja el evento onConnectionReassigned
+   */
+  handleConnectionReassigned(
+    event: FReassignConnectionEvent,
+    options: {
+      isReadOnly: boolean;
+      connections: UmlConnection[];
+      activeDiagramType: DiagramType;
+      onApplyReassigned: (updatedList: UmlConnection[]) => void;
+    },
+  ): void {
+    if (options.isReadOnly) return;
+    const { updatedList, isOccupied } = this.processReassignConnection(
+      options.connections,
+      event,
+      options.activeDiagramType,
+    );
+    if (isOccupied) {
+      this.toastService?.warning('⚠️ No se pueden colocar dos mensajes en la misma posición temporal (fila colineal).');
+      return;
+    }
+    options.onApplyReassigned(updatedList);
+  }
+
+  /**
+   * Maneja el evento onSequenceMessageMove
+   */
+  handleSequenceMessageMove(
+    event: { connectionId: string; targetSlot: number },
+    options: {
+      isReadOnly: boolean;
+      connections: UmlConnection[];
+      activeDiagramType: DiagramType;
+      onApplyMoved: (updatedList: UmlConnection[]) => void;
+    },
+  ): void {
+    if (options.isReadOnly) return;
+    const movingConn = options.connections.find((c) => c.id === event.connectionId);
+    if (!movingConn) return;
+
+    const moved = this.layoutService.computeSequenceMessageMove(
+      options.connections,
+      event.connectionId,
+      event.targetSlot,
+      options.activeDiagramType,
+    );
+    options.onApplyMoved(moved);
   }
 }

@@ -44,6 +44,9 @@ export const es = {
       removeMemberTitle: 'Remover Miembro',
       removeMemberMessage: '¿Estás seguro de que deseas remover a este miembro del proyecto?',
     },
+    toast: {
+      dismiss: 'Cerrar notificación',
+    },
   },
   theme: {
     toggle: 'Cambiar tema',
@@ -383,6 +386,18 @@ export const es = {
         dragLabelHint: 'Arrastrar para reposicionar el texto (Doble clic para editar)',
         focusActivation: 'Foco de control / Activación',
         classHeaderTooltip: 'Clic para resaltar relaciones / Doble clic para editar',
+      },
+      emptyState: {
+        class: 'Arrastra una clase desde el panel izquierdo o presiona C para comenzar',
+        use_case: 'Agrega un Actor o Caso de Uso desde el panel para modelar interacciones',
+        sequence: 'Agrega una Línea de Vida o Actor para modelar el flujo de mensajes',
+        communication: 'Agrega un Objeto o Actor para modelar la colaboración entre instancias',
+        package: 'Agrega un Paquete para organizar módulos y dependencias del sistema',
+        component: 'Agrega un Componente o Recuadro para modelar la arquitectura de software',
+        deployment: 'Agrega un Nodo, Dispositivo o Entorno para modelar la infraestructura',
+        layered: 'Agrega Capas Arquitectónicas para visualizar la estructura de tu sistema',
+        class_analysis: 'Agrega una Clase o Actor para realizar el Análisis de Clases del sistema',
+        shortcutHint: 'Acceso rápido: toolbox lateral o arrastra desde el panel',
       },
     },
     toolbox: {

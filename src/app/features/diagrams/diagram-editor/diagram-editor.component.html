@@ -200,17 +200,19 @@
     </div>
 
     <!-- 2.3 [PANEL LATERAL DERECHO]: COPILOT IA -->
-    <app-ai-assistant-panel
-      [isOpen]="isAiPanelOpen()"
-      [diagramId]="currentDiagramId()"
-      [roomCode]="collaborationService.activeRoomCode()"
-      [currentNodes]="nodes()"
-      [currentConnections]="connections()"
-      [diagramType]="activeDiagramType()"
-      (closePanel)="isAiPanelOpen.set(false)"
-      (applyMutation)="onAiMutation($event)"
-    >
-    </app-ai-assistant-panel>
+    @defer (when isAiPanelOpen()) {
+      <app-ai-assistant-panel
+        [isOpen]="isAiPanelOpen()"
+        [diagramId]="currentDiagramId()"
+        [roomCode]="collaborationService.activeRoomCode()"
+        [currentNodes]="nodes()"
+        [currentConnections]="connections()"
+        [diagramType]="activeDiagramType()"
+        (closePanel)="isAiPanelOpen.set(false)"
+        (applyMutation)="onAiMutation($event)"
+      >
+      </app-ai-assistant-panel>
+    }
   </div>
 
   <!-- 3. [STATUSBAR INFERIOR] REFACTORIZADO EN COMPONENTE SEPARADO -->
@@ -226,82 +228,69 @@
   >
   </app-diagram-statusbar>
 
-  <!-- 4. MODALES REFACTORIZADOS EN COMPONENTES INDEPENDIENTES -->
-  <app-user-profile-modal [isOpen]="isProfileModalOpen()" (close)="isProfileModalOpen.set(false)">
-  </app-user-profile-modal>
+  <!-- 4. MODALES REFACTORIZADOS EN COMPONENTES INDEPENDIENTES CON CARGA DIFERIDA (@defer) -->
+  @defer (when isProfileModalOpen()) {
+    <app-user-profile-modal [isOpen]="isProfileModalOpen()" (close)="isProfileModalOpen.set(false)">
+    </app-user-profile-modal>
+  }
 
-  <app-edit-node-modal
-    [isOpen]="isEditNodeModalOpen()"
-    [node]="editingNode()"
-    [activeDiagramType]="activeDiagramType()"
-    (close)="closeEditNodeModal()"
-    (save)="onSaveEditedNode($event)"
-  >
-  </app-edit-node-modal>
-
-  <app-edit-connection-modal
-    [isOpen]="isEditConnModalOpen()"
-    [connection]="editingConnection()"
-    [activeDiagramType]="activeDiagramType()"
-    (close)="closeEditConnModal()"
-    (save)="onSaveEditedConnection($event)"
-    (delete)="removeConnection($event)"
-  >
-  </app-edit-connection-modal>
-
-  <app-spring-boot-modal
-    [isOpen]="showSpringBootModal()"
-    [diagramId]="currentDiagramId()"
-    [diagramName]="currentDiagramName()"
-    [nodes]="nodes()"
-    [connections]="connections()"
-    [project]="currentProject()"
-    (closeModal)="showSpringBootModal.set(false)"
-  >
-  </app-spring-boot-modal>
-
-  <app-json-modal
-    [isOpen]="showJsonModal()"
-    [mode]="jsonModalMode()"
-    [initialJson]="jsonContent()"
-    (close)="showJsonModal.set(false)"
-    (copied)="showQuickToast('¡JSON AST copiado al portapapeles!')"
-    (applyImport)="onApplyImportedJson($event)"
-  >
-  </app-json-modal>
-
-  <app-create-diagram-modal
-    [isOpen]="isCreateDiagramModalOpen()"
-    [lockedType]="createDiagramLockedType()"
-    [projectName]="currentProject()?.name || currentDiagramName()"
-    (close)="closeCreateDiagramModal()"
-    (create)="handleCreateDiagram($event)"
-  >
-  </app-create-diagram-modal>
-
-  <!-- Toast flotante de notificación rápida (copia/pegado de nodos) -->
-  @if (quickToast()) {
-    <div
-      class="fixed bottom-6 right-6 z-50 bg-slate-900/95 dark:bg-slate-800/95 text-white text-xs px-3.5 py-2.5 rounded-xl shadow-xl backdrop-blur-md border border-slate-700/60 dark:border-slate-600/60 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 select-none"
+  @defer (when isEditNodeModalOpen()) {
+    <app-edit-node-modal
+      [isOpen]="isEditNodeModalOpen()"
+      [node]="editingNode()"
+      [activeDiagramType]="activeDiagramType()"
+      (close)="closeEditNodeModal()"
+      (save)="onSaveEditedNode($event)"
     >
-      <div
-        class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-      </div>
-      <span class="font-medium">{{ quickToast() }}</span>
-    </div>
+    </app-edit-node-modal>
+  }
+
+  @defer (when isEditConnModalOpen()) {
+    <app-edit-connection-modal
+      [isOpen]="isEditConnModalOpen()"
+      [connection]="editingConnection()"
+      [activeDiagramType]="activeDiagramType()"
+      (close)="closeEditConnModal()"
+      (save)="onSaveEditedConnection($event)"
+      (delete)="removeConnection($event)"
+    >
+    </app-edit-connection-modal>
+  }
+
+  @defer (when showSpringBootModal()) {
+    <app-spring-boot-modal
+      [isOpen]="showSpringBootModal()"
+      [diagramId]="currentDiagramId()"
+      [diagramName]="currentDiagramName()"
+      [nodes]="nodes()"
+      [connections]="connections()"
+      [project]="currentProject()"
+      (closeModal)="showSpringBootModal.set(false)"
+    >
+    </app-spring-boot-modal>
+  }
+
+  @defer (when showJsonModal()) {
+    <app-json-modal
+      [isOpen]="showJsonModal()"
+      [mode]="jsonModalMode()"
+      [initialJson]="jsonContent()"
+      (close)="showJsonModal.set(false)"
+      (copied)="showQuickToast('¡JSON AST copiado al portapapeles!')"
+      (applyImport)="onApplyImportedJson($event)"
+    >
+    </app-json-modal>
+  }
+
+  @defer (when isCreateDiagramModalOpen()) {
+    <app-create-diagram-modal
+      [isOpen]="isCreateDiagramModalOpen()"
+      [lockedType]="createDiagramLockedType()"
+      [projectName]="currentProject()?.name || currentDiagramName()"
+      (close)="closeCreateDiagramModal()"
+      (create)="handleCreateDiagram($event)"
+    >
+    </app-create-diagram-modal>
   }
 
   <!-- MENÚ CONTEXTUAL DINÁMICO (CLIC DERECHO / ATAJOS RÁPIDOS) -->

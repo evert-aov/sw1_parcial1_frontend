@@ -38,15 +38,27 @@ import {
   DiagramType,
   UmlMessage,
 } from '../../../../../core/models/diagram.model';
-import { TranslatePipe } from '../../../../../core/i18n';
+import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
+import { RemoteCursor, NodeLock } from '../../../../../core/services/collaboration.service';
 import { UML_SVG_COMPONENTS, getUmlMarkerConfig, UmlMarkerConfig } from '../uml-svg';
 import { UML_WEBGL_COMPONENTS } from '../uml-webgl';
 import { calculateClassDynamicWidth } from '../../utils/node-metrics.util';
+
+import { DropNodePayload } from '../../services/diagram-node-operations.service';
 
 export interface DiagramCanvasViewState {
   zoom: number;
   scrollLeft: number;
   scrollTop: number;
+}
+
+export type DiagramDropPayload = DropNodePayload;
+
+export interface NodeResizeRect {
+  width: number;
+  height: number;
+  x?: number;
+  y?: number;
 }
 
 @Directive({
@@ -71,7 +83,14 @@ export class AutofocusInputDirective implements AfterViewInit {
 }
 
 import { DiagramFloatingLabelComponent } from '../diagram-floating-label/diagram-floating-label.component';
-import { UML_CANVAS_NODE_COMPONENTS } from './nodes';
+import {
+  UML_CANVAS_NODE_COMPONENTS,
+  getSequenceMessageColor,
+  isSequenceConnection as isSequenceConnectionLogic,
+} from './nodes';
+import { DiagramNodeResizeService } from '../../services/diagram-node-resize.service';
+import { DiagramSequenceActivationService } from '../../services/diagram-sequence-activation.service';
+import { DiagramAssemblyConnectionService } from '../../services/diagram-assembly-connection.service';
 
 @Component({
   selector: 'app-diagram-canvas',
@@ -111,6 +130,10 @@ export class DiagramCanvasComponent {
   readonly getSlotTopFn = (slot: number): number => 160 + slot * 50;
 
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly translationService = inject(TranslationService);
+  private readonly resizeService = inject(DiagramNodeResizeService);
+  private readonly sequenceActivationService = inject(DiagramSequenceActivationService);
+  private readonly assemblyConnectionService = inject(DiagramAssemblyConnectionService);
 
   // Inputs
   readonly nodes = input.required<UmlClassNode[]>();
@@ -121,8 +144,8 @@ export class DiagramCanvasComponent {
   readonly isReadOnly = input<boolean>(false);
   readonly selectedNodeIds = input<string[]>([]);
   readonly selectedConnIds = input<string[]>([]);
-  readonly remoteCursors = input<any[]>([]);
-  readonly nodeLocks = input<any>({});
+  readonly remoteCursors = input<RemoteCursor[]>([]);
+  readonly nodeLocks = input<Map<string, NodeLock> | Record<string, NodeLock>>({});
   readonly currentUserId = input<string | null>(null);
   readonly diagramId = input<string | null>(null);
   readonly activeDiagramType = input<DiagramType>(DiagramType.CLASS);
@@ -150,7 +173,7 @@ export class DiagramCanvasComponent {
   readonly nodeRename = output<{ nodeId: string; newName: string }>();
   readonly nodeLabelOffsetChange = output<{ node: UmlClassNode; offset: { x: number; y: number } }>();
   readonly sequenceMessageMove = output<{ connectionId: string; targetSlot: number }>();
-  readonly nodeDropped = output<{ payload: any; position: { x: number; y: number } }>();
+  readonly nodeDropped = output<{ payload: DiagramDropPayload; position: { x: number; y: number } }>();
   readonly nodeContextMenu = output<{ node: UmlClassNode; event: MouseEvent }>();
   readonly connectionContextMenu = output<{ conn: UmlConnection; event: MouseEvent }>();
   readonly canvasContextMenu = output<{ event: MouseEvent; canvasPos: { x: number; y: number } }>();
@@ -171,6 +194,17 @@ export class DiagramCanvasComponent {
   readonly draggingSeqMessageConnId = signal<string | null>(null);
   readonly draggingSeqMessageDeltaY = signal<number>(0);
   readonly draggingSeqMessageTargetSlot = signal<number>(0);
+
+  /** Computed: true cuando no hay nodos reales (excluye anclas internas). */
+  readonly hasNoRealNodes = computed(() => !this.nodes().some((n) => !n.isAnchor));
+
+  /** Computed: devuelve el mensaje del empty state contextual según el tipo de diagrama activo. */
+  readonly canvasEmptyStateMessage = computed(() => {
+    const type = this.activeDiagramType();
+    const key = `editor.canvas.emptyState.${type}`;
+    const msg = this.translationService.translate(key);
+    return msg !== key ? msg : this.translationService.translate('editor.canvas.emptyState.class');
+  });
 
   getLabelTransform(node: UmlClassNode): string {
     const ox = node.labelOffset?.x || 0;
@@ -1316,7 +1350,7 @@ export class DiagramCanvasComponent {
     };
   }
 
-  onNodeSizeChange(node: UmlClassNode, rect: any): void {
+  onNodeSizeChange(node: UmlClassNode, rect: NodeResizeRect): void {
     if (node.isAnchor || this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
     if (!rect) return;
     let minW = 120;
@@ -1357,138 +1391,29 @@ export class DiagramCanvasComponent {
     this.nodeSizeChange.emit({ node, width, height, position });
   }
 
-  // Redimensión manual suave en tiempo real (60 FPS) mediante puntero en manejadores
+  // Redimensión manual suave en tiempo real (60 FPS) delegada a DiagramNodeResizeService
   onResizeHandlePointerDown(node: UmlClassNode, handleType: string, event: PointerEvent): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-    event.preventDefault();
-    event.stopPropagation();
 
-    const targetEl = event.currentTarget as HTMLElement | null;
-    if (targetEl && targetEl.setPointerCapture) {
-      try {
-        targetEl.setPointerCapture(event.pointerId);
-      } catch (_) {}
-    }
-
-    const startX = event.clientX;
-    const startY = event.clientY;
     const scale = this.canvas?.transform?.scale || (this.zoomLevel() ? this.zoomLevel() / 100 : 1) || 1;
-
-    // Medir las dimensiones reales actuales renderizadas para garantizar continuidad milimétrica (sin saltos bruscos)
     const hostEl = (event.currentTarget as HTMLElement).closest('.f-node') as HTMLElement | null;
     const hostRect = hostEl ? hostEl.getBoundingClientRect() : null;
     const initialW = hostRect ? Math.round(hostRect.width / scale) : this.getNodeWidth(node);
     const initialH = hostRect ? Math.round(hostRect.height / scale) : (this.getNodeHeight(node) || node.height || 60);
-    const initialPosX = node.position ? node.position.x : 0;
-    const initialPosY = node.position ? node.position.y : 0;
 
-    let minW = 120;
-    let minH = 60;
-    if (node.nodeType === 'actor') {
-      minW = 50;
-      minH = 65;
-    } else if (node.nodeType === 'use_case') {
-      minW = 80;
-      minH = 45;
-    } else if (node.nodeType === 'package' || node.nodeType === 'boundary_box') {
-      minW = 120;
-      minH = 70;
-    } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      minW = 50;
-      minH = 50;
-    } else if (node.nodeType === 'component') {
-      minW = 140;
-      minH = 50;
-    } else if (this.isDeploymentNode(node)) {
-      minW = 160;
-      minH = 90;
-    } else {
-      minW = Math.max(90, this.getDynamicNodeWidth(node));
-    }
-
-    let animationFrameId: number | null = null;
-    let latestE: PointerEvent | null = null;
-
-    const applyResize = () => {
-      if (!latestE) return;
-      const dx = (latestE.clientX - startX) / scale;
-      const dy = (latestE.clientY - startY) / scale;
-
-      let nextW = initialW;
-      let nextH = initialH;
-      let nextX = initialPosX;
-      let nextY = initialPosY;
-
-      if (handleType.includes('right')) {
-        nextW = initialW + dx;
-      } else if (handleType.includes('left')) {
-        nextW = initialW - dx;
-      }
-
-      if (handleType.includes('bottom')) {
-        nextH = initialH + dy;
-      } else if (handleType.includes('top')) {
-        nextH = initialH - dy;
-      }
-
-      const clampedW = Math.max(minW, Math.round(nextW));
-      const clampedH = Math.max(minH, Math.round(nextH));
-
-      if (handleType.includes('left')) {
-        nextX = Math.round(initialPosX + (initialW - clampedW));
-      }
-      if (handleType.includes('top')) {
-        nextY = Math.round(initialPosY + (initialH - clampedH));
-      }
-
-      node.customWidth = clampedW;
-      node.customHeight = clampedH;
-      node.isCustomSize = true;
-      node.width = clampedW;
-      node.height = clampedH;
-      node.position = { x: nextX, y: nextY };
-
-      this.cdr.detectChanges();
-      this.fFlow?.redraw();
-      animationFrameId = null;
-    };
-
-    const onPointerMove = (e: PointerEvent) => {
-      latestE = e;
-      if (!animationFrameId) {
-        animationFrameId = requestAnimationFrame(applyResize);
-      }
-    };
-
-    const onPointerUp = (e: PointerEvent) => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-      }
-      if (targetEl && targetEl.releasePointerCapture) {
-        try {
-          targetEl.releasePointerCapture(event.pointerId);
-        } catch (_) {}
-      }
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
-
-      if (latestE) {
-        applyResize();
-      }
-
-      this.nodeSizeChange.emit({
-        node,
-        width: node.customWidth || node.width || initialW,
-        height: node.customHeight || node.height || initialH,
-        position: node.position,
-      });
-    };
-
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
+    this.resizeService.startResize({
+      event,
+      node,
+      handleType,
+      scale,
+      initialWidth: initialW,
+      initialHeight: initialH,
+      dynamicNodeWidthFn: (n: UmlClassNode) => this.getDynamicNodeWidth(n),
+      cdr: this.cdr,
+      onRedraw: () => this.fFlow?.redraw(),
+      onComplete: (res: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }) =>
+        this.nodeSizeChange.emit(res),
+    });
   }
 
   // Helpers de estado visual
@@ -1499,8 +1424,7 @@ export class DiagramCanvasComponent {
       this.activeDiagramType() === DiagramType.LAYERED ||
       this.activeDiagramType() === DiagramType.COMPONENT ||
       this.activeDiagramType() === DiagramType.COMMUNICATION ||
-      this.activeDiagramType() === DiagramType.SEQUENCE ||
-      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as any)
+      isSequenceConnectionLogic(conn, this.activeDiagramType())
     ) return false;
     if (
       conn.type === 'generalization' ||
@@ -1655,12 +1579,12 @@ export class DiagramCanvasComponent {
     });
   }
 
-  getNodeLock(nodeId: string): any {
+  getNodeLock(nodeId: string): NodeLock | null {
     const locks = this.nodeLocks();
     if (locks instanceof Map) {
-      return locks.get(nodeId);
+      return locks.get(nodeId) ?? null;
     } else if (locks && typeof locks === 'object') {
-      return locks[nodeId];
+      return (locks as Record<string, NodeLock>)[nodeId] ?? null;
     }
     return null;
   }
@@ -1689,78 +1613,26 @@ export class DiagramCanvasComponent {
     connectorId: string | undefined,
     defaultSide: 'top' | 'right' | 'bottom' | 'left' = 'top',
   ): 'top' | 'right' | 'bottom' | 'left' {
-    if (!connectorId) return defaultSide;
-    if (connectorId.endsWith('_top')) return 'top';
-    if (connectorId.endsWith('_right')) return 'right';
-    if (connectorId.endsWith('_bottom')) return 'bottom';
-    if (connectorId.endsWith('_left')) return 'left';
-    return defaultSide;
+    return this.assemblyConnectionService.getConnSide(connectorId, defaultSide);
   }
 
   getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
-    const w = node.isAnchor ? 0 : this.getNodeWidth(node);
-    const h = this.getNodeHeight(node) || 60;
-    const bottomExtra =
-      node.nodeType === 'actor' ||
-      node.nodeType === 'boundary' ||
-      node.nodeType === 'control' ||
-      node.nodeType === 'entity'
-        ? 38 + Math.max(0, node.labelOffset?.y || 0)
-        : 0;
-    switch (side) {
-      case 'left':
-        return { x: node.position.x, y: node.position.y + h / 2 };
-      case 'right':
-        return { x: node.position.x + w, y: node.position.y + h / 2 };
-      case 'top':
-        return { x: node.position.x + w / 2, y: node.position.y };
-      case 'bottom':
-        return { x: node.position.x + w / 2, y: node.position.y + h + bottomExtra };
-      default:
-        return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
-    }
+    return this.assemblyConnectionService.getConnectorPoint(
+      node,
+      side,
+      this.getNodeWidth(node),
+      this.getNodeHeight(node),
+    );
   }
 
   getAssemblyAngle(conn: UmlConnection): number {
-    try {
-      const container = this.flowContainerRef?.nativeElement;
-      if (container) {
-        const pathEl = container.querySelector(
-          `[data-connection-id="${conn.id}"] path[f-connection-path]`,
-        ) as SVGPathElement | null;
-        if (pathEl && typeof pathEl.getTotalLength === 'function') {
-          const len = pathEl.getTotalLength();
-          if (len > 0) {
-            const p1 = pathEl.getPointAtLength(Math.max(0, len * 0.5 - 2));
-            const p2 = pathEl.getPointAtLength(Math.min(len, len * 0.5 + 2));
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            if (dx !== 0 || dy !== 0) {
-              return Math.round((Math.atan2(dy, dx) * 180) / Math.PI);
-            }
-          }
-        }
-      }
-    } catch (_) {}
-
-    const nodeMap = new Map(this.nodes().map((n) => [n.id, n]));
-    const sId = conn.sourceNodeId || conn.sourceId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
-    const tId = conn.targetNodeId || conn.targetId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
-    const sNode = nodeMap.get(sId);
-    const tNode = nodeMap.get(tId);
-    if (!sNode || !tNode) return 0;
-
-    const sWidth = this.getNodeWidth(sNode);
-    const sHeight = this.getNodeHeight(sNode) || 60;
-    const tWidth = this.getNodeWidth(tNode);
-    const tHeight = this.getNodeHeight(tNode) || 60;
-
-    const sCenter = { x: sNode.position.x + sWidth / 2, y: sNode.position.y + sHeight / 2 };
-    const tCenter = { x: tNode.position.x + tWidth / 2, y: tNode.position.y + tHeight / 2 };
-
-    const dx = tCenter.x - sCenter.x;
-    const dy = tCenter.y - sCenter.y;
-    return Math.round((Math.atan2(dy, dx) * 180) / Math.PI);
+    return this.assemblyConnectionService.getAssemblyAngle(
+      conn,
+      this.nodes(),
+      this.flowContainerRef?.nativeElement,
+      (n: UmlClassNode) => this.getNodeWidth(n),
+      (n: UmlClassNode) => this.getNodeHeight(n),
+    );
   }
 
   hasForwardMessages(conn: UmlConnection): boolean {
@@ -1827,31 +1699,15 @@ export class DiagramCanvasComponent {
   }
 
   getMaxSequenceSlotUsed(): number {
-    let maxSlot = -1;
-    for (const c of this.connections()) {
-      if (!c.sourceId && !c.targetId) continue;
-      const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
-      if (sMatch) {
-        maxSlot = Math.max(maxSlot, parseInt(sMatch[1], 10));
-      }
-      const tMatch = c.targetId?.match(/_slot_(\d+)$/);
-      if (tMatch) {
-        maxSlot = Math.max(maxSlot, parseInt(tMatch[1], 10));
-      }
-    }
-    return maxSlot;
+    return this.sequenceActivationService.getMaxSequenceSlotUsed(this.connections());
   }
 
   isSequenceSlotOccupied(slot: number): boolean {
-    return this.connections().some((c) => {
-      if (!this.isSequenceConnection(c)) return false;
-      const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
-      const tMatch = c.targetId?.match(/_slot_(\d+)$/);
-      return (
-        (sMatch && parseInt(sMatch[1], 10) === slot) ||
-        (tMatch && parseInt(tMatch[1], 10) === slot)
-      );
-    });
+    return this.sequenceActivationService.isSequenceSlotOccupied(
+      slot,
+      this.connections(),
+      this.activeDiagramType(),
+    );
   }
 
   // Slots interactivos para líneas de vida en diagrama de secuencia (puntos de anclaje cada 50px)
@@ -1863,13 +1719,7 @@ export class DiagramCanvasComponent {
   }
 
   getLifelineLength(node?: UmlClassNode): number {
-    const maxSlot = this.getMaxSequenceSlotUsed();
-    const count = Math.max(4, maxSlot + 1 + 3);
-    const nodeHeaderHeight = node?.nodeType === 'actor' ? 95 : 60;
-    // La línea discontinua se extiende 40px más allá del último slot disponible
-    const targetBottom = 160 + (count - 1) * 50 + 40;
-    const minLength = node?.nodeType === 'actor' ? 80 : 120;
-    return Math.max(minLength, targetBottom - nodeHeaderHeight);
+    return this.sequenceActivationService.getLifelineLength(node, this.connections());
   }
 
   getSlotTop(node: UmlClassNode, slot: number): number {
@@ -1877,241 +1727,11 @@ export class DiagramCanvasComponent {
   }
 
   getNodeActivations(node: UmlClassNode): { id: string; top: number; height: number }[] {
-    if (this.activeDiagramType() !== DiagramType.SEQUENCE && node.nodeType !== 'lifeline') {
-      return [];
-    }
-
-    const headerHeight = node.nodeType === 'actor' ? 95 : 60;
-
-    interface ParsedSeqConn {
-      conn: UmlConnection;
-      slot: number;
-      sourceId: string;
-      targetId: string;
-      isReply: boolean;
-      groupKey: string;
-      seqNum: string;
-    }
-
-    const allSeqConns: ParsedSeqConn[] = [];
-
-    for (const c of this.connections()) {
-      if (!this.isSequenceConnection(c)) continue;
-
-      const baseSrc = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-      const baseTgt = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-      if (!baseSrc || !baseTgt) continue;
-
-      const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
-      const tMatch = c.targetId?.match(/_slot_(\d+)$/);
-      const slot = sMatch ? parseInt(sMatch[1], 10) : (tMatch ? parseInt(tMatch[1], 10) : 0);
-      const isReply = this.isReplyConnection(c);
-
-      let seqNum = '';
-      if (c.messages && c.messages.length > 0 && c.messages[0].sequenceNumber) {
-        seqNum = c.messages[0].sequenceNumber.trim();
-      } else if (c.name) {
-        seqNum = c.name.trim();
-      }
-
-      let groupKey = '';
-      const dotMatch = seqNum.match(/^(\d+)(?:\.|$)/);
-      if (dotMatch) {
-        groupKey = dotMatch[1];
-      }
-
-      allSeqConns.push({
-        conn: c,
-        slot,
-        sourceId: baseSrc,
-        targetId: baseTgt,
-        isReply,
-        groupKey,
-        seqNum,
-      });
-    }
-
-    if (allSeqConns.length === 0) {
-      if (node.activations && node.activations.length > 0) {
-        return node.activations.map((a, i) => ({
-          id: a.id || `act_manual_${i}`,
-          top: a.startY ?? a.top ?? 40,
-          height: a.height ?? 60,
-        }));
-      }
-      return [];
-    }
-
-    allSeqConns.sort((a, b) => a.slot - b.slot);
-
-    interface Interaction {
-      id: string;
-      initiatorId: string;
-      conns: ParsedSeqConn[];
-    }
-
-    const interactions: Interaction[] = [];
-    const keyedGroups = new Map<string, ParsedSeqConn[]>();
-    const unkeyedConns: ParsedSeqConn[] = [];
-
-    for (const sc of allSeqConns) {
-      if (sc.groupKey) {
-        if (!keyedGroups.has(sc.groupKey)) {
-          keyedGroups.set(sc.groupKey, []);
-        }
-        keyedGroups.get(sc.groupKey)!.push(sc);
-      } else {
-        unkeyedConns.push(sc);
-      }
-    }
-
-    for (const [key, grp] of keyedGroups.entries()) {
-      grp.sort((a, b) => a.slot - b.slot);
-      interactions.push({
-        id: `keyed_${key}`,
-        initiatorId: grp[0].sourceId,
-        conns: grp,
-      });
-    }
-
-    if (unkeyedConns.length > 0) {
-      let currentInter: Interaction | null = null;
-      let replySeenToInitiator = false;
-
-      for (const sc of unkeyedConns) {
-        const isNewInitiatorCall = currentInter && (
-          replySeenToInitiator ||
-          (sc.sourceId === currentInter.initiatorId && sc.slot - currentInter.conns[currentInter.conns.length - 1].slot >= 2) ||
-          (sc.sourceId !== currentInter.initiatorId && !currentInter.conns.some(prev => prev.targetId === sc.sourceId || prev.sourceId === sc.sourceId))
-        );
-
-        if (!currentInter || isNewInitiatorCall) {
-          if (currentInter) {
-            interactions.push(currentInter);
-          }
-          currentInter = {
-            id: `unkeyed_${sc.slot}`,
-            initiatorId: sc.sourceId,
-            conns: [sc],
-          };
-          replySeenToInitiator = sc.isReply && sc.targetId === sc.sourceId;
-        } else {
-          currentInter.conns.push(sc);
-          if (sc.isReply && sc.targetId === currentInter.initiatorId) {
-            replySeenToInitiator = true;
-          }
-        }
-      }
-
-      if (currentInter) {
-        interactions.push(currentInter);
-      }
-    }
-
-    const intervals: { id: string; minSlot: number; maxSlot: number }[] = [];
-
-    for (const inter of interactions) {
-      const conns = inter.conns;
-      const interMinSlot = Math.min(...conns.map(c => c.slot));
-      const interMaxSlot = Math.max(...conns.map(c => c.slot));
-
-      const isActorInitiator = node.nodeType === 'actor' && node.id === inter.initiatorId;
-
-      if (isActorInitiator) {
-        // SOLO EN EL ACTOR: la barra de activación es una sola y continua en toda la interacción
-        const startSlot = interMinSlot;
-        const replyToInitiator = conns.find(
-          c => c.isReply && c.targetId === node.id && c.slot > startSlot
-        );
-        const endSlot = replyToInitiator ? replyToInitiator.slot : interMaxSlot;
-
-        intervals.push({
-          id: `act_${node.id}_${inter.id}_${startSlot}_${endSlot}`,
-          minSlot: startSlot,
-          maxSlot: endSlot,
-        });
-      } else {
-        // EN LOS DEMÁS ELEMENTOS (View, Controller, etc.):
-        // Como en EA, cada llamada entrante tiene su propia activación independiente.
-        // Por más que estén en slots contiguos, NO se genera un junte entre llamadas separadas.
-        const myConns = conns.filter(c => c.sourceId === node.id || c.targetId === node.id);
-        if (myConns.length === 0) {
-          continue;
-        }
-
-        const incomingCalls = conns.filter(c => c.targetId === node.id && !c.isReply);
-        const effectiveIncoming = incomingCalls.length > 0 ? incomingCalls : conns.filter(c => c.targetId === node.id);
-
-        if (effectiveIncoming.length > 0) {
-          const sortedIncoming = [...effectiveIncoming].sort((a, b) => a.slot - b.slot);
-
-          for (let i = 0; i < sortedIncoming.length; i++) {
-            const inc = sortedIncoming[i];
-            const incSlot = inc.slot;
-            const nextIncSlot = i + 1 < sortedIncoming.length ? sortedIncoming[i + 1].slot : Infinity;
-
-            // Salidas o respuestas de este nodo generadas a partir de esta llamada (antes de la siguiente llamada entrante)
-            const myOutgoing = conns.filter(
-              c => c.sourceId === node.id && c.slot >= incSlot && c.slot < nextIncSlot
-            );
-
-            let endSlot = incSlot;
-            if (myOutgoing.length > 0) {
-              endSlot = Math.max(...myOutgoing.map(c => c.slot));
-            }
-
-            intervals.push({
-              id: `act_${node.id}_${inter.id}_${incSlot}_${endSlot}`,
-              minSlot: incSlot,
-              maxSlot: endSlot,
-            });
-          }
-        }
-
-        // Si hay llamadas salientes no cubiertas por llamadas entrantes
-        const orphanOutgoing = conns.filter(
-          c => c.sourceId === node.id && !intervals.some(inv => c.slot >= inv.minSlot && c.slot <= inv.maxSlot)
-        );
-        for (const out of orphanOutgoing) {
-          intervals.push({
-            id: `act_${node.id}_${inter.id}_${out.slot}_${out.slot}`,
-            minSlot: out.slot,
-            maxSlot: out.slot,
-          });
-        }
-      }
-    }
-
-    intervals.sort((a, b) => a.minSlot - b.minSlot);
-
-    // Merge overlapping intervals (only if they actually overlap in slots: minSlot <= prev.maxSlot)
-    // Non-overlapping slots (even if adjacent: minSlot > prev.maxSlot) remain separate!
-    const mergedIntervals: { id: string; minSlot: number; maxSlot: number }[] = [];
-    for (const inv of intervals) {
-      if (mergedIntervals.length === 0) {
-        mergedIntervals.push({ ...inv });
-      } else {
-        const prev = mergedIntervals[mergedIntervals.length - 1];
-        if (inv.minSlot <= prev.maxSlot) {
-          prev.maxSlot = Math.max(prev.maxSlot, inv.maxSlot);
-          prev.id = `${prev.id}_${inv.maxSlot}`;
-        } else {
-          mergedIntervals.push({ ...inv });
-        }
-      }
-    }
-
-    return mergedIntervals.map((inv) => {
-      const slotYStart = 160 + inv.minSlot * 50 - headerHeight;
-      const slotYEnd = 160 + inv.maxSlot * 50 - headerHeight;
-      const top = Math.max(0, slotYStart - 4);
-      const height = slotYEnd - slotYStart + 22;
-      return {
-        id: inv.id,
-        top,
-        height,
-      };
-    });
+    return this.sequenceActivationService.getNodeActivations(
+      node,
+      this.connections(),
+      this.activeDiagramType(),
+    );
   }
 
   getSequenceConnColor(conn: UmlConnection): string {
@@ -2119,30 +1739,15 @@ export class DiagramCanvasComponent {
       return conn.messages[0].color;
     }
     const seqNum = conn.messages?.[0]?.sequenceNumber || conn.name || '';
-    const match = seqNum.trim().match(/^(\d+)(?:\.|$)/);
-    const palette = [
-      '#0284C7', '#7C3AED', '#059669', '#D97706',
-      '#DC2626', '#0891B2', '#4F46E5', '#C026D3'
-    ];
-    if (match) {
-      const g = parseInt(match[1], 10);
-      return palette[(Math.max(1, g) - 1) % palette.length];
-    }
-    return '#0284C7';
+    return getSequenceMessageColor(seqNum);
   }
 
   isSequenceConnection(conn: UmlConnection): boolean {
-    if (this.activeDiagramType() === DiagramType.COMMUNICATION) {
-      return false;
-    }
-    return (
-      this.activeDiagramType() === DiagramType.SEQUENCE ||
-      ['sync', 'reply', 'async', 'create', 'self'].includes(conn.type as any)
-    );
+    return isSequenceConnectionLogic(conn, this.activeDiagramType());
   }
 
   isReplyConnection(conn: UmlConnection): boolean {
-    return conn.type === 'reply' || (!!conn.messages && conn.messages.some((m) => m.isReturn));
+    return this.sequenceActivationService.isReplyConnection(conn);
   }
 
   formatLifelineName(name?: string): string {

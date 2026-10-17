@@ -1,0 +1,30 @@
+<div class="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end">
+  @for (toast of toastService.toasts(); track toast.id) {
+    <div
+      class="flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg text-xs font-medium max-w-sm w-full bg-white dark:bg-[#111528] min-w-[260px] animate-in slide-in-from-right fade-in duration-300"
+      [ngClass]="getTypeClasses(toast.type)"
+      role="alert"
+      aria-live="assertive"
+    >
+      <!-- Icon -->
+      <ng-icon
+        [name]="getIcon(toast.type)"
+        class="shrink-0 mt-0.5"
+        size="16"
+      />
+
+      <!-- Message -->
+      <span class="flex-1 leading-relaxed">{{ toast.message }}</span>
+
+      <!-- Close button -->
+      <button
+        type="button"
+        class="shrink-0 ml-1 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+        (click)="toastService.dismiss(toast.id)"
+        aria-label="Close notification"
+      >
+        <ng-icon name="heroXMark" size="14" />
+      </button>
+    </div>
+  }
+</div>

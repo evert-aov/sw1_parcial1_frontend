@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { XmiClientParser } from '../../../../core/services/xmi-client-parser';
+import { ToastService } from '../../../../core/services/toast.service';
 import {
   DiagramType,
   UmlClassNode,
@@ -21,6 +22,19 @@ export interface DiagramImportResult {
   providedIn: 'root',
 })
 export class DiagramImportService {
+  private readonly toastService?: ToastService | null;
+
+  constructor(toastService?: ToastService) {
+    if (toastService !== undefined) {
+      this.toastService = toastService;
+    } else {
+      try {
+        this.toastService = inject(ToastService, { optional: true });
+      } catch {
+        this.toastService = null;
+      }
+    }
+  }
   /**
    * Lee un archivo (.xml, .xmi, .json) detectando su codificación (UTF-8, Windows-1252, ISO-8859-1),
    * y parsea su contenido a nodos y conexiones normalizados.
@@ -185,14 +199,14 @@ export class DiagramImportService {
     const { isReadOnly, hasMultipleActiveUsers, multiUserBlockedMsg, jsonString, normalizeDataType, normalizeReturnType, onSuccess } = options;
     if (isReadOnly) return;
     if (hasMultipleActiveUsers) {
-      alert(multiUserBlockedMsg);
+      this.toastService?.warning(multiUserBlockedMsg);
       return;
     }
     try {
       const result = this.parseJsonProject(jsonString, normalizeDataType, normalizeReturnType);
       onSuccess(result);
     } catch (e: any) {
-      alert('Error en el formato JSON: ' + (e?.message || e));
+      this.toastService?.error('Error en el formato JSON: ' + (e?.message || e));
     }
   }
 
@@ -209,7 +223,7 @@ export class DiagramImportService {
     if (isReadOnly) return;
     const target = event.target as HTMLInputElement;
     if (hasMultipleActiveUsers) {
-      alert(multiUserBlockedMsg);
+      this.toastService?.warning(multiUserBlockedMsg);
       if (target) target.value = '';
       return;
     }
@@ -220,7 +234,7 @@ export class DiagramImportService {
       const result = await this.parseFile(file, normalizeDataType, normalizeReturnType);
       onSuccess(result);
     } catch (err: any) {
-      alert('Error al leer el archivo: ' + (err.message || err));
+      this.toastService?.error('Error al leer el archivo: ' + (err.message || err));
     } finally {
       if (target) target.value = '';
     }

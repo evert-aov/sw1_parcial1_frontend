@@ -7,13 +7,17 @@ import {
 } from '../../../../core/models/diagram.model';
 import { DiagramNodeFactoryService } from './diagram-node-factory.service';
 import { DiagramClipboardService } from './diagram-clipboard.service';
+import {
+  sanitizeBoundaryBoxName,
+  isSystemBoundaryBox,
+} from '../components/diagram-canvas/nodes';
 
 export interface DropNodePayload {
   type: 'toolbox_node' | 'explorer_node';
   nodeType?: string;
   stereotype?: UmlStereotype | string | null;
-  nodeData?: any;
-  node?: any;
+  nodeData?: UmlClassNode;
+  node?: UmlClassNode;
   sourceDiagramId?: string;
   sourceDiagramType?: DiagramType;
 }
@@ -212,6 +216,39 @@ export class DiagramNodeOperationsService {
   }
 
   /**
+   * Valida compatibilidad y crea un nodo de diagrama tipado
+   */
+  createValidatedNode(
+    type: string,
+    params: {
+      isReadOnly: boolean;
+      activeDiagramType: DiagramType;
+      nodes: UmlClassNode[];
+      position?: { x: number; y: number };
+      stereotype?: UmlStereotype | string | null;
+      scrollOffset: { scrollLeft: number; scrollTop: number };
+      onIncompatible: (currentType: DiagramType) => void;
+    },
+  ): UmlClassNode | null {
+    if (params.isReadOnly) return null;
+    if (type !== 'boundary_box') {
+      const validation = this.validateNodeAddition(type, params.activeDiagramType);
+      if (!validation.allowed) {
+        params.onIncompatible(params.activeDiagramType);
+        return null;
+      }
+      type = validation.redirectType || type;
+    }
+    return this.createNode(type, {
+      nodes: params.nodes,
+      activeDiagramType: params.activeDiagramType,
+      position: params.position,
+      stereotype: params.stereotype,
+      scrollOffset: params.scrollOffset,
+    });
+  }
+
+  /**
    * Helper para obtener el label legible del tipo de nodo
    */
   getNodeTypeReadableLabel(nodeType?: string): string {
@@ -273,8 +310,8 @@ export class DiagramNodeOperationsService {
     const node = nodes.find((n) => n.id === nodeId);
     if (!node) return { anyChanged: false, updatedNodes: nodes };
     let finalName = newName ?? '';
-    if (node.nodeType === 'boundary_box' && (!finalName.trim() || finalName === 'ClassName')) {
-      finalName = '.';
+    if (isSystemBoundaryBox(node.nodeType)) {
+      finalName = sanitizeBoundaryBoxName(finalName);
     }
     if (node.name === finalName) return { anyChanged: false, updatedNodes: nodes };
 
@@ -387,5 +424,55 @@ export class DiagramNodeOperationsService {
     offset: { x: number; y: number },
   ): UmlClassNode[] {
     return nodes.map((n) => (n.id === nodeId ? { ...n, labelOffset: { ...offset } } : n));
+  }
+
+  /**
+   * Procesa el drop de elementos provenientes del Toolbox o del Explorador
+   */
+  handleNodeDropped(
+    event: { payload: DropNodePayload; position: { x: number; y: number } },
+    handlers: {
+      isReadOnly: boolean;
+      onDropToolbox: (nodeType: string, position: { x: number; y: number }, stereotype?: UmlStereotype | string | null) => void;
+      onCopyExplorer: (data: { node: UmlClassNode; sourceDiagramId?: string; sourceDiagramType?: DiagramType; position: { x: number; y: number } }) => void;
+    },
+  ): void {
+    if (handlers.isReadOnly || !event.payload) return;
+    const { payload, position } = event;
+    if (payload.type === 'toolbox_node') {
+      const type = payload.nodeType === 'node' ? 'executionEnvironment' : (payload.nodeType || 'class');
+      handlers.onDropToolbox(type, position, payload.stereotype);
+    } else if (payload.type === 'explorer_node') {
+      const node = payload.nodeData || payload.node;
+      if (node) {
+        handlers.onCopyExplorer({
+          node,
+          sourceDiagramId: payload.sourceDiagramId,
+          sourceDiagramType: payload.sourceDiagramType,
+          position,
+        });
+      }
+    }
+  }
+
+  /**
+   * Selecciona y desplaza la vista hacia un nodo seleccionado desde el Explorador
+   */
+  handleSelectNodeFromExplorer(
+    nodeId: string,
+    nodes: UmlClassNode[],
+    canvas?: any,
+    onSelect?: (nodeId: string) => void,
+  ): void {
+    onSelect?.(nodeId);
+    canvas?.select([nodeId], []);
+    const node = nodes.find((n) => n.id === nodeId);
+    if (node && node.position) {
+      const scrollEl = canvas?.flowContainerRef?.nativeElement;
+      if (scrollEl) {
+        scrollEl.scrollLeft = Math.max(0, node.position.x - 200);
+        scrollEl.scrollTop = Math.max(0, node.position.y - 150);
+      }
+    }
   }
 }

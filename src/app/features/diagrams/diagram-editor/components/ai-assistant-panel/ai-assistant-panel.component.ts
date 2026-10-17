@@ -31,6 +31,7 @@ import {
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { AiAssistantService, AiResponse, AiModelOption } from '../../../../../core/services/ai-assistant.service';
+import { ToastService } from '../../../../../core/services/toast.service';
 import {
   UmlClassNode,
   UmlConnection,
@@ -82,6 +83,7 @@ import { TranslatePipe } from '../../../../../core/i18n';
 export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   private readonly aiService = inject(AiAssistantService);
+  private readonly toastService = inject(ToastService);
 
   @ViewChild('chatScrollContainer') chatScrollContainerRef?: ElementRef<HTMLDivElement>;
   @ViewChild('imageInput') imageInputRef?: ElementRef<HTMLInputElement>;
@@ -394,7 +396,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   async startAudioRecording(): Promise<void> {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Tu navegador no soporta captura de audio desde el micrófono (MediaDevices API).');
+        this.toastService.warning('Tu navegador no soporta captura de audio desde el micrófono (MediaDevices API).');
         return;
       }
 
@@ -436,7 +438,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
       }, 1000);
     } catch (err: any) {
       console.error('Error al acceder al micrófono:', err);
-      alert('No se pudo acceder al micrófono: ' + (err.message || 'Permiso denegado'));
+      this.toastService.error('No se pudo acceder al micrófono: ' + (err.message || 'Permiso denegado'));
       this.isRecordingAudio.set(false);
     }
   }
@@ -556,13 +558,13 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
               return;
             }
           }
-          alert('No se encontró ninguna imagen en el portapapeles. Copia una captura con Ctrl+C o tecla Impr Pant primero.');
+          this.toastService.warning('No se encontró ninguna imagen en el portapapeles. Copia una captura con Ctrl+C o tecla Impr Pant primero.');
         })
         .catch(() => {
-          alert('Usa el atajo de teclado Ctrl+V dentro del cuadro de texto para pegar la imagen.');
+          this.toastService.info('Usa el atajo de teclado Ctrl+V dentro del cuadro de texto para pegar la imagen.');
         });
     } else {
-      alert('Usa el atajo Ctrl+V dentro del cuadro de texto.');
+      this.toastService.info('Usa el atajo Ctrl+V dentro del cuadro de texto.');
     }
   }
 
@@ -605,7 +607,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
             }
           })
           .catch((err) => {
-            alert('No se pudo acceder a la cámara: ' + err.message);
+            this.toastService.error('No se pudo acceder a la cámara: ' + err.message);
             this.closeWebcamModal();
           });
       }

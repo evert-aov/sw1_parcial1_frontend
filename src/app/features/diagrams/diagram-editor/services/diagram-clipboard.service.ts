@@ -328,4 +328,65 @@ export class DiagramClipboardService {
     }
     return toast;
   }
+
+  /**
+   * Ejecuta la validación y generación de elementos pegados
+   */
+  executePaste(params: {
+    isReadOnly: boolean;
+    activeDiagramType: DiagramType;
+    nodes: UmlClassNode[];
+    targetPos?: { x: number; y: number };
+    scrollOffset: { scrollLeft: number; scrollTop: number };
+    onIncompatible: (currentType: DiagramType) => void;
+  }): { newNodes: UmlClassNode[]; newConnections: UmlConnection[]; newPastedIds: string[] } | null {
+    if (params.isReadOnly) return null;
+    const clip = this.getClipboard();
+    if (!clip || !clip.nodes || clip.nodes.length === 0) return null;
+
+    if (!this.isPasteCompatible(clip, params.activeDiagramType)) {
+      params.onIncompatible(params.activeDiagramType);
+      return null;
+    }
+
+    return this.createPastedElements(
+      clip,
+      params.nodes,
+      params.activeDiagramType,
+      params.targetPos,
+      params.scrollOffset.scrollLeft,
+      params.scrollOffset.scrollTop,
+    );
+  }
+
+  /**
+   * Ejecuta la validación y creación de un nodo arrastrado/copiado desde el explorador
+   */
+  executeCopyFromExplorer(params: {
+    isReadOnly: boolean;
+    node: UmlClassNode;
+    sourceDiagramId: string;
+    currentDiagramId: string | null;
+    activeDiagramType: DiagramType;
+    nodes: UmlClassNode[];
+    position?: { x: number; y: number };
+    scrollOffset: { scrollLeft: number; scrollTop: number };
+    getDefaultColor: (nodeType?: string | null, stereotype?: string | null) => string;
+    onIncompatible: (currentType: DiagramType) => void;
+  }): UmlClassNode | null {
+    if (params.isReadOnly || !params.node) return null;
+    if (!this.isNodeCompatibleWithDiagramType(params.node, params.activeDiagramType)) {
+      params.onIncompatible(params.activeDiagramType);
+      return null;
+    }
+    return this.createExplorerCopiedNode(
+      params.node,
+      params.activeDiagramType,
+      params.nodes,
+      params.sourceDiagramId === params.currentDiagramId,
+      params.position,
+      params.scrollOffset,
+      params.getDefaultColor,
+    );
+  }
 }

@@ -1,11 +1,109 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { toCanvas } from 'html-to-image';
 import { UmlClassNode, UmlConnection } from '../models/diagram.model';
+import { ToastService } from './toast.service';
+import {
+  BmpWorkerRequest,
+  BmpWorkerResponse,
+  convertRgbaToBmpBuffer,
+} from '../workers/bmp-encoder.worker';
 
 @Injectable({
   providedIn: 'root',
 })
 export class BmpExportService {
+  private readonly toastService?: ToastService | null;
+
+  constructor(toastService?: ToastService) {
+    if (toastService !== undefined) {
+      this.toastService = toastService;
+    } else {
+      try {
+        this.toastService = inject(ToastService, { optional: true });
+      } catch {
+        this.toastService = null;
+      }
+    }
+  }
+
+  /**
+   * Codifica los datos de un ImageData en un ArrayBuffer BMP.
+   * Utiliza un Web Worker en segundo plano cuando está disponible en el entorno del navegador,
+   * liberando el hilo principal (Main Thread) para mantener la interfaz a 60 FPS sin bloqueos.
+   * Si los Web Workers no están disponibles o fallan, recurre de forma transparente al fallback síncrono.
+   */
+  async encodeImageDataToBmp(imageData: ImageData): Promise<ArrayBuffer> {
+    if (typeof Worker !== 'undefined' && typeof window !== 'undefined') {
+      try {
+        return await this.encodeViaWorker(imageData);
+      } catch (err) {
+        console.warn('Fallo en codificación BMP con Web Worker, aplicando fallback síncrono:', err);
+      }
+    }
+    return this.convertImageDataToBmp(imageData);
+  }
+
+  private encodeViaWorker(imageData: ImageData): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      let worker: Worker | null = null;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+      try {
+        worker = new Worker(new URL('../workers/bmp-encoder.worker', import.meta.url), {
+          type: 'module',
+        });
+      } catch (e) {
+        return reject(e);
+      }
+
+      const id = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : String(Math.random());
+
+      const cleanup = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (worker) {
+          worker.terminate();
+          worker = null;
+        }
+      };
+
+      // Timeout de seguridad de 30 segundos
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('BMP worker timeout'));
+      }, 30000);
+
+      worker.onmessage = (event: MessageEvent<BmpWorkerResponse>) => {
+        const res = event.data;
+        if (res && res.id === id) {
+          cleanup();
+          if (res.success && res.bmpBuffer) {
+            resolve(res.bmpBuffer);
+          } else {
+            reject(new Error(res.error || 'Error desconocido en Web Worker BMP'));
+          }
+        }
+      };
+
+      worker.onerror = (err) => {
+        cleanup();
+        reject(err);
+      };
+
+      // Copia del buffer de datos para transferir la propiedad al Worker sin alterar el canvas original
+      const pixelBuffer = imageData.data.buffer.slice(0);
+      const request: BmpWorkerRequest = {
+        id,
+        width: imageData.width,
+        height: imageData.height,
+        buffer: pixelBuffer,
+      };
+
+      worker.postMessage(request, [pixelBuffer]);
+    });
+  }
+
   /**
    * Exporta una captura visual exacta del DOM del editor de diagramas a formato BMP (Windows Bitmap),
    * detectando automáticamente el bounding box de los elementos e integrando el marco UML 2.5 estilo Enterprise Architect.
@@ -23,14 +121,14 @@ export class BmpExportService {
       }
 
       const imageData = ctx.getImageData(0, 0, finalCanvas.width, finalCanvas.height);
-      const bmpBuffer = this.convertImageDataToBmp(imageData);
+      const bmpBuffer = await this.encodeImageDataToBmp(imageData);
 
       const blob = new Blob([bmpBuffer], { type: 'image/bmp' });
       const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
       this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.bmp`);
     } catch (err) {
       console.error('Error al capturar imagen BMP del editor:', err);
-      alert('Error al generar la captura BMP del diagrama.');
+      this.toastService?.error('Error al generar la captura BMP del diagrama.');
     }
   }
 
@@ -46,7 +144,7 @@ export class BmpExportService {
       const finalCanvas = await this.generateFramedCanvas(element, diagramName, diagramType);
       finalCanvas.toBlob((blob) => {
         if (!blob) {
-          alert('Error al generar la imagen PNG.');
+          this.toastService?.error('Error al generar la imagen PNG.');
           return;
         }
         const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
@@ -54,7 +152,7 @@ export class BmpExportService {
       }, 'image/png');
     } catch (err) {
       console.error('Error al capturar imagen PNG del editor:', err);
-      alert('Error al generar la captura PNG del diagrama.');
+      this.toastService?.error('Error al generar la captura PNG del diagrama.');
     }
   }
 
@@ -328,7 +426,8 @@ export class BmpExportService {
       rawCanvas = await toCanvas(element, {
         backgroundColor: '#FFFFFF',
         pixelRatio: 2,
-        cacheBust: true,
+        cacheBust: false,
+        skipFonts: true,
         filter: (domNode: HTMLElement) => {
           const classList = domNode.classList;
           // Filtrar drag handles interactivos temporales de Foblex, manejadores de resize y puntos conectores
@@ -567,12 +666,12 @@ export class BmpExportService {
   /**
    * Exporta el diagrama UML a formato Windows Bitmap (.bmp) mediante renderizado de fallback canvas 2D.
    */
-  exportToBmp(
+  async exportToBmp(
     nodes: UmlClassNode[],
     connections: UmlConnection[],
     diagramName = 'diagrama-uml',
     diagramType?: string,
-  ): void {
+  ): Promise<void> {
     const canvas = this.drawFallbackCanvas(nodes, connections, diagramName, diagramType);
     if (!canvas) return;
 
@@ -580,7 +679,7 @@ export class BmpExportService {
     if (!ctx) return;
 
     const rawImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const bmpBuffer = this.convertImageDataToBmp(rawImageData);
+    const bmpBuffer = await this.encodeImageDataToBmp(rawImageData);
 
     const blob = new Blob([bmpBuffer], { type: 'image/bmp' });
     const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
@@ -618,7 +717,7 @@ export class BmpExportService {
     const validNodes = nodes.filter((n) => !n.isAnchor);
 
     if (validNodes.length === 0) {
-      alert('No hay elementos en el diagrama para exportar.');
+      this.toastService?.warning('No hay elementos en el diagrama para exportar.');
       return null;
     }
 
@@ -676,7 +775,7 @@ export class BmpExportService {
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
-      alert('No se pudo inicializar el contexto de dibujo Canvas.');
+      this.toastService?.error('No se pudo inicializar el contexto de dibujo Canvas.');
       return null;
     }
 
@@ -1083,68 +1182,6 @@ export class BmpExportService {
    * Codifica un objeto ImageData (RGBA) a un ArrayBuffer con la estructura binaria de un archivo BMP de 24 bits.
    */
   convertImageDataToBmp(imageData: ImageData): ArrayBuffer {
-    const width = imageData.width;
-    const height = imageData.height;
-    const data = imageData.data;
-
-    const bytesPerPixel = 3;
-    const rowSize = Math.floor((width * bytesPerPixel + 3) / 4) * 4;
-    const pixelArraySize = rowSize * height;
-    const fileHeaderSize = 14;
-    const infoHeaderSize = 40;
-    const fileSize = fileHeaderSize + infoHeaderSize + pixelArraySize;
-
-    const buffer = new ArrayBuffer(fileSize);
-    const view = new DataView(buffer);
-
-    // 1. BITMAPFILEHEADER (14 bytes)
-    view.setUint8(0, 0x42); // 'B'
-    view.setUint8(1, 0x4d); // 'M'
-    view.setUint32(2, fileSize, true); // Tamaño total del archivo
-    view.setUint16(6, 0, true); // Reservado 1
-    view.setUint16(8, 0, true); // Reservado 2
-    view.setUint32(10, fileHeaderSize + infoHeaderSize, true); // Offset a los datos de píxeles
-
-    // 2. BITMAPINFOHEADER (40 bytes)
-    view.setUint32(14, infoHeaderSize, true); // Tamaño de este encabezado
-    view.setInt32(18, width, true); // Ancho de la imagen en píxeles
-    view.setInt32(22, height, true); // Alto de la imagen en píxeles (positivo = bottom-to-top)
-    view.setUint16(26, 1, true); // Planos de color = 1
-    view.setUint16(28, 24, true); // Bits por píxel (24 bits = RGB)
-    view.setUint32(30, 0, true); // Compresión (0 = BI_RGB sin comprimir)
-    view.setUint32(34, pixelArraySize, true); // Tamaño del arreglo de píxeles
-    view.setInt32(38, 3780, true); // Resolución horizontal (~96 DPI, estándar Enterprise Architect)
-    view.setInt32(42, 3780, true); // Resolución vertical (~96 DPI, estándar Enterprise Architect)
-    view.setUint32(46, 0, true); // Colores en la paleta (0 = 2^24)
-    view.setUint32(50, 0, true); // Colores importantes
-
-    // 3. PIXEL DATA (De abajo hacia arriba, formato BGR con padding de 4 bytes)
-    const pixelOffset = fileHeaderSize + infoHeaderSize;
-    const uint8View = new Uint8Array(buffer);
-
-    for (let y = 0; y < height; y++) {
-      const srcRow = height - 1 - y; // Bottom-to-top
-      const destRowOffset = pixelOffset + y * rowSize;
-
-      for (let x = 0; x < width; x++) {
-        const srcIdx = (srcRow * width + x) * 4;
-        const r = data[srcIdx];
-        const g = data[srcIdx + 1];
-        const b = data[srcIdx + 2];
-        const a = data[srcIdx + 3] / 255;
-
-        // Mezcla con fondo blanco puro en caso de transparencia
-        const blendedR = Math.round(r * a + 255 * (1 - a));
-        const blendedG = Math.round(g * a + 255 * (1 - a));
-        const blendedB = Math.round(b * a + 255 * (1 - a));
-
-        const destIdx = destRowOffset + x * 3;
-        uint8View[destIdx] = blendedB; // B
-        uint8View[destIdx + 1] = blendedG; // G
-        uint8View[destIdx + 2] = blendedR; // R
-      }
-    }
-
-    return buffer;
+    return convertRgbaToBmpBuffer(imageData.data, imageData.width, imageData.height);
   }
 }

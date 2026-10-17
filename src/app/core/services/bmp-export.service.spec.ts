@@ -1,12 +1,20 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BmpExportService } from './bmp-export.service';
+import { ToastService } from './toast.service';
 import { UmlClassNode, UmlConnection } from '../models/diagram.model';
 
 describe('BmpExportService', () => {
   let service: BmpExportService;
+  let mockToastService: ToastService;
 
   beforeEach(() => {
-    service = new BmpExportService();
+    mockToastService = {
+      warning: vi.fn(),
+      error: vi.fn(),
+      success: vi.fn(),
+      info: vi.fn(),
+    } as unknown as ToastService;
+    service = new BmpExportService(mockToastService);
   });
 
   afterEach(() => {
@@ -67,11 +75,9 @@ describe('BmpExportService', () => {
     });
   });
 
-  it('debe alertar si no hay nodos válidos', () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+  it('debe alertar con toast si no hay nodos válidos', () => {
     service.exportToBmp([], [], 'test');
-    expect(alertSpy).toHaveBeenCalledWith('No hay elementos en el diagrama para exportar.');
-    alertSpy.mockRestore();
+    expect(mockToastService.warning).toHaveBeenCalledWith('No hay elementos en el diagrama para exportar.');
   });
 
   it('debe codificar un ImageData en un ArrayBuffer BMP válido con encabezado BM', () => {
@@ -108,7 +114,7 @@ describe('BmpExportService', () => {
     expect(view.getUint16(28, true)).toBe(24);
   });
 
-  it('debe generar y descargar un archivo BMP con nodos y conexiones', () => {
+  it('debe generar y descargar un archivo BMP con nodos y conexiones', async () => {
     const mockNodes: UmlClassNode[] = [
       {
         id: 'node_1',
@@ -191,12 +197,12 @@ describe('BmpExportService', () => {
       return origCreateElement(tag);
     });
 
-    service.exportToBmp(mockNodes, mockConnections, 'Mi Diagrama Ferreteria');
+    await service.exportToBmp(mockNodes, mockConnections, 'Mi Diagrama Ferreteria');
 
     expect(clickSpy).toHaveBeenCalled();
   });
 
-  it('debe dibujar correctamente una relación assembly (ball and socket) en canvas fallback', () => {
+  it('debe dibujar correctamente una relación assembly (ball and socket) en canvas fallback', async () => {
     const mockNodes: UmlClassNode[] = [
       {
         id: 'cmp_1',
@@ -271,7 +277,7 @@ describe('BmpExportService', () => {
       return origCreateElement(tag);
     });
 
-    service.exportToBmp(mockNodes, mockConnections, 'Diagrama Componentes', 'component');
+    await service.exportToBmp(mockNodes, mockConnections, 'Diagrama Componentes', 'component');
 
     expect(clickSpy).toHaveBeenCalled();
     // Debe haber llamado a arc al menos 2 veces (1 para la bola y 1 para el socket)
@@ -355,5 +361,34 @@ describe('BmpExportService', () => {
     } finally {
       document.body.removeChild(dummyContainer);
     }
+  });
+
+  describe('encodeImageDataToBmp', () => {
+    it('debe codificar un ImageData de forma asíncrona mediante encodeImageDataToBmp', async () => {
+      const width = 4;
+      const height = 4;
+      const data = new Uint8ClampedArray(width * height * 4);
+      for (let i = 0; i < data.length; i += 4) {
+        data[i] = 0;       // R
+        data[i + 1] = 255; // G
+        data[i + 2] = 0;   // B
+        data[i + 3] = 255; // A
+      }
+      const mockImageData = {
+        width,
+        height,
+        data,
+      } as unknown as ImageData;
+
+      const buffer = await service.encodeImageDataToBmp(mockImageData);
+      expect(buffer).toBeInstanceOf(ArrayBuffer);
+
+      const view = new DataView(buffer);
+      // Validar BM
+      expect(view.getUint8(0)).toBe(0x42);
+      expect(view.getUint8(1)).toBe(0x4d);
+      expect(view.getInt32(18, true)).toBe(width);
+      expect(view.getInt32(22, true)).toBe(height);
+    });
   });
 });

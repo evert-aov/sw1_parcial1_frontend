@@ -10,6 +10,7 @@ import {
   UmlRelationshipType,
 } from '../../../../core/models/diagram.model';
 import { DiagramConnectionLayoutService } from './diagram-connection-layout.service';
+import { isSequenceConnection } from '../components/diagram-canvas/nodes';
 
 export const PREDEFINED_DATA_TYPES: string[] = [
   'UUID', 'String', 'Integer', 'Long', 'Boolean', 'Double',
@@ -97,6 +98,36 @@ export class DiagramAiSyncService {
         }, 80);
       });
     });
+  }
+
+  /**
+   * Procesa la mutación completa por IA: valida nodos, precalcula anclas y sanitiza conexiones.
+   */
+  processAiMutation(params: {
+    targetNodes: any[];
+    targetConns: any[];
+    activeDiagramType: DiagramType;
+    defaultLineStyle: UmlLineStyle;
+    getDefaultColorForNodeType: (nodeType?: string | null, stereotype?: string | null) => string;
+    getOptimalConnectorId: (sourceNode: UmlClassNode, targetNode: UmlClassNode) => { sourceId: string; targetId: string };
+    getConnectorPoint: (node: UmlClassNode, side: string) => { x: number; y: number };
+    recalculateSequenceNumbers: (conns: UmlConnection[], preserve?: boolean) => UmlConnection[];
+  }): { cleanNodes: UmlClassNode[]; cleanConns: UmlConnection[] } {
+    const cleanNodes = this.applyAiNodesMutation(params.targetNodes, params.getDefaultColorForNodeType);
+    this.precalculateAnchorPositions(
+      cleanNodes,
+      params.targetConns,
+      params.getOptimalConnectorId,
+      params.getConnectorPoint,
+    );
+    const cleanConns = this.sanitizeClientConnections(
+      params.targetConns,
+      cleanNodes,
+      params.activeDiagramType,
+      params.defaultLineStyle,
+      params.recalculateSequenceNumbers,
+    );
+    return { cleanNodes, cleanConns };
   }
 
   normalizeDataType(type: string): string {
@@ -353,8 +384,7 @@ export class DiagramAiSyncService {
       if (!nodeIds.has(s) || !nodeIds.has(t)) continue;
 
       const isSeqConn =
-        isSeqDiagram ||
-        ['sync', 'reply', 'async', 'create', 'self'].includes(c.type) ||
+        isSequenceConnection(c, activeDiagramType) ||
         (c.sourceId && c.sourceId.includes('_slot_')) ||
         (c.targetId && c.targetId.includes('_slot_'));
 

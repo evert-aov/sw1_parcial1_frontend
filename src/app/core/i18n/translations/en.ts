@@ -44,6 +44,9 @@ export const en = {
       removeMemberTitle: 'Remove Member',
       removeMemberMessage: 'Are you sure you want to remove this member from the project?',
     },
+    toast: {
+      dismiss: 'Dismiss notification',
+    },
   },
   theme: {
     toggle: 'Toggle theme',
@@ -378,6 +381,18 @@ export const en = {
         dragLabelHint: 'Drag to reposition text (Double-click to edit)',
         focusActivation: 'Control focus / Activation',
         classHeaderTooltip: 'Click to highlight relationships / Double click to edit',
+      },
+      emptyState: {
+        class: 'Drag a class from the left panel or press C to get started',
+        use_case: 'Add an Actor or Use Case from the panel to model interactions',
+        sequence: 'Add a Lifeline or Actor to model the message flow',
+        communication: 'Add an Object or Actor to model collaboration between instances',
+        package: 'Add a Package to organize modules and system dependencies',
+        component: 'Add a Component or Boundary Box to model the software architecture',
+        deployment: 'Add a Node, Device or Environment to model the infrastructure',
+        layered: 'Add Architectural Layers to visualize your system structure',
+        class_analysis: 'Add a Class or Actor to perform the system Class Analysis',
+        shortcutHint: 'Quick access: left toolbox or drag from the panel',
       },
     },
     toolbox: {

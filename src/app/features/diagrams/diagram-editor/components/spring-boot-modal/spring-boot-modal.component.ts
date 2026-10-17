@@ -38,6 +38,7 @@ import {
 } from '../../../../../core/services/code-generator.service';
 import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
 import { Project } from '../../../../../core/models/project.model';
+import { ToastService } from '../../../../../core/services/toast.service';
 import { TranslatePipe } from '../../../../../core/i18n';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import hljs from 'highlight.js/lib/core';
@@ -91,6 +92,7 @@ hljs.registerLanguage('properties', properties);
 export class SpringBootModalComponent implements OnInit {
   private readonly codegenService = inject(CodeGeneratorService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly toastService = inject(ToastService);
 
   readonly isOpen = input<boolean>(false);
   readonly diagramId = input<string | null>(null);
@@ -318,7 +320,7 @@ export class SpringBootModalComponent implements OnInit {
   downloadZip(): void {
     const diagId = this.diagramId();
     if (!diagId) {
-      alert('Debes guardar el diagrama antes de descargar el proyecto.');
+      this.toastService.warning('Debes guardar el diagrama antes de descargar el proyecto.');
       return;
     }
 
@@ -350,12 +352,13 @@ export class SpringBootModalComponent implements OnInit {
         a.click();
         window.URL.revokeObjectURL(url);
         this.isDownloading.set(false);
+        this.toastService.success('Proyecto descargado exitosamente.');
       },
       error: (err) => {
         console.error('Error al descargar ZIP:', err);
         this.isDownloading.set(false);
         const errMsg = err?.error?.message || err?.message || 'Error al descargar el archivo ZIP.';
-        alert(`Error al descargar el archivo ZIP: ${errMsg}`);
+        this.toastService.error(`Error al descargar el archivo ZIP: ${errMsg}`);
       },
     });
   }

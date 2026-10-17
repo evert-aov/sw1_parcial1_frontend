@@ -116,4 +116,18 @@ export class DiagramViewportService {
   fitView(diagramCanvas?: DiagramCanvasComponent): void {
     diagramCanvas?.fitView();
   }
+
+  restoreCanvasViewState(diagramCanvas: DiagramCanvasComponent | undefined, diagramId: string, onUpdateEndpoints: () => void): void {
+    requestAnimationFrame(() => {
+      onUpdateEndpoints();
+      requestAnimationFrame(() => {
+        onUpdateEndpoints();
+        diagramCanvas?.clearSelection();
+        diagramCanvas?.reset();
+        const targetState = this.getDiagramViewState(diagramId);
+        this.zoomLevel.set(targetState.zoom);
+        diagramCanvas?.applyViewState(targetState);
+      });
+    });
+  }
 }

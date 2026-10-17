@@ -2,6 +2,7 @@ import { Injectable, signal, inject } from '@angular/core';
 import { DiagramType, UML_DIAGRAM_TYPES } from '../../../../core/models/diagram.model';
 import { DiagramService } from '../../../../core/services/diagram.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { DiagramViewportService } from './diagram-viewport.service';
 import { DiagramModalService } from './diagram-modal.service';
 import { DiagramTab } from '../components/diagram-tabs/diagram-tabs.component';
@@ -19,12 +20,14 @@ export class DiagramTabManagerService {
   private readonly confirmDialogService?: ConfirmDialogService | null;
   private readonly viewportService?: DiagramViewportService | null;
   private readonly modalService?: DiagramModalService | null;
+  private readonly toastService?: ToastService | null;
 
   constructor(
     diagramService?: DiagramService,
     confirmDialogService?: ConfirmDialogService,
     viewportService?: DiagramViewportService,
     modalService?: DiagramModalService,
+    toastService?: ToastService,
   ) {
     if (diagramService !== undefined) {
       this.diagramService = diagramService;
@@ -45,6 +48,11 @@ export class DiagramTabManagerService {
       this.modalService = modalService;
     } else {
       try { this.modalService = inject(DiagramModalService, { optional: true }); } catch { this.modalService = null; }
+    }
+    if (toastService !== undefined) {
+      this.toastService = toastService;
+    } else {
+      try { this.toastService = inject(ToastService, { optional: true }); } catch { this.toastService = null; }
     }
   }
 
@@ -185,8 +193,82 @@ export class DiagramTabManagerService {
       },
       error: (err) => {
         console.error('Error deleting diagram:', err);
-        alert('No se pudo eliminar el diagrama.');
+        this.toastService?.error('No se pudo eliminar el diagrama.');
       },
     });
+  }
+
+  /**
+   * Resuelve y procesa los parámetros de ruta al inicializar el editor
+   */
+  handleRouteQueryParams(
+    params: any,
+    context: {
+      userId?: string | null;
+      setCurrentProjectId: (id: string) => void;
+      setCurrentDiagramId: (id: string) => void;
+      setCurrentDiagramName: (name: string) => void;
+      setCurrentProject: (proj: any) => void;
+      setCurrentUserRole: (role: any) => void;
+      loadDiagramsByProject: (projectId: string) => any;
+      getProject: (projectId: string) => any;
+      loadDiagram: (diagramId: string) => void;
+      resolveUserRole: (project: any, userId?: string | null) => any;
+    },
+  ): void {
+    const { diagramId, projectId, projectName } = params;
+    if (projectId) {
+      context.setCurrentProjectId(projectId);
+      context.loadDiagramsByProject(projectId).subscribe((diagrams: any[]) => {
+        if (!diagramId && diagrams?.length > 0) {
+          context.setCurrentDiagramId(diagrams[0].id);
+          context.setCurrentDiagramName(diagrams[0].name);
+          context.loadDiagram(diagrams[0].id);
+        }
+      });
+      context.getProject(projectId).subscribe({
+        next: (project: any) => {
+          context.setCurrentProject(project);
+          context.setCurrentUserRole(context.resolveUserRole(project, context.userId));
+        },
+        error: () => {},
+      });
+    }
+    if (projectName) context.setCurrentDiagramName(projectName);
+    if (diagramId) {
+      context.setCurrentDiagramId(diagramId);
+      context.loadDiagram(diagramId);
+    }
+  }
+
+  /**
+   * Transiciona hacia un nuevo diagrama guardando estado y navegando por ruta
+   */
+  executeSelectDiagram(
+    diagramId: string,
+    context: {
+      currentDiagramId: string | null;
+      isReadOnly: boolean;
+      hasUnsavedChanges: boolean;
+      saveCurrentViewState?: () => void;
+      saveToBackend?: () => void;
+      setCurrentDiagramId: (id: string) => void;
+      navigateToDiagram: (id: string) => void;
+      loadDiagram: (id: string) => void;
+    },
+  ): void {
+    if (context.currentDiagramId === diagramId) return;
+
+    if (context.currentDiagramId) {
+      context.saveCurrentViewState?.();
+    }
+
+    if (context.hasUnsavedChanges && !context.isReadOnly) {
+      context.saveToBackend?.();
+    }
+
+    context.setCurrentDiagramId(diagramId);
+    context.navigateToDiagram(diagramId);
+    context.loadDiagram(diagramId);
   }
 }

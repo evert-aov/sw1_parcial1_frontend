@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BmpExportService } from '../../../../core/services/bmp-export.service';
 import { XmiService } from '../../../../core/services/xmi.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import {
   DiagramType,
   SaveDiagramAstRequest,
@@ -27,8 +28,9 @@ export interface UmlDiagramExportJson {
 export class DiagramExportService {
   private readonly bmpExportService: BmpExportService;
   private readonly xmiService: XmiService;
+  private readonly toastService?: ToastService | null;
 
-  constructor(bmpService?: BmpExportService, xmiService?: XmiService) {
+  constructor(bmpService?: BmpExportService, xmiService?: XmiService, toastService?: ToastService) {
     if (bmpService) {
       this.bmpExportService = bmpService;
     } else {
@@ -51,6 +53,16 @@ export class DiagramExportService {
         // Outside Angular DI context
       }
       this.xmiService = injectedXmi ?? ({} as any);
+    }
+
+    if (toastService !== undefined) {
+      this.toastService = toastService;
+    } else {
+      try {
+        this.toastService = inject(ToastService, { optional: true });
+      } catch {
+        this.toastService = null;
+      }
     }
   }
 
@@ -80,7 +92,13 @@ export class DiagramExportService {
         canvasComp.redraw();
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await new Promise<void>((resolve) => {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        } else {
+          setTimeout(resolve, 0);
+        }
+      });
 
       const containerEl = diagramCanvas?.getExportElement();
       if (containerEl) {
@@ -324,10 +342,11 @@ export class DiagramExportService {
         next: (blob: Blob) => {
           const filename = `${params.diagramName.toLowerCase().replace(/\s+/g, '_')}_ea.xmi`;
           this.downloadBlob(blob, filename);
+          this.toastService?.success('Archivo XMI exportado correctamente.');
         },
         error: (err: any) => {
           const errMsg = err?.error?.message || err?.message || 'Error al exportar XMI.';
-          alert(`Error al exportar XMI: ${errMsg}`);
+          this.toastService?.error(`Error al exportar XMI: ${errMsg}`);
         },
       });
     };
@@ -348,4 +367,34 @@ export class DiagramExportService {
       triggerDownload();
     }
   }
+
+  /**
+   * Valida y orquesta la exportación completa a XMI
+   */
+  executeDownloadXmi(options: {
+    currentDiagramId: string | null;
+    currentDiagramName: string;
+    hasUnsavedChanges: boolean;
+    isReadOnly: boolean;
+    xmiService: XmiService;
+    saveAst: (id: string, payload: any) => Observable<any>;
+    buildSaveAstPayload: () => any;
+    onSavedSuccessfully: () => void;
+  }): void {
+    if (!options.currentDiagramId) {
+      this.toastService?.warning('Debes guardar el diagrama antes de exportar XMI.');
+      return;
+    }
+    this.exportXmi({
+      diagramId: options.currentDiagramId,
+      diagramName: options.currentDiagramName,
+      hasUnsavedChanges: options.hasUnsavedChanges,
+      isReadOnly: options.isReadOnly,
+      xmiService: options.xmiService,
+      saveAst: options.saveAst,
+      buildSaveAstPayload: options.buildSaveAstPayload,
+      onSavedSuccessfully: options.onSavedSuccessfully,
+    });
+  }
 }
+
