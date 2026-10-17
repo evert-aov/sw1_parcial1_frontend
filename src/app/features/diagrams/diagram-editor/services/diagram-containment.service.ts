@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { UmlClassNode } from '../../../../core/models/diagram.model';
+import { DiagramType, UmlClassNode } from '../../../../core/models/diagram.model';
 
 @Injectable({
   providedIn: 'root',
@@ -112,5 +112,181 @@ export class DiagramContainmentService {
     this.isDraggingNode = false;
     this.lastNodeDragPos.clear();
     this.currentDragDescendantIds.clear();
+  }
+
+  /**
+   * Procesa el cambio de posición de un nodo durante arrastre manual individual o múltiple,
+   * propagando deltas a selección y descendientes jerárquicos.
+   */
+  processNodePositionChange(params: {
+    node: UmlClassNode;
+    newPosition: { x: number; y: number };
+    nodes: UmlClassNode[];
+    selectedNodeIds: Set<string>;
+    selectedNodeId: string | null;
+    activeDiagramType: DiagramType;
+    getNodeWidth: (n: UmlClassNode) => number;
+    getNodeHeight: (n: UmlClassNode) => number;
+    onStartDrag: () => void;
+    onSelectNode: (id: string) => void;
+    sendNodeDrag: (id: string, pos: { x: number; y: number }) => void;
+  }): { shouldRedraw: boolean } {
+    const {
+      node,
+      nodes,
+      selectedNodeIds,
+      selectedNodeId,
+      activeDiagramType,
+      getNodeWidth,
+      getNodeHeight,
+      onStartDrag,
+      onSelectNode,
+      sendNodeDrag,
+    } = params;
+
+    let targetPos = params.newPosition;
+    const isSequenceNode = activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
+    if (isSequenceNode) {
+      targetPos = { x: Math.round(targetPos.x), y: 50 };
+    }
+
+    if (!this.isDraggingNode) {
+      const rootsToTrace = new Set<string>([node.id]);
+      if (selectedNodeIds.has(node.id)) {
+        for (const id of selectedNodeIds) {
+          rootsToTrace.add(id);
+        }
+      }
+      this.startDrag(rootsToTrace, nodes, getNodeWidth, getNodeHeight);
+      onStartDrag();
+    }
+
+    if (!selectedNodeIds.has(node.id) && selectedNodeId !== node.id) {
+      onSelectNode(node.id);
+    }
+
+    const last = this.lastNodeDragPos.get(node.id);
+    if (last && last.x === targetPos.x && last.y === targetPos.y) {
+      return { shouldRedraw: false };
+    }
+
+    let shouldRedraw = false;
+    if (last) {
+      const dx = targetPos.x - last.x;
+      const dy = isSequenceNode ? 0 : targetPos.y - last.y;
+
+      if (dx !== 0 || dy !== 0) {
+        // 1. Mover nodos seleccionados explícitamente (selección múltiple)
+        if (selectedNodeIds.size > 1 && selectedNodeIds.has(node.id)) {
+          for (const other of nodes) {
+            if (other.id !== node.id && selectedNodeIds.has(other.id) && !other.isAnchor) {
+              const otherIsSeq = activeDiagramType === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
+              const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
+              other.position = { x: Math.round(other.position.x + dx), y: otherY };
+              sendNodeDrag(other.id, other.position);
+            }
+          }
+        }
+
+        // 2. Mover nodos descendientes jerárquicos contenidos (agrupación visual padre-hijo)
+        if (this.currentDragDescendantIds.size > 0) {
+          for (const other of nodes) {
+            if (
+              this.currentDragDescendantIds.has(other.id) &&
+              other.id !== node.id &&
+              !selectedNodeIds.has(other.id) &&
+              !other.isAnchor
+            ) {
+              const otherIsSeq = activeDiagramType === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
+              const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
+              other.position = { x: Math.round(other.position.x + dx), y: otherY };
+              sendNodeDrag(other.id, other.position);
+            }
+          }
+        }
+
+        if ((selectedNodeIds.size > 1 && selectedNodeIds.has(node.id)) || this.currentDragDescendantIds.size > 0) {
+          shouldRedraw = true;
+        }
+      }
+    }
+
+    this.lastNodeDragPos.set(node.id, { x: targetPos.x, y: targetPos.y });
+    node.position = targetPos;
+    sendNodeDrag(node.id, targetPos);
+
+    return { shouldRedraw };
+  }
+
+  /**
+   * Procesa el movimiento por lote de nodos (ej: evento FMoveNodesEvent del flow canvas)
+   */
+  processMoveNodes(params: {
+    eventNodes: Array<{ id: string; position: { x: number; y: number } }>;
+    nodes: UmlClassNode[];
+    activeDiagramType: DiagramType;
+    getNodeWidth: (n: UmlClassNode) => number;
+    getNodeHeight: (n: UmlClassNode) => number;
+    onStartDrag: () => void;
+    sendNodeDrag: (id: string, pos: { x: number; y: number }) => void;
+  }): { anyMoved: boolean } {
+    const {
+      eventNodes,
+      nodes,
+      activeDiagramType,
+      getNodeWidth,
+      getNodeHeight,
+      onStartDrag,
+      sendNodeDrag,
+    } = params;
+
+    if (!this.isDraggingNode) {
+      this.startDrag(
+        eventNodes.map((n) => n.id),
+        nodes,
+        getNodeWidth,
+        getNodeHeight,
+      );
+      onStartDrag();
+    }
+
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+    const eventNodeIds = new Set(eventNodes.map((n) => n.id));
+    let anyMoved = false;
+
+    for (const item of eventNodes) {
+      const node = nodeMap.get(item.id);
+      if (node) {
+        const isSequenceNode = activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
+        const targetX = Math.round(item.position.x);
+        const targetY = isSequenceNode ? 50 : Math.round(item.position.y);
+        const dx = targetX - node.position.x;
+        const dy = isSequenceNode ? 0 : targetY - node.position.y;
+        if (dx !== 0 || dy !== 0) {
+          node.position = { x: targetX, y: targetY };
+          this.lastNodeDragPos.set(node.id, { x: targetX, y: targetY });
+          anyMoved = true;
+          sendNodeDrag(node.id, node.position);
+
+          if (this.currentDragDescendantIds.size > 0) {
+            const descendantsOfThisNode = this.getDescendantNodeIds(node.id, nodes, getNodeWidth, getNodeHeight);
+            for (const descId of descendantsOfThisNode) {
+              if (!eventNodeIds.has(descId)) {
+                const descNode = nodeMap.get(descId);
+                if (descNode && !descNode.isAnchor) {
+                  const dY = (activeDiagramType === DiagramType.SEQUENCE || descNode.nodeType === 'lifeline')
+                    ? 50
+                    : Math.round(descNode.position.y + dy);
+                  descNode.position = { x: Math.round(descNode.position.x + dx), y: dY };
+                  sendNodeDrag(descNode.id, descNode.position);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return { anyMoved };
   }
 }

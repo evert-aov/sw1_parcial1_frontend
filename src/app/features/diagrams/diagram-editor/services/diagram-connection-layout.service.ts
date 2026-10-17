@@ -4,8 +4,10 @@ import {
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
+  UmlMessage,
   UmlRelationshipType,
 } from '../../../../core/models/diagram.model';
+import { XmiClientParser } from '../../../../core/services/xmi-client-parser';
 
 @Injectable({
   providedIn: 'root',
@@ -558,5 +560,138 @@ export class DiagramConnectionLayoutService {
       targetMultiplicity: '',
       messages,
     };
+  }
+
+  /**
+   * Recalcula la numeración secuencial jerárquica (o cronológica) de los mensajes en diagramas de secuencia
+   */
+  recalculateSequenceNumbers(
+    connectionsList: UmlConnection[],
+    nodes: UmlClassNode[],
+    activeDiagramType: DiagramType,
+    preserveSequenceNumbers = false,
+  ): UmlConnection[] {
+    const isSeq = activeDiagramType === DiagramType.SEQUENCE;
+    if (!isSeq) {
+      return connectionsList;
+    }
+
+    const palette = [
+      '#0284C7', // Grupo 1: Azul cielo
+      '#7C3AED', // Grupo 2: Violeta
+      '#059669', // Grupo 3: Esmeralda
+      '#D97706', // Grupo 4: Ámbar
+      '#DC2626', // Grupo 5: Rojo carmesí
+      '#0891B2', // Grupo 6: Cyan
+      '#4F46E5', // Grupo 7: Índigo
+      '#C026D3', // Grupo 8: Magenta
+    ];
+
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+    interface SeqConnMeta {
+      conn: UmlConnection;
+      slot: number;
+      index: number;
+    }
+
+    const seqMetas: SeqConnMeta[] = [];
+    connectionsList.forEach((c, idx) => {
+      const isConnSeq =
+        isSeq || ['sync', 'reply', 'async', 'create', 'self'].includes(c.type as any);
+      if (isConnSeq) {
+        const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+        const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+        const slot = sMatch
+          ? parseInt(sMatch[1], 10)
+          : tMatch
+          ? parseInt(tMatch[1], 10)
+          : c.messages?.[0]?.orderIndex ?? idx;
+        seqMetas.push({ conn: c, slot, index: idx });
+      }
+    });
+
+    if (seqMetas.length === 0) {
+      return connectionsList;
+    }
+
+    // Ordenar cronológicamente de arriba hacia abajo según el slot
+    seqMetas.sort((a, b) => a.slot - b.slot || a.index - b.index);
+
+    let currentGroup = 0;
+    let childIndex = 0;
+
+    const updatedConnMap = new Map<string, UmlConnection>();
+
+    let globalOrderIndex = 0;
+    for (const meta of seqMetas) {
+      const c = meta.conn;
+      const baseSourceId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const baseTargetId = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const sourceNode = nodeMap.get(baseSourceId);
+
+      // Una nueva interacción/grupo inicia cuando el Actor envía un mensaje hacia una línea de vida
+      const isActorSource = sourceNode?.nodeType === 'actor';
+
+      let seqNum: string;
+      if (isActorSource || currentGroup === 0) {
+        currentGroup++;
+        childIndex = 0;
+        seqNum = `${currentGroup}`;
+      } else {
+        childIndex++;
+        seqNum = `${currentGroup}.${childIndex}`;
+      }
+
+      // Cargar/importar no debe convertir etiquetas EA explícitas en grupos por actor.
+      const explicitNumber = c.messages?.[0]?.sequenceNumber?.trim();
+      if (preserveSequenceNumbers && explicitNumber) seqNum = explicitNumber;
+      const color = preserveSequenceNumbers
+        ? XmiClientParser.getGroupColor(seqNum)
+        : palette[(currentGroup - 1) % palette.length];
+
+      let updatedMessages: UmlMessage[];
+      if (c.messages && c.messages.length > 0) {
+        updatedMessages = c.messages.map((m, mIdx) => {
+          if (mIdx === 0) {
+            return {
+              ...m,
+              sequenceNumber: seqNum,
+              direction: m.direction ?? 'forward',
+              type: m.type ?? (['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync'),
+              isReturn: m.isReturn ?? c.type === 'reply',
+              orderIndex: globalOrderIndex++,
+              color,
+            };
+          }
+          return { ...m, orderIndex: globalOrderIndex++ };
+        });
+      } else {
+        updatedMessages = [
+          {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            sequenceNumber: seqNum,
+            functionName: 'msj',
+            parameters: '',
+            returnType: '',
+            isReturn: c.type === 'reply',
+            direction: 'forward',
+            orderIndex: globalOrderIndex++,
+            type: ['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync',
+            color,
+          },
+        ];
+      }
+
+      const updatedConn: UmlConnection = {
+        ...c,
+        name: c.name && /^\d+(\.\d+)*$/.test(c.name.trim()) ? seqNum : c.name,
+        messages: updatedMessages,
+      };
+
+      updatedConnMap.set(c.id, updatedConn);
+    }
+
+    return connectionsList.map((c) => updatedConnMap.get(c.id) || c);
   }
 }

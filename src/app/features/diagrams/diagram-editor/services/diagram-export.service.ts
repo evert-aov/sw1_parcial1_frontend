@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
 import { BmpExportService } from '../../../../core/services/bmp-export.service';
+import { XmiService } from '../../../../core/services/xmi.service';
 import {
   DiagramType,
   SaveDiagramAstRequest,
@@ -24,8 +26,9 @@ export interface UmlDiagramExportJson {
 })
 export class DiagramExportService {
   private readonly bmpExportService: BmpExportService;
+  private readonly xmiService: XmiService;
 
-  constructor(bmpService?: BmpExportService) {
+  constructor(bmpService?: BmpExportService, xmiService?: XmiService) {
     if (bmpService) {
       this.bmpExportService = bmpService;
     } else {
@@ -36,6 +39,18 @@ export class DiagramExportService {
         // Outside Angular DI context (e.g. unit tests with Object.create)
       }
       this.bmpExportService = injected ?? new BmpExportService();
+    }
+
+    if (xmiService) {
+      this.xmiService = xmiService;
+    } else {
+      let injectedXmi: XmiService | null = null;
+      try {
+        injectedXmi = inject(XmiService, { optional: true });
+      } catch {
+        // Outside Angular DI context
+      }
+      this.xmiService = injectedXmi ?? ({} as any);
     }
   }
 
@@ -277,5 +292,49 @@ export class DiagramExportService {
         };
       }),
     };
+  }
+
+  /**
+   * Exporta el diagrama en formato XMI (Enterprise Architect)
+   */
+  exportXmi(params: {
+    diagramId: string;
+    diagramName: string;
+    hasUnsavedChanges: boolean;
+    isReadOnly: boolean;
+    xmiService?: XmiService;
+    saveAst: (diagramId: string, payload: any) => Observable<any>;
+    buildSaveAstPayload: () => any;
+    onSavedSuccessfully: () => void;
+  }): void {
+    const service = params.xmiService || this.xmiService;
+    const triggerDownload = () => {
+      service.exportDiagram(params.diagramId).subscribe({
+        next: (blob: Blob) => {
+          const filename = `${params.diagramName.toLowerCase().replace(/\s+/g, '_')}_ea.xmi`;
+          this.downloadBlob(blob, filename);
+        },
+        error: (err: any) => {
+          const errMsg = err?.error?.message || err?.message || 'Error al exportar XMI.';
+          alert(`Error al exportar XMI: ${errMsg}`);
+        },
+      });
+    };
+
+    if (params.hasUnsavedChanges && !params.isReadOnly) {
+      const payload = params.buildSaveAstPayload();
+      params.saveAst(params.diagramId, payload).subscribe({
+        next: () => {
+          params.onSavedSuccessfully();
+          triggerDownload();
+        },
+        error: (err) => {
+          console.warn('No se pudo guardar automáticamente antes de exportar XMI:', err);
+          triggerDownload();
+        },
+      });
+    } else {
+      triggerDownload();
+    }
   }
 }

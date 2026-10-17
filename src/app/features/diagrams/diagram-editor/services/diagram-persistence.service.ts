@@ -4,6 +4,8 @@ import {
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
+  UmlNodeType,
+  UmlRelationshipType,
 } from '../../../../core/models/diagram.model';
 
 export interface UmlDiagramDraft {
@@ -65,6 +67,34 @@ export class DiagramPersistenceService {
     return null;
   }
 
+  flushExitSave(options: {
+    diagramId: string | null;
+    isReadOnly: boolean;
+    hasUnsavedChanges: boolean;
+    token?: string | null;
+    apiUrl: string;
+    payload: any;
+    onSendDiagramSync?: () => void;
+  }): void {
+    const { diagramId, isReadOnly, hasUnsavedChanges, token, apiUrl, payload, onSendDiagramSync } = options;
+    if (!diagramId || isReadOnly || !hasUnsavedChanges) return;
+
+    onSendDiagramSync?.();
+
+    try {
+      const url = `${apiUrl}/diagrams/${diagramId}/ast`;
+      fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      });
+    } catch (_) {}
+  }
+
   markAsUnsaved(
     isReadOnly: boolean,
     diagramId: string | null,
@@ -114,5 +144,243 @@ export class DiagramPersistenceService {
 
   triggerNodeDragEnd(): void {
     this.nodeDragEnd$.next();
+  }
+
+  restoreDraftIfNewer(
+    diagramId: string,
+    serverUpdatedAt?: string,
+    isSequence?: boolean,
+    getDefaultColor?: (nodeType?: string, stereotype?: string | null) => string,
+  ): { restored: boolean; nodes?: UmlClassNode[]; connections?: UmlConnection[]; defaultLineStyle?: UmlLineStyle } {
+    const localDraftRaw = localStorage.getItem(`uml_draft_${diagramId}`);
+    if (!localDraftRaw) return { restored: false };
+
+    try {
+      const draft = JSON.parse(localDraftRaw);
+      const serverUpdated = serverUpdatedAt ? new Date(serverUpdatedAt).getTime() : 0;
+      if (draft.timestamp && draft.timestamp > serverUpdated && draft.nodes?.length > 0) {
+        const sanitizedDraftNodes: UmlClassNode[] = (draft.nodes || []).map((n: any) => {
+          let nodeType: UmlNodeType | string = n.nodeType || 'class';
+          if (nodeType === 'class') {
+            if (n.id?.startsWith('actor_')) nodeType = 'actor';
+            else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
+            else if (n.id?.startsWith('boundary_box_')) nodeType = 'boundary_box';
+            else if (n.id?.startsWith('package_')) nodeType = 'package';
+            else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
+            else if (n.id?.startsWith('control_')) nodeType = 'control';
+            else if (n.id?.startsWith('entity_')) nodeType = 'entity';
+            else if (n.id?.startsWith('component_')) nodeType = 'component';
+            else if (n.id?.startsWith('device_')) nodeType = 'device';
+            else if (n.id?.startsWith('exec_env_') || n.id?.startsWith('exec_')) nodeType = 'executionEnvironment';
+            else if (n.id?.startsWith('lifeline_') || isSequence) nodeType = 'lifeline';
+          }
+          let name = n.name || '';
+          if (nodeType === 'boundary_box' && (name === 'ClassName' || !name.trim())) {
+            name = '.';
+          }
+          let nodeColor = n.color;
+          if (
+            (!nodeColor ||
+              ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') &&
+                ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) &&
+            getDefaultColor
+          ) {
+            nodeColor = getDefaultColor(nodeType, n.stereotype);
+          }
+          const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
+          const defaultH =
+            nodeType === 'lifeline'
+              ? 60
+              : nodeType === 'component'
+              ? 70
+              : nodeType === 'device' || nodeType === 'node'
+              ? 140
+              : nodeType === 'executionEnvironment'
+              ? 160
+              : nodeType === 'boundary_box'
+              ? 200
+              : nodeType === 'package'
+              ? 120
+              : undefined;
+          const draftH = nodeType === 'lifeline' ? 60 : (n.height || n.customHeight || defaultH);
+          return {
+            ...n,
+            nodeType,
+            name,
+            height: draftH,
+            customHeight: n.customHeight || (isExplicitSizeNode ? draftH : undefined),
+            customWidth: n.customWidth || (isExplicitSizeNode ? (n.width || 220) : undefined),
+            isCustomSize: n.isCustomSize !== undefined ? n.isCustomSize : (isExplicitSizeNode || (!!draftH && nodeType === 'class')),
+            color: nodeColor,
+            stereotype: n.stereotype || null,
+          };
+        });
+
+        return {
+          restored: true,
+          nodes: sanitizedDraftNodes,
+          connections: draft.connections || [],
+          defaultLineStyle: draft.defaultLineStyle,
+        };
+      }
+    } catch (_) {}
+
+    return { restored: false };
+  }
+
+  mapServerDiagramToLocal(
+    diagram: any,
+    getDefaultColor?: (nodeType?: string, stereotype?: string | null) => string,
+    normalizeDataType?: (type: string) => string,
+    normalizeReturnType?: (type: string) => string,
+  ): { nodes: UmlClassNode[]; connections: UmlConnection[] } {
+    const isSequence = diagram.type === 'sequence';
+
+    const mappedNodes: UmlClassNode[] = (diagram.nodes || []).map((n: any) => {
+      let nodeType: UmlNodeType | string = (n.nodeType as any) || (diagram.type === 'package' ? 'package' : (isSequence ? 'lifeline' : 'class'));
+      if (nodeType === 'class') {
+        if (n.id.startsWith('actor_')) {
+          nodeType = 'actor';
+        } else if (n.id.startsWith('use_case_')) {
+          nodeType = 'use_case';
+        } else if (n.id.startsWith('boundary_box_')) {
+          nodeType = 'boundary_box';
+        } else if (n.id.startsWith('package_')) {
+          nodeType = 'package';
+        } else if (n.id.startsWith('boundary_')) {
+          nodeType = 'boundary';
+        } else if (n.id.startsWith('control_')) {
+          nodeType = 'control';
+        } else if (n.id.startsWith('entity_')) {
+          nodeType = 'entity';
+        } else if (n.id.startsWith('component_')) {
+          nodeType = 'component';
+        } else if (n.id.startsWith('device_')) {
+          nodeType = 'device';
+        } else if (n.id.startsWith('exec_env_') || n.id.startsWith('exec_')) {
+          nodeType = 'executionEnvironment';
+        } else if (n.id.startsWith('lifeline_')) {
+          nodeType = 'lifeline';
+        } else if (isSequence) {
+          nodeType = 'lifeline';
+        }
+      }
+      const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
+      const isLifeline = nodeType === 'lifeline';
+      const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
+      const hasExplicitDbHeight = !!(n.height && n.height > 0);
+      const hasCustomFlag = !!n.isCustomSize || (!!n.customHeight && n.customHeight > 0) || (!!n.customWidth && n.customWidth > 0);
+      const isManuallyResized = hasCustomFlag || isExplicitSizeNode || (hasExplicitDbHeight && (nodeType === 'class' || isBce || nodeType === 'actor' || nodeType === 'use_case'));
+
+      let nodeName = n.name || '';
+      if (nodeType === 'boundary_box' && (nodeName === 'ClassName' || !nodeName.trim())) {
+        nodeName = '.';
+      }
+
+      let nodeColor = n.color;
+      if (
+        (!nodeColor ||
+          ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') &&
+            ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) &&
+        getDefaultColor
+      ) {
+        nodeColor = getDefaultColor(nodeType, n.stereotype);
+      }
+
+      const defaultWidth =
+        nodeType === 'actor'
+          ? 65
+          : nodeType === 'use_case'
+          ? 140
+          : nodeType === 'boundary_box'
+          ? 280
+          : nodeType === 'package'
+          ? 200
+          : nodeType === 'component'
+          ? 190
+          : nodeType === 'device'
+          ? 230
+          : nodeType === 'executionEnvironment'
+          ? 240
+          : nodeType === 'node'
+          ? 230
+          : isBce
+          ? 90
+          : isLifeline
+          ? 140
+          : 220;
+      const resolvedWidth = n.width || defaultWidth;
+
+      const defaultHeight =
+        isLifeline
+          ? 60
+          : isBce
+          ? 95
+          : nodeType === 'actor'
+          ? 95
+          : nodeType === 'boundary_box'
+          ? 200
+          : nodeType === 'component'
+          ? 70
+          : nodeType === 'device'
+          ? 140
+          : nodeType === 'executionEnvironment'
+          ? 160
+          : nodeType === 'node'
+          ? 140
+          : nodeType === 'package'
+          ? 120
+          : undefined;
+      const resolvedHeight = isLifeline ? 60 : (n.height || defaultHeight);
+
+      return {
+        id: n.id,
+        name: nodeName,
+        position: { x: n.positionX, y: n.positionY },
+        width: resolvedWidth,
+        height: resolvedHeight,
+        customWidth: isManuallyResized ? (n.customWidth || resolvedWidth) : undefined,
+        customHeight: isManuallyResized ? (n.customHeight || resolvedHeight) : undefined,
+        isCustomSize: isManuallyResized,
+        color: nodeColor,
+        isAnchor: n.isAnchor,
+        nodeType,
+        stereotype: n.stereotype || null,
+        assocMainConnId: n.assocMainConnId || undefined,
+        activations: n.activations || [],
+        attributes: (n.attributes || []).map((a: any) => ({
+          name: a.name,
+          type: normalizeDataType ? normalizeDataType(a.type) : a.type,
+          orderIndex: a.orderIndex,
+          nullable: a.nullable !== undefined ? a.nullable : true,
+          unique: a.unique !== undefined ? a.unique : false,
+          length: a.length !== undefined ? a.length : 255,
+          defaultValue: a.defaultValue ?? a.default ?? null,
+          default: a.default ?? a.defaultValue ?? null,
+        })),
+        methods: (n.methods || []).map((m: any) => ({
+          name: m.name,
+          parameters: m.parameters,
+          returnType: normalizeReturnType ? normalizeReturnType(m.returnType) : m.returnType,
+        })),
+      };
+    });
+
+    const mappedConnections: UmlConnection[] = (diagram.connections || []).map((c: any) => ({
+      id: c.id,
+      sourceNodeId: c.sourceNodeId || undefined,
+      targetNodeId: c.targetNodeId || undefined,
+      sourceId: c.sourceId,
+      targetId: c.targetId,
+      type: c.type as UmlRelationshipType,
+      lineStyle: (c.lineStyle as UmlLineStyle) || 'segment',
+      name: c.name || undefined,
+      sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
+      targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
+      assocAnchorNodeId: c.assocAnchorNodeId || undefined,
+      messages: c.messages || [],
+    }));
+
+    return { nodes: mappedNodes, connections: mappedConnections };
   }
 }

@@ -110,3 +110,160 @@ export function calculateClassDynamicWidth(node: UmlClassNode): number {
   // Ancho mínimo base de 90px para asegurar interacción táctil/puntero adecuada
   return Math.max(90, Math.ceil(maxNeededWidth));
 }
+
+export function getDefaultColorForNodeType(nodeType?: string | null, stereotype?: string | null): string {
+  const nt = nodeType || 'class';
+  const st = stereotype || '';
+
+  if (nt === 'device' || st === 'device') return '#F3FAF7';
+  if (nt === 'executionEnvironment' || st === 'executionEnvironment') return '#CDE5F5';
+  if (nt === 'component' || st === 'component' || nt === 'package' || nt === 'boundary_box') return '#FAF1EC';
+  if (nt === 'boundary' || nt === 'control' || nt === 'entity' || nt === 'lifeline' || st === 'UI' || st === 'Entity.' || st === 'Controller.' || st === 'boundary' || st === 'control' || st === 'entity') return '#DDF4F5';
+  if (nt === 'use_case') return '#E5F2FE';
+  if (nt === 'actor') return '#FEF2DD';
+  if (nt === 'node') return '#F3FAF7';
+  return '#FDFAF3';
+}
+
+export function getDynamicNodeWidth(node: UmlClassNode): number {
+  if (node.isAnchor) return 0;
+  if (node.nodeType === 'actor') return 65;
+  if (node.nodeType === 'lifeline') {
+    const nameLen = (node.name || '').length;
+    return Math.max(160, Math.round(nameLen * 8.5 + 44));
+  }
+  if (node.nodeType === 'use_case') {
+    const nameLen = (node.name || '').length;
+    return Math.min(260, Math.max(140, Math.round(nameLen * 7.5 + 40)));
+  }
+  if (node.nodeType === 'package') {
+    const tabTitle = node.name ? node.name.split('\n')[0].trim() : 'Paquete';
+    const bodyText = (node.attributes && node.attributes.length > 0 && node.attributes[0]?.name)
+      ? node.attributes[0].name
+      : (node.name && node.name.includes('\n') ? node.name.split('\n').slice(1).join('\n').trim() : '');
+    const maxLen = Math.max(tabTitle.length, bodyText.length);
+    return Math.max(180, Math.round(maxLen * 7.5 + 40));
+  }
+  if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+    return 70;
+  }
+  return calculateClassDynamicWidth(node);
+}
+
+export function getNodeWidth(node: UmlClassNode): number {
+  if (node.isAnchor) return 0;
+  if (node.nodeType === 'use_case') {
+    const dynamicW = getDynamicNodeWidth(node);
+    const manualW = (node.isCustomSize && (node.customWidth || node.width)) ? (node.customWidth || node.width || 0) : (node.customWidth || 0);
+    return Math.max(dynamicW, manualW || 0);
+  }
+  if (node.nodeType === 'actor') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+    if (manualW && manualW > 0) {
+      return Math.max(50, manualW);
+    }
+    return 65;
+  }
+  if (node.nodeType === 'lifeline') {
+    const manualW = node.customWidth || node.width || 0;
+    return Math.max(getDynamicNodeWidth(node), manualW);
+  }
+  if (node.nodeType === 'package') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    if (manualW && manualW > 0) {
+      return Math.max(120, manualW);
+    }
+    return getDynamicNodeWidth(node);
+  }
+  if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0);
+    if (manualW && manualW > 0) {
+      return Math.max(50, manualW);
+    }
+    return 70;
+  }
+  if (node.nodeType === 'component') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    if (manualW && manualW > 0) {
+      return Math.max(140, manualW);
+    }
+    const nameLen = (node.name || '').length;
+    return Math.max(180, Math.round(nameLen * 8.5 + 50));
+  }
+  if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    if (manualW && manualW > 0) {
+      return Math.max(160, manualW);
+    }
+    const nameLen = (node.name || '').length;
+    return Math.max(230, Math.round(nameLen * 8.5 + 50));
+  }
+  if (node.nodeType === 'boundary_box') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    if (manualW && manualW > 0) {
+      return Math.max(120, manualW);
+    }
+    return 280;
+  }
+  const dynamicW = getDynamicNodeWidth(node);
+  const manualW = (node.isCustomSize && node.customWidth) ? node.customWidth : 0;
+  return Math.max(dynamicW, manualW);
+}
+
+export function getNodeHeight(node: UmlClassNode): number {
+  if (node.isAnchor) return 0;
+  if (node.nodeType === 'lifeline') return 60;
+  if (node.customHeight && node.customHeight > 0) return node.customHeight;
+  if (node.isCustomSize && node.height && node.height > 0) return node.height;
+  if (node.nodeType === 'actor') return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 95;
+
+  if (node.nodeType === 'package') return node.customHeight || node.height || 120;
+  if (node.nodeType === 'boundary_box') {
+    return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 200;
+  }
+  if (node.nodeType === 'component') {
+    return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
+  }
+  if (node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment') {
+    return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || (node.nodeType === 'executionEnvironment' ? 160 : 140);
+  }
+  if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
+    return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 70;
+  }
+  if (node.nodeType === 'use_case') {
+    const manualH = (node.isCustomSize && (node.customHeight || node.height)) ? (node.customHeight || node.height || 0) : (node.customHeight || 0);
+    const w = getNodeWidth(node);
+    const nameLen = (node.name || '').length;
+    const usableWidth = Math.max(50, w - 24);
+    const charsPerLine = Math.max(8, Math.floor(usableWidth / 6.8));
+    const lines = Math.max(1, Math.ceil(nameLen / charsPerLine));
+    const dynamicH = Math.max(60, 45 + (lines - 1) * 18);
+    return Math.max(dynamicH, manualH || 0);
+  }
+  const headerH = 34;
+  const attrCount = (node.attributes || []).length;
+  const methodCount = (node.methods || []).length;
+  const attrH = attrCount > 0 ? attrCount * 22 + 12 : 28;
+  const methodH = methodCount > 0 ? methodCount * 22 + 12 : 0;
+  return headerH + attrH + methodH;
+}
+
+export function computeBoardWidth(nodes: UmlClassNode[], minWidth = 2200): number {
+  let max = minWidth;
+  for (const node of nodes) {
+    if (node.position && node.position.x + 350 > max) {
+      max = node.position.x + 350;
+    }
+  }
+  return max;
+}
+
+export function computeBoardHeight(nodes: UmlClassNode[], minHeight = 1400): number {
+  let max = minHeight;
+  for (const node of nodes) {
+    if (node.position && node.position.y + 350 > max) {
+      max = node.position.y + 350;
+    }
+  }
+  return max;
+}

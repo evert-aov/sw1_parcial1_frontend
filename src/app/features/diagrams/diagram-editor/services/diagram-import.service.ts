@@ -137,4 +137,91 @@ export class DiagramImportService {
       }
     }
   }
+
+  parseJsonProject(
+    jsonString: string,
+    normalizeDataType: (type: string) => string,
+    normalizeReturnType: (type: string) => string,
+  ): { nodes: UmlClassNode[]; connections: UmlConnection[]; defaultLineStyle?: UmlLineStyle } {
+    const project = JSON.parse(jsonString) as UmlDiagramProject;
+    if (!project.nodes || !project.connections) {
+      throw new Error('Estructura JSON inválida: faltan nodos o conexiones.');
+    }
+    const nodes: UmlClassNode[] = project.nodes.map((n) => ({
+      ...n,
+      width: n.width || 220,
+      attributes: (n.attributes || []).map((a) => ({
+        ...a,
+        name: a.name,
+        type: normalizeDataType(a.type),
+        nullable: a.nullable !== undefined ? a.nullable : true,
+        unique: a.unique !== undefined ? a.unique : false,
+        length: a.length !== undefined ? a.length : 255,
+        defaultValue: a.defaultValue ?? (a as any).default ?? null,
+      })),
+      methods: (n.methods || []).map((m) => ({
+        name: m.name,
+        parameters: m.parameters,
+        returnType: normalizeReturnType(m.returnType),
+      })),
+    }));
+    return {
+      nodes,
+      connections: project.connections,
+      defaultLineStyle: project.defaultLineStyle,
+    };
+  }
+
+  executeJsonImport(options: {
+    jsonString: string;
+    isReadOnly: boolean;
+    hasMultipleActiveUsers: boolean;
+    multiUserBlockedMsg: string;
+    normalizeDataType: (type: string) => string;
+    normalizeReturnType: (type: string) => string;
+    onSuccess: (result: { nodes: UmlClassNode[]; connections: UmlConnection[]; defaultLineStyle?: UmlLineStyle }) => void;
+  }): void {
+    const { isReadOnly, hasMultipleActiveUsers, multiUserBlockedMsg, jsonString, normalizeDataType, normalizeReturnType, onSuccess } = options;
+    if (isReadOnly) return;
+    if (hasMultipleActiveUsers) {
+      alert(multiUserBlockedMsg);
+      return;
+    }
+    try {
+      const result = this.parseJsonProject(jsonString, normalizeDataType, normalizeReturnType);
+      onSuccess(result);
+    } catch (e: any) {
+      alert('Error en el formato JSON: ' + (e?.message || e));
+    }
+  }
+
+  async executeFileImport(options: {
+    event: Event;
+    isReadOnly: boolean;
+    hasMultipleActiveUsers: boolean;
+    multiUserBlockedMsg: string;
+    normalizeDataType: (type: string) => string;
+    normalizeReturnType: (type: string) => string;
+    onSuccess: (result: DiagramImportResult) => void;
+  }): Promise<void> {
+    const { event, isReadOnly, hasMultipleActiveUsers, multiUserBlockedMsg, normalizeDataType, normalizeReturnType, onSuccess } = options;
+    if (isReadOnly) return;
+    const target = event.target as HTMLInputElement;
+    if (hasMultipleActiveUsers) {
+      alert(multiUserBlockedMsg);
+      if (target) target.value = '';
+      return;
+    }
+    const file = target?.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await this.parseFile(file, normalizeDataType, normalizeReturnType);
+      onSuccess(result);
+    } catch (err: any) {
+      alert('Error al leer el archivo: ' + (err.message || err));
+    } finally {
+      if (target) target.value = '';
+    }
+  }
 }

@@ -41,6 +41,38 @@ export class DiagramAiSyncService {
     }
   }
 
+  /**
+   * Precalcula la posición del ancla antes de emitir a señales para que nazca en el punto medio
+   */
+  precalculateAnchorPositions(
+    cleanNodes: UmlClassNode[],
+    targetConns: UmlConnection[],
+    getOptimalConnectorId: (sourceNode: UmlClassNode, targetNode: UmlClassNode) => { sourceId: string; targetId: string },
+    getConnectorPoint: (node: UmlClassNode, side: string) => { x: number; y: number },
+  ): void {
+    const nodeMap = new Map(cleanNodes.map((n) => [n.id, n]));
+    for (const conn of targetConns) {
+      if (conn.assocAnchorNodeId) {
+        const anchorNode = nodeMap.get(conn.assocAnchorNodeId);
+        const baseSourceId = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
+        const baseTargetId = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        const sourceNode = baseSourceId ? nodeMap.get(baseSourceId) : undefined;
+        const targetNode = baseTargetId ? nodeMap.get(baseTargetId) : undefined;
+        if (anchorNode && sourceNode && targetNode) {
+          const optimal = getOptimalConnectorId(sourceNode, targetNode);
+          const sSide = optimal.sourceId.split('_').pop() || 'right';
+          const tSide = optimal.targetId.split('_').pop() || 'left';
+          const p1 = getConnectorPoint(sourceNode, sSide);
+          const p2 = getConnectorPoint(targetNode, tSide);
+          anchorNode.position = {
+            x: Math.round((p1.x + p2.x) / 2),
+            y: Math.round((p1.y + p2.y) / 2),
+          };
+        }
+      }
+    }
+  }
+
   normalizeDataType(type: string): string {
     if (!type) return 'String';
     const found = PREDEFINED_DATA_TYPES.find((t) => t.toLowerCase() === type.trim().toLowerCase());

@@ -1,14 +1,54 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import {
   DiagramType,
   UmlClassNode,
   UmlConnection,
 } from '../../../../core/models/diagram.model';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DiagramModalService {
+  private readonly confirmDialogService?: ConfirmDialogService | null;
+
+  constructor(confirmDialogService?: ConfirmDialogService) {
+    if (confirmDialogService !== undefined) {
+      this.confirmDialogService = confirmDialogService;
+    } else {
+      try {
+        this.confirmDialogService = inject(ConfirmDialogService, { optional: true });
+      } catch {
+        this.confirmDialogService = null;
+      }
+    }
+  }
+
+  getIncompatibleElementMessageKey(diagType: DiagramType): string {
+    const keyMap: Partial<Record<DiagramType, string>> = {
+      [DiagramType.USE_CASE]: 'editor.incompatible.useCase',
+      [DiagramType.PACKAGE]: 'editor.incompatible.package',
+      [DiagramType.COMMUNICATION]: 'editor.incompatible.communication',
+      [DiagramType.SEQUENCE]: 'editor.incompatible.sequence',
+      [DiagramType.CLASS]: 'editor.incompatible.class',
+      [DiagramType.CLASS_ANALYSIS]: 'editor.incompatible.classAnalysis',
+      [DiagramType.COMPONENT]: 'editor.incompatible.component',
+      [DiagramType.DEPLOYMENT]: 'editor.incompatible.deployment',
+      [DiagramType.LAYERED]: 'editor.incompatible.layered',
+    };
+    return keyMap[diagType] || 'editor.incompatible.class';
+  }
+
+  showIncompatibleElementModal(diagType: DiagramType, customDialog?: any): void {
+    const dialog = customDialog || this.confirmDialogService;
+    dialog?.alert({
+      title: 'editor.incompatible.title',
+      message: this.getIncompatibleElementMessageKey(diagType),
+      type: 'warning',
+      confirmText: 'common.confirmModal.understood',
+    });
+  }
+
   // Modales de edición de elementos
   readonly isEditNodeModalOpen = signal<boolean>(false);
   readonly isEditConnModalOpen = signal<boolean>(false);
