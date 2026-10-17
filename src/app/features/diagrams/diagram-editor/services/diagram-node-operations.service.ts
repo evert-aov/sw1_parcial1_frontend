@@ -131,6 +131,42 @@ export class DiagramNodeOperationsService {
   }
 
   /**
+   * Ejecuta la eliminación en cascada de un nodo y retorna las listas resultantes
+   */
+  executeCascadeDeleteNode(
+    nodeId: string,
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    selectedNodeId: string | null,
+    recalculateSequenceNumbers: (conns: UmlConnection[]) => UmlConnection[],
+  ): {
+    remainingNodes: UmlClassNode[];
+    remainingConnections: UmlConnection[];
+    nextSelectedNodeId: string | null;
+  } {
+    const { nodesToDelete, connsToDelete } = this.computeCascadeDeleteNode(nodeId, nodes, connections);
+    const remainingNodes = nodes.filter((n) => !nodesToDelete.has(n.id));
+    const filteredConns = connections.filter((c) => !connsToDelete.has(c.id));
+    const remainingConnections = recalculateSequenceNumbers(filteredConns);
+    const nextSelectedNodeId =
+      selectedNodeId === nodeId || nodesToDelete.has(selectedNodeId || '') ? null : selectedNodeId;
+
+    return { remainingNodes, remainingConnections, nextSelectedNodeId };
+  }
+
+  /**
+   * Guarda las ediciones de un nodo saneando su estereotipo
+   */
+  saveEditedNode(
+    nodes: UmlClassNode[],
+    savedNode: UmlClassNode,
+    activeDiagramType: DiagramType,
+  ): UmlClassNode[] {
+    const sanitizedNode = this.sanitizeNodeStereotype(savedNode, activeDiagramType);
+    return nodes.map((n) => (n.id === sanitizedNode.id ? sanitizedNode : n));
+  }
+
+  /**
    * Crea un nodo según su tipo utilizando DiagramNodeFactoryService
    */
   createNode(

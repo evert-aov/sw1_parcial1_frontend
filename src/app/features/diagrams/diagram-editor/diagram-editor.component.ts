@@ -70,7 +70,7 @@ import { DiagramAlignmentService } from './services/diagram-alignment.service';
 import { DiagramNodeFactoryService } from './services/diagram-node-factory.service';
 import { DiagramNodeOperationsService } from './services/diagram-node-operations.service';
 import { DiagramExportService } from './services/diagram-export.service';
-import { DiagramImportService } from './services/diagram-import.service';
+import { DiagramImportService, DiagramImportResult } from './services/diagram-import.service';
 import { DiagramConnectionLayoutService } from './services/diagram-connection-layout.service';
 import { DiagramConnectionOperationsService } from './services/diagram-connection-operations.service';
 import { DiagramSelectionService } from './services/diagram-selection.service';
@@ -335,7 +335,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   // Historial de cambios (Deshacer Ctrl+Z / Rehacer Ctrl+Y)
   private isApplyingHistory = false;
   private hasMovedDuringPointerDown = false;
-  private lastSelectionChangeTime = 0;
 
   historyUndoCount = computed(() => this.diagramHistoryService.undoCount());
   historyRedoCount = computed(() => this.diagramHistoryService.redoCount());
@@ -347,7 +346,6 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly isToolboxOpen = this.isSidebarOpen;
   isAiPanelOpen = signal<boolean>(false);
   readonly isExportDropdownOpen = this.modalService.isExportDropdownOpen;
-  isImportDropdownOpen = signal<boolean>(false);
 
   // Opciones de multiplicidad estándar
   readonly multiplicityOptions: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];
@@ -685,10 +683,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   private handleEscapeKey(): void {
-    this.selectedNodeId.set(null);
-    this.selectedNodeIds.set(new Set());
-    this.selectedConnId.set(null);
-    this.selectedConnIds.set(new Set());
+    this.selectionService.clearSelection();
     this.setPointerMode();
     this.closeEditNodeModal();
     this.closeEditConnModal();
@@ -999,14 +994,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (nodeIds.length === 0 && connIds.length === 0) return;
 
     this.pushSnapshot();
-    for (const id of nodeIds) {
-      this.removeClass(id, undefined, false);
-    }
-    for (const id of connIds) {
-      this.removeConnection(id);
-    }
-    this.selectionService.clearSelection();
-    this.diagramCanvas?.clearSelection();
+    for (const id of nodeIds) this.removeClass(id, undefined, false);
+    for (const id of connIds) this.removeConnection(id);
+    this.deselectAll();
   }
 
   onConnectionSelect(connId: string, event: MouseEvent): void {
@@ -1544,23 +1534,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   removeClass(nodeId: string, event?: MouseEvent, recordHistory = true): void {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
+    if (recordHistory) this.pushSnapshot();
 
-    if (recordHistory) {
-      this.pushSnapshot();
-    }
-
-    const { nodesToDelete, connsToDelete } = this.nodeOps.computeCascadeDeleteNode(
+    const result = this.nodeOps.executeCascadeDeleteNode(
       nodeId,
       this.nodes(),
       this.connections(),
+      this.selectedNodeId(),
+      (c) => this.recalculateSequenceNumbers(c),
     );
 
-    this.nodes.update((list) => list.filter((n) => !nodesToDelete.has(n.id)));
-    this.connections.update((list) => this.recalculateSequenceNumbers(list.filter((c) => !connsToDelete.has(c.id))));
-
-    if (this.selectedNodeId() === nodeId || nodesToDelete.has(this.selectedNodeId() || '')) {
-      this.selectedNodeId.set(null);
-    }
+    this.nodes.set(result.remainingNodes);
+    this.connections.set(result.remainingConnections);
+    this.selectedNodeId.set(result.nextSelectedNodeId);
 
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
@@ -1598,17 +1584,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.isReadOnly()) return;
 
     this.pushSnapshot();
-    const { connsToDelete, nodesToDelete } = this.connectionOps.computeCascadeDelete(
+    const result = this.connectionOps.executeCascadeDeleteConnection(
       connId,
       this.nodes(),
       this.connections(),
+      (c) => this.recalculateSequenceNumbers(c),
     );
 
-    if (nodesToDelete.size > 0) {
-      this.nodes.update((list) => list.filter((n) => !nodesToDelete.has(n.id)));
-    }
-    this.connections.update((list) => this.recalculateSequenceNumbers(list.filter((c) => !connsToDelete.has(c.id))));
-
+    this.nodes.set(result.remainingNodes);
+    this.connections.set(result.remainingConnections);
     this.markAsUnsaved();
     this.closeEditConnModal();
     this.updateConnectionEndpoints();
@@ -1739,6 +1723,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.modalService.openImportModal();
   }
 
+  private applyImportSuccess(result: DiagramImportResult, action: string): void {
+    this.nodes.set(result.nodes);
+    if (result.format === 'xmi') {
+      if (result.name) this.currentDiagramName.set(result.name);
+      if (result.diagramType) this.activeDiagramType.set(result.diagramType);
+      this.connections.set(this.recalculateSequenceNumbers(result.connections, true));
+    } else {
+      this.connections.set(result.connections);
+      if (result.defaultLineStyle) this.defaultLineStyle.set(result.defaultLineStyle);
+    }
+    this.markAsUnsaved();
+    this.updateConnectionEndpoints();
+    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), action);
+    setTimeout(() => {
+      this.updateConnectionEndpoints();
+      this.fitView();
+    }, 100);
+  }
+
   applyImportedJson(): void {
     this.importService.executeJsonImport({
       jsonString: this.jsonContent(),
@@ -1748,14 +1751,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       normalizeDataType: (t) => this.normalizeDataType(t),
       normalizeReturnType: (rt) => this.normalizeReturnType(rt),
       onSuccess: (result) => {
-        this.nodes.set(result.nodes);
-        this.connections.set(result.connections);
-        if (result.defaultLineStyle) {
-          this.defaultLineStyle.set(result.defaultLineStyle);
-        }
-        this.updateConnectionEndpoints();
+        this.applyImportSuccess(result, 'apply_json');
         this.showJsonModal.set(false);
-        this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'apply_json');
       },
     });
   }
@@ -1774,44 +1771,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       multiUserBlockedMsg: this.translationService.translate('appbar.multiUserImportBlocked'),
       normalizeDataType: (t) => this.normalizeDataType(t),
       normalizeReturnType: (rt) => this.normalizeReturnType(rt),
-      onSuccess: (result) => {
-        this.nodes.set(result.nodes);
-        if (result.format === 'xmi') {
-          if (result.name) this.currentDiagramName.set(result.name);
-          if (result.diagramType) this.activeDiagramType.set(result.diagramType);
-          this.connections.set(this.recalculateSequenceNumbers(result.connections, true));
-          this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'import_xmi');
-        } else {
-          this.connections.set(result.connections);
-          if (result.defaultLineStyle) this.defaultLineStyle.set(result.defaultLineStyle);
-          this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'import_json');
-        }
-        this.markAsUnsaved();
-        this.updateConnectionEndpoints();
-        setTimeout(() => {
-          this.updateConnectionEndpoints();
-          this.fitView();
-        }, 100);
-      },
+      onSuccess: (result) => this.applyImportSuccess(result, result.format === 'xmi' ? 'import_xmi' : 'import_json'),
     });
   }
 
-  triggerSpringBootGeneration(): void {
-    this.modalService.openSpringBootModal();
-  }
-
-  openProfileModal(): void {
-    this.modalService.openProfileModal();
-  }
-
-  syncZoomFromCanvas(): void {
-    this.viewportService.syncZoomFromCanvas(this.diagramCanvas);
-  }
-
+  triggerSpringBootGeneration(): void { this.modalService.openSpringBootModal(); }
+  openProfileModal(): void { this.modalService.openProfileModal(); }
+  syncZoomFromCanvas(): void { this.viewportService.syncZoomFromCanvas(this.diagramCanvas); }
   onZoomChanged(zoom: number): void {
-    if (this.contextMenu()) {
-      this.closeContextMenu();
-    }
+    if (this.contextMenu()) this.closeContextMenu();
     this.viewportService.onZoomChanged(zoom, this.currentDiagramId());
   }
 
@@ -1825,19 +1793,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   centerViewportOnBoard(): void { this.viewportService.centerViewportOnBoard(this.diagramCanvas); }
   resetView(): void { this.viewportService.resetView(this.diagramCanvas); }
   fitView(): void { this.viewportService.fitView(this.diagramCanvas); }
-
   onDiagramTypeChange(type: DiagramType): void {
     this.activeDiagramType.set(type);
     this.collabCoordinator.setCurrentDiagramType(type);
   }
 
   onSaveEditedNode(savedNode: UmlClassNode): void {
-    const sanitizedNode = this.nodeOps.sanitizeNodeStereotype(savedNode, this.activeDiagramType());
-
     this.pushSnapshot();
-    this.nodes.update((list) =>
-      list.map((n) => (n.id === sanitizedNode.id ? sanitizedNode : n))
-    );
+    this.nodes.set(this.nodeOps.saveEditedNode(this.nodes(), savedNode, this.activeDiagramType()));
     this.updateConnectionEndpoints();
     this.markAsUnsaved();
     this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'update_class');
@@ -1845,19 +1808,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onSaveEditedConnection(savedConn: UmlConnection): void {
-    const { isSeq, prepared } = this.connectionOps.prepareSavedEditedConnection(
+    const { updatedConnections, isSeq } = this.connectionOps.saveEditedConnection(
+      this.connections(),
       savedConn,
       this.activeDiagramType(),
       (m, seq) => this.normalizeUmlMessage(m, seq),
     );
 
     this.pushSnapshot();
-    this.connections.update((list) => {
-      const updated = list.map((c) =>
-        c.id === prepared.id ? { ...prepared, messages: prepared.messages ? [...prepared.messages] : undefined } : c,
-      );
-      return isSeq ? this.recalculateSequenceNumbers(updated, true) : updated;
-    });
+    this.connections.set(isSeq ? this.recalculateSequenceNumbers(updatedConnections, true) : updatedConnections);
     this.markAsUnsaved();
     this.closeEditConnModal();
     this.updateConnectionEndpoints();

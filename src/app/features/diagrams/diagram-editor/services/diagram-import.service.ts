@@ -142,7 +142,7 @@ export class DiagramImportService {
     jsonString: string,
     normalizeDataType: (type: string) => string,
     normalizeReturnType: (type: string) => string,
-  ): { nodes: UmlClassNode[]; connections: UmlConnection[]; defaultLineStyle?: UmlLineStyle } {
+  ): DiagramImportResult {
     const project = JSON.parse(jsonString) as UmlDiagramProject;
     if (!project.nodes || !project.connections) {
       throw new Error('Estructura JSON inválida: faltan nodos o conexiones.');
@@ -166,6 +166,7 @@ export class DiagramImportService {
       })),
     }));
     return {
+      format: 'json',
       nodes,
       connections: project.connections,
       defaultLineStyle: project.defaultLineStyle,
@@ -179,7 +180,7 @@ export class DiagramImportService {
     multiUserBlockedMsg: string;
     normalizeDataType: (type: string) => string;
     normalizeReturnType: (type: string) => string;
-    onSuccess: (result: { nodes: UmlClassNode[]; connections: UmlConnection[]; defaultLineStyle?: UmlLineStyle }) => void;
+    onSuccess: (result: DiagramImportResult) => void;
   }): void {
     const { isReadOnly, hasMultipleActiveUsers, multiUserBlockedMsg, jsonString, normalizeDataType, normalizeReturnType, onSuccess } = options;
     if (isReadOnly) return;

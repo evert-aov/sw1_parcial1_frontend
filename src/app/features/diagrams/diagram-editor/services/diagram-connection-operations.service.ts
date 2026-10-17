@@ -354,6 +354,46 @@ export class DiagramConnectionOperationsService {
   }
 
   /**
+   * Ejecuta la eliminación en cascada de una conexión y retorna las listas resultantes
+   */
+  executeCascadeDeleteConnection(
+    connId: string,
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    recalculateSequenceNumbers: (conns: UmlConnection[]) => UmlConnection[],
+  ): {
+    remainingNodes: UmlClassNode[];
+    remainingConnections: UmlConnection[];
+  } {
+    const { connsToDelete, nodesToDelete } = this.computeCascadeDelete(connId, nodes, connections);
+    const remainingNodes = nodesToDelete.size > 0 ? nodes.filter((n) => !nodesToDelete.has(n.id)) : nodes;
+    const remainingConnections = recalculateSequenceNumbers(connections.filter((c) => !connsToDelete.has(c.id)));
+    return { remainingNodes, remainingConnections };
+  }
+
+  /**
+   * Guarda y procesa la conexión editada
+   */
+  saveEditedConnection(
+    connections: UmlConnection[],
+    savedConn: UmlConnection,
+    activeDiagramType: DiagramType,
+    normalizeUmlMessage?: (m: any, defaultSeq?: string) => UmlMessage,
+  ): { updatedConnections: UmlConnection[]; isSeq: boolean } {
+    const { isSeq, prepared } = this.prepareSavedEditedConnection(
+      savedConn,
+      activeDiagramType,
+      normalizeUmlMessage,
+    );
+    const updatedConnections = connections.map((c) =>
+      c.id === prepared.id
+        ? { ...prepared, messages: prepared.messages ? [...prepared.messages] : undefined }
+        : c,
+    );
+    return { updatedConnections, isSeq };
+  }
+
+  /**
    * Prepara la conexión editada antes de persistir
    */
   prepareSavedEditedConnection(
