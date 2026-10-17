@@ -213,6 +213,10 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   private readonly selectedNodeIdsInternal = signal<string[]>([]);
   private readonly selectedConnIdsInternal = signal<string[]>([]);
 
+  // Estado de interacción de arrastre
+  private isDraggingNode = false;
+  private lastRenderedSignature = '';
+
   /** Computed: true cuando no hay nodos reales en el diagrama */
   readonly hasNoRealNodes = computed(() => !this.nodes().some((n) => !n.isAnchor));
 
@@ -225,19 +229,99 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
-    // Sincronizar automáticamente el renderizado cuando los signals cambian
+    // 1. Sincronizar estructura de nodos y conexiones (NUNCA destruir durante arrastre activo)
     effect(() => {
-      // Registrar dependencias de reactividad
       const nodes = this.nodes();
-      const connections = this.connections();
-      const selectedIds = this.selectedNodeIds();
-      const selectedConns = this.selectedConnIds();
-      const relType = this.selectedRelationType();
+      const conns = this.connections();
+      const diagType = this.activeDiagramType();
 
-      if (this.stage && this.nodeLayer) {
+      if (!this.stage || !this.nodeLayer) return;
+      if (this.isDraggingNode) return;
+
+      const currentSig = this.computeStructureSignature();
+      if (currentSig !== this.lastRenderedSignature) {
+        this.lastRenderedSignature = currentSig;
         this.renderFullDiagram();
+      } else {
+        // Solo posiciones modificadas (por ejemplo por sincronización remota o historial)
+        for (const rawNode of nodes) {
+          const group = this.nodeGroupsMap.get(rawNode.id);
+          if (group && (Math.round(group.x()) !== rawNode.position.x || Math.round(group.y()) !== rawNode.position.y)) {
+            group.position({ x: rawNode.position.x, y: rawNode.position.y });
+          }
+        }
+        this.renderRelationshipsOnly();
+        this.syncTransformer();
+        this.stage.batchDraw();
       }
     });
+
+    // 2. Sincronizar selección visual (NUNCA destruye nodos)
+    effect(() => {
+      const selectedIds = this.selectedNodeIds();
+      const selectedConns = this.selectedConnIds();
+
+      if (!this.stage || !this.nodeLayer) return;
+      if (this.isDraggingNode) return;
+
+      this.syncTransformer();
+      this.renderRelationshipsOnly();
+      this.updateNodesSelectionAppearance();
+    });
+
+    // 3. Sincronizar interactividad según tipo de relación activo
+    effect(() => {
+      const relType = this.selectedRelationType();
+      if (!this.stage || !this.nodeLayer) return;
+
+      const canDrag = !this.isReadOnly() && relType === null;
+      for (const [id, group] of this.nodeGroupsMap.entries()) {
+        const isLocked = this.isNodeLockedByOther(id);
+        group.draggable(canDrag && !isLocked);
+      }
+    });
+  }
+
+  private computeStructureSignature(): string {
+    const nodeSig = this.nodes()
+      .filter((n) => !n.isAnchor)
+      .map(
+        (n) =>
+          `${n.id}:${n.name}:${n.nodeType}:${n.attributes?.length ?? 0}:${n.methods?.length ?? 0}:${n.customWidth ?? 0}:${n.customHeight ?? 0}`
+      )
+      .join('|');
+    const connSig = this.connections()
+      .map((c) => `${c.id}:${c.sourceId}:${c.targetId}:${c.type}:${c.name ?? ''}`)
+      .join('|');
+    return `${this.activeDiagramType()}#${nodeSig}#${connSig}`;
+  }
+
+  private updateNodesSelectionAppearance(): void {
+    const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
+    const pendingSrcId = this.pendingSourceNodeId();
+
+    for (const [id, group] of this.nodeGroupsMap.entries()) {
+      const isSelected = selectedIds.has(id) || id === pendingSrcId;
+
+      const bgRect = group.findOne<Konva.Rect>('.bg-rect');
+      if (bgRect) {
+        bgRect.stroke(isSelected ? '#059669' : '#78716C');
+        bgRect.strokeWidth(isSelected ? 2 : 1.3);
+      }
+
+      const ellipse = group.findOne<Konva.Ellipse>('.uc-ellipse');
+      if (ellipse) {
+        ellipse.stroke(isSelected ? '#059669' : '#78716C');
+        ellipse.strokeWidth(isSelected ? 2.2 : 1.6);
+      }
+
+      const hitRect = group.findOne<Konva.Rect>('.hit-rect');
+      if (hitRect) {
+        hitRect.stroke(isSelected ? '#10B981' : 'transparent');
+        hitRect.strokeWidth(isSelected ? 1 : 0);
+      }
+    }
+    this.nodeLayer?.batchDraw();
   }
 
   ngAfterViewInit(): void {
@@ -359,25 +443,32 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   private bindStageEvents(): void {
     if (!this.stage) return;
 
-    let isPanning = false;
-    let panStart = { x: 0, y: 0 };
-    let stageStartPos = { x: 0, y: 0 };
-
     this.stage.on('mousedown touchstart', (e) => {
       const isTargetStage = e.target === this.stage || e.target === this.bgRect;
 
       if (isTargetStage) {
-        // Iniciar panning si se hace clic en el fondo
-        isPanning = true;
-        const pointer = this.stage?.getPointerPosition() || { x: 0, y: 0 };
-        panStart = { ...pointer };
-        stageStartPos = { x: this.stage?.x() || 0, y: this.stage?.y() || 0 };
-
         this.ngZone.run(() => {
           this.pendingSourceNodeId.set(null);
           this.clearLivePreviewLine();
           this.clearSelection();
           this.canvasBackgroundClick.emit(e.evt as MouseEvent);
+          this.canvasMouseDown.emit(e.evt as MouseEvent);
+        });
+      }
+    });
+
+    this.stage.on('contextmenu', (e) => {
+      e.evt.preventDefault();
+      const isTargetStage = e.target === this.stage || e.target === this.bgRect;
+      if (isTargetStage) {
+        const pointer = this.stage?.getPointerPosition() || { x: 0, y: 0 };
+        const transform = this.stage?.getAbsoluteTransform().copy().invert();
+        const canvasPos = transform ? transform.point(pointer) : pointer;
+        this.ngZone.run(() => {
+          this.canvasContextMenu.emit({
+            event: e.evt as MouseEvent,
+            canvasPos: { x: Math.round(canvasPos.x), y: Math.round(canvasPos.y) },
+          });
         });
       }
     });
@@ -386,17 +477,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       if (!this.stage) return;
 
       const pointer = this.stage.getPointerPosition() || { x: 0, y: 0 };
-
-      if (isPanning) {
-        const dx = pointer.x - panStart.x;
-        const dy = pointer.y - panStart.y;
-        this.stage.position({
-          x: stageStartPos.x + dx,
-          y: stageStartPos.y + dy,
-        });
-        this.stage.batchDraw();
-        return;
-      }
 
       // Previsualización de línea en modo conexión
       const pendingSrcId = this.pendingSourceNodeId();
@@ -407,10 +487,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       }
 
       this.canvasMouseMove.emit(e.evt as MouseEvent);
-    });
-
-    this.stage.on('mouseup touchend', () => {
-      isPanning = false;
     });
 
     // Zoom suave con rueda de ratón centrado en el cursor
@@ -541,6 +617,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.renderRelationshipsOnly();
     this.syncTransformer();
+    this.lastRenderedSignature = this.computeStructureSignature();
     this.nodeLayer.batchDraw();
     this.uiLayer?.batchDraw();
   }
@@ -666,12 +743,16 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
     group.on('mouseenter', () => {
       this.hoveredNodeId.set(origNode.id);
+      if (!this.isReadOnly() && !this.isNodeLockedByOther(origNode.id)) {
+        this.stage?.container().style.setProperty('cursor', this.selectedRelationType() ? 'crosshair' : 'move');
+      }
     });
 
     group.on('mouseleave', () => {
       if (this.hoveredNodeId() === origNode.id) {
         this.hoveredNodeId.set(null);
       }
+      this.stage?.container().style.setProperty('cursor', 'default');
     });
 
     group.on('mousedown touchstart', (e) => {
@@ -706,7 +787,11 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         });
         return;
       }
+    });
 
+    group.on('click tap', (e) => {
+      if (this.selectedRelationType()) return;
+      e.cancelBubble = true;
       this.ngZone.run(() => {
         this.nodeClick.emit({ nodeId: origNode.id, event: e.evt as MouseEvent });
       });
@@ -727,11 +812,13 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       });
     });
 
-    // Control de arrastre robusto individual y sincronizado (multi-selección y secuencial)
+    // Control de arrastre fluido individual y sincronizado (multi-selección y secuencial)
     let dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
     const siblingStartPositions = new Map<string, { x: number; y: number }>();
 
     group.on('dragstart', (e) => {
+      this.isDraggingNode = true;
+      group.moveToTop();
       dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
       siblingStartPositions.clear();
 
@@ -739,6 +826,12 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         this.ngZone.run(() => {
           this.nodeClick.emit({ nodeId: origNode.id, event: e.evt as MouseEvent });
         });
+      }
+
+      // Ocultar temporalmente el transformer para máxima fluidez durante el arrastre
+      if (this.transformer) {
+        this.transformer.nodes([]);
+        this.uiLayer?.batchDraw();
       }
 
       for (const id of this.selectedNodeIds()) {
@@ -763,7 +856,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
       origNode.position = { x: curX, y: curY };
 
-      // Mover los demás nodos seleccionados de manera coordinada
+      // Mover los demás nodos seleccionados de manera coordinada si hay selección múltiple
       if (siblingStartPositions.size > 1 && siblingStartPositions.has(origNode.id)) {
         for (const [id, start] of siblingStartPositions.entries()) {
           if (id !== origNode.id) {
@@ -782,15 +875,14 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         }
       }
 
-      // Propagar posición al editor para WebSockets y sincronización reactiva en tiempo real
-      this.ngZone.run(() => {
-        this.nodePositionChange.emit({ node: origNode, newPosition: { x: curX, y: curY } });
-      });
-
+      // Emitir cambio de posición hacia WebSocket y persistencia reactiva
+      this.nodePositionChange.emit({ node: origNode, newPosition: { x: curX, y: curY } });
       this.renderRelationshipsOnly();
     });
 
     group.on('dragend', () => {
+      this.isDraggingNode = false;
+
       if (this.activeDiagramType() === DiagramType.SEQUENCE || origNode.nodeType === 'lifeline') {
         group.y(origNode.position ? origNode.position.y : 30);
       }
@@ -803,6 +895,11 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         this.nodePositionChange.emit({ node: origNode, newPosition });
         this.syncTransformer();
       });
+      this.renderRelationshipsOnly();
+    });
+
+    group.on('transformstart', () => {
+      this.isDraggingNode = true;
     });
 
     // Redimensión fluida de nodo mediante Transformer
@@ -838,13 +935,14 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     });
 
     group.on('transformend', () => {
+      this.isDraggingNode = false;
       const width = Math.round(group.width());
       const height = Math.round(group.height());
       const position = { x: Math.round(group.x()), y: Math.round(group.y()) };
 
       this.ngZone.run(() => {
         this.nodeSizeChange.emit({ node: origNode, width, height, position });
-        this.renderFullDiagram();
+        this.syncTransformer();
       });
     });
   }
@@ -906,7 +1004,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   // Métodos de compatibilidad y control público del Canvas
 
   redraw(): void {
-    if (this.stage) {
+    if (this.stage && !this.isDraggingNode) {
       this.renderFullDiagram();
       this.stage.batchDraw();
     }
@@ -1026,7 +1124,8 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.selectedNodeIdsInternal.set(nodeIds);
     this.selectedConnIdsInternal.set(connIds);
     this.syncTransformer();
-    this.renderFullDiagram();
+    this.updateNodesSelectionAppearance();
+    this.renderRelationshipsOnly();
   }
 
   clearSelection(): void {
@@ -1038,7 +1137,8 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       this.transformer.nodes([]);
       this.uiLayer?.batchDraw();
     }
-    this.renderFullDiagram();
+    this.updateNodesSelectionAppearance();
+    this.renderRelationshipsOnly();
   }
 
   startRenameNode(nodeId: string): void {
