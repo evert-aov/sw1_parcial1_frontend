@@ -2,7 +2,7 @@ import { Component, inject, signal, input, output, effect, untracked } from '@an
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroUserCircle, heroXMark, heroCheck } from '@ng-icons/heroicons/outline';
+import { heroUserCircle, heroXMark, heroCheck, heroArrowPath } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { ToastService } from '../../../../../core/services/toast.service';
 import { TranslatePipe } from '../../../../../core/i18n';
@@ -16,6 +16,7 @@ import { TranslatePipe } from '../../../../../core/i18n';
       heroUserCircle,
       heroXMark,
       heroCheck,
+      heroArrowPath,
     }),
   ],
   templateUrl: './user-profile-modal.component.html',

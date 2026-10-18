@@ -104,8 +104,9 @@
                   class="p-3 border rounded-2xl rounded-tl-xs text-[11.5px] shadow-2xs leading-relaxed space-y-1.5">
                   
                   @if (msg.status === 'clarification') {
-                    <div class="flex items-center gap-1 font-bold text-amber-800 dark:text-amber-300 text-[10.5px]">
-                      <span>⚠️ Aclaración Requerida</span>
+                    <div class="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300 text-[10.5px]">
+                      <ng-icon name="heroExclamationTriangle" class="text-amber-600 dark:text-amber-400 text-xs shrink-0"></ng-icon>
+                      <span>Aclaración Requerida</span>
                     </div>
                     <p class="whitespace-pre-wrap text-amber-950 dark:text-amber-100 font-medium">{{ msg.text || 'Por favor especifica las tablas, atributos o relaciones concretas que requieres para el diagrama, o adjunta una imagen.' }}</p>
                   } @else {
@@ -113,8 +114,8 @@
                   }
 
                   @if (msg.changesSummary) {
-                    <div class="p-1.5 bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 rounded text-[10px] font-mono text-purple-900 dark:text-purple-300 flex items-center gap-1">
-                      <span class="text-purple-600 dark:text-purple-400 font-bold">✓</span>
+                    <div class="p-1.5 bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 rounded text-[10px] font-mono text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
+                      <ng-icon name="heroCheck" class="text-purple-600 dark:text-purple-400 text-xs shrink-0"></ng-icon>
                       <span class="truncate">{{ msg.changesSummary }}</span>
                     </div>
                   }
@@ -157,18 +158,21 @@
       <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[10px]">
         <button
           (click)="setAiSuggestion('Crea una tabla Producto con atributos id UUID, nombre String, precio Double y relacionala con Usuarios con multiplicidad *')"
-          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
-          ✨ Crear Producto y relación
+          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px] flex items-center gap-1">
+          <ng-icon name="heroSparkles" class="text-[11px] text-purple-600 dark:text-purple-400"></ng-icon>
+          <span>Crear Producto y relación</span>
         </button>
         <button
           (click)="setAiSuggestion('Agrega la clase FacturaDetalle con cantidad Integer, precio_unitario Double y subtotal Double')"
-          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
-          ✨ Agregar FacturaDetalle
+          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px] flex items-center gap-1">
+          <ng-icon name="heroSparkles" class="text-[11px] text-purple-600 dark:text-purple-400"></ng-icon>
+          <span>Agregar FacturaDetalle</span>
         </button>
         <button
           (click)="setAiSuggestion('Crear relación de Composición entre Pedido y DetallePedido con multiplicidad 1 a 1..*')"
-          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
-          ✨ Composición 1 a n
+          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px] flex items-center gap-1">
+          <ng-icon name="heroSparkles" class="text-[11px] text-purple-600 dark:text-purple-400"></ng-icon>
+          <span>Composición 1 a n</span>
         </button>
       </div>
 
@@ -187,8 +191,8 @@
           <button
             (click)="removeAttachedImage()"
             title="Quitar imagen"
-            class="text-purple-600 dark:text-purple-400 hover:text-red-700 dark:hover:text-red-400 font-bold text-base px-1.5 cursor-pointer">
-            &times;
+            class="text-purple-600 dark:text-purple-400 hover:text-red-700 dark:hover:text-red-400 p-1 rounded transition-colors cursor-pointer flex items-center justify-center">
+            <ng-icon name="heroXMark" class="text-sm"></ng-icon>
           </button>
         </div>
       }
@@ -212,8 +216,8 @@
           <button
             (click)="removeAttachedAudio()"
             title="Quitar audio"
-            class="text-indigo-600 dark:text-indigo-400 hover:text-red-700 dark:hover:text-red-400 font-bold text-base px-1.5 cursor-pointer">
-            &times;
+            class="text-indigo-600 dark:text-indigo-400 hover:text-red-700 dark:hover:text-red-400 p-1 rounded transition-colors cursor-pointer flex items-center justify-center">
+            <ng-icon name="heroXMark" class="text-sm"></ng-icon>
           </button>
         </div>
       }
@@ -326,7 +330,9 @@
           </div>
           <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">Capturar Diagrama con Cámara Web</h3>
         </div>
-        <button (click)="closeWebcamModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
+        <button (click)="closeWebcamModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md transition-colors cursor-pointer flex items-center justify-center">
+          <ng-icon name="heroXMark" class="text-base"></ng-icon>
+        </button>
       </div>
 
       <!-- Video en Vivo -->

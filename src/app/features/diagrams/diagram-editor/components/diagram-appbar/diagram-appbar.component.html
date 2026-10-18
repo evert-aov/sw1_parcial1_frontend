@@ -322,7 +322,9 @@
             <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform relative">
               <ng-icon name="heroArrowDownTray" class="text-xl text-blue-600 dark:text-blue-400"></ng-icon>
               @if (multiUserBlocked()) {
-                <span class="absolute -top-1 -right-1 text-[10px]" title="Bloqueado por edición concurrente">🔒</span>
+                <span class="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 bg-amber-500 text-white rounded-full shadow-xs" [title]="'appbar.multiUserExportBlocked' | translate">
+                  <ng-icon name="heroLockClosed" class="text-[9px] block"></ng-icon>
+                </span>
               }
             </div>
             <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap">
@@ -339,7 +341,9 @@
             <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform relative">
               <ng-icon name="heroArrowUpTray" class="text-xl text-amber-600 dark:text-amber-400"></ng-icon>
               @if (multiUserBlocked()) {
-                <span class="absolute -top-1 -right-1 text-[10px]" title="Bloqueado por edición concurrente">🔒</span>
+                <span class="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 bg-amber-500 text-white rounded-full shadow-xs" [title]="'appbar.multiUserImportBlocked' | translate">
+                  <ng-icon name="heroLockClosed" class="text-[9px] block"></ng-icon>
+                </span>
               }
             </div>
             <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap">
@@ -469,8 +473,8 @@
               [title]="c.name"
               class="w-5 h-5 rounded-md border border-slate-300/80 dark:border-slate-700 transition-all hover:scale-110 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs relative flex items-center justify-center"
               [style.backgroundColor]="c.color">
-              @if (selectedNodeColor() === c.color || (!selectedNodeColor() && c.color === '#FDFAF3')) {
-                <span class="text-[10px] font-bold text-slate-800 leading-none select-none">✓</span>
+              @if ((selectedNodeColor() || '').toUpperCase() === c.color.toUpperCase()) {
+                <ng-icon name="heroCheck" class="text-[11px] text-slate-800 dark:text-slate-900 drop-shadow-xs"></ng-icon>
               }
             </button>
           }
@@ -479,13 +483,14 @@
         <!-- Dropdown & Reset -->
         <div class="flex items-center justify-between gap-2 text-xs">
           <label
-            [title]="selectedNodeId() ? 'Elegir color personalizado' : 'Selecciona una clase primero'"
+            [title]="selectedNodeId() ? 'Elegir color personalizado' : 'Selecciona un elemento primero'"
             [class.opacity-40]="!selectedNodeId() || isReadOnly()"
             class="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium cursor-pointer">
             <input
               #nativeColorInput
               type="color"
               [disabled]="!selectedNodeId() || isReadOnly()"
+              [value]="selectedNodeColor() || '#FDFAF3'"
               (focus)="onColorPickerFocus()"
               (blur)="onColorPickerBlur()"
               (click)="onColorPickerFocus()"
@@ -494,15 +499,15 @@
               (keydown)="$event.stopPropagation()"
               (pointerdown)="$event.stopPropagation()"
               class="w-3.5 h-3.5 p-0 border-0 rounded cursor-pointer disabled:cursor-not-allowed bg-transparent" />
-            <span>Elementos de clase</span>
+            <span>Color de elemento</span>
             <ng-icon name="heroChevronDown" class="text-[9px] text-slate-400"></ng-icon>
           </label>
 
           <button
             type="button"
-            (click)="changeNodeColor.emit('#FDFAF3')"
-            [disabled]="!selectedNodeId() || selectedNodeColor() === '#FDFAF3' || isReadOnly()"
-            title="Restablecer al color por defecto (#FDFAF3)"
+            (click)="changeNodeColor.emit(null)"
+            [disabled]="!selectedNodeId() || isReadOnly()"
+            title="Restablecer al color por defecto"
             class="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors">
             Restablecer
           </button>
@@ -636,6 +641,32 @@
             [class.font-bold]="smartGuidesEnabled()"
             [class.text-slate-500]="!smartGuidesEnabled()">
             {{ smartGuidesEnabled() ? ('toolbar.alignment.smartGuidesOn' | translate) : ('toolbar.alignment.smartGuidesOff' | translate) }}
+          </span>
+        </button>
+
+        <!-- Toggle Cuadrícula (Grid) -->
+        <button
+          (click)="toggleGrid.emit()"
+          [title]="showGrid() ? ('toolbar.grid.hide' | translate) : ('toolbar.grid.show' | translate)"
+          class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-[62px] group border border-transparent"
+          [class.bg-blue-50]="showGrid()"
+          [class.dark:bg-blue-950/40]="showGrid()"
+          [class.border-blue-200]="showGrid()"
+          [class.dark:border-blue-800]="showGrid()">
+          <div class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform"
+            [class.text-blue-600]="showGrid()"
+            [class.dark:text-blue-400]="showGrid()"
+            [class.text-slate-400]="!showGrid()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6h16.5M3.75 12h16.5M3.75 18h16.5M6 3.75v16.5M12 3.75v16.5M18 3.75v16.5" />
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium leading-tight whitespace-nowrap"
+            [class.text-blue-700]="showGrid()"
+            [class.dark:text-blue-300]="showGrid()"
+            [class.font-bold]="showGrid()"
+            [class.text-slate-500]="!showGrid()">
+            {{ 'toolbar.grid.title' | translate }}
           </span>
         </button>
 
@@ -941,10 +972,10 @@
 
     }
 
-    <!-- BANNER DE BLOQUEO POR EDICIÓN MULTIUSUARIO (SI ESTÁ ACTIVO) -->
-    @if (multiUserBlocked()) {
-      <div class="self-center ml-auto px-3 py-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60 rounded-md text-[11px] font-sans flex items-center gap-2 shadow-xs shrink-0">
-        <span class="text-sm">🔒</span>
+    <!-- BANNER DE BLOQUEO POR EDICIÓN MULTIUSUARIO (SOLO VISIBLE EN TAB PUBLISH) -->
+    @if (multiUserBlocked() && activeTab() === 'publish') {
+      <div class="self-center ml-auto px-3 py-1.5 bg-amber-50 dark:bg-[#201705] text-amber-950 dark:text-amber-100 border border-amber-400 dark:border-amber-500 rounded-md text-[11px] font-sans flex items-center gap-2 shadow-xs shrink-0">
+        <ng-icon name="heroLockClosed" class="text-sm text-amber-600 dark:text-amber-400 shrink-0"></ng-icon>
         <span class="max-w-[340px] leading-tight font-medium">{{ 'appbar.multiUserBanner' | translate }}</span>
       </div>
     }

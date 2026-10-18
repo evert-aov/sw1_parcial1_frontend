@@ -341,4 +341,40 @@ describe('DiagramEditorComponent: persistencia de altura en diagramas de desplie
     expect(editor.nodes()[2].nodeType).toBe('class');
     expect(editor.nodes()[2].stereotype).toBe('Entity.');
   });
+
+  it('actualiza de forma reactiva e inmutable el signal nodes al mover un nodo', () => {
+    const selectedNodeIdsSig = signal(new Set<string>());
+    const selectedNodeIdSig = signal<string | null>(null);
+    (editor as any).selectedNodeIds = selectedNodeIdsSig;
+    (editor as any).selectedNodeId = selectedNodeIdSig;
+    (editor as any).isReadOnly = signal(false);
+    (editor as any).isNodeLockedByOther = () => false;
+    (editor as any).diagramSelectionService = {
+      setNodeSelection: () => {},
+      selectedNodeIds: selectedNodeIdsSig,
+      selectedNodeId: selectedNodeIdSig,
+    };
+    (editor as any).diagramCollaborationCoordinatorService = { sendNodeDrag: () => {} };
+    (editor as any).diagramPersistenceService = { triggerNodeDragEnd: () => {} };
+    (editor as any).markAsUnsaved = () => {};
+    (editor as any).updateConnectionEndpoints = () => {};
+    (editor as any).diagramCanvasInteractionService = {
+      handleNodePositionChange: () => ({ shouldRedraw: false }),
+    };
+
+    const targetNode: UmlClassNode = {
+      id: 'class_1',
+      name: 'Usuario',
+      nodeType: 'class',
+      position: { x: 100, y: 100 },
+      width: 150,
+      attributes: [],
+      methods: [],
+    };
+    editor.nodes.set([targetNode]);
+
+    editor.onNodePositionChange(targetNode, { x: 350, y: 280 });
+
+    expect(editor.nodes()[0].position).toEqual({ x: 350, y: 280 });
+  });
 });

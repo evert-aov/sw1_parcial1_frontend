@@ -242,6 +242,11 @@ export const en = {
       smartGuidesOff: 'Guides: OFF',
       selectedClasses: '{{count}} selected',
     },
+    grid: {
+      show: 'Show Grid',
+      hide: 'Hide Grid',
+      title: 'Grid',
+    },
     pointer: 'Select / Move',
     pointerDesc: 'Move classes freely',
     pan: 'Pan Canvas',
@@ -628,7 +633,7 @@ export const en = {
     platformAll: 'Fullstack (Both)',
     springBootTab: 'Spring Boot',
     flutterTab: 'Flutter BLoC',
-    warningTitle: '⚠️ Attention:',
+    warningTitle: 'Attention:',
     warningDesc:
       'You must save the diagram on the server before generating architecture and downloading the project.',
     packageBase: 'Base Package',
@@ -711,7 +716,7 @@ export const en = {
     close: 'Close',
   },
   guide: {
-    launcherBadge: '👋 New user? <strong>Interactive Manual</strong>',
+    launcherBadge: 'New user? <strong>Interactive Manual</strong>',
     openTooltip: 'Open Interactive Guide & Manual',
     title: 'Interactive Manual',
     subtitle: 'Assistant & Guide for New Users',
@@ -730,7 +735,7 @@ export const en = {
     scrollLeft: 'Scroll topics left',
     scrollRight: 'Scroll topics right',
     inputPlaceholder: "Ask a question about the system or type 'tour'...",
-    inputTip: '💡 Press Enter to send or use the quick options above.',
+    inputTip: 'Press Enter to send or use the quick options above.',
     interactiveManual: 'Interactive Manual',
     manual: 'Manual',
   },

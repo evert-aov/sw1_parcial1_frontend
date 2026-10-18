@@ -243,21 +243,21 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
       id: 'welcome-1',
       sender: 'bot',
       text: isEn
-        ? 'Hello! 👋 I am your **Interactive Assistant and User Guide for UML Architect & Code Generator**.\n\nI have replaced static user manuals to help you step by step in real time. Feel free to ask any questions about using the platform, modeling diagrams, generating code, or running your projects.'
-        : '¡Hola! 👋 Soy tu **Asistente y Guía Interactivo de UML Architect & Code Generator**.\n\nHe reemplazado los manuales de usuario estáticos para ayudarte paso a paso en tiempo real. Puedes preguntarme cualquier duda sobre cómo usar la plataforma, modelar diagramas, generar código o ejecutar tus proyectos.',
+        ? 'Hello! I am your **Interactive Assistant and User Guide for UML Architect & Code Generator**.\n\nI have replaced static user manuals to help you step by step in real time. Feel free to ask any questions about using the platform, modeling diagrams, generating code, or running your projects.'
+        : '¡Hola! Soy tu **Asistente y Guía Interactivo de UML Architect & Code Generator**.\n\nHe reemplazado los manuales de usuario estáticos para ayudarte paso a paso en tiempo real. Puedes preguntarme cualquier duda sobre cómo usar la plataforma, modelar diagramas, generar código o ejecutar tus proyectos.',
       timestamp: this.initialTimestamp,
       quickActions: isEn
         ? [
-            { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
-            { label: '📊 Supported Diagram Types', query: 'diagram types' },
-            { label: '🐳 Project Run Commands', query: 'run commands' },
-            { label: '⚡ What does the platform generate?', query: 'generated architecture' },
+            { label: 'Start Step-by-Step Tour', query: 'start tour' },
+            { label: 'Supported Diagram Types', query: 'diagram types' },
+            { label: 'Project Run Commands', query: 'run commands' },
+            { label: 'What does the platform generate?', query: 'generated architecture' },
           ]
         : [
-            { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
-            { label: '📊 Tipos de Diagramas Soportados', query: 'tipos de diagramas' },
-            { label: '🐳 Comandos para Correr el Proyecto', query: 'comandos de ejecucion' },
-            { label: '⚡ ¿Qué genera la plataforma?', query: 'arquitectura generada' },
+            { label: 'Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
+            { label: 'Tipos de Diagramas Soportados', query: 'tipos de diagramas' },
+            { label: 'Comandos para Correr el Proyecto', query: 'comandos de ejecucion' },
+            { label: '¿Qué genera la plataforma?', query: 'arquitectura generada' },
           ],
     };
   });
@@ -280,7 +280,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
         'Selecciona la versión de Java (Java 21 LTS recomendada) y Spring Boot (3.4.0).',
         '¡Listo! Tu proyecto creará un diagrama principal listo para modelar.',
       ],
-      tips: '💡 El paquete base configurado aquí determinará la estructura de carpetas de tu backend en Spring Boot.',
+      tips: 'El paquete base configurado aquí determinará la estructura de carpetas de tu backend en Spring Boot.',
     },
     {
       title: '2. Modelar Diagramas UML y Arquitectónicos',
@@ -293,7 +293,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
         'En Clases: agrega atributos con visibilidad (+, -, #), tipos de datos (String, Long, UUID, Double, LocalDate) y modificadores (PK, AutoIncrement, Unique).',
         'En Casos de Uso y Secuencia: define actores, mensajes síncronos/asíncronos y activaciones temporales.',
       ],
-      tips: '💡 Puedes tener múltiples diagramas de diferente tipo dentro del mismo proyecto y exportarlos a Enterprise Architect XMI.',
+      tips: 'Puedes tener múltiples diagramas de diferente tipo dentro del mismo proyecto y exportarlos a Enterprise Architect XMI.',
     },
     {
       title: '3. Conectar Relaciones y Multiplicidades',
@@ -306,7 +306,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
         'Por ejemplo, para "Venta" y "Cliente": una Venta tiene 1 Cliente (1..1) y un Cliente tiene muchas Ventas (1..* o 0..*).',
         'El generador creará automáticamente las anotaciones JPA (@ManyToOne, @OneToMany) y las claves foráneas en Flyway.',
       ],
-      tips: '💡 Para cambiar entre el modo de puntero/selección y el modo de conexión, presiona la tecla Escape o el icono de cursor en el Toolbox.',
+      tips: 'Para cambiar entre el modo de puntero/selección y el modo de conexión, presiona la tecla Escape o el icono de cursor en el Toolbox.',
     },
     {
       title: '4. Colaboración en Tiempo Real',
@@ -319,7 +319,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
         'Sistema de Bloqueo Exclusivo (NodeLock): Cuando un usuario edita una clase, esta se bloquea temporalmente para los demás, evitando conflictos.',
         'Usa el chat integrado en vivo de la sala para coordinar el trabajo en equipo.',
       ],
-      tips: '💡 Los usuarios con rol VIEWER pueden inspeccionar el diagrama y generar código, pero no pueden mutar el modelo.',
+      tips: 'Los usuarios con rol VIEWER pueden inspeccionar el diagrama y generar código, pero no pueden mutar el modelo.',
     },
     {
       title: '5. Copilot de IA & Visión Multimodal',
@@ -331,7 +331,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
         'Modo Visión / Cámara: Sube un boceto dibujado a mano en papel o usa tu cámara web.',
         'La IA analizará el boceto y construirá las clases y conexiones directamente sobre el lienzo.',
       ],
-      tips: '💡 Puedes pedirle a la IA tanto crear clases nuevas como refactorizar entidades existentes.',
+      tips: 'Puedes pedirle a la IA tanto crear clases nuevas como refactorizar entidades existentes.',
     },
     {
       title: '6. Generar Código Fullstack (Spring Boot & Flutter)',
@@ -344,7 +344,7 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
         'Móvil generado: Flutter con Clean Architecture (BLoC, DataSources, Repositorios, Entidades, Pantallas CRUD completas, Autenticación JWT y Asistente IA Local).',
         'Haz clic en "Descargar ZIP" para obtener el proyecto empaquetado.',
       ],
-      tips: '💡 El backend incluye soporte nativo para PostgreSQL en Docker y autenticación con contraseñas encriptadas con BCrypt.',
+      tips: 'El backend incluye soporte nativo para PostgreSQL en Docker y autenticación con contraseñas encriptadas con BCrypt.',
     },
     {
       title: '7. Puesta en Marcha en tu Máquina',
@@ -366,7 +366,7 @@ gradle bootRun
 # 3. En otra terminal, ejecutar App Móvil Flutter
 cd ../mobile_flutter
 flutter run`,
-      tips: '💡 Si quieres reiniciar la base de datos desde cero, usa: docker compose -f docker-compose.local.yml down -v',
+      tips: 'Si quieres reiniciar la base de datos desde cero, usa: docker compose -f docker-compose.local.yml down -v',
     },
   ];
 
@@ -383,7 +383,7 @@ flutter run`,
         'Select the Java version (Java 21 LTS recommended) and Spring Boot (3.4.0).',
         'Done! Your project will create a main diagram ready for modeling.',
       ],
-      tips: '💡 The base package configured here determines the folder structure of your Spring Boot backend.',
+      tips: 'The base package configured here determines the folder structure of your Spring Boot backend.',
     },
     {
       title: '2. Model UML & Architectural Diagrams',
@@ -396,7 +396,7 @@ flutter run`,
         'In Class Diagrams: add attributes with visibility (+, -, #), data types (String, Long, UUID, Double, LocalDate) and modifiers (PK, AutoIncrement, Unique).',
         'In Use Cases & Sequence: model actors, synchronous/asynchronous messages and activation lifetimes.',
       ],
-      tips: '💡 You can create multiple diagrams of distinct types within the same project and export them to Enterprise Architect XMI.',
+      tips: 'You can create multiple diagrams of distinct types within the same project and export them to Enterprise Architect XMI.',
     },
     {
       title: '3. Connect Relationships & Multiplicities',
@@ -409,7 +409,7 @@ flutter run`,
         'For example, for "Sale" and "Customer": a Sale has 1 Customer (1..1) and a Customer has many Sales (1..* or 0..*).',
         'The generator will automatically generate JPA annotations (@ManyToOne, @OneToMany) and foreign keys in Flyway.',
       ],
-      tips: '💡 To toggle between selection mode and connection mode, press Escape or click the cursor icon in the Toolbox.',
+      tips: 'To toggle between selection mode and connection mode, press Escape or click the cursor icon in the Toolbox.',
     },
     {
       title: '4. Real-time Team Collaboration',
@@ -422,7 +422,7 @@ flutter run`,
         'Exclusive Lock System (NodeLock): When a user edits a class, it is temporarily locked for others to prevent conflicts.',
         'Use the built-in room chat to coordinate development and modeling in real time.',
       ],
-      tips: '💡 Users with VIEWER role can inspect the canvas and generate code, but cannot modify the model.',
+      tips: 'Users with VIEWER role can inspect the canvas and generate code, but cannot modify the model.',
     },
     {
       title: '5. AI Copilot & Multimodal Vision',
@@ -434,7 +434,7 @@ flutter run`,
         'Vision / Camera Mode: Upload a hand-drawn sketch on paper or capture with your webcam.',
         'The AI analyzes the sketch and renders the classes and relationships directly on the canvas.',
       ],
-      tips: '💡 You can instruct the AI to both create new classes and refactor existing entities.',
+      tips: 'You can instruct the AI to both create new classes and refactor existing entities.',
     },
     {
       title: '6. Fullstack Code Generator (Spring Boot & Flutter)',
@@ -447,7 +447,7 @@ flutter run`,
         'Generated Mobile: Flutter with Clean Architecture (BLoC, DataSources, Repositories, Entities, full CRUD screens, JWT Auth, and Local AI Assistant).',
         'Click "Download ZIP" to download the packaged project.',
       ],
-      tips: '💡 The backend includes native PostgreSQL in Docker and BCrypt password encryption.',
+      tips: 'The backend includes native PostgreSQL in Docker and BCrypt password encryption.',
     },
     {
       title: '7. Running on your Machine',
@@ -469,7 +469,7 @@ gradle bootRun
 # 3. In another terminal, run Flutter Mobile App
 cd ../mobile_flutter
 flutter run`,
-      tips: '💡 To restart the database from scratch, use: docker compose -f docker-compose.local.yml down -v',
+      tips: 'To restart the database from scratch, use: docker compose -f docker-compose.local.yml down -v',
     },
   ];
 
@@ -480,36 +480,36 @@ flutter run`,
 
   // Píldoras de sugerencias rápidas en Español
   readonly quickPillsEs = [
-    { label: '🚀 Guía Rápida (Paso a Paso)', query: 'iniciar tour' },
-    { label: '📊 Tipos de Diagramas soportados', query: 'tipos de diagramas' },
-    { label: '👤 Casos de Uso (Actores e Includes)', query: 'diagrama de casos de uso' },
-    { label: '⏱️ Secuencia (Lifelines y Mensajes)', query: 'diagrama de secuencia' },
-    { label: '💬 Comunicación y Flujos', query: 'diagrama de comunicacion' },
-    { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
-    { label: '📦 Paquetes y Componentes', query: 'diagramas de paquetes y componentes' },
-    { label: '🎨 ¿Cómo crear clases y relaciones?', query: 'como modelar clases y relaciones' },
-    { label: '🐳 ¿Cómo correr con Docker y Gradle?', query: 'comandos de ejecucion' },
-    { label: '⚡ ¿Cómo generar Spring Boot y Flutter?', query: 'como generar codigo' },
-    { label: '📱 ¿Cómo funciona la IA Local en el móvil?', query: 'ia en flutter y qwen' },
-    { label: '👥 ¿Cómo colaborar en equipo?', query: 'colaboracion en tiempo real' },
-    { label: '🔄 ¿Cómo importar/exportar a Enterprise Architect?', query: 'enterprise architect xmi' },
+    { label: 'Guía Rápida (Paso a Paso)', query: 'iniciar tour' },
+    { label: 'Tipos de Diagramas soportados', query: 'tipos de diagramas' },
+    { label: 'Casos de Uso (Actores e Includes)', query: 'diagrama de casos de uso' },
+    { label: 'Secuencia (Lifelines y Mensajes)', query: 'diagrama de secuencia' },
+    { label: 'Comunicación y Flujos', query: 'diagrama de comunicacion' },
+    { label: 'Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+    { label: 'Paquetes y Componentes', query: 'diagramas de paquetes y componentes' },
+    { label: '¿Cómo crear clases y relaciones?', query: 'como modelar clases y relaciones' },
+    { label: '¿Cómo correr con Docker y Gradle?', query: 'comandos de ejecucion' },
+    { label: '¿Cómo generar Spring Boot y Flutter?', query: 'como generar codigo' },
+    { label: '¿Cómo funciona la IA Local en el móvil?', query: 'ia en flutter y qwen' },
+    { label: '¿Cómo colaborar en equipo?', query: 'colaboracion en tiempo real' },
+    { label: '¿Cómo importar/exportar a Enterprise Architect?', query: 'enterprise architect xmi' },
   ];
 
   // Píldoras de sugerencias rápidas en Inglés
   readonly quickPillsEn = [
-    { label: '🚀 Quick Guide (Step by Step)', query: 'start tour' },
-    { label: '📊 Supported Diagram Types', query: 'diagram types' },
-    { label: '👤 Use Cases (Actors & Includes)', query: 'use case diagram' },
-    { label: '⏱️ Sequence (Lifelines & Messages)', query: 'sequence diagram' },
-    { label: '💬 Communication Diagrams', query: 'communication diagram' },
-    { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
-    { label: '📦 Packages & Components', query: 'packages and components' },
-    { label: '🎨 How to create classes & relations?', query: 'how to model classes' },
-    { label: '🐳 How to run with Docker & Gradle?', query: 'run commands' },
-    { label: '⚡ How to generate Spring Boot & Flutter?', query: 'how to generate code' },
-    { label: '📱 How does Local AI work on mobile?', query: 'mobile ai and qwen' },
-    { label: '👥 How to collaborate in teams?', query: 'realtime collaboration' },
-    { label: '🔄 How to import/export Enterprise Architect?', query: 'enterprise architect xmi' },
+    { label: 'Quick Guide (Step by Step)', query: 'start tour' },
+    { label: 'Supported Diagram Types', query: 'diagram types' },
+    { label: 'Use Cases (Actors & Includes)', query: 'use case diagram' },
+    { label: 'Sequence (Lifelines & Messages)', query: 'sequence diagram' },
+    { label: 'Communication Diagrams', query: 'communication diagram' },
+    { label: 'Robustness Class Analysis', query: 'class analysis diagram' },
+    { label: 'Packages & Components', query: 'packages and components' },
+    { label: 'How to create classes & relations?', query: 'how to model classes' },
+    { label: 'How to run with Docker & Gradle?', query: 'run commands' },
+    { label: 'How to generate Spring Boot & Flutter?', query: 'how to generate code' },
+    { label: 'How does Local AI work on mobile?', query: 'mobile ai and qwen' },
+    { label: 'How to collaborate in teams?', query: 'realtime collaboration' },
+    { label: 'How to import/export Enterprise Architect?', query: 'enterprise architect xmi' },
   ];
 
   // Píldoras activas según el idioma
@@ -592,14 +592,14 @@ flutter run`,
       '<code class="px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-[#1E2548] text-indigo-700 dark:text-indigo-300 font-mono text-[11px] border border-slate-300/80 dark:border-[#2D3762]">$1</code>'
     );
 
-    // 5. Cajas de Tips / Alertas con icono
+    // 5. Cajas de Tips / Alertas con icono SVG
     html = html.replace(
-      /^💡\s+(.+)$/gm,
-      '<div class="p-2.5 my-2.5 bg-amber-50 dark:bg-amber-950/30 border-l-3 border-amber-500 rounded-r text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed flex items-start gap-2 shadow-2xs"><span class="shrink-0 text-sm">💡</span><div class="flex-1">$1</div></div>'
+      /^(?:\u{1F4A1}|Tip:|Consejo:)\s+(.+)$/gmu,
+      '<div class="p-2.5 my-2.5 bg-amber-50 dark:bg-amber-950/30 border-l-3 border-amber-500 rounded-r text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed flex items-start gap-2 shadow-2xs"><svg class="shrink-0 w-4 h-4 text-amber-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.5a3 3 0 0 1-4.5 0m4.5 0H9.75m4.5 0a3 3 0 0 1-4.5 0m6.75-7.5a6 6 0 1 0-9 0" /></svg><div class="flex-1">$1</div></div>'
     );
     html = html.replace(
-      /^🎉\s+(.+)$/gm,
-      '<div class="p-2.5 my-2.5 bg-emerald-50 dark:bg-emerald-950/30 border-l-3 border-emerald-500 rounded-r text-emerald-900 dark:text-emerald-200 text-[11px] leading-relaxed flex items-start gap-2 shadow-2xs"><span class="shrink-0 text-sm">🎉</span><div class="flex-1">$1</div></div>'
+      /^(?:\u{1F389}|Éxito:|Success:)\s+(.+)$/gmu,
+      '<div class="p-2.5 my-2.5 bg-emerald-50 dark:bg-emerald-950/30 border-l-3 border-emerald-500 rounded-r text-emerald-900 dark:text-emerald-200 text-[11px] leading-relaxed flex items-start gap-2 shadow-2xs"><svg class="shrink-0 w-4 h-4 text-emerald-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg><div class="flex-1">$1</div></div>'
     );
 
     // 6. Viñetas con sub-niveles: "  - texto"
@@ -661,20 +661,20 @@ flutter run`,
     const isEn = this.translationService.currentLang() === 'en';
     this.addBotMessage(
       isEn
-        ? '🎉 **Congratulations! You have completed the UML Architect Interactive Tour.**\n\nYou now know the entire workflow: from creating your project to modeling on the canvas, generating Fullstack code, and running the backend and mobile app.\n\nDo you have any specific questions? Type them in the chat and I will be happy to help!'
-        : '🎉 **¡Felicidades! Has completado el Tour Interactivo de UML Architect.**\n\nYa conoces todo el flujo: desde crear tu proyecto hasta modelar en el lienzo, generar código Fullstack y poner en marcha el backend y la app móvil.\n\n¿Tienes alguna duda específica? Escríbela en el chat y con gusto te respondo.',
+        ? '**Congratulations! You have completed the UML Architect Interactive Tour.**\n\nYou now know the entire workflow: from creating your project to modeling on the canvas, generating Fullstack code, and running the backend and mobile app.\n\nDo you have any specific questions? Type them in the chat and I will be happy to help!'
+        : '**¡Felicidades! Has completado el Tour Interactivo de UML Architect.**\n\nYa conoces todo el flujo: desde crear tu proyecto hasta modelar en el lienzo, generar código Fullstack y poner en marcha el backend y la app móvil.\n\n¿Tienes alguna duda específica? Escríbela en el chat y con gusto te respondo.',
       undefined,
       undefined,
       isEn
         ? [
-            { label: '🐳 View Docker & Gradle commands', query: 'run commands' },
-            { label: '📱 View Qwen2.5 Local AI integration', query: 'mobile ai and qwen' },
-            { label: '🔄 Restart Tour', query: 'start tour' },
+            { label: 'View Docker & Gradle commands', query: 'run commands' },
+            { label: 'View Qwen2.5 Local AI integration', query: 'mobile ai and qwen' },
+            { label: 'Restart Tour', query: 'start tour' },
           ]
         : [
-            { label: '🐳 Ver comandos Docker & Gradle', query: 'comandos de ejecucion' },
-            { label: '📱 Ver integración con IA local Qwen2.5', query: 'ia en flutter y qwen' },
-            { label: '🔄 Reiniciar Tour', query: 'iniciar tour' },
+            { label: 'Ver comandos Docker & Gradle', query: 'comandos de ejecucion' },
+            { label: 'Ver integración con IA local Qwen2.5', query: 'ia en flutter y qwen' },
+            { label: 'Reiniciar Tour', query: 'iniciar tour' },
           ],
     );
   }
@@ -682,7 +682,7 @@ flutter run`,
   private sendTourStepMessage(index: number): void {
     const step = this.currentTourSteps()[index];
     const detailsFormatted = step.details.map((d) => `• ${d}`).join('\n');
-    const text = `### 📘 ${step.title} (${step.badge})\n\n${step.description}\n\n${detailsFormatted}\n\n${step.tips}`;
+    const text = `### ${step.title} (${step.badge})\n\n${step.description}\n\n${detailsFormatted}\n\n${step.tips}`;
 
     this.addBotMessage(text, step.code, 'bash');
   }
@@ -774,8 +774,8 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 🚀 Commands to Run the Downloaded Project\n\nTo start the generated project on your local machine, run these steps in your terminal:\n\n**1. Start PostgreSQL Database:**\nInside `/backend`, run Docker Compose in the background.\n\n**2. Build & Run Spring Boot Backend:**\nExecute Gradle. Flyway will automatically apply database migrations and seed the default admin account (`admin@studio.com` / `admin123`).\n\n**3. Run Flutter Mobile App:**\nIn another terminal, navigate to `/mobile_flutter` and run the app on your mobile device or emulator.'
-          : '### 🚀 Comandos para Ejecutar el Proyecto Descargado\n\nPara poner en marcha el proyecto generado en tu máquina local, sigue estos sencillos pasos desde tu terminal:\n\n**1. Iniciar la Base de Datos PostgreSQL:**\nDentro de la carpeta `/backend`, ejecuta Docker Compose en segundo plano.\n\n**2. Compilar y Ejecutar el Backend (Spring Boot 3):**\nEjecuta Gradle. Flyway aplicará automáticamente las migraciones y creará el usuario administrador por defecto (`admin@studio.com` / `admin123`).\n\n**3. Ejecutar la App Móvil (Flutter):**\nEn otra terminal, entra a `/mobile_flutter` y corre la aplicación en tu dispositivo o emulador.',
+          ? '### Commands to Run the Downloaded Project\n\nTo start the generated project on your local machine, run these steps in your terminal:\n\n**1. Start PostgreSQL Database:**\nInside `/backend`, run Docker Compose in the background.\n\n**2. Build & Run Spring Boot Backend:**\nExecute Gradle. Flyway will automatically apply database migrations and seed the default admin account (`admin@studio.com` / `admin123`).\n\n**3. Run Flutter Mobile App:**\nIn another terminal, navigate to `/mobile_flutter` and run the app on your mobile device or emulator.'
+          : '### Comandos para Ejecutar el Proyecto Descargado\n\nPara poner en marcha el proyecto generado en tu máquina local, sigue estos sencillos pasos desde tu terminal:\n\n**1. Iniciar la Base de Datos PostgreSQL:**\nDentro de la carpeta `/backend`, ejecuta Docker Compose en segundo plano.\n\n**2. Compilar y Ejecutar el Backend (Spring Boot 3):**\nEjecuta Gradle. Flyway aplicará automáticamente las migraciones y creará el usuario administrador por defecto (`admin@studio.com` / `admin123`).\n\n**3. Ejecutar la App Móvil (Flutter):**\nEn otra terminal, entra a `/mobile_flutter` y corre la aplicación en tu dispositivo o emulador.',
         `# === STEP 1: Start PostgreSQL in Docker (port 5431/5432) ===
 cd backend
 docker compose -f docker-compose.local.yml up -d db
@@ -789,14 +789,14 @@ flutter run`,
         'bash',
         isEn
           ? [
-              { label: '🔑 Default credentials?', query: 'default credentials' },
-              { label: '📱 How to use Qwen2.5 AI?', query: 'mobile ai and qwen' },
-              { label: '⚡ How to generate code?', query: 'how to generate code' },
+              { label: 'Default credentials?', query: 'default credentials' },
+              { label: 'How to use Qwen2.5 AI?', query: 'mobile ai and qwen' },
+              { label: 'How to generate code?', query: 'how to generate code' },
             ]
           : [
-              { label: '🔑 ¿Cuáles son las credenciales por defecto?', query: 'credenciales por defecto' },
-              { label: '📱 ¿Cómo usar la IA local Qwen2.5?', query: 'ia en flutter y qwen' },
-              { label: '⚡ ¿Cómo generar el código?', query: 'como generar codigo' },
+              { label: '¿Cuáles son las credenciales por defecto?', query: 'credenciales por defecto' },
+              { label: '¿Cómo usar la IA local Qwen2.5?', query: 'ia en flutter y qwen' },
+              { label: '¿Cómo generar el código?', query: 'como generar codigo' },
             ],
       );
       return;
@@ -817,18 +817,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 🔑 Default Access Credentials\n\nThe system automatically seeds an Administrator user in the database (with BCrypt encrypted password):\n\n• **Email:** `admin@studio.com`\n• **Password:** `admin123`\n• **Role:** `ADMIN`\n\n**How does authentication work?**\n• The backend exposes `/api/auth/login` and `/api/auth/register` endpoints protected with **JWT Tokens (Bearer)**.\n• The Flutter mobile app securely stores tokens and profile details locally (`TokenStorageService`) and displays the connected user on the **My Profile** screen.'
-          : '### 🔑 Credenciales de Acceso por Defecto\n\nEl sistema inicializa automáticamente un usuario con rol de Administrador en la base de datos (con contraseña encriptada en BCrypt):\n\n• **Correo electrónico:** `admin@studio.com`\n• **Contraseña:** `admin123`\n• **Rol:** `ADMIN`\n\n**¿Cómo funciona la autenticación?**\n• El backend expone endpoints `/api/auth/login` y `/api/auth/register` protegidos con **JWT Token (Bearer)**.\n• La app móvil Flutter almacena de forma segura el token y los datos del perfil en local (`TokenStorageService`) y muestra el usuario conectado en la pantalla de **Mi Perfil**.',
+          ? '### Default Access Credentials\n\nThe system automatically seeds an Administrator user in the database (with BCrypt encrypted password):\n\n• **Email:** `admin@studio.com`\n• **Password:** `admin123`\n• **Role:** `ADMIN`\n\n**How does authentication work?**\n• The backend exposes `/api/auth/login` and `/api/auth/register` endpoints protected with **JWT Tokens (Bearer)**.\n• The Flutter mobile app securely stores tokens and profile details locally (`TokenStorageService`) and displays the connected user on the **My Profile** screen.'
+          : '### Credenciales de Acceso por Defecto\n\nEl sistema inicializa automáticamente un usuario con rol de Administrador en la base de datos (con contraseña encriptada en BCrypt):\n\n• **Correo electrónico:** `admin@studio.com`\n• **Contraseña:** `admin123`\n• **Rol:** `ADMIN`\n\n**¿Cómo funciona la autenticación?**\n• El backend expone endpoints `/api/auth/login` y `/api/auth/register` protegidos con **JWT Token (Bearer)**.\n• La app móvil Flutter almacena de forma segura el token y los datos del perfil en local (`TokenStorageService`) y muestra el usuario conectado en la pantalla de **Mi Perfil**.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '🐳 View backend run commands', query: 'run commands' },
-              { label: '📱 View mobile app features', query: 'mobile ai and qwen' },
+              { label: 'View backend run commands', query: 'run commands' },
+              { label: 'View mobile app features', query: 'mobile ai and qwen' },
             ]
           : [
-              { label: '🐳 Ver comandos para correr el backend', query: 'comandos de ejecucion' },
-              { label: '📱 Ver funciones de la app móvil', query: 'ia en flutter y qwen' },
+              { label: 'Ver comandos para correr el backend', query: 'comandos de ejecucion' },
+              { label: 'Ver funciones de la app móvil', query: 'ia en flutter y qwen' },
             ],
       );
       return;
@@ -850,18 +850,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### ⚡ Automated Fullstack Code Generator\n\nUML Architect compiles your visual diagram into clean, production-ready code:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• Typed **REST Controllers** with OpenAPI/Swagger and Request/Response DTOs.\n• Decoupled **Services & Business Logic** with Mappers.\n• **Spring Data JPA Repositories** and Entities with relational mappings.\n• **Flyway Migrations (SQL)** supporting native UUID (`pgcrypto`) and numeric autoincrement sequences (`BIGSERIAL`).\n• **JWT Security** with BCrypt and authorization filters.\n• Pre-configured **Docker Compose** files.\n\n**2. Mobile Frontend (Flutter):**\n• **Clean Architecture** layered structure (Data, Domain, Presentation).\n• Reactive **BLoC State Management**.\n• Complete **CRUD Screens** with validation and interactive cards.\n• **Local AI Assistant** with on-device **Qwen 2.5 GGUF** download via llama.cpp and native semantic engine.\n\n**How to download?**\nIn the editor top bar, click the **"Generator"** button and press **"Download ZIP"**.'
-          : '### ⚡ Generador de Código Fullstack Automatizado\n\nUML Architect compila tu diagrama visual en código limpio listo para producción:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• **Controladores REST** tipados con Swagger/OpenAPI y DTOs de petición y respuesta.\n• **Servicios y Lógica de Negocio** desacoplada con Mappers.\n• **Repositorios Spring Data JPA** y Entidades con relaciones tipadas.\n• **Migraciones Flyway (SQL)** con soporte de UUID nativo (`pgcrypto`) y secuencias numéricas (`BIGSERIAL`).\n• **Seguridad JWT** con BCrypt y filtros de autorización.\n• **Docker Compose** preconfigurado.\n\n**2. Frontend Móvil (Flutter):**\n• **Clean Architecture** estructurada en Capas (Data, Domain, Presentation).\n• **Gestión de Estado BLoC** reactiva.\n• **Pantallas CRUD completas** con validaciones y tarjetas interactivas.\n• **Asistente IA Local** con descarga on-device de **Qwen 2.5 GGUF** vía llama.cpp y motor semántico nativo.\n\n**¿Cómo descargarlo?**\nEn la barra superior del editor, haz clic en el botón **"Generador"** y presiona **"Descargar ZIP"**.',
+          ? '### Automated Fullstack Code Generator\n\nUML Architect compiles your visual diagram into clean, production-ready code:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• Typed **REST Controllers** with OpenAPI/Swagger and Request/Response DTOs.\n• Decoupled **Services & Business Logic** with Mappers.\n• **Spring Data JPA Repositories** and Entities with relational mappings.\n• **Flyway Migrations (SQL)** supporting native UUID (`pgcrypto`) and numeric autoincrement sequences (`BIGSERIAL`).\n• **JWT Security** with BCrypt and authorization filters.\n• Pre-configured **Docker Compose** files.\n\n**2. Mobile Frontend (Flutter):**\n• **Clean Architecture** layered structure (Data, Domain, Presentation).\n• Reactive **BLoC State Management**.\n• Complete **CRUD Screens** with validation and interactive cards.\n• **Local AI Assistant** with on-device **Qwen 2.5 GGUF** download via llama.cpp and native semantic engine.\n\n**How to download?**\nIn the editor top bar, click the **"Generator"** button and press **"Download ZIP"**.'
+          : '### Generador de Código Fullstack Automatizado\n\nUML Architect compila tu diagrama visual en código limpio listo para producción:\n\n**1. Backend (Spring Boot 3 + PostgreSQL):**\n• **Controladores REST** tipados con Swagger/OpenAPI y DTOs de petición y respuesta.\n• **Servicios y Lógica de Negocio** desacoplada con Mappers.\n• **Repositorios Spring Data JPA** y Entidades con relaciones tipadas.\n• **Migraciones Flyway (SQL)** con soporte de UUID nativo (`pgcrypto`) y secuencias numéricas (`BIGSERIAL`).\n• **Seguridad JWT** con BCrypt y filtros de autorización.\n• **Docker Compose** preconfigurado.\n\n**2. Frontend Móvil (Flutter):**\n• **Clean Architecture** estructurada en Capas (Data, Domain, Presentation).\n• **Gestión de Estado BLoC** reactiva.\n• **Pantallas CRUD completas** con validaciones y tarjetas interactivas.\n• **Asistente IA Local** con descarga on-device de **Qwen 2.5 GGUF** vía llama.cpp y motor semántico nativo.\n\n**¿Cómo descargarlo?**\nEn la barra superior del editor, haz clic en el botón **"Generador"** y presiona **"Descargar ZIP"**.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '🐳 How to execute the downloaded ZIP?', query: 'run commands' },
-              { label: '🎨 How to create classes on canvas?', query: 'how to model classes' },
+              { label: 'How to execute the downloaded ZIP?', query: 'run commands' },
+              { label: 'How to create classes on canvas?', query: 'how to model classes' },
             ]
           : [
-              { label: '🐳 ¿Cómo ejecuto el ZIP descargado?', query: 'comandos de ejecucion' },
-              { label: '🎨 ¿Cómo creo clases en el lienzo?', query: 'como modelar clases y relaciones' },
+              { label: '¿Cómo ejecuto el ZIP descargado?', query: 'comandos de ejecucion' },
+              { label: '¿Cómo creo clases en el lienzo?', query: 'como modelar clases y relaciones' },
             ],
       );
       return;
@@ -887,18 +887,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 📱 Autonomous On-Device Local AI in the Mobile App\n\nThe Flutter mobile application includes an intelligent assistant that runs **100% locally on your smartphone without requiring external apps like PocketPal**:\n\n**1. On-Device Qwen 2.5 GGUF Inference:**\n• Inside the Flutter app, tap the AI chat screen.\n• Tap **"Download / Load Qwen"** to fetch the lightweight, quantized **Qwen 2.5 model (`qwen2.5-0.5b-instruct-q4_k_m.gguf`)** directly from Hugging Face onto device storage.\n• In-memory inference is executed locally using **llama.cpp / fllama**, providing fast conversational responses with zero data leaving your phone.\n\n**2. Autonomous On-Device Semantic Engine:**\n• If the model is not yet loaded or you want zero RAM overhead, the app automatically switches to its native regex and semantic processor.\n• It executes full CRUD operations directly against the backend REST API:\n  - *"register a user named Ana, email ana@gmail.com, password 123"*\n  - *"update customer 2 changing phone to 77889900"*\n  - *"delete purchase with id 5"*\n  - *"list all sales"*\n\n**3. Voice Dictation (Speech-to-Text):**\n• Tap the microphone button to dictate commands in natural language.'
-          : '### 📱 Inteligencia Artificial Local On-Device en la App Móvil\n\nLa app móvil Flutter incluye un asistente inteligente que se ejecuta **100% en local en tu teléfono, sin necesidad de apps externas como PocketPal**:\n\n**1. Inferencia On-Device con Qwen 2.5 GGUF:**\n• Dentro de la app Flutter, ingresa a la pantalla del Asistente IA.\n• Pulsa **"Cargar Qwen"** o **"Descargar"**: la app descargará automáticamente el modelo cuantizado **Qwen 2.5 (`qwen2.5-0.5b-instruct-q4_k_m.gguf`)** directamente desde Hugging Face al almacenamiento del teléfono.\n• La inferencia se ejecuta en el dispositivo mediante **llama.cpp / fllama**, respondiendo en lenguaje natural de forma privada sin conexión a servidores externos.\n\n**2. Motor Semántico On-Device Autónomo:**\n• Si el modelo no está cargado o prefieres ahorrar batería/RAM, la app activa automáticamente el motor semántico nativo.\n• Entiende órdenes en lenguaje natural para ejecutar todo el ciclo CRUD en la API REST:\n  - *"regístrame un usuario con nombre Ana, email ana@gmail.com, password 123"*\n  - *"actualiza el cliente 2 cambiando el teléfono a 77889900"*\n  - *"elimina la compra con id 5"*\n  - *"lista las ventas"*\n\n**3. Dictado por Voz:**\n• Pulsa el botón del micrófono y habla en español para enviar tus comandos sin teclear.',
+          ? '### Autonomous On-Device Local AI in the Mobile App\n\nThe Flutter mobile application includes an intelligent assistant that runs **100% locally on your smartphone without requiring external apps like PocketPal**:\n\n**1. On-Device Qwen 2.5 GGUF Inference:**\n• Inside the Flutter app, tap the AI chat screen.\n• Tap **"Download / Load Qwen"** to fetch the lightweight, quantized **Qwen 2.5 model (`qwen2.5-0.5b-instruct-q4_k_m.gguf`)** directly from Hugging Face onto device storage.\n• In-memory inference is executed locally using **llama.cpp / fllama**, providing fast conversational responses with zero data leaving your phone.\n\n**2. Autonomous On-Device Semantic Engine:**\n• If the model is not yet loaded or you want zero RAM overhead, the app automatically switches to its native regex and semantic processor.\n• It executes full CRUD operations directly against the backend REST API:\n  - *"register a user named Ana, email ana@gmail.com, password 123"*\n  - *"update customer 2 changing phone to 77889900"*\n  - *"delete purchase with id 5"*\n  - *"list all sales"*\n\n**3. Voice Dictation (Speech-to-Text):**\n• Tap the microphone button to dictate commands in natural language.'
+          : '### Inteligencia Artificial Local On-Device en la App Móvil\n\nLa app móvil Flutter incluye un asistente inteligente que se ejecuta **100% en local en tu teléfono, sin necesidad de apps externas como PocketPal**:\n\n**1. Inferencia On-Device con Qwen 2.5 GGUF:**\n• Dentro de la app Flutter, ingresa a la pantalla del Asistente IA.\n• Pulsa **"Cargar Qwen"** o **"Descargar"**: la app descargará automáticamente el modelo cuantizado **Qwen 2.5 (`qwen2.5-0.5b-instruct-q4_k_m.gguf`)** directamente desde Hugging Face al almacenamiento del teléfono.\n• La inferencia se ejecuta en el dispositivo mediante **llama.cpp / fllama**, respondiendo en lenguaje natural de forma privada sin conexión a servidores externos.\n\n**2. Motor Semántico On-Device Autónomo:**\n• Si el modelo no está cargado o prefieres ahorrar batería/RAM, la app activa automáticamente el motor semántico nativo.\n• Entiende órdenes en lenguaje natural para ejecutar todo el ciclo CRUD en la API REST:\n  - *"regístrame un usuario con nombre Ana, email ana@gmail.com, password 123"*\n  - *"actualiza el cliente 2 cambiando el teléfono a 77889900"*\n  - *"elimina la compra con id 5"*\n  - *"lista las ventas"*\n\n**3. Dictado por Voz:**\n• Pulsa el botón del micrófono y habla en español para enviar tus comandos sin teclear.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '🐳 View backend run commands', query: 'run commands' },
-              { label: '🔑 View admin credentials', query: 'default credentials' },
+              { label: 'View backend run commands', query: 'run commands' },
+              { label: 'View admin credentials', query: 'default credentials' },
             ]
           : [
-              { label: '🐳 Ver comandos para correr el backend', query: 'comandos de ejecucion' },
-              { label: '🔑 Ver credenciales de administrador', query: 'credenciales por defecto' },
+              { label: 'Ver comandos para correr el backend', query: 'comandos de ejecucion' },
+              { label: 'Ver credenciales de administrador', query: 'credenciales por defecto' },
             ],
       );
       return;
@@ -923,18 +923,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 🎨 Modeling UML Classes & Attributes\n\n**How to add a class?**\n• Click the `+ Class` button on the left Toolbox or double-click anywhere on the empty canvas.\n\n**Supported data types:**\n• `String`: Text, names, emails, descriptions (`VARCHAR(255)` / `TEXT`).\n• `Long` / `Integer`: Whole numbers, counts, numeric identifiers (`BIGINT` / `INTEGER`).\n• `UUID`: Universally unique identifiers (`UUID` with native generation in PostgreSQL).\n• `Double` / `BigDecimal`: Amounts, prices, decimals.\n• `Boolean`: Logical flags (`true` / `false`).\n• `LocalDate` / `LocalDateTime`: Dates and timestamps (`DATE` / `TIMESTAMP`).\n\n**Modifiers:**\n• **PK:** Marks the Primary Key.\n• **AutoIncrement:** Enables automatic database sequences (`BIGSERIAL`).\n• **Unique:** Ensures non-duplicate values (e.g. emails, invoice numbers).\n• **Nullable:** Allows null values.'
-          : '### 🎨 Modelado de Clases y Atributos UML\n\n**¿Cómo agregar una clase?**\n• Haz clic en el botón `+ Clase` del Toolbox lateral izquierdo o haz doble clic en cualquier área vacía del lienzo.\n\n**Tipos de datos soportados por el generador:**\n• `String`: Textos, nombres, correos, descripciones (`VARCHAR(255)` / `TEXT`).\n• `Long` / `Integer`: Números enteros, cantidades, identificadores numéricos (`BIGINT` / `INTEGER`).\n• `UUID`: Identificadores únicos universales (`UUID` con generación nativa en PostgreSQL).\n• `Double` / `BigDecimal`: Montos, precios, subtotales, totales con decimales.\n• `Boolean`: Banderas lógicas (`true` / `false`).\n• `LocalDate` / `LocalDateTime`: Fechas y marcas de tiempo (`DATE` / `TIMESTAMP`).\n\n**Modificadores:**\n• **PK:** Define la clave primaria.\n• **AutoIncrement:** Habilita secuencias automáticas en base de datos (`BIGSERIAL`).\n• **Unique:** Asegura que no existan valores duplicados (ej: emails, números de factura, NIT).\n• **Nullable:** Permite que el campo acepte nulos.',
+          ? '### Modeling UML Classes & Attributes\n\n**How to add a class?**\n• Click the `+ Class` button on the left Toolbox or double-click anywhere on the empty canvas.\n\n**Supported data types:**\n• `String`: Text, names, emails, descriptions (`VARCHAR(255)` / `TEXT`).\n• `Long` / `Integer`: Whole numbers, counts, numeric identifiers (`BIGINT` / `INTEGER`).\n• `UUID`: Universally unique identifiers (`UUID` with native generation in PostgreSQL).\n• `Double` / `BigDecimal`: Amounts, prices, decimals.\n• `Boolean`: Logical flags (`true` / `false`).\n• `LocalDate` / `LocalDateTime`: Dates and timestamps (`DATE` / `TIMESTAMP`).\n\n**Modifiers:**\n• **PK:** Marks the Primary Key.\n• **AutoIncrement:** Enables automatic database sequences (`BIGSERIAL`).\n• **Unique:** Ensures non-duplicate values (e.g. emails, invoice numbers).\n• **Nullable:** Allows null values.'
+          : '### Modelado de Clases y Atributos UML\n\n**¿Cómo agregar una clase?**\n• Haz clic en el botón `+ Clase` del Toolbox lateral izquierdo o haz doble clic en cualquier área vacía del lienzo.\n\n**Tipos de datos soportados por el generador:**\n• `String`: Textos, nombres, correos, descripciones (`VARCHAR(255)` / `TEXT`).\n• `Long` / `Integer`: Números enteros, cantidades, identificadores numéricos (`BIGINT` / `INTEGER`).\n• `UUID`: Identificadores únicos universales (`UUID` con generación nativa en PostgreSQL).\n• `Double` / `BigDecimal`: Montos, precios, subtotales, totales con decimales.\n• `Boolean`: Banderas lógicas (`true` / `false`).\n• `LocalDate` / `LocalDateTime`: Fechas y marcas de tiempo (`DATE` / `TIMESTAMP`).\n\n**Modificadores:**\n• **PK:** Define la clave primaria.\n• **AutoIncrement:** Habilita secuencias automáticas en base de datos (`BIGSERIAL`).\n• **Unique:** Asegura que no existan valores duplicados (ej: emails, números de factura, NIT).\n• **Nullable:** Permite que el campo acepte nulos.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '🔗 How to connect relationships?', query: 'how to connect relations' },
-              { label: '⚡ Generate Spring Boot code', query: 'how to generate code' },
+              { label: 'How to connect relationships?', query: 'how to connect relations' },
+              { label: 'Generate Spring Boot code', query: 'how to generate code' },
             ]
           : [
-              { label: '🔗 ¿Cómo conecto relaciones entre clases?', query: 'como conectar relaciones' },
-              { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
+              { label: '¿Cómo conecto relaciones entre clases?', query: 'como conectar relaciones' },
+              { label: 'Generar código Spring Boot', query: 'como generar codigo' },
             ],
       );
       return;
@@ -967,18 +967,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 🔗 Connecting Relationships & Multiplicities\n\n**Steps to connect two classes:**\n1. In the left Toolbox, click on the relationship type (Association, Aggregation, Composition, Generalization, or Realization).\n2. The cursor activates connection mode.\n3. Click on the **Source Class** (e.g. `Sale`).\n4. Click on the **Target Class** (e.g. `Customer`).\n5. The interactive link is rendered on the canvas.\n\n**Semantic Relationship Types:**\n• **Simple Association:** Standard connection between entities.\n• **Aggregation (Hollow diamond):** "Whole-part" relationship where parts can exist independently.\n• **Composition (Solid diamond):** Strong lifecycle ownership (e.g. `Sale` and `SaleItem`).\n• **Generalization / Inheritance (Hollow triangle arrow):** Defines subclasses and superclasses.\n\n**Multiplicities:**\n• Assign `1..1`, `0..1`, `1..*` or `*` to each end. The generator maps this to `@ManyToOne`, `@OneToMany` or `@OneToOne` in Spring Boot and creates foreign keys in Flyway.'
-          : '### 🔗 Conexión de Relaciones y Multiplicidades\n\n**Pasos para conectar dos clases:**\n1. En el Toolbox lateral izquierdo, haz clic sobre el tipo de relación que deseas crear (Asociación, Agregación, Composición, Herencia o Realización).\n2. El cursor se activará en modo de conexión.\n3. Haz clic en la **Clase Origen** (ej: `Venta`).\n4. Haz clic en la **Clase Destino** (ej: `Cliente`).\n5. Se creará el enlace visual en el lienzo.\n\n**Tipos de Relaciones Semánticas:**\n• **Asociación Simple:** Conexión estándar entre dos entidades.\n• **Agregación (Rombo hueco):** Relación "todo-parte" donde las partes pueden existir independientemente.\n• **Composición (Rombo relleno):** Relación fuerte de pertenencia de ciclo de vida (ej: `Venta` y `DetalleVenta`).\n• **Herencia / Generalización (Flecha triangular hueca):** Define subclases y superclases.\n\n**Multiplicidades:**\n• Puedes asignar `1..1`, `0..1`, `1..*` o `*` en cada extremo. El generador traducirá esto a `@ManyToOne`, `@OneToMany` o `@OneToOne` en Spring Boot y las claves foráneas correspondientes en PostgreSQL.',
+          ? '### Connecting Relationships & Multiplicities\n\n**Steps to connect two classes:**\n1. In the left Toolbox, click on the relationship type (Association, Aggregation, Composition, Generalization, or Realization).\n2. The cursor activates connection mode.\n3. Click on the **Source Class** (e.g. `Sale`).\n4. Click on the **Target Class** (e.g. `Customer`).\n5. The interactive link is rendered on the canvas.\n\n**Semantic Relationship Types:**\n• **Simple Association:** Standard connection between entities.\n• **Aggregation (Hollow diamond):** "Whole-part" relationship where parts can exist independently.\n• **Composition (Solid diamond):** Strong lifecycle ownership (e.g. `Sale` and `SaleItem`).\n• **Generalization / Inheritance (Hollow triangle arrow):** Defines subclasses and superclasses.\n\n**Multiplicities:**\n• Assign `1..1`, `0..1`, `1..*` or `*` to each end. The generator maps this to `@ManyToOne`, `@OneToMany` or `@OneToOne` in Spring Boot and creates foreign keys in Flyway.'
+          : '### Conexión de Relaciones y Multiplicidades\n\n**Pasos para conectar dos clases:**\n1. En el Toolbox lateral izquierdo, haz clic sobre el tipo de relación que deseas crear (Asociación, Agregación, Composición, Herencia o Realización).\n2. El cursor se activará en modo de conexión.\n3. Haz clic en la **Clase Origen** (ej: `Venta`).\n4. Haz clic en la **Clase Destino** (ej: `Cliente`).\n5. Se creará el enlace visual en el lienzo.\n\n**Tipos de Relaciones Semánticas:**\n• **Asociación Simple:** Conexión estándar entre dos entidades.\n• **Agregación (Rombo hueco):** Relación "todo-parte" donde las partes pueden existir independientemente.\n• **Composición (Rombo relleno):** Relación fuerte de pertenencia de ciclo de vida (ej: `Venta` y `DetalleVenta`).\n• **Herencia / Generalización (Flecha triangular hueca):** Define subclases y superclases.\n\n**Multiplicidades:**\n• Puedes asignar `1..1`, `0..1`, `1..*` o `*` en cada extremo. El generador traducirá esto a `@ManyToOne`, `@OneToMany` o `@OneToOne` en Spring Boot y las claves foráneas correspondientes en PostgreSQL.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '🎨 How to model classes & attributes?', query: 'how to model classes' },
-              { label: '⚡ How to generate code?', query: 'how to generate code' },
+              { label: 'How to model classes & attributes?', query: 'how to model classes' },
+              { label: 'How to generate code?', query: 'how to generate code' },
             ]
           : [
-              { label: '🎨 ¿Cómo crear atributos y clases?', query: 'como modelar clases y atributos' },
-              { label: '⚡ ¿Cómo generar código?', query: 'como generar codigo' },
+              { label: '¿Cómo crear atributos y clases?', query: 'como modelar clases y atributos' },
+              { label: '¿Cómo generar código?', query: 'como generar codigo' },
             ],
       );
       return;
@@ -1004,18 +1004,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 👥 Real-Time Multi-User Collaboration\n\nUML Architect enables multiple developers to work on the same diagram simultaneously using **WebSockets (Socket.io)**:\n\n**1. Invite Members:**\n• In the Projects Dashboard, click the **"Members"** button on the project card.\n• Enter your teammate\'s email and assign a role:\n  - **OWNER:** Full administrative control.\n  - **EDITOR:** Can create, edit, and delete classes and relations in real time.\n  - **VIEWER:** Read-only access (can inspect diagram and generate code).\n\n**2. Remote Cursors:**\n• See your teammates\' live colored cursors moving across the canvas with their name.\n\n**3. NodeLock Concurrency Protection:**\n• When a user opens a class to edit, the system locks that entity for others, preventing conflicting overwrites.'
-          : '### 👥 Colaboración Multiusuario en Tiempo Real\n\nUML Architect permite que múltiples desarrolladores trabajen en el mismo diagrama simultáneamente mediante **WebSockets (Socket.io)**:\n\n**1. Invitar Miembros:**\n• En el Dashboard de Proyectos, haz clic en el botón **"Miembros"** de la tarjeta del proyecto.\n• Ingresa el correo de tu colega y asígnale un rol:\n  - **OWNER:** Propietario del proyecto con control total.\n  - **EDITOR:** Puede crear, modificar y eliminar clases y relaciones en tiempo real.\n  - **VIEWER:** Solo lectura (puede explorar el lienzo y generar código).\n\n**2. Cursores Remotos:**\n• Verás los cursores de tus compañeros moviéndose por el lienzo en tiempo real con su nombre y color.\n\n**3. Bloqueo de Nodos (NodeLock):**\n• Cuando alguien abre para editar una clase, el sistema bloquea temporalmente esa entidad para los demás evitando sobreescrituras accidentales.',
+          ? '### Real-Time Multi-User Collaboration\n\nUML Architect enables multiple developers to work on the same diagram simultaneously using **WebSockets (Socket.io)**:\n\n**1. Invite Members:**\n• In the Projects Dashboard, click the **"Members"** button on the project card.\n• Enter your teammate\'s email and assign a role:\n  - **OWNER:** Full administrative control.\n  - **EDITOR:** Can create, edit, and delete classes and relations in real time.\n  - **VIEWER:** Read-only access (can inspect diagram and generate code).\n\n**2. Remote Cursors:**\n• See your teammates\' live colored cursors moving across the canvas with their name.\n\n**3. NodeLock Concurrency Protection:**\n• When a user opens a class to edit, the system locks that entity for others, preventing conflicting overwrites.'
+          : '### Colaboración Multiusuario en Tiempo Real\n\nUML Architect permite que múltiples desarrolladores trabajen en el mismo diagrama simultáneamente mediante **WebSockets (Socket.io)**:\n\n**1. Invitar Miembros:**\n• En el Dashboard de Proyectos, haz clic en el botón **"Miembros"** de la tarjeta del proyecto.\n• Ingresa el correo de tu colega y asígnale un rol:\n  - **OWNER:** Propietario del proyecto con control total.\n  - **EDITOR:** Puede crear, modificar y eliminar clases y relaciones en tiempo real.\n  - **VIEWER:** Solo lectura (puede explorar el lienzo y generar código).\n\n**2. Cursores Remotos:**\n• Verás los cursores de tus compañeros moviéndose por el lienzo en tiempo real con su nombre y color.\n\n**3. Bloqueo de Nodos (NodeLock):**\n• Cuando alguien abre para editar una clase, el sistema bloquea temporalmente esa entidad para los demás evitando sobreescrituras accidentales.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '🚀 Start Guided Tour', query: 'start tour' },
-              { label: '⚡ Generate project code', query: 'how to generate code' },
+              { label: 'Start Guided Tour', query: 'start tour' },
+              { label: 'Generate project code', query: 'how to generate code' },
             ]
           : [
-              { label: '🚀 Iniciar Tour Guiado', query: 'iniciar tour' },
-              { label: '⚡ Generar código del diagrama', query: 'como generar codigo' },
+              { label: 'Iniciar Tour Guiado', query: 'iniciar tour' },
+              { label: 'Generar código del diagrama', query: 'como generar codigo' },
             ],
       );
       return;
@@ -1033,18 +1033,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 🔄 Enterprise Architect Interoperability (XMI 2.1)\n\nThe system offers complete bidirectional compatibility with **Enterprise Architect**:\n\n**1. Export to Enterprise Architect:**\n• In the top bar, click **"Export"** and select **"Enterprise Architect (.xmi)"**.\n• Generates a standard XMI 2.1 file containing diagrams, classes, attributes, visibilities, and relationships compatible with Sparx Systems Enterprise Architect.\n\n**2. Import from Enterprise Architect:**\n• In the top bar, click **"Import XMI"** and upload your `.xmi` file.\n• The parser converts XMI entities into interactive canvas nodes and connectors.\n\n**3. Version History:**\n• Save diagram snapshots and restore previous versions at any time.'
-          : '### 🔄 Interoperabilidad con Enterprise Architect (XMI 2.1)\n\nEl sistema cuenta con compatibilidad bidireccional completa con **Enterprise Architect**:\n\n**1. Exportar a Enterprise Architect:**\n• En la barra superior, haz clic en **"Exportar"** y selecciona **"Enterprise Architect (.xmi)"**.\n• Genera un archivo estándar XMI 2.1 con diagramas, clases, atributos, visibilidades y relaciones reconocibles por Sparx Systems Enterprise Architect.\n\n**2. Importar desde Enterprise Architect:**\n• En la barra superior, selecciona **"Importar XMI"** y sube tu archivo `.xmi`.\n• El conversor transformará automáticamente los elementos XMI en nodos y conexiones interactivas en el lienzo web.\n\n**3. Historial de Versiones:**\n• Puedes guardar snapshots del diagrama y restaurar versiones anteriores en cualquier momento.',
+          ? '### Enterprise Architect Interoperability (XMI 2.1)\n\nThe system offers complete bidirectional compatibility with **Enterprise Architect**:\n\n**1. Export to Enterprise Architect:**\n• In the top bar, click **"Export"** and select **"Enterprise Architect (.xmi)"**.\n• Generates a standard XMI 2.1 file containing diagrams, classes, attributes, visibilities, and relationships compatible with Sparx Systems Enterprise Architect.\n\n**2. Import from Enterprise Architect:**\n• In the top bar, click **"Import XMI"** and upload your `.xmi` file.\n• The parser converts XMI entities into interactive canvas nodes and connectors.\n\n**3. Version History:**\n• Save diagram snapshots and restore previous versions at any time.'
+          : '### Interoperabilidad con Enterprise Architect (XMI 2.1)\n\nEl sistema cuenta con compatibilidad bidireccional completa con **Enterprise Architect**:\n\n**1. Exportar a Enterprise Architect:**\n• En la barra superior, haz clic en **"Exportar"** y selecciona **"Enterprise Architect (.xmi)"**.\n• Genera un archivo estándar XMI 2.1 con diagramas, clases, atributos, visibilidades y relaciones reconocibles por Sparx Systems Enterprise Architect.\n\n**2. Importar desde Enterprise Architect:**\n• En la barra superior, selecciona **"Importar XMI"** y sube tu archivo `.xmi`.\n• El conversor transformará automáticamente los elementos XMI en nodos y conexiones interactivas en el lienzo web.\n\n**3. Historial de Versiones:**\n• Puedes guardar snapshots del diagrama y restaurar versiones anteriores en cualquier momento.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '⚡ Generate Spring Boot code', query: 'how to generate code' },
-              { label: '🚀 View Guided Tour', query: 'start tour' },
+              { label: 'Generate Spring Boot code', query: 'how to generate code' },
+              { label: 'View Guided Tour', query: 'start tour' },
             ]
           : [
-              { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
-              { label: '🚀 Ver Tour Guiado', query: 'iniciar tour' },
+              { label: 'Generar código Spring Boot', query: 'como generar codigo' },
+              { label: 'Ver Tour Guiado', query: 'iniciar tour' },
             ],
       );
       return;
@@ -1066,18 +1066,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 🤖 AI Copilot on the Canvas\n\nIn the editor, click the **"AI Copilot"** button:\n\n• **Natural Language Prompts:**\n  Instruct the AI in plain English or Spanish. For example:\n  *"Create a billing module with Customer, Invoice and InvoiceItem with their relationships"*\n\n• **Multimodal Visual Input (Camera / Sketch):**\n  Have a diagram drawn on a whiteboard or paper? Upload a picture or turn on your webcam. The AI parses the shapes and text and renders the classes and relations directly on your canvas.'
-          : '### 🤖 Copilot de Inteligencia Artificial en el Lienzo\n\nEn la esquina superior derecha del editor, haz clic en el botón flotante **"Copilot IA"**:\n\n• **Comandos en Lenguaje Natural:**\n  Escribe en español lo que deseas en el diagrama. Ejemplo:\n  *"Crea un módulo de compras con Proveedor, Compra y DetalleCompra con sus relaciones"*\n\n• **Entrada Visual Multimodal (Cámara o Foto):**\n  ¿Tienes un diagrama dibujado en una pizarra o en una hoja de papel? Sube la foto o activa tu cámara web. La IA interpretará los rectángulos, textos y flechas y colocará las clases y relaciones directamente en el lienzo.',
+          ? '### AI Copilot on the Canvas\n\nIn the editor, click the **"AI Copilot"** button:\n\n• **Natural Language Prompts:**\n  Instruct the AI in plain English or Spanish. For example:\n  *"Create a billing module with Customer, Invoice and InvoiceItem with their relationships"*\n\n• **Multimodal Visual Input (Camera / Sketch):**\n  Have a diagram drawn on a whiteboard or paper? Upload a picture or turn on your webcam. The AI parses the shapes and text and renders the classes and relations directly on your canvas.'
+          : '### Copilot de Inteligencia Artificial en el Lienzo\n\nEn la esquina superior derecha del editor, haz clic en el botón flotante **"Copilot IA"**:\n\n• **Comandos en Lenguaje Natural:**\n  Escribe en español lo que deseas en el diagrama. Ejemplo:\n  *"Crea un módulo de compras con Proveedor, Compra y DetalleCompra con sus relaciones"*\n\n• **Entrada Visual Multimodal (Cámara o Foto):**\n  ¿Tienes un diagrama dibujado en una pizarra o en una hoja de papel? Sube la foto o activa tu cámara web. La IA interpretará los rectángulos, textos y flechas y colocará las clases y relaciones directamente en el lienzo.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '🎨 How to edit classes manually?', query: 'how to model classes' },
-              { label: '⚡ Generate project code', query: 'how to generate code' },
+              { label: 'How to edit classes manually?', query: 'how to model classes' },
+              { label: 'Generate project code', query: 'how to generate code' },
             ]
           : [
-              { label: '🎨 ¿Cómo editar clases manualmente?', query: 'como modelar clases y atributos' },
-              { label: '⚡ Generar código del diagrama', query: 'como generar codigo' },
+              { label: '¿Cómo editar clases manualmente?', query: 'como modelar clases y atributos' },
+              { label: 'Generar código del diagrama', query: 'como generar codigo' },
             ],
       );
       return;
@@ -1098,22 +1098,22 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 📊 Supported UML & Architectural Diagram Types\n\nUML/ER Studio supports 8 integrated diagram types with interactive canvas modeling and Enterprise Architect (XMI) compatibility:\n\n1. **Class Diagram (`class`):** Static structure, typed attributes, visibility, relationships (association, composition, aggregation, generalization) and automatic Spring Boot code generation.\n2. **Use Case Diagram (`use_case`):** Functional requirements, actors (stick figure), use cases (ovals), `<<include>>`, `<<extend>>` and System Boundaries.\n3. **Sequence Diagram (`sequence`):** Temporal interactions, lifelines, activation blocks, synchronous, asynchronous and reply messages.\n4. **Communication Diagram (`communication`):** Object collaboration topology with hierarchically numbered sequential messages (`1:`, `1.1:`, `2:`).\n5. **Class Analysis Diagram (`class_analysis`):** Jacobson Robustness Analysis (Boundary, Control, Entity) linking use cases to technical design.\n6. **Package Diagram (`package`):** System modularity, architectural subsystems and dependencies.\n7. **Component Diagram (`component`):** Software modules, ports, provided and required assembly interfaces.\n8. **Deployment Diagram (`deployment`):** Physical execution nodes, database servers, cloud environments and deployment artifacts.'
-          : '### 📊 Tipos de Diagramas Soportados en UML/ER Studio\n\nNuestra suite soporta 8 tipos de diagramas estandarizados con modelado interactivo y compatibilidad bidireccional con Enterprise Architect (XMI):\n\n1. **Diagrama de Clases (`class`):** Estructura estática del dominio, atributos tipados, PKs, visibilidades, métodos, relaciones semánticas y generación automática de Spring Boot 3 y migraciones Flyway.\n2. **Diagrama de Casos de Uso (`use_case`):** Requerimientos del sistema, actores, casos de uso (óvalos), relaciones `<<include>>`, `<<extend>>` y límites del sistema (*System Boundary*).\n3. **Diagrama de Secuencia (`sequence`):** Interacción dinámica temporal, líneas de vida (*Lifelines*), bloques de activación y mensajes síncronos, asíncronos y de retorno.\n4. **Diagrama de Comunicación (`communication`):** Topología estructural de objetos colaboradores con mensajes numerados secuenciales (`1:`, `1.1:`, `2:`) y flechas directrices.\n5. **Diagrama de Análisis de Clases (`class_analysis`):** Análisis de Robustez de Ivar Jacobson (Boundary, Control, Entity) para transicionar de casos de uso a diseño técnico.\n6. **Diagrama de Paquetes (`package`):** Modularización en paquetes, subsistemas y dependencias de arquitectura.\n7. **Diagrama de Componentes (`component`):** Componentes ejecutables, puertos e interfaces provistas y requeridas (conectores assembly).\n8. **Diagrama de Despliegue (`deployment`):** Nodos físicos, servidores de base de datos, entornos de ejecución y artefactos.',
+          ? '### Supported UML & Architectural Diagram Types\n\nUML/ER Studio supports 8 integrated diagram types with interactive canvas modeling and Enterprise Architect (XMI) compatibility:\n\n1. **Class Diagram (`class`):** Static structure, typed attributes, visibility, relationships (association, composition, aggregation, generalization) and automatic Spring Boot code generation.\n2. **Use Case Diagram (`use_case`):** Functional requirements, actors (stick figure), use cases (ovals), `<<include>>`, `<<extend>>` and System Boundaries.\n3. **Sequence Diagram (`sequence`):** Temporal interactions, lifelines, activation blocks, synchronous, asynchronous and reply messages.\n4. **Communication Diagram (`communication`):** Object collaboration topology with hierarchically numbered sequential messages (`1:`, `1.1:`, `2:`).\n5. **Class Analysis Diagram (`class_analysis`):** Jacobson Robustness Analysis (Boundary, Control, Entity) linking use cases to technical design.\n6. **Package Diagram (`package`):** System modularity, architectural subsystems and dependencies.\n7. **Component Diagram (`component`):** Software modules, ports, provided and required assembly interfaces.\n8. **Deployment Diagram (`deployment`):** Physical execution nodes, database servers, cloud environments and deployment artifacts.'
+          : '### Tipos de Diagramas Soportados en UML/ER Studio\n\nNuestra suite soporta 8 tipos de diagramas estandarizados con modelado interactivo y compatibilidad bidireccional con Enterprise Architect (XMI):\n\n1. **Diagrama de Clases (`class`):** Estructura estática del dominio, atributos tipados, PKs, visibilidades, métodos, relaciones semánticas y generación automática de Spring Boot 3 y migraciones Flyway.\n2. **Diagrama de Casos de Uso (`use_case`):** Requerimientos del sistema, actores, casos de uso (óvalos), relaciones `<<include>>`, `<<extend>>` y límites del sistema (*System Boundary*).\n3. **Diagrama de Secuencia (`sequence`):** Interacción dinámica temporal, líneas de vida (*Lifelines*), bloques de activación y mensajes síncronos, asíncronos y de retorno.\n4. **Diagrama de Comunicación (`communication`):** Topología estructural de objetos colaboradores con mensajes numerados secuenciales (`1:`, `1.1:`, `2:`) y flechas directrices.\n5. **Diagrama de Análisis de Clases (`class_analysis`):** Análisis de Robustez de Ivar Jacobson (Boundary, Control, Entity) para transicionar de casos de uso a diseño técnico.\n6. **Diagrama de Paquetes (`package`):** Modularización en paquetes, subsistemas y dependencias de arquitectura.\n7. **Diagrama de Componentes (`component`):** Componentes ejecutables, puertos e interfaces provistas y requeridas (conectores assembly).\n8. **Diagrama de Despliegue (`deployment`):** Nodos físicos, servidores de base de datos, entornos de ejecución y artefactos.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '👤 Use Case Diagrams', query: 'use case diagram' },
-              { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
-              { label: '💬 Communication Diagrams', query: 'communication diagram' },
-              { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
+              { label: 'Use Case Diagrams', query: 'use case diagram' },
+              { label: 'Sequence Diagrams', query: 'sequence diagram' },
+              { label: 'Communication Diagrams', query: 'communication diagram' },
+              { label: 'Robustness Class Analysis', query: 'class analysis diagram' },
             ]
           : [
-              { label: '👤 Casos de Uso', query: 'diagrama de casos de uso' },
-              { label: '⏱️ Secuencia', query: 'diagrama de secuencia' },
-              { label: '💬 Comunicación', query: 'diagrama de comunicacion' },
-              { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+              { label: 'Casos de Uso', query: 'diagrama de casos de uso' },
+              { label: 'Secuencia', query: 'diagrama de secuencia' },
+              { label: 'Comunicación', query: 'diagrama de comunicacion' },
+              { label: 'Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
             ],
       );
       return;
@@ -1134,20 +1134,20 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 👤 Use Case Diagrams (`use_case`)\n\nCapture system functional requirements from the perspective of external actors.\n\n**Visual Elements in Toolbox:**\n• **Actor (Stick Figure):** External users, external systems, or time triggers that initiate or participate in actions.\n• **Use Case (Oval):** Discrete service or goal that the system provides to produce value.\n• **System Boundary (Frame):** Rectangular container grouping use cases inside the system perimeter, keeping external actors outside.\n\n**Relationships & Connectors:**\n• **Association:** Plain line connecting an Actor to a Use Case.\n• **Include (`<<include>>`):** Mandatory dependency where the base use case always invokes the included behavior (e.g. *Checkout* `--<<include>>-->` *Process Payment*).\n• **Extend (`<<extend>>`):** Optional or conditional extension point (e.g. *Generate Invoice* `<--<<extend>>--* *Request Home Delivery*).\n• **Generalization:** Inheritance hierarchy between Actors (e.g. *Supervisor* inherits from *Employee*) or specialized Use Cases.\n\n**Tip:** Double-click any element on the canvas to edit its name, alias, and descriptive notes.'
-          : '### 👤 Diagrama de Casos de Uso (`use_case`)\n\nModela los requerimientos funcionales y las fronteras de tu sistema desde la perspectiva de los usuarios externos.\n\n**Elementos en el Toolbox:**\n• **Actor (Figura Humana):** Usuario humano, rol externo, sistema secundario o reloj de tiempo que interactúa con el software.\n• **Caso de Uso (Óvalo):** Unidad funcional atómica que produce un resultado observable de valor.\n• **Límites del Sistema (*System Boundary*):** Marco rectangular delimitador que agrupa los casos de uso dentro del alcance del software y deja a los actores en el exterior.\n\n**Conectores y Relaciones:**\n• **Asociación Simple:** Línea continua que vincula al Actor con el Caso de Uso en el que participa.\n• **Inclusión (`<<include>>`):** Relación obligatoria donde el caso base siempre ejecuta el caso incluido (ej: *Realizar Pedido* `--<<include>>-->` *Validar Inventario*).\n• **Extensión (`<<extend>>`):** Relación condicional donde el comportamiento se inserta sólo si se cumple una regla específica (ej: *Pagar Compra* `<--<<extend>>--* *Aplicar Cupón de Descuento*).\n• **Generalización:** Herencia entre actores (ej: *Administrador* especializa a *Usuario*) o entre casos de uso.\n\n**Consejo:** Haz doble clic en cualquier nodo para modificar su nombre, descripción y notas.',
+          ? '### Use Case Diagrams (`use_case`)\n\nCapture system functional requirements from the perspective of external actors.\n\n**Visual Elements in Toolbox:**\n• **Actor (Stick Figure):** External users, external systems, or time triggers that initiate or participate in actions.\n• **Use Case (Oval):** Discrete service or goal that the system provides to produce value.\n• **System Boundary (Frame):** Rectangular container grouping use cases inside the system perimeter, keeping external actors outside.\n\n**Relationships & Connectors:**\n• **Association:** Plain line connecting an Actor to a Use Case.\n• **Include (`<<include>>`):** Mandatory dependency where the base use case always invokes the included behavior (e.g. *Checkout* `--<<include>>-->` *Process Payment*).\n• **Extend (`<<extend>>`):** Optional or conditional extension point (e.g. *Generate Invoice* `<--<<extend>>--* *Request Home Delivery*).\n• **Generalization:** Inheritance hierarchy between Actors (e.g. *Supervisor* inherits from *Employee*) or specialized Use Cases.\n\n**Tip:** Double-click any element on the canvas to edit its name, alias, and descriptive notes.'
+          : '### Diagrama de Casos de Uso (`use_case`)\n\nModela los requerimientos funcionales y las fronteras de tu sistema desde la perspectiva de los usuarios externos.\n\n**Elementos en el Toolbox:**\n• **Actor (Figura Humana):** Usuario humano, rol externo, sistema secundario o reloj de tiempo que interactúa con el software.\n• **Caso de Uso (Óvalo):** Unidad funcional atómica que produce un resultado observable de valor.\n• **Límites del Sistema (*System Boundary*):** Marco rectangular delimitador que agrupa los casos de uso dentro del alcance del software y deja a los actores en el exterior.\n\n**Conectores y Relaciones:**\n• **Asociación Simple:** Línea continua que vincula al Actor con el Caso de Uso en el que participa.\n• **Inclusión (`<<include>>`):** Relación obligatoria donde el caso base siempre ejecuta el caso incluido (ej: *Realizar Pedido* `--<<include>>-->` *Validar Inventario*).\n• **Extensión (`<<extend>>`):** Relación condicional donde el comportamiento se inserta sólo si se cumple una regla específica (ej: *Pagar Compra* `<--<<extend>>--* *Aplicar Cupón de Descuento*).\n• **Generalización:** Herencia entre actores (ej: *Administrador* especializa a *Usuario*) o entre casos de uso.\n\n**Consejo:** Haz doble clic en cualquier nodo para modificar su nombre, descripción y notas.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
-              { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
-              { label: '📊 All Diagram Types', query: 'diagram types' },
+              { label: 'Sequence Diagrams', query: 'sequence diagram' },
+              { label: 'Robustness Class Analysis', query: 'class analysis diagram' },
+              { label: 'All Diagram Types', query: 'diagram types' },
             ]
           : [
-              { label: '⏱️ Diagramas de Secuencia', query: 'diagrama de secuencia' },
-              { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
-              { label: '📊 Ver todos los tipos', query: 'tipos de diagramas' },
+              { label: 'Diagramas de Secuencia', query: 'diagrama de secuencia' },
+              { label: 'Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+              { label: 'Ver todos los tipos', query: 'tipos de diagramas' },
             ],
       );
       return;
@@ -1169,20 +1169,20 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### ⏱️ Sequence Diagrams (`sequence`)\n\nVisualizes dynamic temporal interaction and message passing between objects over time.\n\n**Key Elements:**\n• **Lifeline (Participant):** Header box containing the participant name/role with a vertical dashed line extending downwards representing the progression of time.\n• **Execution Specification (Activation Bar):** Slim vertical rectangle along the lifeline showing when an object has active execution control.\n• **Synchronous Message (Call):** Solid line with filled arrow (`->`). The sender blocks waiting for completion.\n• **Asynchronous Message (Signal):** Solid line with open stick arrow (`->>`). The sender continues without blocking.\n• **Return / Reply Message:** Dashed line with open arrow (`-->`). Returns computed values or control back to the caller.\n• **Creation / Destruction:** Arrows pointing directly into participant boxes to create instances, or termination markers (`X`).\n\n**Usage:**\nDrag lifelines across the horizontal axis; messages are ordered vertically in chronological order from top to bottom.'
-          : '### ⏱️ Diagrama de Secuencia (`sequence`)\n\nModela la interacción dinámica y el intercambio temporal de mensajes entre objetos ordenados cronológicamente.\n\n**Elementos Clave:**\n• **Línea de Vida (*Lifeline*):** Caja superior con el nombre del objeto/rol y una línea vertical punteada que desciende representando el flujo del tiempo.\n• **Barra de Activación (*Execution Bar*):** Rectángulo vertical sobre la línea de vida que indica el periodo en el que el objeto está ejecutando una acción.\n• **Mensaje Síncrono (*Call*):** Flecha sólida con punta rellena (`->`). El emisor se detiene esperando la finalización de la operación.\n• **Mensaje Asíncrono (*Signal*):** Flecha sólida con punta abierta (`->>`). El emisor continúa inmediatamente sin bloquearse.\n• **Mensaje de Retorno (*Reply*):** Línea discontinua con punta abierta (`-->`). Devuelve el resultado o confirma el fin de la operación.\n• **Creación / Destrucción:** Flechas que apuntan a una nueva línea de vida para instanciarla, o aspas (`X`) para representar su finalización.\n\n**Uso:**\nLos objetos se disponen horizontalmente en la parte superior y el tiempo transcurre verticalmente de arriba hacia abajo.',
+          ? '### Sequence Diagrams (`sequence`)\n\nVisualizes dynamic temporal interaction and message passing between objects over time.\n\n**Key Elements:**\n• **Lifeline (Participant):** Header box containing the participant name/role with a vertical dashed line extending downwards representing the progression of time.\n• **Execution Specification (Activation Bar):** Slim vertical rectangle along the lifeline showing when an object has active execution control.\n• **Synchronous Message (Call):** Solid line with filled arrow (`->`). The sender blocks waiting for completion.\n• **Asynchronous Message (Signal):** Solid line with open stick arrow (`->>`). The sender continues without blocking.\n• **Return / Reply Message:** Dashed line with open arrow (`-->`). Returns computed values or control back to the caller.\n• **Creation / Destruction:** Arrows pointing directly into participant boxes to create instances, or termination markers (`X`).\n\n**Usage:**\nDrag lifelines across the horizontal axis; messages are ordered vertically in chronological order from top to bottom.'
+          : '### Diagrama de Secuencia (`sequence`)\n\nModela la interacción dinámica y el intercambio temporal de mensajes entre objetos ordenados cronológicamente.\n\n**Elementos Clave:**\n• **Línea de Vida (*Lifeline*):** Caja superior con el nombre del objeto/rol y una línea vertical punteada que desciende representando el flujo del tiempo.\n• **Barra de Activación (*Execution Bar*):** Rectángulo vertical sobre la línea de vida que indica el periodo en el que el objeto está ejecutando una acción.\n• **Mensaje Síncrono (*Call*):** Flecha sólida con punta rellena (`->`). El emisor se detiene esperando la finalización de la operación.\n• **Mensaje Asíncrono (*Signal*):** Flecha sólida con punta abierta (`->>`). El emisor continúa inmediatamente sin bloquearse.\n• **Mensaje de Retorno (*Reply*):** Línea discontinua con punta abierta (`-->`). Devuelve el resultado o confirma el fin de la operación.\n• **Creación / Destrucción:** Flechas que apuntan a una nueva línea de vida para instanciarla, o aspas (`X`) para representar su finalización.\n\n**Uso:**\nLos objetos se disponen horizontalmente en la parte superior y el tiempo transcurre verticalmente de arriba hacia abajo.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '💬 Communication Diagrams', query: 'communication diagram' },
-              { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
-              { label: '📊 All Diagram Types', query: 'diagram types' },
+              { label: 'Communication Diagrams', query: 'communication diagram' },
+              { label: 'Robustness Class Analysis', query: 'class analysis diagram' },
+              { label: 'All Diagram Types', query: 'diagram types' },
             ]
           : [
-              { label: '💬 Diagramas de Comunicación', query: 'diagrama de comunicacion' },
-              { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
-              { label: '📊 Ver todos los tipos', query: 'tipos de diagramas' },
+              { label: 'Diagramas de Comunicación', query: 'diagrama de comunicacion' },
+              { label: 'Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+              { label: 'Ver todos los tipos', query: 'tipos de diagramas' },
             ],
       );
       return;
@@ -1201,20 +1201,20 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 💬 Communication Diagrams (`communication`)\n\nFocuses on structural relationships and object collaboration network topology rather than timeline axes.\n\n**Core Concepts:**\n• **Collaborating Nodes:** Objects placed freely on the canvas, optionally annotated with stereotyping icons (`<<boundary>>`, `<<control>>`, `<<entity>>`).\n• **Communication Links:** Solid paths between nodes that represent active communication channels.\n• **Numbered Messages:** Messages placed along connection links with hierarchical sequence numbering:\n  - `1: submitForm(data)`\n  - `1.1: validateInput()`\n  - `1.2: persistRecord()`\n  - `2: notifySuccess()`\n• **Direction Arrows:** Directional arrows next to message labels specify which participant is sending the command.'
-          : '### 💬 Diagrama de Comunicación (`communication`)\n\nEnfatiza la red estructural de relaciones y colaboración entre objetos, organizando el espacio libremente en vez de usar un eje temporal rígido.\n\n**Conceptos Fundamentales:**\n• **Nodos Participantes:** Objetos distribuidos en el lienzo, soportando estereotipos normativos (`<<boundary>>`, `<<control>>`, `<<entity>>`).\n• **Enlaces de Comunicación:** Rutas continuas entre los objetos por donde circulan las llamadas.\n• **Mensajes Numerados Secuencialmente:** Cada mensaje lleva un prefijo numérico jerárquico que indica el orden exacto de ejecución:\n  - `1: registrarPedido(datos)`\n  - `1.1: verificarStock()`\n  - `1.2: debitarSaldo()`\n  - `2: enviarConfirmacion()`\n• **Flechas de Dirección:** Pequeñas flechas junto al texto del mensaje que indican el sentido en el que viaja la llamada entre los participantes.',
+          ? '### Communication Diagrams (`communication`)\n\nFocuses on structural relationships and object collaboration network topology rather than timeline axes.\n\n**Core Concepts:**\n• **Collaborating Nodes:** Objects placed freely on the canvas, optionally annotated with stereotyping icons (`<<boundary>>`, `<<control>>`, `<<entity>>`).\n• **Communication Links:** Solid paths between nodes that represent active communication channels.\n• **Numbered Messages:** Messages placed along connection links with hierarchical sequence numbering:\n  - `1: submitForm(data)`\n  - `1.1: validateInput()`\n  - `1.2: persistRecord()`\n  - `2: notifySuccess()`\n• **Direction Arrows:** Directional arrows next to message labels specify which participant is sending the command.'
+          : '### Diagrama de Comunicación (`communication`)\n\nEnfatiza la red estructural de relaciones y colaboración entre objetos, organizando el espacio libremente en vez de usar un eje temporal rígido.\n\n**Conceptos Fundamentales:**\n• **Nodos Participantes:** Objetos distribuidos en el lienzo, soportando estereotipos normativos (`<<boundary>>`, `<<control>>`, `<<entity>>`).\n• **Enlaces de Comunicación:** Rutas continuas entre los objetos por donde circulan las llamadas.\n• **Mensajes Numerados Secuencialmente:** Cada mensaje lleva un prefijo numérico jerárquico que indica el orden exacto de ejecución:\n  - `1: registrarPedido(datos)`\n  - `1.1: verificarStock()`\n  - `1.2: debitarSaldo()`\n  - `2: enviarConfirmacion()`\n• **Flechas de Dirección:** Pequeñas flechas junto al texto del mensaje que indican el sentido en el que viaja la llamada entre los participantes.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
-              { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
-              { label: '🎨 UML Classes & Relations', query: 'how to model classes' },
+              { label: 'Sequence Diagrams', query: 'sequence diagram' },
+              { label: 'Robustness Class Analysis', query: 'class analysis diagram' },
+              { label: 'UML Classes & Relations', query: 'how to model classes' },
             ]
           : [
-              { label: '⏱️ Diagramas de Secuencia', query: 'diagrama de secuencia' },
-              { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
-              { label: '🎨 Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
+              { label: 'Diagramas de Secuencia', query: 'diagrama de secuencia' },
+              { label: 'Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+              { label: 'Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
             ],
       );
       return;
@@ -1234,20 +1234,20 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 🔬 Robustness Analysis Diagram (`class_analysis`)\n\nBridging the gap between Use Cases (requirements) and Detailed Class Design using Ivar Jacobson\'s Robustness Analysis.\n\n**The Three Canonical Stereotypes:**\n• **1. Boundary (Frontera):** Mediates interaction between external actors and system internals (screens, API endpoints, web forms, reports). Drawn as a circle with a vertical tangent line on the left.\n• **2. Control:** Coordinates business logic, orchestrates transactional workflows, and governs rules. Drawn as a circle topped by an arrow.\n• **3. Entity:** Encapsulates persistent business domain data (e.g. `Client`, `Order`, `Invoice`). Drawn as a circle with a flat horizontal base.\n\n**Golden Rules of Robustness:**\n• **Actors** only interact with **Boundary** classes.\n• **Boundary** classes only talk to **Control** classes (or Actors).\n• **Control** classes can talk to **Boundary**, other **Control**, and **Entity** classes.\n• **Entity** classes only interact with **Control** classes (two Entities should not invoke each other directly in analysis).'
-          : '### 🔬 Diagrama de Análisis de Clases / Robustez (`class_analysis`)\n\nConecta el puente metodológico entre los Casos de Uso (requerimientos) y el Diseño Detallado de Clases aplicando el Análisis de Robustez de Ivar Jacobson.\n\n**Los Tres Estereotipos Canónicos:**\n• **1. Boundary (Frontera / Interfaz):** Media entre los actores externos y el interior del sistema (pantallas, vistas, controladores API, diálogos). Representado por un círculo con una barra vertical tangente a la izquierda.\n• **2. Control (Controlador / Lógica de Negocio):** Orquesta la lógica del caso de uso, coordina transacciones y valida reglas del negocio. Representado por un círculo con una flecha directriz superior.\n• **3. Entity (Entidad / Dominio Persistente):** Almacena y gestiona los datos de dominio duraderos (`Cliente`, `Factura`, `Producto`). Representado por un círculo sobre una base horizontal.\n\n**Reglas de Oro del Análisis de Robustez:**\n• Los **Actores** solo pueden conectarse con clases **Boundary**.\n• Las clases **Boundary** solo se comunican con clases **Control** (o con Actores).\n• Las clases **Control** pueden comunicarse con **Boundary**, otros **Control** y clases **Entity**.\n• Las clases **Entity** solo interactúan con clases **Control** (dos entidades no deben comunicarse directamente en la fase de análisis).\n\n**En UML/ER Studio:** En este diagrama los estereotipos se posicionan centralmente en la cabecera del nodo y son completamente exportables a Enterprise Architect XMI.',
+          ? '### Robustness Analysis Diagram (`class_analysis`)\n\nBridging the gap between Use Cases (requirements) and Detailed Class Design using Ivar Jacobson\'s Robustness Analysis.\n\n**The Three Canonical Stereotypes:**\n• **1. Boundary (Frontera):** Mediates interaction between external actors and system internals (screens, API endpoints, web forms, reports). Drawn as a circle with a vertical tangent line on the left.\n• **2. Control:** Coordinates business logic, orchestrates transactional workflows, and governs rules. Drawn as a circle topped by an arrow.\n• **3. Entity:** Encapsulates persistent business domain data (e.g. `Client`, `Order`, `Invoice`). Drawn as a circle with a flat horizontal base.\n\n**Golden Rules of Robustness:**\n• **Actors** only interact with **Boundary** classes.\n• **Boundary** classes only talk to **Control** classes (or Actors).\n• **Control** classes can talk to **Boundary**, other **Control**, and **Entity** classes.\n• **Entity** classes only interact with **Control** classes (two Entities should not invoke each other directly in analysis).'
+          : '### Diagrama de Análisis de Clases / Robustez (`class_analysis`)\n\nConecta el puente metodológico entre los Casos de Uso (requerimientos) y el Diseño Detallado de Clases aplicando el Análisis de Robustez de Ivar Jacobson.\n\n**Los Tres Estereotipos Canónicos:**\n• **1. Boundary (Frontera / Interfaz):** Media entre los actores externos y el interior del sistema (pantallas, vistas, controladores API, diálogos). Representado por un círculo con una barra vertical tangente a la izquierda.\n• **2. Control (Controlador / Lógica de Negocio):** Orquesta la lógica del caso de uso, coordina transacciones y valida reglas del negocio. Representado por un círculo con una flecha directriz superior.\n• **3. Entity (Entidad / Dominio Persistente):** Almacena y gestiona los datos de dominio duraderos (`Cliente`, `Factura`, `Producto`). Representado por un círculo sobre una base horizontal.\n\n**Reglas de Oro del Análisis de Robustez:**\n• Los **Actores** solo pueden conectarse con clases **Boundary**.\n• Las clases **Boundary** solo se comunican con clases **Control** (o con Actores).\n• Las clases **Control** pueden comunicarse con **Boundary**, otros **Control** y clases **Entity**.\n• Las clases **Entity** solo interactúan con clases **Control** (dos entidades no deben comunicarse directamente en la fase de análisis).\n\n**En UML/ER Studio:** En este diagrama los estereotipos se posicionan centralmente en la cabecera del nodo y son completamente exportables a Enterprise Architect XMI.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '👤 Use Case Diagrams', query: 'use case diagram' },
-              { label: '🎨 Detailed Class Diagrams', query: 'how to model classes' },
-              { label: '⚡ Generate Spring Boot code', query: 'how to generate code' },
+              { label: 'Use Case Diagrams', query: 'use case diagram' },
+              { label: 'Detailed Class Diagrams', query: 'how to model classes' },
+              { label: 'Generate Spring Boot code', query: 'how to generate code' },
             ]
           : [
-              { label: '👤 Casos de Uso', query: 'diagrama de casos de uso' },
-              { label: '🎨 Diagrama de Clases Detallado', query: 'como modelar clases y relaciones' },
-              { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
+              { label: 'Casos de Uso', query: 'diagrama de casos de uso' },
+              { label: 'Diagrama de Clases Detallado', query: 'como modelar clases y relaciones' },
+              { label: 'Generar código Spring Boot', query: 'como generar codigo' },
             ],
       );
       return;
@@ -1266,18 +1266,18 @@ flutter run`,
     ) {
       this.addBotMessage(
         isEn
-          ? '### 📦 Architectural Diagrams (Packages, Components & Deployment)\n\nModel high-level system topology, modular subsystems, and physical infrastructure:\n\n• **Package Diagrams (`package`):** Group classes and models into folder-like modules with dependency arrows (`<<import>>`, `<<access>>`) to organize large-scale architectures.\n• **Component Diagrams (`component`):** Represent deployable executable software blocks with provided interfaces (ball/lollipop) and required interfaces (socket) forming assembly connectors.\n• **Deployment Diagrams (`deployment`):** Depict hardware nodes (servers, devices, cloud clusters) and the software artifacts running inside them.'
-          : '### 📦 Diagramas Arquitectónicos (Paquetes, Componentes y Despliegue)\n\nModela la topología de alto nivel, la modularidad de subsistemas y la infraestructura física:\n\n• **Diagrama de Paquetes (`package`):** Agrupa clases, modelos y subsistemas en carpetas modulares con flechas de dependencia (`<<import>>`, `<<access>>`), organizando arquitecturas complejas.\n• **Diagrama de Componentes (`component`):** Representa módulos de software ejecutables con interfaces provistas (lollipop) e interfaces requeridas (socket) formando conectores de ensamble (*assembly*).\n• **Diagrama de Despliegue (`deployment`):** Mapea los nodos físicos y de red (servidores de aplicación, clústeres cloud, contenedores Docker, bases de datos) y los artefactos que se ejecutan en ellos.',
+          ? '### Architectural Diagrams (Packages, Components & Deployment)\n\nModel high-level system topology, modular subsystems, and physical infrastructure:\n\n• **Package Diagrams (`package`):** Group classes and models into folder-like modules with dependency arrows (`<<import>>`, `<<access>>`) to organize large-scale architectures.\n• **Component Diagrams (`component`):** Represent deployable executable software blocks with provided interfaces (ball/lollipop) and required interfaces (socket) forming assembly connectors.\n• **Deployment Diagrams (`deployment`):** Depict hardware nodes (servers, devices, cloud clusters) and the software artifacts running inside them.'
+          : '### Diagramas Arquitectónicos (Paquetes, Componentes y Despliegue)\n\nModela la topología de alto nivel, la modularidad de subsistemas y la infraestructura física:\n\n• **Diagrama de Paquetes (`package`):** Agrupa clases, modelos y subsistemas en carpetas modulares con flechas de dependencia (`<<import>>`, `<<access>>`), organizando arquitecturas complejas.\n• **Diagrama de Componentes (`component`):** Representa módulos de software ejecutables con interfaces provistas (lollipop) e interfaces requeridas (socket) formando conectores de ensamble (*assembly*).\n• **Diagrama de Despliegue (`deployment`):** Mapea los nodos físicos y de red (servidores de aplicación, clústeres cloud, contenedores Docker, bases de datos) y los artefactos que se ejecutan en ellos.',
         undefined,
         undefined,
         isEn
           ? [
-              { label: '📊 All Diagram Types', query: 'diagram types' },
-              { label: '⚡ Generate Fullstack Code', query: 'how to generate code' },
+              { label: 'All Diagram Types', query: 'diagram types' },
+              { label: 'Generate Fullstack Code', query: 'how to generate code' },
             ]
           : [
-              { label: '📊 Ver todos los tipos', query: 'tipos de diagramas' },
-              { label: '⚡ Generar código Fullstack', query: 'como generar codigo' },
+              { label: 'Ver todos los tipos', query: 'tipos de diagramas' },
+              { label: 'Generar código Fullstack', query: 'como generar codigo' },
             ],
       );
       return;
@@ -1292,22 +1292,22 @@ flutter run`,
       undefined,
       isEn
         ? [
-            { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
-            { label: '📊 Supported Diagram Types', query: 'diagram types' },
-            { label: '👤 Use Case Diagrams', query: 'use case diagram' },
-            { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
-            { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
-            { label: '🐳 Docker & Gradle Run Commands', query: 'run commands' },
-            { label: '⚡ Generate Spring Boot & Flutter', query: 'how to generate code' },
+            { label: 'Start Step-by-Step Tour', query: 'start tour' },
+            { label: 'Supported Diagram Types', query: 'diagram types' },
+            { label: 'Use Case Diagrams', query: 'use case diagram' },
+            { label: 'Sequence Diagrams', query: 'sequence diagram' },
+            { label: 'Robustness Class Analysis', query: 'class analysis diagram' },
+            { label: 'Docker & Gradle Run Commands', query: 'run commands' },
+            { label: 'Generate Spring Boot & Flutter', query: 'how to generate code' },
           ]
         : [
-            { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
-            { label: '📊 Tipos de Diagramas Soportados', query: 'tipos de diagramas' },
-            { label: '👤 Diagramas de Casos de Uso', query: 'diagrama de casos de uso' },
-            { label: '⏱️ Diagramas de Secuencia', query: 'diagrama de secuencia' },
-            { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
-            { label: '🐳 Comandos para Correr Docker y Gradle', query: 'comandos de ejecucion' },
-            { label: '⚡ Generar Código Spring Boot y Flutter', query: 'como generar codigo' },
+            { label: 'Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
+            { label: 'Tipos de Diagramas Soportados', query: 'tipos de diagramas' },
+            { label: 'Diagramas de Casos de Uso', query: 'diagrama de casos de uso' },
+            { label: 'Diagramas de Secuencia', query: 'diagrama de secuencia' },
+            { label: 'Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
+            { label: 'Comandos para Correr Docker y Gradle', query: 'comandos de ejecucion' },
+            { label: 'Generar Código Spring Boot y Flutter', query: 'como generar codigo' },
           ],
     );
   }

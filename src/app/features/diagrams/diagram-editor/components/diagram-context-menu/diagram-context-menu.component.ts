@@ -73,6 +73,7 @@ export class DiagramContextMenuComponent {
   @Output() editConnection = new EventEmitter<UmlConnection>();
   @Output() reverseConnection = new EventEmitter<UmlConnection>();
   @Output() setConnectionLineStyle = new EventEmitter<{ connection: UmlConnection; lineStyle: UmlLineStyle }>();
+  @Output() attachAssociationClass = new EventEmitter<UmlConnection>();
   @Output() selectAll = new EventEmitter<void>();
   @Output() deselectAll = new EventEmitter<void>();
   @Output() resetView = new EventEmitter<void>();
@@ -131,6 +132,11 @@ export class DiagramContextMenuComponent {
 
   onSetLineStyle(conn: UmlConnection, lineStyle: UmlLineStyle): void {
     this.setConnectionLineStyle.emit({ connection: conn, lineStyle });
+  }
+
+  onAttachAssociationClass(conn: UmlConnection): void {
+    this.attachAssociationClass.emit(conn);
+    this.close.emit();
   }
 
   onSelectAll(): void {

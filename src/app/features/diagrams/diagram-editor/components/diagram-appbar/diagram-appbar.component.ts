@@ -148,6 +148,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
   readonly selectedNodeColor = input<string | null>(null);
   readonly selectedNodesCount = input<number>(0);
   readonly smartGuidesEnabled = input<boolean>(true);
+  readonly showGrid = input<boolean>(false);
 
   // Colores predefinidos modernos
   readonly presetColors = [
@@ -195,6 +196,7 @@ export class DiagramAppbarComponent implements AfterViewInit {
   readonly distributeNodes = output<'horizontal' | 'vertical'>();
   readonly snapToGrid = output<void>();
   readonly toggleSmartGuides = output<void>();
+  readonly toggleGrid = output<void>();
 
   handleExportBmp(): void {
     if (this.multiUserBlocked()) {

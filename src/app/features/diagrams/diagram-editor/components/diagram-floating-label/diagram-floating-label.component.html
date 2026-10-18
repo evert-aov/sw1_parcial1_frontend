@@ -58,9 +58,9 @@
           (click)="onReset($event)"
           (pointerdown)="$event.stopPropagation()"
           [title]="'editor.canvas.nodes.resetLabelPosition' | translate"
-          class="opacity-0 group-hover/label:opacity-100 text-[10px] text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer"
+          class="opacity-0 group-hover/label:opacity-100 text-slate-400 hover:text-red-500 p-0.5 rounded transition-opacity cursor-pointer flex items-center justify-center"
         >
-          ✕
+          <ng-icon name="heroXMark" class="text-xs"></ng-icon>
         </button>
       }
     </div>

@@ -1,5 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import { heroXMark } from '@ng-icons/heroicons/outline';
 import { TranslatePipe } from '../../../../../core/i18n';
 import { UmlClassNode } from '../../../../../core/models/diagram.model';
 import { AutofocusInputDirective } from '../../directives/autofocus-input.directive';
@@ -7,7 +9,12 @@ import { AutofocusInputDirective } from '../../directives/autofocus-input.direct
 @Component({
   standalone: true,
   selector: 'app-diagram-floating-label',
-  imports: [CommonModule, AutofocusInputDirective, TranslatePipe],
+  imports: [CommonModule, AutofocusInputDirective, TranslatePipe, NgIconComponent],
+  providers: [
+    provideIcons({
+      heroXMark,
+    }),
+  ],
   templateUrl: './diagram-floating-label.component.html',
 })
 export class DiagramFloatingLabelComponent {

@@ -28,6 +28,8 @@ import {
   heroArrowPath,
   heroChevronDown,
   heroChevronUp,
+  heroExclamationTriangle,
+  heroCheck,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { AiAssistantService, AiResponse, AiModelOption } from '../../../../../core/services/ai-assistant.service';
@@ -76,6 +78,8 @@ import { TranslatePipe } from '../../../../../core/i18n';
       heroArrowPath,
       heroChevronDown,
       heroChevronUp,
+      heroExclamationTriangle,
+      heroCheck,
     }),
   ],
   templateUrl: './ai-assistant-panel.component.html',
@@ -236,9 +240,9 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
 
     let userMessageText = promptText;
     if (audioBase64 && !promptText) {
-      userMessageText = `🎙️ [Comando de Voz] (${audioDuration ? audioDuration + 's' : 'audio'})`;
+      userMessageText = `[Comando de Voz] (${audioDuration ? audioDuration + 's' : 'audio'})`;
     } else if (audioBase64 && promptText) {
-      userMessageText = `🎙️ [Comando de Voz (${audioDuration ? audioDuration + 's' : 'audio'})]: ${promptText}`;
+      userMessageText = `[Comando de Voz (${audioDuration ? audioDuration + 's' : 'audio'})]: ${promptText}`;
     } else if (!promptText && imageBase64) {
       userMessageText = 'Digitalizar diagrama desde imagen adjunta';
     }
@@ -278,7 +282,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
           { provider: 'vertex', model: 'gemini-2.5-flash', diagramType: dType },
         )
         .subscribe({
-          next: (res) => this.handleAiResponse(res, '🎙️ Comando de Voz (Gemini Multimodal)'),
+          next: (res) => this.handleAiResponse(res, 'Comando de Voz (Gemini Multimodal)'),
           error: (err) => this.handleAiError(err),
         });
     } else if (imageBase64) {
@@ -295,7 +299,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
           { provider: 'vertex', model: 'gemini-2.5-flash', diagramType: dType },
         )
         .subscribe({
-          next: (res) => this.handleAiResponse(res, '📸 Reconocimiento de Boceto / Imagen'),
+          next: (res) => this.handleAiResponse(res, 'Reconocimiento de Boceto / Imagen'),
           error: (err) => this.handleAiError(err),
         });
     } else {
@@ -310,7 +314,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
           { provider, model, diagramType: dType },
         )
         .subscribe({
-          next: (res) => this.handleAiResponse(res, '✨ Copilot IA (Prompt)'),
+          next: (res) => this.handleAiResponse(res, 'Copilot IA (Prompt)'),
           error: (err) => this.handleAiError(err),
         });
     }
@@ -368,7 +372,7 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
       {
         id: 'msg-err-' + Date.now(),
         sender: 'assistant',
-        text: '❌ Ocurrió un error al procesar tu solicitud: ' + msg,
+        text: 'Ocurrió un error al procesar tu solicitud: ' + msg,
         status: 'error',
         timestamp: new Date(),
       },

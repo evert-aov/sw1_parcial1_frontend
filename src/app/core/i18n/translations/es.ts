@@ -244,6 +244,11 @@ export const es = {
       smartGuidesOff: 'Guías: OFF',
       selectedClasses: '{{count}} seleccionadas',
     },
+    grid: {
+      show: 'Mostrar Cuadrícula',
+      hide: 'Ocultar Cuadrícula',
+      title: 'Cuadrícula',
+    },
     pointer: 'Seleccionar / Mover',
     pointerDesc: 'Mueve clases libremente',
     pan: 'Mover Lienzo',
@@ -633,7 +638,7 @@ export const es = {
     platformAll: 'Fullstack (Ambos)',
     springBootTab: 'Spring Boot',
     flutterTab: 'Flutter BLoC',
-    warningTitle: '⚠️ Atención:',
+    warningTitle: 'Atención:',
     warningDesc:
       'Debes guardar el diagrama en el servidor antes de generar la arquitectura y descargar el proyecto.',
     packageBase: 'Package Base',
@@ -717,7 +722,7 @@ export const es = {
     close: 'Cerrar',
   },
   guide: {
-    launcherBadge: '👋 ¿Nuevo usuario? <strong>Manual Interactivo</strong>',
+    launcherBadge: '¿Nuevo usuario? <strong>Manual Interactivo</strong>',
     openTooltip: 'Abrir Guía y Manual Interactivo',
     title: 'Manual Interactivo',
     subtitle: 'Asistente y Guía para Nuevos Usuarios',
@@ -736,7 +741,7 @@ export const es = {
     scrollLeft: 'Desplazar temas a la izquierda',
     scrollRight: 'Desplazar temas a la derecha',
     inputPlaceholder: "Escribe una pregunta sobre el sistema o 'tour'...",
-    inputTip: '💡 Pulsa Enter para enviar o usa las opciones rápidas arriba.',
+    inputTip: 'Pulsa Enter para enviar o usa las opciones rápidas arriba.',
     interactiveManual: 'Manual Interactivo',
     manual: 'Manual',
   },

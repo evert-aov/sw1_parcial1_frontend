@@ -5,6 +5,7 @@ import {
   OnInit,
   OnDestroy,
   HostListener,
+  ChangeDetectionStrategy,
   inject,
   computed,
 } from '@angular/core';
@@ -127,6 +128,7 @@ export type { DiagramHistorySnapshot, DiagramTab, DiagramContextMenuState };
     TranslatePipe,
   ],
   providers: [provideIcons(DIAGRAM_EDITOR_ICONS)],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './diagram-editor.component.html',
   styleUrl: './diagram-editor.component.css',
 })
@@ -318,6 +320,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   defaultLineStyle = signal<UmlLineStyle>('segment');
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
   get smartGuidesEnabled() { return this.toolbarService.smartGuidesEnabled; }
+  get showGrid() { return this.toolbarService.showGrid; }
 
   private isApplyingHistory = false;
   get hasMovedDuringPointerDown(): boolean { return this.interactionService.hasMovedDuringPointerDown; }
@@ -423,7 +426,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (this.editingNode()?.id === data.nodeId) {
       this.isEditNodeModalOpen.set(false);
       this.editingNode.set(null);
-      this.toastService.warning(`🔒 La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
+      this.toastService.warning(`La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
     }
   }
 
@@ -685,6 +688,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       onSelectNode: (id) => this.selectionService.setNodeSelection([id]),
       sendNodeDrag: (id, pos) => this.collabCoordinator.sendNodeDrag(id, pos),
     });
+
+    // Actualización inmutable reactiva de las posiciones en el signal de nodos
+    this.nodes.update((currentNodes) =>
+      currentNodes.map((n) => (n.id === node.id ? { ...n, position: { ...newPosition } } : { ...n, position: { ...n.position } })),
+    );
+
     if (shouldRedraw) this.diagramCanvas?.redraw();
     this.markAsUnsaved();
     this.updateConnectionEndpoints();
@@ -744,6 +753,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   toggleSmartGuides(): void {
     this.toolbarService.toggleSmartGuides();
+  }
+
+  toggleGrid(): void {
+    this.toolbarService.toggleGrid();
   }
 
   private applyNodesTransformation(modified: UmlClassNode[], action: string): void {
@@ -847,8 +860,33 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (nodeIds.length === 0 && connIds.length === 0) return;
 
     this.pushSnapshot();
-    for (const id of nodeIds) this.removeClass(id, undefined, false);
-    for (const id of connIds) this.removeConnection(id);
+
+    let currentNodes = this.nodes();
+    let currentConns = this.connections();
+
+    if (nodeIds.length > 0) {
+      const res = this.nodeOps.executeCascadeDeleteNodes(
+        nodeIds,
+        currentNodes,
+        currentConns,
+        (c) => this.recalculateSequenceNumbers(c),
+      );
+      currentNodes = res.remainingNodes;
+      currentConns = res.remainingConnections;
+    }
+
+    if (connIds.length > 0) {
+      const connSet = new Set(connIds);
+      currentConns = this.recalculateSequenceNumbers(currentConns.filter((c) => !connSet.has(c.id)));
+    }
+
+    this.commitDiagramMutation({
+      nodes: currentNodes,
+      connections: currentConns,
+      action: 'remove_node',
+      recordHistory: false,
+    });
+
     this.deselectAll();
   }
 
@@ -1177,6 +1215,37 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.syncUpdatedConnections(`Estilo de línea cambiado a ${style}`);
   }
 
+  attachAssociationClassToConnection(conn: UmlConnection): void {
+    if (this.isReadOnly()) return;
+    const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
+    const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
+
+    const srcNode = this.nodes().find((n) => n.id === baseSourceId);
+    const tgtNode = this.nodes().find((n) => n.id === baseTargetId);
+
+    if (!srcNode || !tgtNode) {
+      this.showQuickToast('No se encontraron los extremos de la relación');
+      return;
+    }
+
+    const assocResult = this.connectionOps.createAssociationClassBetween(
+      srcNode,
+      tgtNode,
+      this.nodes(),
+      this.connections(),
+      conn.id,
+    );
+
+    this.commitDiagramMutation({
+      nodes: assocResult.nodes,
+      connections: assocResult.connections,
+      action: 'add_association_class',
+    });
+
+    this.closeContextMenu();
+    this.showQuickToast('Association Class vinculada al punto medio de la relación N:M');
+  }
+
   private showIncompatibleElementModal(diagType: DiagramType): void {
     this.modalService.showIncompatibleElementModal(diagType, this.confirmDialogService);
   }
@@ -1253,7 +1322,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     if (this.isNodeLockedByOther(node.id)) {
       const lock = this.collabCoordinator.getNodeLock(node.id);
-      this.toastService.warning(`🔒 Esta tabla está bloqueada por ${lock?.userName || 'otro usuario'}.`);
+      this.toastService.warning(`Esta tabla está bloqueada por ${lock?.userName || 'otro usuario'}.`);
       return;
     }
 
@@ -1513,6 +1582,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       setNodes: (n) => this.nodes.set(n),
       markAsUnsaved: () => this.markAsUnsaved(),
       sendDiagramSync: (nodes, conns, act, style) => this.collabCoordinator.sendDiagramSync(nodes, conns, act, style),
+      getDefaultColor: (t, s) => this.getDefaultColorForNodeType(t, s),
     });
   }
 
