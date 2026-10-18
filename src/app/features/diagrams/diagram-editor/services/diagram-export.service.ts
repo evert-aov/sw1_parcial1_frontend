@@ -12,6 +12,7 @@ import {
   UmlMessage,
 } from '../../../../core/models/diagram.model';
 import { DiagramCanvasComponent } from '../components/diagram-canvas/diagram-canvas.component';
+import { DiagramAstNormalizerService } from './diagram-ast-normalizer.service';
 
 export interface UmlDiagramExportJson {
   version: string;
@@ -29,6 +30,8 @@ export class DiagramExportService {
   private readonly bmpExportService: BmpExportService;
   private readonly xmiService: XmiService;
   private readonly toastService?: ToastService | null;
+  // Normalizador sin estado: se instancia directamente para seguir siendo válido fuera de DI.
+  private readonly astNormalizer = new DiagramAstNormalizerService();
 
   constructor(bmpService?: BmpExportService, xmiService?: XmiService, toastService?: ToastService) {
     if (bmpService) {
@@ -103,8 +106,12 @@ export class DiagramExportService {
     // 3. Fallback con elemento DOM (para entornos donde el lienzo no esté inicializado en Konva)
     const canvasComp = diagramCanvas?.canvas;
     const prevScale = canvasComp?.transform?.scale ?? 1;
-    const prevPos = canvasComp?.transform?.position ? { ...canvasComp.transform.position } : { x: 0, y: 0 };
-    const prevScaledPos = canvasComp?.transform?.scaledPosition ? { ...canvasComp.transform.scaledPosition } : { x: 0, y: 0 };
+    const prevPos = canvasComp?.transform?.position
+      ? { ...canvasComp.transform.position }
+      : { x: 0, y: 0 };
+    const prevScaledPos = canvasComp?.transform?.scaledPosition
+      ? { ...canvasComp.transform.scaledPosition }
+      : { x: 0, y: 0 };
 
     diagramCanvas?.clearSelection();
 
@@ -208,12 +215,16 @@ export class DiagramExportService {
     getNodeHeight: (node: UmlClassNode) => number,
     getDefaultColor: (nodeType?: string | null, stereotype?: string | null) => string,
     normalizeUmlMessage: (m: any, defaultSeq?: string) => UmlMessage,
-    recalculateSequenceNumbers?: (conns: UmlConnection[], preserveOrder?: boolean) => UmlConnection[],
+    recalculateSequenceNumbers?: (
+      conns: UmlConnection[],
+      preserveOrder?: boolean,
+    ) => UmlConnection[],
   ): SaveDiagramAstRequest {
     const isSequence = activeDiagramType === DiagramType.SEQUENCE;
-    const connections = isSequence && recalculateSequenceNumbers
-      ? recalculateSequenceNumbers(connectionsList, true)
-      : connectionsList;
+    const connections =
+      isSequence && recalculateSequenceNumbers
+        ? recalculateSequenceNumbers(connectionsList, true)
+        : connectionsList;
 
     return {
       type: activeDiagramType,
@@ -224,55 +235,33 @@ export class DiagramExportService {
           ? 'Anchor'
           : n.nodeType === 'boundary_box'
             ? '.'
-            : (isSequence
-              ? (n.nodeType === 'actor' || n.id.startsWith('actor_') ? 'actor_1' : 'lifeline_1')
-              : 'ClassName');
-        const finalName = (n.nodeType === 'boundary_box' && (cleanName === 'ClassName' || !cleanName))
-          ? '.'
-          : (cleanName || fallbackName);
-
-        const resolvedNodeType =
-          n.nodeType && n.nodeType !== 'class'
-            ? n.nodeType
-            : n.id.startsWith('actor_')
-            ? 'actor'
-            : n.id.startsWith('use_case_')
-            ? 'use_case'
-            : n.id.startsWith('boundary_box_')
-            ? 'boundary_box'
-            : n.id.startsWith('package_')
-            ? 'package'
-            : n.id.startsWith('boundary_')
-            ? 'boundary'
-            : n.id.startsWith('control_')
-            ? 'control'
-            : n.id.startsWith('entity_')
-            ? 'entity'
-            : n.id.startsWith('component_')
-            ? 'component'
-            : n.id.startsWith('device_')
-            ? 'device'
-            : n.id.startsWith('exec_env_') || n.id.startsWith('exec_')
-            ? 'executionEnvironment'
-            : n.id.startsWith('lifeline_')
-            ? 'lifeline'
             : isSequence
-            ? 'lifeline'
-            : activeDiagramType === DiagramType.PACKAGE
-            ? 'package'
-            : n.nodeType || 'class';
+              ? n.nodeType === 'actor' || n.id.startsWith('actor_')
+                ? 'actor_1'
+                : 'lifeline_1'
+              : 'ClassName';
+        const finalName =
+          n.nodeType === 'boundary_box' && (cleanName === 'ClassName' || !cleanName)
+            ? '.'
+            : cleanName || fallbackName;
+
+        const resolvedNodeType = this.astNormalizer.resolveNodeType(n.id, n.nodeType, {
+          isSequence,
+          isPackageDiagram: activeDiagramType === DiagramType.PACKAGE,
+        });
 
         let nodeColor = n.color;
         if (!nodeColor && getDefaultColor) {
           nodeColor = getDefaultColor(resolvedNodeType, n.stereotype);
         }
 
-        const isExplicitSize = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(resolvedNodeType);
-        const savedHeight = resolvedNodeType === 'lifeline'
-          ? 60
-          : (isExplicitSize
-              ? (n.customHeight || n.height || getNodeHeight(n))
-              : (n.customHeight || (n.isCustomSize ? n.height : null) || null));
+        const isExplicitSize = this.astNormalizer.isExplicitSizeNodeType(resolvedNodeType);
+        const savedHeight =
+          resolvedNodeType === 'lifeline'
+            ? 60
+            : isExplicitSize
+              ? n.customHeight || n.height || getNodeHeight(n)
+              : n.customHeight || (n.isCustomSize ? n.height : null) || null;
 
         return {
           id: n.id,
@@ -291,8 +280,14 @@ export class DiagramExportService {
             name: a.name,
             type: a.type || 'String',
             orderIndex: typeof a.orderIndex === 'number' ? a.orderIndex : aIdx,
-            nullable: a.nullable !== undefined ? a.nullable : (a.isNullable !== undefined ? a.isNullable : true),
-            unique: a.unique !== undefined ? a.unique : (a.isUnique !== undefined ? a.isUnique : false),
+            nullable:
+              a.nullable !== undefined
+                ? a.nullable
+                : a.isNullable !== undefined
+                  ? a.isNullable
+                  : true,
+            unique:
+              a.unique !== undefined ? a.unique : a.isUnique !== undefined ? a.isUnique : false,
             length: a.length !== undefined && a.length !== null ? Number(a.length) : 255,
             defaultValue: a.defaultValue ?? a.default ?? null,
             default: a.default ?? a.defaultValue ?? null,
@@ -312,8 +307,8 @@ export class DiagramExportService {
         };
       }),
       connections: connections.map((c) => {
-        const baseSourceId = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-        const baseTargetId = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+        const { sourceNodeId: baseSourceId, targetNodeId: baseTargetId } =
+          this.astNormalizer.resolveConnectionNodeIds(c);
         return {
           id: c.id,
           sourceNodeId: baseSourceId,
@@ -323,8 +318,8 @@ export class DiagramExportService {
           type: c.type,
           lineStyle: c.lineStyle || defaultLineStyle,
           name: c.name || null,
-          sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
-          targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
+          sourceMultiplicity: isSequence ? '' : c.sourceMultiplicity || '',
+          targetMultiplicity: isSequence ? '' : c.targetMultiplicity || '',
           assocAnchorNodeId: c.assocAnchorNodeId || null,
           messages: (c.messages || []).map((m, mIdx) => {
             const norm = normalizeUmlMessage(m, `${mIdx + 1}`);
@@ -421,4 +416,3 @@ export class DiagramExportService {
     });
   }
 }
-

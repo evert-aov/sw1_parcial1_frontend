@@ -9,6 +9,9 @@ export class DiagramContainmentService {
   readonly currentDragDescendantIds = new Set<string>();
   isDraggingNode = false;
 
+  /** Índice padre → hijos directos, calculado una vez al iniciar el arrastre (O(n²) amortizado por gesto). */
+  private containmentIndex: Map<string, string[]> | null = null;
+
   /**
    * Determina si un nodo hijo se encuentra geométricamente dentro de los límites de un nodo contenedor (Package/Subsystem).
    */
@@ -40,6 +43,48 @@ export class DiagramContainmentService {
   }
 
   /**
+   * Pre-indexa la contención geométrica: `parentId → childIds` (hijos directos por geometría).
+   * Permite resolver descendientes con un BFS sobre el índice, sin recalcular geometría por nivel.
+   */
+  buildContainmentIndex(
+    allNodes: UmlClassNode[],
+    getNodeWidth: (n: UmlClassNode) => number,
+    getNodeHeight: (n: UmlClassNode) => number,
+  ): Map<string, string[]> {
+    const index = new Map<string, string[]>();
+    for (const parent of allNodes) {
+      if (parent.isAnchor) continue;
+      for (const child of allNodes) {
+        if (this.isNodeInsideParent(child, parent, getNodeWidth, getNodeHeight)) {
+          const children = index.get(parent.id);
+          if (children) children.push(child.id);
+          else index.set(parent.id, [child.id]);
+        }
+      }
+    }
+    return index;
+  }
+
+  /**
+   * Resuelve los descendientes transitivos de un nodo usando un índice de contención ya construido.
+   */
+  getDescendantsFromIndex(parentNodeId: string, index: Map<string, string[]>): Set<string> {
+    const descendants = new Set<string>();
+    const visited = new Set<string>([parentNodeId]);
+    const queue: string[] = [parentNodeId];
+    for (let head = 0; head < queue.length; head++) {
+      for (const childId of index.get(queue[head]) ?? []) {
+        if (!visited.has(childId)) {
+          visited.add(childId);
+          descendants.add(childId);
+          queue.push(childId);
+        }
+      }
+    }
+    return descendants;
+  }
+
+  /**
    * Obtiene todos los IDs de nodos descendientes jerárquicos de forma recursiva (BFS).
    */
   getDescendantNodeIds(
@@ -56,10 +101,13 @@ export class DiagramContainmentService {
     const queue: UmlClassNode[] = [parent];
     const visited = new Set<string>([parentNodeId]);
 
-    while (queue.length > 0) {
-      const current = queue.shift()!;
+    for (let head = 0; head < queue.length; head++) {
+      const current = queue[head];
       for (const candidate of allNodes) {
-        if (!visited.has(candidate.id) && this.isNodeInsideParent(candidate, current, getNodeWidth, getNodeHeight)) {
+        if (
+          !visited.has(candidate.id) &&
+          this.isNodeInsideParent(candidate, current, getNodeWidth, getNodeHeight)
+        ) {
           visited.add(candidate.id);
           descendants.add(candidate.id);
           queue.push(candidate);
@@ -99,9 +147,11 @@ export class DiagramContainmentService {
   ): void {
     this.isDraggingNode = true;
     this.currentDragDescendantIds.clear();
-    const collected = this.collectDescendantsForRoots(rootIds, allNodes, getNodeWidth, getNodeHeight);
-    for (const id of collected) {
-      this.currentDragDescendantIds.add(id);
+    this.containmentIndex = this.buildContainmentIndex(allNodes, getNodeWidth, getNodeHeight);
+    for (const rootId of rootIds) {
+      for (const id of this.getDescendantsFromIndex(rootId, this.containmentIndex)) {
+        this.currentDragDescendantIds.add(id);
+      }
     }
   }
 
@@ -110,6 +160,7 @@ export class DiagramContainmentService {
    */
   resetDragState(): void {
     this.isDraggingNode = false;
+    this.containmentIndex = null;
     this.lastNodeDragPos.clear();
     this.currentDragDescendantIds.clear();
   }
@@ -145,7 +196,8 @@ export class DiagramContainmentService {
     } = params;
 
     let targetPos = params.newPosition;
-    const isSequenceNode = activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
+    const isSequenceNode =
+      activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
     if (isSequenceNode) {
       targetPos = { x: Math.round(targetPos.x), y: 50 };
     }
@@ -180,7 +232,8 @@ export class DiagramContainmentService {
         if (selectedNodeIds.size > 1 && selectedNodeIds.has(node.id)) {
           for (const other of nodes) {
             if (other.id !== node.id && selectedNodeIds.has(other.id) && !other.isAnchor) {
-              const otherIsSeq = activeDiagramType === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
+              const otherIsSeq =
+                activeDiagramType === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
               const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
               other.position = { x: Math.round(other.position.x + dx), y: otherY };
               sendNodeDrag(other.id, other.position);
@@ -197,7 +250,8 @@ export class DiagramContainmentService {
               !selectedNodeIds.has(other.id) &&
               !other.isAnchor
             ) {
-              const otherIsSeq = activeDiagramType === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
+              const otherIsSeq =
+                activeDiagramType === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
               const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
               other.position = { x: Math.round(other.position.x + dx), y: otherY };
               sendNodeDrag(other.id, other.position);
@@ -205,7 +259,10 @@ export class DiagramContainmentService {
           }
         }
 
-        if ((selectedNodeIds.size > 1 && selectedNodeIds.has(node.id)) || this.currentDragDescendantIds.size > 0) {
+        if (
+          (selectedNodeIds.size > 1 && selectedNodeIds.has(node.id)) ||
+          this.currentDragDescendantIds.size > 0
+        ) {
           shouldRedraw = true;
         }
       }
@@ -257,7 +314,8 @@ export class DiagramContainmentService {
     for (const item of eventNodes) {
       const node = nodeMap.get(item.id);
       if (node) {
-        const isSequenceNode = activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
+        const isSequenceNode =
+          activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
         const targetX = Math.round(item.position.x);
         const targetY = isSequenceNode ? 50 : Math.round(item.position.y);
         const dx = targetX - node.position.x;
@@ -269,14 +327,17 @@ export class DiagramContainmentService {
           sendNodeDrag(node.id, node.position);
 
           if (this.currentDragDescendantIds.size > 0) {
-            const descendantsOfThisNode = this.getDescendantNodeIds(node.id, nodes, getNodeWidth, getNodeHeight);
+            const descendantsOfThisNode = this.containmentIndex
+              ? this.getDescendantsFromIndex(node.id, this.containmentIndex)
+              : this.getDescendantNodeIds(node.id, nodes, getNodeWidth, getNodeHeight);
             for (const descId of descendantsOfThisNode) {
               if (!eventNodeIds.has(descId)) {
                 const descNode = nodeMap.get(descId);
                 if (descNode && !descNode.isAnchor) {
-                  const dY = (activeDiagramType === DiagramType.SEQUENCE || descNode.nodeType === 'lifeline')
-                    ? 50
-                    : Math.round(descNode.position.y + dy);
+                  const dY =
+                    activeDiagramType === DiagramType.SEQUENCE || descNode.nodeType === 'lifeline'
+                      ? 50
+                      : Math.round(descNode.position.y + dy);
                   descNode.position = { x: Math.round(descNode.position.x + dx), y: dY };
                   sendNodeDrag(descNode.id, descNode.position);
                 }
