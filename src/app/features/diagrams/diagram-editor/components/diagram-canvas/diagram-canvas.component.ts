@@ -39,25 +39,6 @@ import {
 } from '../../utils/node-metrics.util';
 import { DiagramSequenceActivationService } from '../../services/diagram-sequence-activation.service';
 import { DiagramContainmentService } from '../../services/diagram-containment.service';
-import { isSequenceRelationshipType, findNextAvailableSlot } from './nodes/uml-lifeline-node/uml-lifeline.logic';
-
-import {
-  createClassKonvaNode,
-  createActorKonvaNode,
-  createUseCaseKonvaNode,
-  createBoundaryKonvaNode,
-  createControlKonvaNode,
-  createEntityKonvaNode,
-  createLifelineKonvaNode,
-  createDeploymentKonvaNode,
-  createComponentKonvaNode,
-  createPackageKonvaNode,
-  createPackageLayerKonvaNode,
-  createActivityKonvaNode,
-  createNoteKonvaNode,
-} from './konva/nodes';
-import { toKonvaNode } from './konva/konva-adapter.util';
-import { UmlNode } from './konva/models/uml.model';
 
 import {
   CanvasStageManagerService,
@@ -66,6 +47,7 @@ import {
   CanvasNodeInteractionService,
   CanvasCollabExportService,
   DiagramCanvasViewState,
+  NodeInteractionContext,
 } from './services';
 
 export type { DiagramCanvasViewState };
@@ -124,9 +106,12 @@ export class AutofocusInputDirective implements AfterViewInit {
 /**
  * Componente principal del lienzo nodal UML (DiagramCanvasComponent).
  *
- * Renderiza el escenario gráfico de Konva.js gestionando la interacción de nodos,
- * conexiones reactivas a 60 FPS, paneo, zoom adaptativo, cursores remotos y selección.
- * Delega sus responsabilidades en 5 servicios especializados para mantener alta cohesión.
+ * Actúa como orquestador desacoplado delegando todas sus áreas funcionales en 5 servicios especializados:
+ * - `CanvasStageManagerService`: Escenario Konva, cuantización por bloques (Bucket Sizing 512px) y grid.
+ * - `CanvasViewportManagerService`: Cámara, zoom adaptativo (15%-125%), scroll suave y punto focal.
+ * - `CanvasRelationshipManagerService`: Conexiones, animación a 60 FPS, previsualización y proximidad magnética.
+ * - `CanvasNodeInteractionService`: Manipulación de nodos, arrastre coordinado, guías inteligentes y transformer.
+ * - `CanvasCollabExportService`: Bloqueos concurrentes, cursores y exportación vectorial nativa de alta resolución.
  */
 @Component({
   selector: 'app-diagram-canvas',
@@ -162,7 +147,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   private readonly sequenceActivationService = inject(DiagramSequenceActivationService);
   private readonly containmentService = inject(DiagramContainmentService);
 
-  // Servicios modulares especializados inyectados
+  // Servicios especializados desacoplados
   private readonly stageManager = inject(CanvasStageManagerService);
   private readonly viewportManager = inject(CanvasViewportManagerService);
   private readonly relationshipManager = inject(CanvasRelationshipManagerService);
@@ -186,7 +171,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   readonly smartGuidesEnabled = input<boolean>(true);
   readonly showGrid = input<boolean>(false);
 
-  // Outputs hacia el contenedor principal (DiagramEditorComponent)
+  // Outputs hacia el editor principal
   readonly flowLoaded = output<void>();
   readonly connectionCreated = output<any>();
   readonly connectionReassigned = output<any>();
@@ -213,37 +198,31 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   readonly connectionContextMenu = output<{ conn: UmlConnection; event: MouseEvent }>();
   readonly canvasContextMenu = output<{ event: MouseEvent; canvasPos: { x: number; y: number } }>();
 
-  // Estado interno del lienzo
+  // Señales reactivas internas
   readonly zoomLevel = this.viewportManager.zoomLevel;
   readonly isDragOverCanvas = signal<boolean>(false);
   readonly hoveredNodeId = signal<string | null>(null);
   readonly renamingNodeId = signal<string | null>(null);
   readonly pendingSourceNodeId = signal<string | null>(null);
 
-  // Referencias a instancias de Konva
+  // Referencias a capas de Konva y mapas de elementos
   private stage: Konva.Stage | null = null;
   private bgLayer: Konva.Layer | null = null;
   private frameLayer: Konva.Layer | null = null;
   private relLayer: Konva.Layer | null = null;
   private nodeLayer: Konva.Layer | null = null;
   private uiLayer: Konva.Layer | null = null;
-  private transformer: Konva.Transformer | null = null;
   private gridGroup: Konva.Group | null = null;
   private bgRect: Konva.Rect | null = null;
-  private previewLineGroup: Konva.Group | null = null;
   private guideLinesGroup: Konva.Group | null = null;
-  private marqueeRect: Konva.Rect | null = null;
 
-  private nodeGroupsMap = new Map<string, Konva.Group>();
+  private readonly nodeGroupsMap = new Map<string, Konva.Group>();
   private readonly selectedNodeIdsInternal = signal<string[]>([]);
   private readonly selectedConnIdsInternal = signal<string[]>([]);
-
   private isDraggingNode = false;
-  private isMarqueeSelecting = false;
-  private marqueeStartPos = { x: 0, y: 0 };
   private lastRenderedSignature = '';
   private readonly lastLocalMoveTimestamps = new Map<string, number>();
-  private onWindowMouseUpHandler?: () => void;
+  private stageEventsCleanup?: () => void;
 
   /** Computed: true cuando no hay nodos reales en el diagrama */
   readonly hasNoRealNodes = computed(() => !this.nodes().some((n) => !n.isAnchor));
@@ -271,11 +250,11 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
-    // 1. Sincronizar estructura de nodos y conexiones (NUNCA destruir durante arrastre activo)
+    // 1. Sincronizar estructura de nodos y conexiones
     effect(() => {
       const nodes = this.nodes();
-      const conns = this.connections();
-      const diagType = this.activeDiagramType();
+      this.connections();
+      this.activeDiagramType();
 
       if (!this.stage || !this.nodeLayer) return;
       if (this.isDraggingNode) return;
@@ -299,7 +278,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
           if (Math.round(group.x()) !== rawNode.position.x || Math.round(group.y()) !== rawNode.position.y) {
             group.position({ x: rawNode.position.x, y: rawNode.position.y });
           }
-          this.applyLiveGroupColor(group, rawNode);
+          this.nodeInteraction.applyLiveGroupColor(group, rawNode);
         }
         this.renderRelationshipsOnly();
         this.syncTransformer();
@@ -319,7 +298,14 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
       this.syncTransformer();
       this.renderRelationshipsOnly();
-      this.updateNodesSelectionAppearance();
+      const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
+      this.nodeInteraction.updateNodesSelectionAppearance({
+        nodeGroupsMap: this.nodeGroupsMap,
+        selectedNodeIds: selectedIds,
+        pendingSourceNodeId: this.pendingSourceNodeId(),
+        frameLayer: this.frameLayer,
+        nodeLayer: this.nodeLayer,
+      });
     });
 
     // 3. Sincronizar interactividad según tipo de relación activo
@@ -334,7 +320,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    // 4. Sincronizar dimensiones y escala del stage cuando cambia el tablero o el zoom
+    // 4. Sincronizar dimensiones y escala del stage
     effect(() => {
       this.scaledBoardWidth();
       this.scaledBoardHeight();
@@ -352,7 +338,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       });
     });
 
-    // 6. Sincronizar y restaurar vista y zoom cuando cambia el diagrama activo
+    // 6. Sincronizar y restaurar vista cuando cambia el diagrama
     effect(() => {
       const dId = this.diagramId();
       if (!dId || !this.stage) return;
@@ -388,8 +374,9 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    */
   ngOnDestroy(): void {
     this.clearSmartGuides();
-    if (this.onWindowMouseUpHandler && typeof window !== 'undefined') {
-      window.removeEventListener('mouseup', this.onWindowMouseUpHandler);
+    if (this.stageEventsCleanup) {
+      this.stageEventsCleanup();
+      this.stageEventsCleanup = undefined;
     }
     this.relationshipManager.cancelAnimation();
     this.nodeInteraction.destroy();
@@ -402,10 +389,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.uiLayer = null;
     this.gridGroup = null;
     this.bgRect = null;
-    this.transformer = null;
-    this.marqueeRect = null;
     this.guideLinesGroup = null;
-    this.previewLineGroup = null;
   }
 
   /**
@@ -442,15 +426,96 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.bgRect = this.stageManager.getBgRect();
 
     if (this.uiLayer) {
-      this.previewLineGroup = this.relationshipManager.initPreviewGroup(this.uiLayer);
+      this.relationshipManager.initPreviewGroup(this.uiLayer);
       const uiElements = this.nodeInteraction.initUiElements(this.uiLayer);
-      this.transformer = uiElements.transformer;
-      this.marqueeRect = uiElements.marqueeRect;
       this.guideLinesGroup = uiElements.guideLinesGroup;
     }
 
     this.renderFullDiagram(true);
-    this.bindStageEvents();
+
+    this.stageEventsCleanup = this.nodeInteraction.bindStageEvents({
+      stage: this.stage,
+      bgRect: this.bgRect,
+      uiLayer: this.uiLayer,
+      nodeLayer: this.nodeLayer,
+      relLayer: this.relLayer,
+      nodeGroupsMap: this.nodeGroupsMap,
+      nodes: () => this.nodes(),
+      connections: () => this.connections(),
+      activeDiagramType: () => this.activeDiagramType(),
+      selectedRelationType: () => this.selectedRelationType(),
+      pendingSourceNodeId: () => this.pendingSourceNodeId(),
+      setPendingSourceNodeId: (id) => this.pendingSourceNodeId.set(id),
+      isReadOnly: () => this.isReadOnly(),
+      isDraggingNode: () => this.isDraggingNode,
+      selectedConnIds: () => [...this.selectedConnIds(), ...this.selectedConnIdsInternal()],
+      sequenceActivationService: this.sequenceActivationService,
+      relationshipManager: this.relationshipManager,
+      ngZone: this.ngZone,
+      callbacks: {
+        onConnectionClick: (connId, event) => this.connectionClick.emit({ connId, event }),
+        onConnectionDblClick: (conn, event) => this.connectionDblClick.emit({ conn, event }),
+        onConnectionContextMenu: (conn, event) => this.connectionContextMenu.emit({ conn, event }),
+        onCanvasBackgroundClick: (event) => this.canvasBackgroundClick.emit(event),
+        onCanvasMouseDown: (event) => this.canvasMouseDown.emit(event),
+        onCanvasMouseMove: (event) => this.canvasMouseMove.emit(event),
+        onCanvasContextMenu: (payload) => this.canvasContextMenu.emit(payload),
+        onSelectionChange: (payload) => this.selectionChange.emit(payload),
+        onSelect: (nodeIds, connIds) => this.select(nodeIds, connIds),
+        onClearSelection: () => this.clearSelection(),
+        onLivePreview: (sourceId, x, y) => this.drawLiveConnectionPreview(sourceId, x, y),
+        onClearLivePreview: () => this.clearLivePreviewLine(),
+      },
+    });
+  }
+
+  /**
+   * Construye el contexto de interacción necesario para conectar eventos sobre los nodos.
+   *
+   * @returns Contexto NodeInteractionContext configurado.
+   */
+  private getNodeInteractionContext(): NodeInteractionContext {
+    return {
+      stage: this.stage,
+      nodeLayer: this.nodeLayer,
+      frameLayer: this.frameLayer,
+      uiLayer: this.uiLayer,
+      nodeGroupsMap: this.nodeGroupsMap,
+      nodes: () => this.nodes(),
+      connections: () => this.connections(),
+      activeDiagramType: () => this.activeDiagramType(),
+      selectedRelationType: () => this.selectedRelationType(),
+      pendingSourceNodeId: () => this.pendingSourceNodeId(),
+      setPendingSourceNodeId: (id) => this.pendingSourceNodeId.set(id),
+      hoveredNodeId: () => this.hoveredNodeId(),
+      setHoveredNodeId: (id) => this.hoveredNodeId.set(id),
+      selectedNodeIdsInternal: () => this.selectedNodeIdsInternal(),
+      select: (nodeIds, connIds) => this.select(nodeIds, connIds),
+      isReadOnly: () => this.isReadOnly(),
+      smartGuidesEnabled: () => this.smartGuidesEnabled(),
+      isNodeLockedByOther: (nodeId) => this.isNodeLockedByOther(nodeId),
+      containmentService: this.containmentService,
+      relationshipManager: this.relationshipManager,
+      sequenceActivationService: this.sequenceActivationService,
+      ngZone: this.ngZone,
+      lastLocalMoveTimestamps: this.lastLocalMoveTimestamps,
+      callbacks: {
+        onNodeClick: (nodeId, event) => this.nodeClick.emit({ nodeId, event }),
+        onNodeDblClick: (node, event) => this.nodeDblClick.emit({ node, event }),
+        onNodeContextMenu: (node, event) => this.nodeContextMenu.emit({ node, event }),
+        onConnectionClick: (connId, event) => this.connectionClick.emit({ connId, event }),
+        onConnectionCreated: (event) => this.connectionCreated.emit(event),
+        onNodePositionChange: (event) => this.nodePositionChange.emit(event),
+        onNodeSizeChange: (event) => this.nodeSizeChange.emit(event),
+        onMoveNodes: (event) => this.moveNodes.emit(event),
+        onSelectionChange: (event) => this.selectionChange.emit(event),
+        onRenderRelationships: () => this.renderRelationshipsOnly(),
+        onClearLivePreview: () => this.clearLivePreviewLine(),
+        onDragStateChange: (isDragging) => {
+          this.isDraggingNode = isDragging;
+        },
+      },
+    };
   }
 
   /**
@@ -468,207 +533,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       scaledBoardHeight: this.scaledBoardHeight(),
       showGrid: this.showGrid(),
     });
-  }
-
-  /**
-   * Inicia el bucle de animación suave a 60 FPS con requestAnimationFrame para relaciones UML.
-   */
-  private startRelationshipAnimationLoop(): void {
-    this.relationshipManager.startRelationshipAnimationLoop(() => {
-      if (this.relLayer && !this.isDraggingNode) {
-        this.renderRelationshipsOnly();
-      }
-    });
-  }
-
-  /**
-   * Dispara la animación de entrada progresiva de todas las conexiones del diagrama.
-   *
-   * @param staggered Indica si se debe aplicar un retardo escalonado de 90ms entre conexiones.
-   */
-  private triggerAllRelationshipsDrawAnimation(staggered = true): void {
-    this.relationshipManager.triggerAllRelationshipsDrawAnimation(this.connections(), staggered);
-    this.startRelationshipAnimationLoop();
-  }
-
-  /**
-   * Registra los eventos de puntero sobre el escenario de Konva (selección, barrido, clic de fondo).
-   */
-  private bindStageEvents(): void {
-    if (!this.stage) return;
-
-    this.stage.on('mousedown touchstart', (e) => {
-      const isTargetStage = e.target === this.stage || e.target === this.bgRect;
-
-      if (isTargetStage) {
-        const pointer = this.stage?.getPointerPosition() || { x: 0, y: 0 };
-        const transform = this.stage?.getAbsoluteTransform().copy().invert();
-        const canvasPos = transform ? transform.point(pointer) : pointer;
-        const canvasX = Math.round(canvasPos.x);
-        const canvasY = Math.round(canvasPos.y);
-
-        const nearConn = this.findClosestRelationshipAtCanvasPoint(canvasX, canvasY, 28);
-        if (nearConn) {
-          this.ngZone.run(() => {
-            this.select([], [nearConn.id]);
-            this.connectionClick.emit({ connId: nearConn.id, event: e.evt as MouseEvent });
-          });
-          return;
-        }
-
-        const mouseEvt = e.evt as MouseEvent;
-        const isLeftClick = mouseEvt.button === 0 || mouseEvt.button === undefined;
-
-        if (isLeftClick && !this.selectedRelationType() && !this.isReadOnly()) {
-          this.isMarqueeSelecting = true;
-          this.marqueeStartPos = { x: canvasX, y: canvasY };
-          if (this.marqueeRect) {
-            this.marqueeRect.position({ x: canvasX, y: canvasY });
-            this.marqueeRect.size({ width: 0, height: 0 });
-            this.marqueeRect.visible(false);
-          }
-          if (!mouseEvt.shiftKey && !mouseEvt.ctrlKey) {
-            this.ngZone.run(() => {
-              this.clearSelection();
-            });
-          }
-        }
-
-        this.ngZone.run(() => {
-          this.pendingSourceNodeId.set(null);
-          this.clearLivePreviewLine();
-          if (!this.isMarqueeSelecting) {
-            this.clearSelection();
-          }
-          this.canvasBackgroundClick.emit(e.evt as MouseEvent);
-          this.canvasMouseDown.emit(e.evt as MouseEvent);
-        });
-      }
-    });
-
-    this.stage.on('dblclick dbltap', (e) => {
-      const isTargetStage = e.target === this.stage || e.target === this.bgRect;
-      if (isTargetStage) {
-        const pointer = this.stage?.getPointerPosition() || { x: 0, y: 0 };
-        const transform = this.stage?.getAbsoluteTransform().copy().invert();
-        const canvasPos = transform ? transform.point(pointer) : pointer;
-        const canvasX = Math.round(canvasPos.x);
-        const canvasY = Math.round(canvasPos.y);
-
-        const nearConn = this.findClosestRelationshipAtCanvasPoint(canvasX, canvasY, 28);
-        if (nearConn) {
-          this.ngZone.run(() => {
-            this.connectionDblClick.emit({ conn: nearConn, event: e.evt as MouseEvent });
-          });
-        }
-      }
-    });
-
-    this.stage.on('contextmenu', (e) => {
-      e.evt.preventDefault();
-      const isTargetStage = e.target === this.stage || e.target === this.bgRect;
-      if (isTargetStage) {
-        const pointer = this.stage?.getPointerPosition() || { x: 0, y: 0 };
-        const transform = this.stage?.getAbsoluteTransform().copy().invert();
-        const canvasPos = transform ? transform.point(pointer) : pointer;
-        const canvasX = Math.round(canvasPos.x);
-        const canvasY = Math.round(canvasPos.y);
-
-        const nearConn = this.findClosestRelationshipAtCanvasPoint(canvasX, canvasY, 28);
-        if (nearConn) {
-          this.ngZone.run(() => {
-            this.select([], [nearConn.id]);
-            this.connectionContextMenu.emit({ conn: nearConn, event: e.evt as MouseEvent });
-          });
-          return;
-        }
-
-        this.ngZone.run(() => {
-          this.canvasContextMenu.emit({
-            event: e.evt as MouseEvent,
-            canvasPos: { x: Math.round(canvasPos.x), y: Math.round(canvasPos.y) },
-          });
-        });
-      }
-    });
-
-    this.stage.on('mousemove touchmove', (e) => {
-      if (!this.stage) return;
-
-      const pointer = this.stage.getPointerPosition() || { x: 0, y: 0 };
-      const transform = this.stage.getAbsoluteTransform().copy().invert();
-      const canvasPos = transform ? transform.point(pointer) : pointer;
-      const canvasX = Math.round(canvasPos.x);
-      const canvasY = Math.round(canvasPos.y);
-
-      // Selección por recuadro / barrido (Marquee Selection)
-      if (this.isMarqueeSelecting && this.marqueeRect) {
-        const x = Math.min(this.marqueeStartPos.x, canvasX);
-        const y = Math.min(this.marqueeStartPos.y, canvasY);
-        const w = Math.abs(canvasX - this.marqueeStartPos.x);
-        const h = Math.abs(canvasY - this.marqueeStartPos.y);
-
-        this.marqueeRect.position({ x, y });
-        this.marqueeRect.size({ width: w, height: h });
-        this.marqueeRect.visible(w > 3 || h > 3);
-
-        const intersectingIds: string[] = [];
-        for (const [id, group] of this.nodeGroupsMap.entries()) {
-          const gx = group.x();
-          const gy = group.y();
-          const gw = group.width() || 180;
-          const gh = group.height() || 100;
-
-          if (gx < x + w && gx + gw > x && gy < y + h && gy + gh > y) {
-            intersectingIds.push(id);
-          }
-        }
-
-        this.ngZone.run(() => {
-          this.select(intersectingIds, []);
-          this.selectionChange.emit({ nodeIds: intersectingIds, connectionIds: [] });
-        });
-        this.uiLayer?.batchDraw();
-      }
-
-      // Previsualización de línea elástica en modo conexión
-      const pendingSrcId = this.pendingSourceNodeId();
-      if (pendingSrcId) {
-        this.drawLiveConnectionPreview(pendingSrcId, canvasPos.x, canvasPos.y);
-      } else if (!this.isDraggingNode && !this.isMarqueeSelecting) {
-        // Detección de proximidad magnética de 28px al acercar el puntero a cualquier relación
-        const isOverNode = e.target?.getLayer() === this.nodeLayer;
-        if (!isOverNode && !this.selectedRelationType()) {
-          const nearConn = this.findClosestRelationshipAtCanvasPoint(canvasX, canvasY, 28);
-          this.setHoveredRelationship(nearConn?.id ?? null);
-          if (this.stage.container()) {
-            this.stage.container().style.cursor = nearConn ? 'pointer' : 'default';
-          }
-        } else {
-          this.setHoveredRelationship(null);
-          if (this.stage.container()) {
-            this.stage.container().style.cursor = 'default';
-          }
-        }
-      }
-
-      this.canvasMouseMove.emit(e.evt as MouseEvent);
-    });
-
-    const finishMarquee = () => {
-      if (this.isMarqueeSelecting) {
-        this.isMarqueeSelecting = false;
-        if (this.marqueeRect) {
-          this.marqueeRect.visible(false);
-          this.uiLayer?.batchDraw();
-        }
-      }
-    };
-    this.stage.on('mouseup touchend', finishMarquee);
-    this.onWindowMouseUpHandler = finishMarquee;
-    if (typeof window !== 'undefined') {
-      window.addEventListener('mouseup', finishMarquee);
-    }
   }
 
   /**
@@ -704,48 +568,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Determina si un nodo actúa como contenedor estructural de fondo.
-   *
-   * @param node Nodo UML a evaluar.
-   * @returns True si el nodo es un contenedor estructural.
-   */
-  private isContainerNode(node?: UmlClassNode | UmlNode | null): boolean {
-    return this.nodeInteraction.isContainerNode(node);
-  }
-
-  /**
-   * Obtiene el peso de ordenamiento de profundidad Z para un nodo.
-   *
-   * @param node Nodo UML a evaluar.
-   * @returns Peso numérico en el eje Z.
-   */
-  private getNodeZWeight(node: UmlClassNode | UmlNode): number {
-    return this.nodeInteraction.getNodeZWeight(node);
-  }
-
-  /**
-   * Asegura que los contenedores de fondo y los componentes mantengan el orden Z correcto.
-   */
-  private enforceZOrdering(): void {
-    this.nodeInteraction.enforceZOrdering(this.nodeLayer, this.frameLayer, this.nodeGroupsMap, this.nodes());
-  }
-
-  /**
-   * Resuelve el nodo destino real considerando la contención geométrica interna.
-   *
-   * @param clickedNode Nodo sobre el cual se hizo clic.
-   * @returns El nodo hijo contenido si el clic apuntaba a su interior, o clickedNode.
-   */
-  private resolveTargetNodeAtPointer(clickedNode: UmlClassNode): UmlClassNode {
-    return this.nodeInteraction.resolveTargetNodeAtPointer(
-      clickedNode,
-      this.stage,
-      this.nodes(),
-      this.nodeGroupsMap
-    );
-  }
-
-  /**
    * Genera una firma estructural única del diagrama para detectar cambios en atributos o nombres.
    *
    * @returns Cadena de texto representativa de la estructura del diagrama.
@@ -766,94 +588,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Aplica dinámicamente el color personalizado a las figuras internas de un nodo Konva.
-   *
-   * @param group Grupo de Konva que representa visualmente al nodo.
-   * @param rawNode Modelo de datos del nodo.
-   */
-  private applyLiveGroupColor(group: Konva.Group, rawNode: UmlClassNode): void {
-    const color = rawNode.color;
-    if (!color) return;
-
-    const bgRect = group.findOne<Konva.Rect>('.bg-rect');
-    if (bgRect && bgRect.fill() !== color) {
-      bgRect.fill(color);
-    }
-    const ucEllipse = group.findOne<Konva.Ellipse>('.uc-ellipse');
-    if (ucEllipse && ucEllipse.fill() !== color) {
-      ucEllipse.fill(color);
-    }
-    const actorHead = group.findOne<Konva.Circle>('.actor-part');
-    if (actorHead && actorHead.fill() !== color) {
-      actorHead.fill(color);
-    }
-    const compBody = group.findOne<Konva.Rect>('.comp-part');
-    if (compBody) {
-      compBody.fill(color);
-    }
-    const pkgFolderParts = group.find<Konva.Rect>('.pkg-folder-part');
-    pkgFolderParts.forEach((part) => {
-      if (part.fill() !== color) part.fill(color);
-    });
-    const actParts = group.find<Konva.Shape>('.act-part');
-    actParts.forEach((part) => {
-      if (part instanceof Konva.Rect && part.cornerRadius() === 12) {
-        part.fill(color);
-      } else if (part instanceof Konva.Line && part.closed()) {
-        part.fill(color);
-      }
-    });
-    const lifelineBox = group.findOne<Konva.Rect>('.lifeline-part');
-    if (lifelineBox && lifelineBox.fill() !== color) {
-      lifelineBox.fill(color);
-    }
-    const deployBox = group.findOne<Konva.Rect>('.deploy-main');
-    if (deployBox && deployBox.fill() !== color) {
-      deployBox.fill(color);
-    }
-    const layerBg = group.findOne<Konva.Rect>('.layer-bg');
-    if (layerBg && layerBg.fill() !== color) {
-      layerBg.fill(color);
-    }
-    const notePart = group.findOne<Konva.Shape>('.note-part');
-    if (notePart && (notePart as any).fill && (notePart as any).fill() !== color) {
-      (notePart as any).fill(color);
-    }
-  }
-
-  /**
-   * Actualiza el trazo visual de selección sobre los nodos en pantalla.
-   */
-  private updateNodesSelectionAppearance(): void {
-    const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
-    const pendingSrcId = this.pendingSourceNodeId();
-
-    for (const [id, group] of this.nodeGroupsMap.entries()) {
-      const isSelected = selectedIds.has(id) || id === pendingSrcId;
-
-      const bgRect = group.findOne<Konva.Rect>('.bg-rect');
-      if (bgRect) {
-        bgRect.stroke(isSelected ? '#059669' : '#78716C');
-        bgRect.strokeWidth(isSelected ? 2 : 1.3);
-      }
-
-      const ellipse = group.findOne<Konva.Ellipse>('.uc-ellipse');
-      if (ellipse) {
-        ellipse.stroke(isSelected ? '#059669' : '#78716C');
-        ellipse.strokeWidth(isSelected ? 2.2 : 1.6);
-      }
-
-      const hitRect = group.findOne<Konva.Rect>('.hit-rect');
-      if (hitRect) {
-        hitRect.stroke(isSelected ? '#10B981' : 'transparent');
-        hitRect.strokeWidth(isSelected ? 1 : 0);
-      }
-    }
-    this.frameLayer?.batchDraw();
-    this.nodeLayer?.batchDraw();
-  }
-
-  /**
    * Reconstruye y renderiza todo el diagrama en las capas correspondientes de Konva.
    *
    * @param animateEntrance Indica si se debe ejecutar la animación progresiva de relaciones.
@@ -861,47 +595,33 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   renderFullDiagram(animateEntrance = false): void {
     if (!this.nodeLayer || !this.frameLayer || !this.relLayer) return;
 
-    this.frameLayer.destroyChildren();
-    this.nodeLayer.destroyChildren();
-    this.nodeGroupsMap.clear();
+    this.nodeInteraction.renderFullDiagram({
+      frameLayer: this.frameLayer,
+      nodeLayer: this.nodeLayer,
+      uiLayer: this.uiLayer,
+      nodeGroupsMap: this.nodeGroupsMap,
+      nodes: this.nodes(),
+      connections: this.connections(),
+      selectedNodeIds: this.selectedNodeIds(),
+      selectedNodeIdsInternal: this.selectedNodeIdsInternal(),
+      pendingSourceNodeId: this.pendingSourceNodeId(),
+      activeDiagramType: this.activeDiagramType(),
+      sequenceActivationService: this.sequenceActivationService,
+      isReadOnly: this.isReadOnly(),
+      nodeInteractionContext: this.getNodeInteractionContext(),
+    });
 
-    const currentNodes = this.nodes().filter((n) => !n.isAnchor);
-    currentNodes.sort((a, b) => this.getNodeZWeight(a) - this.getNodeZWeight(b));
-
-    const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
-    const pendingSrcId = this.pendingSourceNodeId();
-
-    for (const rawNode of currentNodes) {
-      const isSelected = selectedIds.has(rawNode.id) || rawNode.id === pendingSrcId;
-      const kNode = toKonvaNode(
-        rawNode,
-        this.activeDiagramType(),
-        this.connections(),
-        this.sequenceActivationService
-      );
-      const group = this.buildNodeGroup(kNode, isSelected);
-
-      this.attachNodeInteractions(group, rawNode);
-      this.nodeGroupsMap.set(rawNode.id, group);
-
-      if (this.isContainerNode(rawNode)) {
-        this.frameLayer.add(group);
-      } else {
-        this.nodeLayer.add(group);
-      }
-    }
-
-    this.enforceZOrdering();
     if (animateEntrance) {
-      this.triggerAllRelationshipsDrawAnimation(true);
+      this.relationshipManager.triggerAllRelationshipsDrawAnimation(this.connections(), true);
+      this.relationshipManager.startRelationshipAnimationLoop(() => {
+        if (this.relLayer && !this.isDraggingNode) {
+          this.renderRelationshipsOnly();
+        }
+      });
     } else {
       this.renderRelationshipsOnly();
     }
-    this.syncTransformer();
     this.lastRenderedSignature = this.computeStructureSignature();
-    this.frameLayer.batchDraw();
-    this.nodeLayer.batchDraw();
-    this.uiLayer?.batchDraw();
   }
 
   /**
@@ -921,537 +641,12 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       isReadOnly: this.isReadOnly(),
       ngZone: this.ngZone,
       events: {
-        onConnectionClick: (connId, event) => {
-          this.connectionClick.emit({ connId, event });
-        },
-        onConnectionDblClick: (conn, event) => {
-          this.connectionDblClick.emit({ conn, event });
-        },
-        onConnectionContextMenu: (conn, event) => {
-          this.connectionContextMenu.emit({ conn, event });
-        },
-        onSequenceMessageMove: (connectionId, targetSlot) => {
-          this.sequenceMessageMove.emit({ connectionId, targetSlot });
-        },
+        onConnectionClick: (connId, event) => this.connectionClick.emit({ connId, event }),
+        onConnectionDblClick: (conn, event) => this.connectionDblClick.emit({ conn, event }),
+        onConnectionContextMenu: (conn, event) => this.connectionContextMenu.emit({ conn, event }),
+        onSequenceMessageMove: (connectionId, targetSlot) => this.sequenceMessageMove.emit({ connectionId, targetSlot }),
       },
     });
-  }
-
-  /**
-   * Detecta la conexión más cercana a un punto específico del lienzo dentro del umbral magnético de 28px.
-   *
-   * @param canvasX Coordenada X dentro del lienzo.
-   * @param canvasY Coordenada Y dentro del lienzo.
-   * @param maxDistancePx Distancia máxima de captura en píxeles.
-   * @returns La conexión más próxima al punto o null.
-   */
-  private findClosestRelationshipAtCanvasPoint(
-    canvasX: number,
-    canvasY: number,
-    maxDistancePx = 28
-  ): UmlConnection | null {
-    return this.relationshipManager.findClosestRelationshipAtCanvasPoint({
-      canvasX,
-      canvasY,
-      nodes: this.nodes(),
-      connections: this.connections(),
-      nodeGroupsMap: this.nodeGroupsMap,
-      activeDiagramType: this.activeDiagramType(),
-      sequenceActivationService: this.sequenceActivationService,
-      maxDistancePx,
-    });
-  }
-
-  /**
-   * Actualiza el efecto visual de iluminación halo sobre la relación bajo el puntero.
-   *
-   * @param relId ID de la relación o null.
-   */
-  private setHoveredRelationship(relId: string | null): void {
-    const selectedConnIds = new Set([...this.selectedConnIds(), ...this.selectedConnIdsInternal()]);
-    this.relationshipManager.setHoveredRelationship(relId, selectedConnIds, this.relLayer);
-  }
-
-  /**
-   * Instancia el grupo Konva correspondiente al tipo de nodo UML.
-   *
-   * @param node Modelo Konva del nodo.
-   * @param isSelected Indica si el nodo se encuentra seleccionado.
-   * @returns Grupo Konva.Group construido.
-   */
-  private buildNodeGroup(node: UmlNode, isSelected: boolean): Konva.Group {
-    switch (node.type) {
-      case 'class':
-        return createClassKonvaNode(node, isSelected);
-      case 'actor':
-        return createActorKonvaNode(node, isSelected);
-      case 'use_case':
-        return createUseCaseKonvaNode(node, isSelected);
-      case 'boundary':
-        return createBoundaryKonvaNode(node, isSelected);
-      case 'control':
-        return createControlKonvaNode(node, isSelected);
-      case 'entity':
-        return createEntityKonvaNode(node, isSelected);
-      case 'lifeline':
-        return createLifelineKonvaNode(node, isSelected);
-      case 'deployment_node':
-        return createDeploymentKonvaNode(node, isSelected);
-      case 'component':
-        return createComponentKonvaNode(node, isSelected);
-      case 'package':
-        return createPackageKonvaNode(node, isSelected);
-      case 'package_layer':
-        return createPackageLayerKonvaNode(node, isSelected);
-      case 'note':
-        return createNoteKonvaNode(node, isSelected);
-      case 'activity_initial':
-      case 'activity_final':
-      case 'activity_action':
-      case 'activity_decision':
-      case 'activity_fork':
-        return createActivityKonvaNode(node, isSelected);
-      default:
-        return createClassKonvaNode(node, isSelected);
-    }
-  }
-
-  /**
-   * Asocia controladores de interacción a un nodo (arrastre individual, selección múltiple, contención, redimensión).
-   *
-   * @param group Grupo Konva del nodo.
-   * @param origNode Modelo original del nodo.
-   */
-  private attachNodeInteractions(group: Konva.Group, origNode: UmlClassNode): void {
-    const isLocked = this.isNodeLockedByOther(origNode.id);
-    const canDrag = !this.isReadOnly() && !isLocked && this.selectedRelationType() === null;
-    group.draggable(canDrag);
-
-    group.on('mouseenter', (e) => {
-      this.hoveredNodeId.set(origNode.id);
-      if (!this.isReadOnly() && !this.isNodeLockedByOther(origNode.id)) {
-        this.stage?.container().style.setProperty('cursor', this.selectedRelationType() ? 'crosshair' : 'move');
-      }
-
-      const mouseEvt = e.evt as MouseEvent;
-      if (mouseEvt && mouseEvt.buttons === 1 && !this.selectedRelationType() && !this.isDraggingNode) {
-        if (!this.isContainerNode(origNode) && !this.selectedNodeIdsInternal().includes(origNode.id)) {
-          const updated = [...this.selectedNodeIdsInternal(), origNode.id];
-          this.ngZone.run(() => {
-            this.select(updated, []);
-            this.selectionChange.emit({ nodeIds: updated, connectionIds: [] });
-          });
-        }
-      }
-    });
-
-    group.on('mouseleave', () => {
-      if (this.hoveredNodeId() === origNode.id) {
-        this.hoveredNodeId.set(null);
-      }
-      this.stage?.container().style.setProperty('cursor', 'default');
-    });
-
-    group.on('mousedown touchstart', (e) => {
-      e.cancelBubble = true;
-
-      if (this.isContainerNode(origNode) && !this.selectedRelationType()) {
-        const mouseEvt = e.evt as MouseEvent;
-        if (mouseEvt && (mouseEvt.button === 0 || mouseEvt.button === undefined)) {
-          const pointer = this.stage?.getPointerPosition();
-          if (pointer) {
-            const transform = this.stage?.getAbsoluteTransform().copy().invert();
-            const canvasPos = transform ? transform.point(pointer) : pointer;
-            const nearConn = this.findClosestRelationshipAtCanvasPoint(Math.round(canvasPos.x), Math.round(canvasPos.y), 28);
-            if (nearConn) {
-              this.ngZone.run(() => {
-                this.select([], [nearConn.id]);
-                this.connectionClick.emit({ connId: nearConn.id, event: mouseEvt });
-              });
-              return;
-            }
-          }
-        }
-      }
-
-      const activeRelType = this.selectedRelationType();
-      if (activeRelType) {
-        const targetNode = this.resolveTargetNodeAtPointer(origNode);
-        this.ngZone.run(() => {
-          const pendingSrc = this.pendingSourceNodeId();
-          if (!pendingSrc) {
-            this.pendingSourceNodeId.set(targetNode.id);
-          } else if (pendingSrc !== targetNode.id) {
-            const isSeq =
-              this.activeDiagramType() === DiagramType.SEQUENCE ||
-              isSequenceRelationshipType(activeRelType);
-            if (isSeq) {
-              const nextSlot = findNextAvailableSlot(this.connections());
-              this.connectionCreated.emit({
-                fOutputId: `${pendingSrc}_slot_${nextSlot}`,
-                fInputId: `${targetNode.id}_slot_${nextSlot}`,
-              });
-            } else {
-              this.connectionCreated.emit({
-                fOutputId: pendingSrc,
-                fInputId: targetNode.id,
-              });
-            }
-            this.pendingSourceNodeId.set(null);
-            this.clearLivePreviewLine();
-          }
-        });
-        return;
-      }
-
-      const mouseEvt = e.evt as MouseEvent;
-      if (mouseEvt && (mouseEvt.button === 0 || mouseEvt.button === undefined)) {
-        const isAlreadySelected = this.selectedNodeIdsInternal().includes(origNode.id);
-        this.ngZone.run(() => {
-          if (!isAlreadySelected) {
-            if (mouseEvt.shiftKey || mouseEvt.ctrlKey) {
-              const updated = [...this.selectedNodeIdsInternal(), origNode.id];
-              this.select(updated, []);
-              this.selectionChange.emit({ nodeIds: updated, connectionIds: [] });
-            } else {
-              this.select([origNode.id], []);
-              this.selectionChange.emit({ nodeIds: [origNode.id], connectionIds: [] });
-              this.nodeClick.emit({ nodeId: origNode.id, event: mouseEvt });
-            }
-          } else {
-            if (mouseEvt.shiftKey || mouseEvt.ctrlKey) {
-              const updated = this.selectedNodeIdsInternal().filter((id) => id !== origNode.id);
-              this.select(updated, []);
-              this.selectionChange.emit({ nodeIds: updated, connectionIds: [] });
-            }
-          }
-        });
-      }
-    });
-
-    group.on('click tap', (e) => {
-      if (this.selectedRelationType()) return;
-      e.cancelBubble = true;
-
-      if (this.isDraggingNode) return;
-
-      const mouseEvt = e.evt as MouseEvent;
-      if (mouseEvt && !mouseEvt.shiftKey && !mouseEvt.ctrlKey && this.selectedNodeIdsInternal().length > 1) {
-        this.ngZone.run(() => {
-          this.select([origNode.id], []);
-          this.selectionChange.emit({ nodeIds: [origNode.id], connectionIds: [] });
-          this.nodeClick.emit({ nodeId: origNode.id, event: mouseEvt });
-        });
-      } else {
-        this.ngZone.run(() => {
-          this.nodeClick.emit({ nodeId: origNode.id, event: mouseEvt });
-        });
-      }
-    });
-
-    group.on('dblclick dbltap', (e) => {
-      e.cancelBubble = true;
-      this.ngZone.run(() => {
-        this.nodeDblClick.emit({ node: origNode, event: e.evt as MouseEvent });
-      });
-    });
-
-    group.on('contextmenu', (e) => {
-      e.evt.preventDefault();
-      e.cancelBubble = true;
-      this.ngZone.run(() => {
-        this.nodeContextMenu.emit({ node: origNode, event: e.evt as MouseEvent });
-      });
-    });
-
-    let dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
-    const siblingStartPositions = new Map<string, { x: number; y: number }>();
-
-    group.on('dragstart', () => {
-      this.isDraggingNode = true;
-      this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
-
-      if (this.isContainerNode(origNode)) {
-        group.moveToBottom();
-      } else {
-        group.moveToTop();
-      }
-      this.enforceZOrdering();
-
-      dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
-      siblingStartPositions.clear();
-
-      if (!this.selectedNodeIdsInternal().includes(origNode.id)) {
-        this.select([origNode.id], []);
-        this.selectionChange.emit({ nodeIds: [origNode.id], connectionIds: [] });
-      }
-
-      if (this.transformer) {
-        this.transformer.nodes([]);
-        this.uiLayer?.batchDraw();
-      }
-
-      for (const id of this.selectedNodeIdsInternal()) {
-        const otherG = this.nodeGroupsMap.get(id);
-        if (otherG) {
-          siblingStartPositions.set(id, { x: Math.round(otherG.x()), y: Math.round(otherG.y()) });
-        }
-      }
-
-      const currentNodes = this.nodes().map((n) => {
-        const g = this.nodeGroupsMap.get(n.id);
-        return {
-          ...n,
-          position: g ? { x: Math.round(g.x()), y: Math.round(g.y()) } : { ...n.position },
-        };
-      });
-
-      const getW = (n: UmlClassNode) => this.nodeGroupsMap.get(n.id)?.width() || getNodeWidth(n);
-      const getH = (n: UmlClassNode) => this.nodeGroupsMap.get(n.id)?.height() || getNodeHeight(n);
-
-      const rootsToTrace = this.selectedNodeIdsInternal().length > 0 ? this.selectedNodeIdsInternal() : [origNode.id];
-      const descendants = this.containmentService.collectDescendantsForRoots(
-        rootsToTrace,
-        currentNodes,
-        getW,
-        getH
-      );
-
-      for (const descId of descendants) {
-        if (!siblingStartPositions.has(descId)) {
-          const descG = this.nodeGroupsMap.get(descId);
-          if (descG) {
-            siblingStartPositions.set(descId, { x: Math.round(descG.x()), y: Math.round(descG.y()) });
-          }
-        }
-      }
-    });
-
-    group.on('dragmove', () => {
-      this.isDraggingNode = true;
-      this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
-
-      if (this.activeDiagramType() === DiagramType.SEQUENCE || origNode.nodeType === 'lifeline') {
-        group.y(origNode.position ? origNode.position.y : 30);
-      }
-
-      let rawX = Math.max(10, Math.round(group.x()));
-      let rawY = Math.max(10, Math.round(group.y()));
-
-      if (this.smartGuidesEnabled()) {
-        const ignoredIds = new Set<string>();
-        ignoredIds.add(origNode.id);
-        if (siblingStartPositions.size > 0) {
-          for (const sId of siblingStartPositions.keys()) {
-            ignoredIds.add(sId);
-          }
-        }
-        const snapped = this.calculateAndDrawSmartGuides(
-          origNode.id,
-          rawX,
-          rawY,
-          group.width() || getNodeWidth(origNode),
-          group.height() || getNodeHeight(origNode) || 100,
-          ignoredIds
-        );
-        rawX = snapped.x;
-        rawY = snapped.y;
-      } else {
-        this.clearSmartGuides();
-      }
-
-      const curX = rawX;
-      const curY = rawY;
-      group.x(curX);
-      group.y(curY);
-      const dx = curX - dragStartPos.x;
-      const dy = curY - dragStartPos.y;
-
-      const currentNode = this.nodes().find((n) => n.id === origNode.id) || origNode;
-      currentNode.position = { x: curX, y: curY };
-      origNode.position = { x: curX, y: curY };
-
-      if (siblingStartPositions.size > 1 && siblingStartPositions.has(origNode.id)) {
-        for (const [id, start] of siblingStartPositions.entries()) {
-          if (id !== origNode.id) {
-            const otherG = this.nodeGroupsMap.get(id);
-            const otherNode = this.nodes().find((n) => n.id === id);
-            if (otherG && otherNode) {
-              const targetX = Math.max(10, Math.round(start.x + dx));
-              const targetY =
-                this.activeDiagramType() === DiagramType.SEQUENCE || otherNode.nodeType === 'lifeline'
-                  ? (otherNode.position ? otherNode.position.y : 30)
-                  : Math.max(10, Math.round(start.y + dy));
-              otherG.position({ x: targetX, y: targetY });
-              otherNode.position = { x: targetX, y: targetY };
-              this.lastLocalMoveTimestamps.set(id, Date.now());
-            }
-          }
-        }
-        this.frameLayer?.batchDraw();
-        this.nodeLayer?.batchDraw();
-      }
-
-      if (siblingStartPositions.size <= 1) {
-        this.nodePositionChange.emit({ node: currentNode, newPosition: { x: curX, y: curY } });
-      }
-      this.renderRelationshipsOnly();
-    });
-
-    group.on('dragend', () => {
-      this.clearSmartGuides();
-      this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
-
-      if (this.activeDiagramType() === DiagramType.SEQUENCE || origNode.nodeType === 'lifeline') {
-        group.y(origNode.position ? origNode.position.y : 30);
-      }
-      const finalX = Math.max(10, Math.round(group.x()));
-      const finalY = Math.max(10, Math.round(group.y()));
-      group.x(finalX);
-      group.y(finalY);
-      const newPosition = { x: finalX, y: finalY };
-
-      const currentNode = this.nodes().find((n) => n.id === origNode.id) || origNode;
-      currentNode.position = newPosition;
-      origNode.position = newPosition;
-
-      if (siblingStartPositions.size > 1 && siblingStartPositions.has(origNode.id)) {
-        const movedPayload: Array<{ id: string; position: { x: number; y: number } }> = [];
-        for (const [id] of siblingStartPositions.entries()) {
-          const otherG = this.nodeGroupsMap.get(id);
-          const otherNode = this.nodes().find((n) => n.id === id) || (id === origNode.id ? origNode : null);
-          if (otherG && otherNode) {
-            const targetPos = {
-              x: Math.max(10, Math.round(otherG.x())),
-              y: Math.max(10, Math.round(otherG.y())),
-            };
-            otherG.position(targetPos);
-            otherNode.position = targetPos;
-            this.lastLocalMoveTimestamps.set(id, Date.now());
-            movedPayload.push({ id, position: targetPos });
-          }
-        }
-
-        this.ngZone.run(() => {
-          this.moveNodes.emit({ nodes: movedPayload });
-          this.syncTransformer();
-          this.enforceZOrdering();
-          setTimeout(() => {
-            this.isDraggingNode = false;
-          }, 50);
-        });
-      } else {
-        this.ngZone.run(() => {
-          this.nodePositionChange.emit({ node: currentNode, newPosition });
-          this.syncTransformer();
-          this.enforceZOrdering();
-          setTimeout(() => {
-            this.isDraggingNode = false;
-          }, 50);
-        });
-      }
-      this.frameLayer?.batchDraw();
-      this.nodeLayer?.batchDraw();
-      this.renderRelationshipsOnly();
-    });
-
-    group.on('transformstart', () => {
-      this.isDraggingNode = true;
-      this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
-    });
-
-    group.on('transform', () => {
-      this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
-      const sX = group.scaleX();
-      const sY = group.scaleY();
-      const nextW = Math.max(80, Math.round(group.width() * sX));
-      const nextH = Math.max(50, Math.round(group.height() * sY));
-
-      group.scaleX(1);
-      group.scaleY(1);
-
-      this.applyFluidNodeResize(
-        group,
-        toKonvaNode(
-          origNode,
-          this.activeDiagramType(),
-          this.connections(),
-          this.sequenceActivationService
-        ),
-        nextW,
-        nextH
-      );
-
-      const actualW = Math.round(group.width());
-      const actualH = Math.round(group.height());
-
-      const currentNode = this.nodes().find((n) => n.id === origNode.id) || origNode;
-      currentNode.width = actualW;
-      currentNode.height = actualH;
-      currentNode.customWidth = actualW;
-      currentNode.customHeight = actualH;
-      currentNode.isCustomSize = true;
-      currentNode.position = { x: Math.round(group.x()), y: Math.round(group.y()) };
-
-      origNode.width = actualW;
-      origNode.height = actualH;
-      origNode.customWidth = actualW;
-      origNode.customHeight = actualH;
-      origNode.isCustomSize = true;
-      origNode.position = { x: Math.round(group.x()), y: Math.round(group.y()) };
-
-      this.nodeLayer?.batchDraw();
-      this.frameLayer?.batchDraw();
-      this.renderRelationshipsOnly();
-    });
-
-    group.on('transformend', () => {
-      this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
-      const width = Math.round(group.width());
-      const height = Math.round(group.height());
-      const position = { x: Math.round(group.x()), y: Math.round(group.y()) };
-
-      const currentNode = this.nodes().find((n) => n.id === origNode.id) || origNode;
-      currentNode.width = width;
-      currentNode.height = height;
-      currentNode.customWidth = width;
-      currentNode.customHeight = height;
-      currentNode.isCustomSize = true;
-      currentNode.position = position;
-
-      origNode.width = width;
-      origNode.height = height;
-      origNode.customWidth = width;
-      origNode.customHeight = height;
-      origNode.isCustomSize = true;
-      origNode.position = position;
-
-      this.ngZone.run(() => {
-        this.nodeSizeChange.emit({ node: currentNode, width, height, position });
-        this.syncTransformer();
-        this.enforceZOrdering();
-        setTimeout(() => {
-          this.isDraggingNode = false;
-        }, 50);
-      });
-    });
-  }
-
-  /**
-   * Redimensiona fluidamente los elementos internos de un nodo según su tipo UML.
-   *
-   * @param group Grupo Konva del nodo.
-   * @param node Modelo Konva del nodo.
-   * @param newW Nuevo ancho en píxeles.
-   * @param newH Nuevo alto en píxeles.
-   */
-  private applyFluidNodeResize(
-    group: Konva.Group,
-    node: UmlNode,
-    newW: number,
-    newH: number
-  ): void {
-    this.nodeInteraction.applyFluidNodeResize(group, node, newW, newH);
   }
 
   /**
@@ -1641,7 +836,14 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.selectedNodeIdsInternal.set(nodeIds);
     this.selectedConnIdsInternal.set(connIds);
     this.syncTransformer();
-    this.updateNodesSelectionAppearance();
+    const selectedIds = new Set([...this.selectedNodeIds(), ...nodeIds]);
+    this.nodeInteraction.updateNodesSelectionAppearance({
+      nodeGroupsMap: this.nodeGroupsMap,
+      selectedNodeIds: selectedIds,
+      pendingSourceNodeId: this.pendingSourceNodeId(),
+      frameLayer: this.frameLayer,
+      nodeLayer: this.nodeLayer,
+    });
     this.renderRelationshipsOnly();
   }
 
@@ -1654,11 +856,19 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.selectedConnIdsInternal.set([]);
     this.pendingSourceNodeId.set(null);
     this.clearLivePreviewLine();
-    if (this.transformer) {
-      this.transformer.nodes([]);
-      this.uiLayer?.batchDraw();
-    }
-    this.updateNodesSelectionAppearance();
+    this.nodeInteraction.syncTransformer({
+      selectedNodeIds: [],
+      nodeGroupsMap: this.nodeGroupsMap,
+      isReadOnly: this.isReadOnly(),
+      uiLayer: this.uiLayer,
+    });
+    this.nodeInteraction.updateNodesSelectionAppearance({
+      nodeGroupsMap: this.nodeGroupsMap,
+      selectedNodeIds: new Set(this.selectedNodeIds()),
+      pendingSourceNodeId: null,
+      frameLayer: this.frameLayer,
+      nodeLayer: this.nodeLayer,
+    });
     this.renderRelationshipsOnly();
   }
 
@@ -1719,7 +929,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       uiLayer: this.uiLayer,
       gridGroup: this.gridGroup,
       bgRect: this.bgRect,
-      transformer: this.transformer,
+      transformer: (this.nodeInteraction as any).transformer,
       pixelRatio,
       padding,
     });
