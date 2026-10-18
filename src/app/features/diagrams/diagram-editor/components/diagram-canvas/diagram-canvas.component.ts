@@ -43,49 +43,32 @@ import { isSequenceRelationshipType, findNextAvailableSlot } from './nodes/uml-l
 
 import {
   createClassKonvaNode,
-  resizeClassKonvaNode,
   createActorKonvaNode,
-  resizeActorKonvaNode,
   createUseCaseKonvaNode,
-  resizeUseCaseKonvaNode,
   createBoundaryKonvaNode,
-  resizeBoundaryKonvaNode,
   createControlKonvaNode,
-  resizeControlKonvaNode,
   createEntityKonvaNode,
-  resizeEntityKonvaNode,
   createLifelineKonvaNode,
-  resizeLifelineKonvaNode,
   createDeploymentKonvaNode,
-  resizeDeploymentKonvaNode,
   createComponentKonvaNode,
-  resizeComponentKonvaNode,
   createPackageKonvaNode,
-  resizePackageKonvaNode,
   createPackageLayerKonvaNode,
-  resizePackageLayerKonvaNode,
   createActivityKonvaNode,
-  resizeActivityKonvaNode,
   createNoteKonvaNode,
-  resizeNoteKonvaNode,
-  createUmlRelationshipKonvaGroup,
-  getPointToRelationshipDistance,
 } from './konva/nodes';
-import { toKonvaNode, toKonvaRelationship } from './konva/konva-adapter.util';
-import { UmlNode, UmlRelationship } from './konva/models/uml.model';
+import { toKonvaNode } from './konva/konva-adapter.util';
+import { UmlNode } from './konva/models/uml.model';
 
-interface RelDrawAnimationState {
-  startTime: number;
-  duration: number;
-  delay: number;
-}
+import {
+  CanvasStageManagerService,
+  CanvasViewportManagerService,
+  CanvasRelationshipManagerService,
+  CanvasNodeInteractionService,
+  CanvasCollabExportService,
+  DiagramCanvasViewState,
+} from './services';
 
-export interface DiagramCanvasViewState {
-  zoom: number;
-  scrollLeft: number;
-  scrollTop: number;
-}
-
+export type { DiagramCanvasViewState };
 export type DiagramDropPayload = DropNodePayload;
 
 export interface NodeResizeRect {
@@ -95,7 +78,6 @@ export interface NodeResizeRect {
   y?: number;
 }
 
-// Interfaces de eventos compatibles con el editor
 export interface CanvasCreateConnectionEvent {
   fOutputId: string;
   fInputId: string;
@@ -139,6 +121,13 @@ export class AutofocusInputDirective implements AfterViewInit {
   }
 }
 
+/**
+ * Componente principal del lienzo nodal UML (DiagramCanvasComponent).
+ *
+ * Renderiza el escenario gráfico de Konva.js gestionando la interacción de nodos,
+ * conexiones reactivas a 60 FPS, paneo, zoom adaptativo, cursores remotos y selección.
+ * Delega sus responsabilidades en 5 servicios especializados para mantener alta cohesión.
+ */
 @Component({
   selector: 'app-diagram-canvas',
   standalone: true,
@@ -172,6 +161,13 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   private readonly translationService = inject(TranslationService);
   private readonly sequenceActivationService = inject(DiagramSequenceActivationService);
   private readonly containmentService = inject(DiagramContainmentService);
+
+  // Servicios modulares especializados inyectados
+  private readonly stageManager = inject(CanvasStageManagerService);
+  private readonly viewportManager = inject(CanvasViewportManagerService);
+  private readonly relationshipManager = inject(CanvasRelationshipManagerService);
+  private readonly nodeInteraction = inject(CanvasNodeInteractionService);
+  private readonly collabExport = inject(CanvasCollabExportService);
 
   // Inputs del lienzo
   readonly nodes = input.required<UmlClassNode[]>();
@@ -218,13 +214,13 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   readonly canvasContextMenu = output<{ event: MouseEvent; canvasPos: { x: number; y: number } }>();
 
   // Estado interno del lienzo
-  readonly zoomLevel = signal<number>(100);
+  readonly zoomLevel = this.viewportManager.zoomLevel;
   readonly isDragOverCanvas = signal<boolean>(false);
   readonly hoveredNodeId = signal<string | null>(null);
   readonly renamingNodeId = signal<string | null>(null);
   readonly pendingSourceNodeId = signal<string | null>(null);
 
-  // Konva Engine References
+  // Referencias a instancias de Konva
   private stage: Konva.Stage | null = null;
   private bgLayer: Konva.Layer | null = null;
   private frameLayer: Konva.Layer | null = null;
@@ -236,31 +232,18 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   private bgRect: Konva.Rect | null = null;
   private previewLineGroup: Konva.Group | null = null;
   private guideLinesGroup: Konva.Group | null = null;
+  private marqueeRect: Konva.Rect | null = null;
 
   private nodeGroupsMap = new Map<string, Konva.Group>();
-  private readonly konvaRelGroupMap = new Map<string, Konva.Group>();
-  private hoveredRelId: string | null = null;
-  private relAnimStates = new Map<string, RelDrawAnimationState>();
-  private relProgressMap = new Map<string, number>();
-  private animFrameId: number | null = null;
-  private lastFrameTime = 0;
-  private flowPhase = 0;
-  private resizeObserver?: ResizeObserver;
-  private marqueeRect: Konva.Rect | null = null;
-  private isMarqueeSelecting = false;
-  private marqueeStartPos = { x: 0, y: 0 };
-  private onWindowMouseUpHandler?: () => void;
-  private pendingWheelZoom: { nextZoom: number; focusPoint: { clientX: number; clientY: number } } | null = null;
-  private wheelAnimFrameId: number | null = null;
-
-  // Selección interna
   private readonly selectedNodeIdsInternal = signal<string[]>([]);
   private readonly selectedConnIdsInternal = signal<string[]>([]);
 
-  // Estado de interacción de arrastre
   private isDraggingNode = false;
+  private isMarqueeSelecting = false;
+  private marqueeStartPos = { x: 0, y: 0 };
   private lastRenderedSignature = '';
   private readonly lastLocalMoveTimestamps = new Map<string, number>();
+  private onWindowMouseUpHandler?: () => void;
 
   /** Computed: true cuando no hay nodos reales en el diagrama */
   readonly hasNoRealNodes = computed(() => !this.nodes().some((n) => !n.isAnchor));
@@ -273,7 +256,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     return msg !== key ? msg : this.translationService.translate('editor.canvas.emptyState.class');
   });
 
-  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 2200x1400 para garantizar scroll bidireccional fluido en pantallas 1080p y superiores)
+  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 2200x1400)
   readonly boardWidth = computed(() => computeBoardWidth(this.nodes(), 2200));
   readonly boardHeight = computed(() => computeBoardHeight(this.nodes(), 1400));
 
@@ -303,13 +286,10 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         this.renderFullDiagram(false);
       } else {
         const now = Date.now();
-        // Solo posiciones modificadas (por ejemplo por sincronización remota o historial)
         for (const rawNode of nodes) {
           const group = this.nodeGroupsMap.get(rawNode.id);
           if (!group) continue;
 
-          // Si el nodo está en arrastre activo o terminó de moverse localmente hace menos de 400ms,
-          // Konva es la fuente de verdad. No forzar posición vieja desde el estado padre.
           const lastMove = this.lastLocalMoveTimestamps.get(rawNode.id) || 0;
           if (group.isDragging() || now - lastMove < 400) {
             rawNode.position = { x: Math.round(group.x()), y: Math.round(group.y()) };
@@ -329,10 +309,10 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    // 2. Sincronizar selección visual (NUNCA destruye nodos)
+    // 2. Sincronizar selección visual
     effect(() => {
-      const selectedIds = this.selectedNodeIds();
-      const selectedConns = this.selectedConnIds();
+      this.selectedNodeIds();
+      this.selectedConnIds();
 
       if (!this.stage || !this.nodeLayer) return;
       if (this.isDraggingNode) return;
@@ -372,7 +352,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       });
     });
 
-    // 6. Sincronizar y restaurar vista y zoom cuando cambia el diagrama activo (tabs o explorador)
+    // 6. Sincronizar y restaurar vista y zoom cuando cambia el diagrama activo
     effect(() => {
       const dId = this.diagramId();
       if (!dId || !this.stage) return;
@@ -389,100 +369,10 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private computeStructureSignature(): string {
-    const nodeSig = this.nodes()
-      .filter((n) => !n.isAnchor)
-      .map((n) => {
-        const attrs = (n.attributes || []).map((a) => `${a.name}:${a.type}:${a.visibility}`).join(',');
-        const methods = (n.methods || []).map((m) => `${m.name}:${m.parameters}:${m.returnType}:${m.visibility}`).join(',');
-        return `${n.id}:${n.name}:${n.stereotype || ''}:${n.nodeType}:${n.color || ''}:${attrs}:${methods}:${n.customWidth ?? 0}:${n.customHeight ?? 0}`;
-      })
-      .join('|');
-    const connSig = this.connections()
-      .map((c) => `${c.id}:${c.sourceId}:${c.targetId}:${c.type}:${c.name ?? ''}`)
-      .join('|');
-    return `${this.activeDiagramType()}#${nodeSig}#${connSig}`;
-  }
-
-  private applyLiveGroupColor(group: Konva.Group, rawNode: UmlClassNode): void {
-    const color = rawNode.color;
-    if (!color) return;
-
-    const bgRect = group.findOne<Konva.Rect>('.bg-rect');
-    if (bgRect && bgRect.fill() !== color) {
-      bgRect.fill(color);
-    }
-    const ucEllipse = group.findOne<Konva.Ellipse>('.uc-ellipse');
-    if (ucEllipse && ucEllipse.fill() !== color) {
-      ucEllipse.fill(color);
-    }
-    const actorHead = group.findOne<Konva.Circle>('.actor-part');
-    if (actorHead && actorHead.fill() !== color) {
-      actorHead.fill(color);
-    }
-    const compBody = group.findOne<Konva.Rect>('.comp-part');
-    if (compBody) {
-      compBody.fill(color);
-    }
-    const pkgFolderParts = group.find<Konva.Rect>('.pkg-folder-part');
-    pkgFolderParts.forEach((part) => {
-      if (part.fill() !== color) part.fill(color);
-    });
-    const actParts = group.find<Konva.Shape>('.act-part');
-    actParts.forEach((part) => {
-      if (part instanceof Konva.Rect && part.cornerRadius() === 12) {
-        part.fill(color);
-      } else if (part instanceof Konva.Line && part.closed()) {
-        part.fill(color);
-      }
-    });
-    const lifelineBox = group.findOne<Konva.Rect>('.lifeline-part');
-    if (lifelineBox && lifelineBox.fill() !== color) {
-      lifelineBox.fill(color);
-    }
-    const deployBox = group.findOne<Konva.Rect>('.deploy-main');
-    if (deployBox && deployBox.fill() !== color) {
-      deployBox.fill(color);
-    }
-    const layerBg = group.findOne<Konva.Rect>('.layer-bg');
-    if (layerBg && layerBg.fill() !== color) {
-      layerBg.fill(color);
-    }
-    const notePart = group.findOne<Konva.Shape>('.note-part');
-    if (notePart && (notePart as any).fill && (notePart as any).fill() !== color) {
-      (notePart as any).fill(color);
-    }
-  }
-
-  private updateNodesSelectionAppearance(): void {
-    const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
-    const pendingSrcId = this.pendingSourceNodeId();
-
-    for (const [id, group] of this.nodeGroupsMap.entries()) {
-      const isSelected = selectedIds.has(id) || id === pendingSrcId;
-
-      const bgRect = group.findOne<Konva.Rect>('.bg-rect');
-      if (bgRect) {
-        bgRect.stroke(isSelected ? '#059669' : '#78716C');
-        bgRect.strokeWidth(isSelected ? 2 : 1.3);
-      }
-
-      const ellipse = group.findOne<Konva.Ellipse>('.uc-ellipse');
-      if (ellipse) {
-        ellipse.stroke(isSelected ? '#059669' : '#78716C');
-        ellipse.strokeWidth(isSelected ? 2.2 : 1.6);
-      }
-
-      const hitRect = group.findOne<Konva.Rect>('.hit-rect');
-      if (hitRect) {
-        hitRect.stroke(isSelected ? '#10B981' : 'transparent');
-        hitRect.strokeWidth(isSelected ? 1 : 0);
-      }
-    }
-    this.frameLayer?.batchDraw();
-    this.nodeLayer?.batchDraw();
-  }
-
+  /**
+   * Ciclo de vida posterior a la inicialización de la vista. Inicializa el canvas de Konva
+   * y restaura el estado previo del viewport.
+   */
   ngAfterViewInit(): void {
     if (typeof window === 'undefined') return;
 
@@ -493,244 +383,117 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     }, 40);
   }
 
+  /**
+   * Ciclo de vida de destrucción. Limpia eventos globales, guías y recursos de memoria.
+   */
   ngOnDestroy(): void {
     this.clearSmartGuides();
     if (this.onWindowMouseUpHandler && typeof window !== 'undefined') {
       window.removeEventListener('mouseup', this.onWindowMouseUpHandler);
     }
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-    }
-    if (this.animFrameId) {
-      cancelAnimationFrame(this.animFrameId);
-      this.animFrameId = null;
-    }
-    if (this.wheelAnimFrameId !== null) {
-      cancelAnimationFrame(this.wheelAnimFrameId);
-      this.wheelAnimFrameId = null;
-    }
-    if (this.stage) {
-      this.stage.destroy();
-      this.stage = null;
-    }
+    this.relationshipManager.cancelAnimation();
+    this.nodeInteraction.destroy();
+    this.stageManager.destroy();
+    this.stage = null;
+    this.bgLayer = null;
+    this.frameLayer = null;
+    this.relLayer = null;
+    this.nodeLayer = null;
+    this.uiLayer = null;
+    this.gridGroup = null;
+    this.bgRect = null;
+    this.transformer = null;
+    this.marqueeRect = null;
+    this.guideLinesGroup = null;
+    this.previewLineGroup = null;
   }
 
+  /**
+   * Inicializa el escenario Konva.Stage, registra las 5 capas y enlaza observadores de interacción.
+   */
   private initKonvaStage(): void {
     const container = this.stageContainerRef?.nativeElement;
     const parentContainer = this.flowContainerRef?.nativeElement;
     if (!container) return;
 
-    const scale = Math.max(0.2, this.zoomLevel() / 100);
-    const rawTargetW = Math.max(parentContainer?.clientWidth || 0, container.clientWidth || 0, this.scaledBoardWidth(), 2200);
-    const rawTargetH = Math.max(parentContainer?.clientHeight || 0, container.clientHeight || 0, this.scaledBoardHeight(), 1400);
-
-    // Cuantización de dimensiones del canvas a bloques de 512px (Bucket Sizing)
-    const width = Math.ceil(rawTargetW / 512) * 512;
-    const height = Math.ceil(rawTargetH / 512) * 512;
-
-    // Limitar el pixel ratio a 1.5x max para evitar alocaciones masivas de memoria en pantallas HiDPI/Retina
-    Konva.pixelRatio = Math.min(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1, 1.5);
-    Konva.dragDistance = 3;
-
-    this.ngZone.runOutsideAngular(() => {
-      this.stage = new Konva.Stage({
+    this.stage = this.stageManager.initStage(
+      {
         container,
-        width,
-        height,
-        draggable: false,
-      });
+        parentContainer,
+        initialZoom: this.zoomLevel(),
+        boardWidth: this.boardWidth(),
+        boardHeight: this.boardHeight(),
+        scaledBoardWidth: this.scaledBoardWidth(),
+        scaledBoardHeight: this.scaledBoardHeight(),
+        showGrid: this.showGrid(),
+        onResize: () => this.updateStageDimensions(),
+      },
+      this.ngZone
+    );
 
-      this.stage.scale({ x: scale, y: scale });
-      this.stage.position({ x: 0, y: 0 });
+    if (!this.stage) return;
 
-      this.bgLayer = new Konva.Layer({ listening: true });
-      this.frameLayer = new Konva.Layer({ listening: true });
-      this.relLayer = new Konva.Layer();
-      this.nodeLayer = new Konva.Layer();
-      this.uiLayer = new Konva.Layer();
+    this.bgLayer = this.stageManager.getBgLayer();
+    this.frameLayer = this.stageManager.getFrameLayer();
+    this.relLayer = this.stageManager.getRelLayer();
+    this.nodeLayer = this.stageManager.getNodeLayer();
+    this.uiLayer = this.stageManager.getUiLayer();
+    this.gridGroup = this.stageManager.getGridGroup();
+    this.bgRect = this.stageManager.getBgRect();
 
-      const effectiveW = Math.max(this.boardWidth(), Math.ceil(width / 0.25));
-      const effectiveH = Math.max(this.boardHeight(), Math.ceil(height / 0.25));
+    if (this.uiLayer) {
+      this.previewLineGroup = this.relationshipManager.initPreviewGroup(this.uiLayer);
+      const uiElements = this.nodeInteraction.initUiElements(this.uiLayer);
+      this.transformer = uiElements.transformer;
+      this.marqueeRect = uiElements.marqueeRect;
+      this.guideLinesGroup = uiElements.guideLinesGroup;
+    }
 
-      this.bgRect = new Konva.Rect({
-        x: 0,
-        y: 0,
-        width: effectiveW,
-        height: effectiveH,
-        fill: '#FAF9F5',
-        listening: true,
-      });
-      this.bgLayer.add(this.bgRect);
-
-      this.gridGroup = new Konva.Group({ listening: false });
-      this.bgLayer.add(this.gridGroup);
-
-      this.previewLineGroup = new Konva.Group({ listening: false });
-      this.uiLayer.add(this.previewLineGroup);
-
-      this.guideLinesGroup = new Konva.Group({ listening: false, name: 'smart-guidelines-group' });
-      this.uiLayer.add(this.guideLinesGroup);
-
-      // Transformer para redimensionamiento fluido de nodos
-      this.transformer = new Konva.Transformer({
-        rotateEnabled: false,
-        ignoreStroke: true,
-        padding: 4,
-        anchorSize: 9,
-        anchorCornerRadius: 2,
-        anchorStroke: '#059669',
-        anchorFill: '#FFFFFF',
-        borderStroke: '#059669',
-        borderDash: [4, 4],
-        boundBoxFunc: (oldBox, newBox) => {
-          if (newBox.width < 80 || newBox.height < 50) {
-            return oldBox;
-          }
-          return newBox;
-        },
-      });
-      this.uiLayer.add(this.transformer);
-
-      this.marqueeRect = new Konva.Rect({
-        name: 'marquee-rect',
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        visible: false,
-        stroke: '#2563EB',
-        strokeWidth: 1.5,
-        dash: [4, 4],
-        fill: 'rgba(37, 99, 235, 0.12)',
-        listening: false,
-      });
-      this.uiLayer.add(this.marqueeRect);
-
-      this.stage.add(this.bgLayer);
-      this.stage.add(this.frameLayer);
-      this.stage.add(this.relLayer);
-      this.stage.add(this.nodeLayer);
-      this.stage.add(this.uiLayer);
-
-      this.drawGrid();
-      this.renderFullDiagram(true);
-      this.bindStageEvents();
-
-      // Observador de redimensionamiento del contenedor y viewport
-      this.resizeObserver = new ResizeObserver(() => {
-        this.updateStageDimensions();
-      });
-      this.resizeObserver.observe(container);
-      if (parentContainer) {
-        this.resizeObserver.observe(parentContainer);
-      }
-    });
+    this.renderFullDiagram(true);
+    this.bindStageEvents();
   }
 
+  /**
+   * Actualiza las dimensiones físicas del canvas Konva aplicando cuantización (Bucket Sizing de 512px).
+   */
   private updateStageDimensions(): void {
     if (!this.stage) return;
-    const container = this.stageContainerRef?.nativeElement;
-    const parentContainer = this.flowContainerRef?.nativeElement;
-    const scale = Math.max(0.2, this.zoomLevel() / 100);
-    const rawTargetW = Math.max(parentContainer?.clientWidth || 0, container?.clientWidth || 0, this.scaledBoardWidth());
-    const rawTargetH = Math.max(parentContainer?.clientHeight || 0, container?.clientHeight || 0, this.scaledBoardHeight());
-
-    // Cuantizar las dimensiones físicas del canvas en bloques de 512px (Bucket Sizing)
-    // Esto evita que al hacer zoom gradual (ej. 30% -> 110%) el canvas se redimensione en cada paso de 5%,
-    // reduciendo decenas de descartes de buffer a 0 o 1 sola redimensión en todo el recorrido.
-    const targetW = Math.ceil(rawTargetW / 512) * 512;
-    const targetH = Math.ceil(rawTargetH / 512) * 512;
-
-    if (targetW > 0 && targetH > 0) {
-      let dimensionsChanged = false;
-      if (this.stage.width() !== targetW || this.stage.height() !== targetH) {
-        this.stage.width(targetW);
-        this.stage.height(targetH);
-        dimensionsChanged = true;
-      }
-
-      const scaleChanged = this.stage.scaleX() !== scale || this.stage.scaleY() !== scale;
-      if (scaleChanged) {
-        this.stage.scale({ x: scale, y: scale });
-        this.stage.position({ x: 0, y: 0 });
-      }
-
-      // Solo reconstruir la cuadrícula si cambiaron las dimensiones del canvas
-      if (dimensionsChanged) {
-        this.drawGrid();
-      }
-
-      if (dimensionsChanged || scaleChanged) {
-        this.stage.batchDraw();
-      }
-    }
+    this.stageManager.updateStageDimensions({
+      container: this.stageContainerRef?.nativeElement,
+      parentContainer: this.flowContainerRef?.nativeElement,
+      zoomLevel: this.zoomLevel(),
+      boardWidth: this.boardWidth(),
+      boardHeight: this.boardHeight(),
+      scaledBoardWidth: this.scaledBoardWidth(),
+      scaledBoardHeight: this.scaledBoardHeight(),
+      showGrid: this.showGrid(),
+    });
   }
 
+  /**
+   * Inicia el bucle de animación suave a 60 FPS con requestAnimationFrame para relaciones UML.
+   */
   private startRelationshipAnimationLoop(): void {
-    if (this.animFrameId) {
-      cancelAnimationFrame(this.animFrameId);
-      this.animFrameId = null;
-    }
-    this.lastFrameTime = performance.now();
-
-    const step = (timestamp: number) => {
-      if (!this.lastFrameTime) this.lastFrameTime = timestamp;
-      this.lastFrameTime = timestamp;
-
-      let needsRedraw = false;
-
-      for (const [relId, animState] of this.relAnimStates.entries()) {
-        const elapsed = timestamp - animState.startTime - animState.delay;
-        if (elapsed < 0) {
-          this.relProgressMap.set(relId, 0);
-          needsRedraw = true;
-        } else if (elapsed < animState.duration) {
-          const t = Math.max(0, Math.min(1, elapsed / animState.duration));
-          const eased = 1 - Math.pow(1 - t, 3);
-          this.relProgressMap.set(relId, eased);
-          needsRedraw = true;
-        } else {
-          this.relProgressMap.set(relId, 1);
-          this.relAnimStates.delete(relId);
-          needsRedraw = true;
-        }
-      }
-
-      if (needsRedraw && this.relLayer && !this.isDraggingNode) {
+    this.relationshipManager.startRelationshipAnimationLoop(() => {
+      if (this.relLayer && !this.isDraggingNode) {
         this.renderRelationshipsOnly();
       }
-
-      // Si aún quedan relaciones animándose, continuar en el siguiente fotograma
-      if (this.relAnimStates.size > 0) {
-        this.animFrameId = requestAnimationFrame(step);
-      } else {
-        // Animaciones completadas: apagar el loop y dejar la CPU en reposo (0% CPU)
-        this.animFrameId = null;
-        this.lastFrameTime = 0;
-      }
-    };
-
-    this.animFrameId = requestAnimationFrame(step);
+    });
   }
 
+  /**
+   * Dispara la animación de entrada progresiva de todas las conexiones del diagrama.
+   *
+   * @param staggered Indica si se debe aplicar un retardo escalonado de 90ms entre conexiones.
+   */
   private triggerAllRelationshipsDrawAnimation(staggered = true): void {
-    const now = performance.now();
-    this.relAnimStates.clear();
-    this.relProgressMap.clear();
-
-    const conns = this.connections();
-    conns.forEach((conn, index) => {
-      this.relProgressMap.set(conn.id, 0);
-      this.relAnimStates.set(conn.id, {
-        startTime: now,
-        duration: 680,
-        delay: staggered ? index * 90 : 0,
-      });
-    });
-
+    this.relationshipManager.triggerAllRelationshipsDrawAnimation(this.connections(), staggered);
     this.startRelationshipAnimationLoop();
   }
 
+  /**
+   * Registra los eventos de puntero sobre el escenario de Konva (selección, barrido, clic de fondo).
+   */
   private bindStageEvents(): void {
     if (!this.stage) return;
 
@@ -744,7 +507,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         const canvasX = Math.round(canvasPos.x);
         const canvasY = Math.round(canvasPos.y);
 
-        // Si se hace clic dentro de la zona magnética de 28px de una relación
         const nearConn = this.findClosestRelationshipAtCanvasPoint(canvasX, canvasY, 28);
         if (nearConn) {
           this.ngZone.run(() => {
@@ -839,7 +601,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       const canvasX = Math.round(canvasPos.x);
       const canvasY = Math.round(canvasPos.y);
 
-      // Selección por recuadro / barrido (Marquee Selection) con clic izquierdo
+      // Selección por recuadro / barrido (Marquee Selection)
       if (this.isMarqueeSelecting && this.marqueeRect) {
         const x = Math.min(this.marqueeStartPos.x, canvasX);
         const y = Math.min(this.marqueeStartPos.y, canvasY);
@@ -869,12 +631,12 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         this.uiLayer?.batchDraw();
       }
 
-      // Previsualización de línea en modo conexión
+      // Previsualización de línea elástica en modo conexión
       const pendingSrcId = this.pendingSourceNodeId();
       if (pendingSrcId) {
         this.drawLiveConnectionPreview(pendingSrcId, canvasPos.x, canvasPos.y);
       } else if (!this.isDraggingNode && !this.isMarqueeSelecting) {
-        // Detección geométrica de proximidad de 28px al acercar el cursor a cualquier relación
+        // Detección de proximidad magnética de 28px al acercar el puntero a cualquier relación
         const isOverNode = e.target?.getLayer() === this.nodeLayer;
         if (!isOverNode && !this.selectedRelationType()) {
           const nearConn = this.findClosestRelationshipAtCanvasPoint(canvasX, canvasY, 28);
@@ -882,7 +644,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
           if (this.stage.container()) {
             this.stage.container().style.cursor = nearConn ? 'pointer' : 'default';
           }
-        } else if (this.hoveredRelId) {
+        } else {
           this.setHoveredRelationship(null);
           if (this.stage.container()) {
             this.stage.container().style.cursor = 'default';
@@ -907,219 +669,195 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     if (typeof window !== 'undefined') {
       window.addEventListener('mouseup', finishMarquee);
     }
-
   }
 
+  /**
+   * Dibuja o actualiza la cuadrícula de fondo en el lienzo.
+   */
   private drawGrid(): void {
-    if (!this.gridGroup || !this.bgLayer || !this.stage) return;
-    this.gridGroup.destroyChildren();
-
-    const targetW = this.stage.width();
-    const targetH = this.stage.height();
-
-    // Cubrir hasta el rango de zoom mínimo (25%) para que durante el zoom no se requiera recrear líneas
-    const effectiveW = Math.max(this.boardWidth(), Math.ceil(targetW / 0.25));
-    const effectiveH = Math.max(this.boardHeight(), Math.ceil(targetH / 0.25));
-
-    if (this.bgRect) {
-      this.bgRect.position({ x: 0, y: 0 });
-      this.bgRect.width(effectiveW);
-      this.bgRect.height(effectiveH);
-    }
-
-    // Dibujar líneas de cuadrícula solo si está activada la opción showGrid
-    if (this.showGrid()) {
-      const step = 28;
-      for (let x = 0; x <= effectiveW; x += step) {
-        const isMajor = x % (step * 4) === 0;
-        this.gridGroup.add(
-          new Konva.Line({
-            points: [x, 0, x, effectiveH],
-            stroke: isMajor ? 'rgba(120, 113, 108, 0.15)' : 'rgba(120, 113, 108, 0.05)',
-            strokeWidth: 1,
-            listening: false,
-          })
-        );
-      }
-
-      for (let y = 0; y <= effectiveH; y += step) {
-        const isMajor = y % (step * 4) === 0;
-        this.gridGroup.add(
-          new Konva.Line({
-            points: [0, y, effectiveW, y],
-            stroke: isMajor ? 'rgba(120, 113, 108, 0.15)' : 'rgba(120, 113, 108, 0.05)',
-            strokeWidth: 1,
-            listening: false,
-          })
-        );
-      }
-    }
-
-    this.bgLayer.batchDraw();
+    this.stageManager.drawGrid(this.showGrid(), this.boardWidth(), this.boardHeight());
   }
 
+  /**
+   * Dibuja una línea de conexión temporal desde el nodo origen hacia el cursor.
+   *
+   * @param sourceId Identificador del nodo origen.
+   * @param cursorX Posición horizontal X del cursor.
+   * @param cursorY Posición vertical Y del cursor.
+   */
   private drawLiveConnectionPreview(sourceId: string, cursorX: number, cursorY: number): void {
-    if (!this.previewLineGroup || !this.uiLayer) return;
-    const srcNode = this.nodes().find((n) => n.id === sourceId);
-    if (!srcNode) return;
-
-    this.previewLineGroup.destroyChildren();
-
-    const isSeq = this.activeDiagramType() === DiagramType.SEQUENCE;
-    const startX = srcNode.position.x + (srcNode.width || 120) / 2;
-    const startY = isSeq ? cursorY : srcNode.position.y + (srcNode.height || 100) / 2;
-
-    const previewArrow = new Konva.Arrow({
-      points: [startX, startY, cursorX, cursorY],
-      stroke: '#059669',
-      fill: '#059669',
-      strokeWidth: 2,
-      dash: [6, 4],
-      pointerLength: 10,
-      pointerWidth: 8,
-      listening: false,
-    });
-
-    const originCircle = new Konva.Circle({
-      x: startX,
-      y: startY,
-      radius: 5,
-      fill: '#059669',
-      listening: false,
-    });
-
-    this.previewLineGroup.add(originCircle, previewArrow);
-    this.uiLayer.batchDraw();
-  }
-
-  private clearLivePreviewLine(): void {
-    if (!this.previewLineGroup || !this.uiLayer) return;
-    this.previewLineGroup.destroyChildren();
-    this.uiLayer.batchDraw();
-  }
-
-  private isContainerNode(node?: UmlClassNode | UmlNode | null): boolean {
-    if (!node) return false;
-    const n = node as any;
-    const t = (n.nodeType || n.type || '').toLowerCase();
-    const id = (n.id || '').toLowerCase();
-    return (
-      t === 'boundary_box' ||
-      t === 'package_layer' ||
-      t === 'package' ||
-      t === 'device' ||
-      t === 'executionenvironment' ||
-      t === 'execution_environment' ||
-      t === 'exec_env' ||
-      t === 'deployment_node' ||
-      t === 'node' ||
-      t === 'subsystem' ||
-      id.startsWith('boundary_box_') ||
-      id.startsWith('bbox_') ||
-      id.startsWith('package_')
+    this.relationshipManager.drawLiveConnectionPreview(
+      sourceId,
+      cursorX,
+      cursorY,
+      this.nodes(),
+      this.activeDiagramType(),
+      this.uiLayer
     );
   }
 
-  private getNodeZWeight(node: UmlClassNode | UmlNode): number {
-    const n = node as any;
-    const t = (n.nodeType || n.type || '').toLowerCase();
-    const id = (n.id || '').toLowerCase();
-    // 1. Grouping boundaries y boundary boxes al fondo absoluto de frameLayer
-    if (t === 'boundary_box' || t === 'package_layer' || id.startsWith('boundary_box_') || id.startsWith('bbox_')) {
-      return 0;
-    }
-    // 2. Paquetes UML
-    if (t === 'package' || id.startsWith('package_')) {
-      return 1;
-    }
-    // 3. Nodos contenedores de despliegue (device, executionEnvironment, node)
-    if (
-      t === 'device' ||
-      t === 'executionenvironment' ||
-      t === 'execution_environment' ||
-      t === 'exec_env' ||
-      t === 'deployment_node' ||
-      t === 'node' ||
-      t === 'subsystem'
-    ) {
-      return 2;
-    }
-    // 4. Componentes y artefactos contenidos siempre en z = top
-    if (t === 'component' || t === 'artifact') {
-      return 100;
-    }
-    // 5. Nodos regulares (clase, actor, use case, lifelines, notas, actividades) en el nivel intermedio
-    return 10;
+  /**
+   * Elimina la línea interactiva de previsualización de conexión.
+   */
+  private clearLivePreviewLine(): void {
+    this.relationshipManager.clearLivePreviewLine(this.uiLayer);
   }
 
+  /**
+   * Determina si un nodo actúa como contenedor estructural de fondo.
+   *
+   * @param node Nodo UML a evaluar.
+   * @returns True si el nodo es un contenedor estructural.
+   */
+  private isContainerNode(node?: UmlClassNode | UmlNode | null): boolean {
+    return this.nodeInteraction.isContainerNode(node);
+  }
+
+  /**
+   * Obtiene el peso de ordenamiento de profundidad Z para un nodo.
+   *
+   * @param node Nodo UML a evaluar.
+   * @returns Peso numérico en el eje Z.
+   */
+  private getNodeZWeight(node: UmlClassNode | UmlNode): number {
+    return this.nodeInteraction.getNodeZWeight(node);
+  }
+
+  /**
+   * Asegura que los contenedores de fondo y los componentes mantengan el orden Z correcto.
+   */
   private enforceZOrdering(): void {
-    if (!this.nodeLayer || !this.frameLayer) return;
-
-    // 1. En frameLayer: ordenar contenedores manteniendo los de menor peso (boundary_box) al fondo
-    for (const [id, grp] of this.nodeGroupsMap.entries()) {
-      const n = this.nodes().find((x) => x.id === id);
-      if (!n || !this.isContainerNode(n)) continue;
-      const w = this.getNodeZWeight(n);
-      if (w === 0) {
-        grp.moveToBottom();
-      }
-    }
-
-    // 2. En nodeLayer: componentes siempre en z = top
-    for (const [id, grp] of this.nodeGroupsMap.entries()) {
-      const n = this.nodes().find((x) => x.id === id);
-      if (!n || this.isContainerNode(n)) continue;
-      const t = (n?.nodeType || '').toLowerCase();
-      if (t === 'component' || t === 'artifact') {
-        grp.moveToTop();
-      }
-    }
+    this.nodeInteraction.enforceZOrdering(this.nodeLayer, this.frameLayer, this.nodeGroupsMap, this.nodes());
   }
 
   /**
    * Resuelve el nodo destino real considerando la contención geométrica interna.
-   * Si el usuario hace clic sobre un contenedor (boundary box, paquete o dispositivo)
-   * pero el puntero apunta a un componente o clase dentro de él, prioriza el nodo interno.
+   *
+   * @param clickedNode Nodo sobre el cual se hizo clic.
+   * @returns El nodo hijo contenido si el clic apuntaba a su interior, o clickedNode.
    */
   private resolveTargetNodeAtPointer(clickedNode: UmlClassNode): UmlClassNode {
-    if (!this.isContainerNode(clickedNode)) {
-      return clickedNode;
-    }
-
-    const pointer = this.stage?.getPointerPosition();
-    if (!pointer) return clickedNode;
-
-    const transform = this.stage?.getAbsoluteTransform().copy().invert();
-    const canvasPos = transform ? transform.point(pointer) : pointer;
-    const px = Math.round(canvasPos.x);
-    const py = Math.round(canvasPos.y);
-
-    const candidates = this.nodes().filter((n) => {
-      if (n.id === clickedNode.id || n.isAnchor) return false;
-      const group = this.nodeGroupsMap.get(n.id);
-      const nx = group ? group.x() : n.position?.x ?? 0;
-      const ny = group ? group.y() : n.position?.y ?? 0;
-      const nw = group ? group.width() : n.width || 120;
-      const nh = group ? group.height() : n.height || 60;
-      return px >= nx && px <= nx + nw && py >= ny && py <= ny + nh;
-    });
-
-    if (candidates.length === 0) {
-      return clickedNode;
-    }
-
-    // Priorizar nodo interno con mayor peso Z (ej. componente) o menor área geométrica
-    candidates.sort((a, b) => {
-      const zDiff = this.getNodeZWeight(b) - this.getNodeZWeight(a);
-      if (zDiff !== 0) return zDiff;
-      const areaA = (a.width || 120) * (a.height || 60);
-      const areaB = (b.width || 120) * (b.height || 60);
-      return areaA - areaB;
-    });
-
-    return candidates[0];
+    return this.nodeInteraction.resolveTargetNodeAtPointer(
+      clickedNode,
+      this.stage,
+      this.nodes(),
+      this.nodeGroupsMap
+    );
   }
 
+  /**
+   * Genera una firma estructural única del diagrama para detectar cambios en atributos o nombres.
+   *
+   * @returns Cadena de texto representativa de la estructura del diagrama.
+   */
+  private computeStructureSignature(): string {
+    const nodeSig = this.nodes()
+      .filter((n) => !n.isAnchor)
+      .map((n) => {
+        const attrs = (n.attributes || []).map((a) => `${a.name}:${a.type}:${a.visibility}`).join(',');
+        const methods = (n.methods || []).map((m) => `${m.name}:${m.parameters}:${m.returnType}:${m.visibility}`).join(',');
+        return `${n.id}:${n.name}:${n.stereotype || ''}:${n.nodeType}:${n.color || ''}:${attrs}:${methods}:${n.customWidth ?? 0}:${n.customHeight ?? 0}`;
+      })
+      .join('|');
+    const connSig = this.connections()
+      .map((c) => `${c.id}:${c.sourceId}:${c.targetId}:${c.type}:${c.name ?? ''}`)
+      .join('|');
+    return `${this.activeDiagramType()}#${nodeSig}#${connSig}`;
+  }
+
+  /**
+   * Aplica dinámicamente el color personalizado a las figuras internas de un nodo Konva.
+   *
+   * @param group Grupo de Konva que representa visualmente al nodo.
+   * @param rawNode Modelo de datos del nodo.
+   */
+  private applyLiveGroupColor(group: Konva.Group, rawNode: UmlClassNode): void {
+    const color = rawNode.color;
+    if (!color) return;
+
+    const bgRect = group.findOne<Konva.Rect>('.bg-rect');
+    if (bgRect && bgRect.fill() !== color) {
+      bgRect.fill(color);
+    }
+    const ucEllipse = group.findOne<Konva.Ellipse>('.uc-ellipse');
+    if (ucEllipse && ucEllipse.fill() !== color) {
+      ucEllipse.fill(color);
+    }
+    const actorHead = group.findOne<Konva.Circle>('.actor-part');
+    if (actorHead && actorHead.fill() !== color) {
+      actorHead.fill(color);
+    }
+    const compBody = group.findOne<Konva.Rect>('.comp-part');
+    if (compBody) {
+      compBody.fill(color);
+    }
+    const pkgFolderParts = group.find<Konva.Rect>('.pkg-folder-part');
+    pkgFolderParts.forEach((part) => {
+      if (part.fill() !== color) part.fill(color);
+    });
+    const actParts = group.find<Konva.Shape>('.act-part');
+    actParts.forEach((part) => {
+      if (part instanceof Konva.Rect && part.cornerRadius() === 12) {
+        part.fill(color);
+      } else if (part instanceof Konva.Line && part.closed()) {
+        part.fill(color);
+      }
+    });
+    const lifelineBox = group.findOne<Konva.Rect>('.lifeline-part');
+    if (lifelineBox && lifelineBox.fill() !== color) {
+      lifelineBox.fill(color);
+    }
+    const deployBox = group.findOne<Konva.Rect>('.deploy-main');
+    if (deployBox && deployBox.fill() !== color) {
+      deployBox.fill(color);
+    }
+    const layerBg = group.findOne<Konva.Rect>('.layer-bg');
+    if (layerBg && layerBg.fill() !== color) {
+      layerBg.fill(color);
+    }
+    const notePart = group.findOne<Konva.Shape>('.note-part');
+    if (notePart && (notePart as any).fill && (notePart as any).fill() !== color) {
+      (notePart as any).fill(color);
+    }
+  }
+
+  /**
+   * Actualiza el trazo visual de selección sobre los nodos en pantalla.
+   */
+  private updateNodesSelectionAppearance(): void {
+    const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
+    const pendingSrcId = this.pendingSourceNodeId();
+
+    for (const [id, group] of this.nodeGroupsMap.entries()) {
+      const isSelected = selectedIds.has(id) || id === pendingSrcId;
+
+      const bgRect = group.findOne<Konva.Rect>('.bg-rect');
+      if (bgRect) {
+        bgRect.stroke(isSelected ? '#059669' : '#78716C');
+        bgRect.strokeWidth(isSelected ? 2 : 1.3);
+      }
+
+      const ellipse = group.findOne<Konva.Ellipse>('.uc-ellipse');
+      if (ellipse) {
+        ellipse.stroke(isSelected ? '#059669' : '#78716C');
+        ellipse.strokeWidth(isSelected ? 2.2 : 1.6);
+      }
+
+      const hitRect = group.findOne<Konva.Rect>('.hit-rect');
+      if (hitRect) {
+        hitRect.stroke(isSelected ? '#10B981' : 'transparent');
+        hitRect.strokeWidth(isSelected ? 1 : 0);
+      }
+    }
+    this.frameLayer?.batchDraw();
+    this.nodeLayer?.batchDraw();
+  }
+
+  /**
+   * Reconstruye y renderiza todo el diagrama en las capas correspondientes de Konva.
+   *
+   * @param animateEntrance Indica si se debe ejecutar la animación progresiva de relaciones.
+   */
   renderFullDiagram(animateEntrance = false): void {
     if (!this.nodeLayer || !this.frameLayer || !this.relLayer) return;
 
@@ -1128,7 +866,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.nodeGroupsMap.clear();
 
     const currentNodes = this.nodes().filter((n) => !n.isAnchor);
-    // Ordenamiento estricto Z: Boundary/Grouping al fondo (0, 1, 2), Clases (10), Componentes arriba (100)
     currentNodes.sort((a, b) => this.getNodeZWeight(a) - this.getNodeZWeight(b));
 
     const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
@@ -1167,253 +904,81 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.uiLayer?.batchDraw();
   }
 
+  /**
+   * Renderiza exclusivamente la capa de conexiones (relLayer).
+   */
   private renderRelationshipsOnly(): void {
-    if (!this.relLayer) return;
-    this.relLayer.destroyChildren();
-    this.konvaRelGroupMap.clear();
-
-    const nodeMap = new Map<string, UmlNode>();
-    for (const rawNode of this.nodes()) {
-      if (!rawNode.isAnchor) {
-        const liveG = this.nodeGroupsMap.get(rawNode.id);
-        const kNode = toKonvaNode(
-          rawNode,
-          this.activeDiagramType(),
-          this.connections(),
-          this.sequenceActivationService
-        );
-        if (liveG) {
-          kNode.x = Math.round(liveG.x());
-          kNode.y = Math.round(liveG.y());
-        }
-        nodeMap.set(rawNode.id, kNode);
-      }
-    }
-
     const selectedConnIds = new Set([...this.selectedConnIds(), ...this.selectedConnIdsInternal()]);
-    const isSequenceDiag = this.activeDiagramType() === DiagramType.SEQUENCE;
-
-    for (const rawConn of this.connections()) {
-      // Ignorar conexiones de anclaje legacy hacia el nodo ancla invisible (ej: anchor_xxx)
-      // ya que la conexión principal dibuja la rama discontinua automáticamente
-      const isLegacyAnchorDashed =
-        rawConn.id.includes('assoc_dashed') ||
-        (rawConn.sourceNodeId && this.nodes().some((n) => n.id === rawConn.sourceNodeId && n.isAnchor));
-      if (isLegacyAnchorDashed) {
-        continue;
-      }
-
-      // Si existe una conexión duplicada generada por el bug anterior (ej: conn_..._assoc_main junto a la conexión original),
-      // omitir el duplicado para no dibujar líneas dobles superpuestas
-      if (rawConn.id.includes('_assoc_main')) {
-        const srcId = rawConn.sourceNodeId || rawConn.sourceId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
-        const tgtId = rawConn.targetNodeId || rawConn.targetId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
-        const hasOtherConn = this.connections().some(
-          (c) =>
-            c.id !== rawConn.id &&
-            !c.id.includes('assoc_dashed') &&
-            ((c.sourceNodeId === srcId && c.targetNodeId === tgtId) ||
-              (c.sourceId?.startsWith(srcId) && c.targetId?.startsWith(tgtId)) ||
-              (c.sourceNodeId === tgtId && c.targetNodeId === srcId) ||
-              (c.sourceId?.startsWith(tgtId) && c.targetId?.startsWith(srcId)))
-        );
-        if (hasOtherConn) {
-          continue;
-        }
-      }
-
-      const kRel = toKonvaRelationship(rawConn, this.activeDiagramType(), this.nodes(), this.connections());
-      const src = nodeMap.get(kRel.sourceId);
-      const tgt = nodeMap.get(kRel.targetId);
-      if (!src || !tgt) continue;
-
-      const assocNode = kRel.associationClassNodeId
-        ? nodeMap.get(kRel.associationClassNodeId) ?? null
-        : null;
-
-      const isSelected = selectedConnIds.has(rawConn.id);
-      const progress = this.relProgressMap.get(rawConn.id) ?? 1;
-      const relGroup = createUmlRelationshipKonvaGroup(
-        kRel,
-        src,
-        tgt,
-        isSelected,
-        progress,
-        this.flowPhase,
-        assocNode
-      );
-
-      this.konvaRelGroupMap.set(rawConn.id, relGroup);
-
-      if (this.hoveredRelId === rawConn.id && !isSelected) {
-        relGroup.find('.hover-halo').forEach((h) => h.opacity(1));
-      }
-
-      relGroup.on('mouseenter', () => {
-        this.setHoveredRelationship(rawConn.id);
-        if (this.stage?.container()) {
-          this.stage.container().style.cursor = 'pointer';
-        }
-      });
-
-      relGroup.on('mouseleave', () => {
-        if (this.hoveredRelId === rawConn.id) {
-          this.setHoveredRelationship(null);
-          if (this.stage?.container()) {
-            this.stage.container().style.cursor = 'default';
-          }
-        }
-      });
-
-      // Si es un mensaje de secuencia, permitir moverlo verticalmente entre slots
-      const isSeqConn = isSequenceDiag || ['sync_message', 'return_message'].includes(kRel.type);
-      if (isSeqConn && !this.isReadOnly()) {
-        relGroup.draggable(true);
-        relGroup.dragBoundFunc((pos) => ({
-          x: relGroup.absolutePosition().x,
-          y: pos.y,
-        }));
-
-        relGroup.on('dragend', () => {
-          const deltaY = relGroup.y();
-          relGroup.y(0);
-          const origY = kRel.yOffset || 160;
-          const finalY = origY + deltaY;
-          const targetSlot = Math.max(0, Math.round((finalY - 160) / 50));
-
-          this.ngZone.run(() => {
-            this.sequenceMessageMove.emit({
-              connectionId: rawConn.id,
-              targetSlot,
-            });
-          });
-        });
-      }
-
-      relGroup.on('mousedown touchstart', (e) => {
-        e.cancelBubble = true;
-        this.ngZone.run(() => {
-          this.connectionClick.emit({ connId: rawConn.id, event: e.evt as MouseEvent });
-        });
-      });
-
-      relGroup.on('dblclick dbltap', (e) => {
-        e.cancelBubble = true;
-        this.ngZone.run(() => {
-          this.connectionDblClick.emit({ conn: rawConn, event: e.evt as MouseEvent });
-        });
-      });
-
-      relGroup.on('contextmenu', (e) => {
-        e.evt.preventDefault();
-        e.cancelBubble = true;
-        this.ngZone.run(() => {
-          this.connectionContextMenu.emit({ conn: rawConn, event: e.evt as MouseEvent });
-        });
-      });
-
-      this.relLayer.add(relGroup);
-    }
-
-    this.relLayer.batchDraw();
+    this.relationshipManager.renderRelationshipsOnly({
+      relLayer: this.relLayer,
+      stage: this.stage,
+      nodes: this.nodes(),
+      connections: this.connections(),
+      nodeGroupsMap: this.nodeGroupsMap,
+      selectedConnIds,
+      activeDiagramType: this.activeDiagramType(),
+      sequenceActivationService: this.sequenceActivationService,
+      isReadOnly: this.isReadOnly(),
+      ngZone: this.ngZone,
+      events: {
+        onConnectionClick: (connId, event) => {
+          this.connectionClick.emit({ connId, event });
+        },
+        onConnectionDblClick: (conn, event) => {
+          this.connectionDblClick.emit({ conn, event });
+        },
+        onConnectionContextMenu: (conn, event) => {
+          this.connectionContextMenu.emit({ conn, event });
+        },
+        onSequenceMessageMove: (connectionId, targetSlot) => {
+          this.sequenceMessageMove.emit({ connectionId, targetSlot });
+        },
+      },
+    });
   }
 
+  /**
+   * Detecta la conexión más cercana a un punto específico del lienzo dentro del umbral magnético de 28px.
+   *
+   * @param canvasX Coordenada X dentro del lienzo.
+   * @param canvasY Coordenada Y dentro del lienzo.
+   * @param maxDistancePx Distancia máxima de captura en píxeles.
+   * @returns La conexión más próxima al punto o null.
+   */
   private findClosestRelationshipAtCanvasPoint(
     canvasX: number,
     canvasY: number,
     maxDistancePx = 28
   ): UmlConnection | null {
-    const nodeMap = new Map<string, UmlNode>();
-    for (const rawNode of this.nodes()) {
-      if (!rawNode.isAnchor) {
-        const liveG = this.nodeGroupsMap.get(rawNode.id);
-        const kNode = toKonvaNode(
-          rawNode,
-          this.activeDiagramType(),
-          this.connections(),
-          this.sequenceActivationService
-        );
-        if (liveG) {
-          kNode.x = Math.round(liveG.x());
-          kNode.y = Math.round(liveG.y());
-        }
-        nodeMap.set(rawNode.id, kNode);
-      }
-    }
-
-    let closestConn: UmlConnection | null = null;
-    let bestDist = maxDistancePx;
-
-    for (const rawConn of this.connections()) {
-      const isLegacyAnchorDashed =
-        rawConn.id.includes('assoc_dashed') ||
-        (rawConn.sourceNodeId && this.nodes().some((n) => n.id === rawConn.sourceNodeId && n.isAnchor));
-      if (isLegacyAnchorDashed) {
-        continue;
-      }
-
-      if (rawConn.id.includes('_assoc_main')) {
-        const srcId = rawConn.sourceNodeId || rawConn.sourceId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
-        const tgtId = rawConn.targetNodeId || rawConn.targetId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
-        const hasOtherConn = this.connections().some(
-          (c) =>
-            c.id !== rawConn.id &&
-            !c.id.includes('assoc_dashed') &&
-            ((c.sourceNodeId === srcId && c.targetNodeId === tgtId) ||
-              (c.sourceId?.startsWith(srcId) && c.targetId?.startsWith(tgtId)) ||
-              (c.sourceNodeId === tgtId && c.targetNodeId === srcId) ||
-              (c.sourceId?.startsWith(tgtId) && c.targetId?.startsWith(srcId)))
-        );
-        if (hasOtherConn) {
-          continue;
-        }
-      }
-
-      const kRel = toKonvaRelationship(rawConn, this.activeDiagramType(), this.nodes(), this.connections());
-      const src = nodeMap.get(kRel.sourceId);
-      const tgt = nodeMap.get(kRel.targetId);
-      if (!src || !tgt) continue;
-
-      const assocNode = kRel.associationClassNodeId
-        ? nodeMap.get(kRel.associationClassNodeId) ?? null
-        : null;
-
-      const d = getPointToRelationshipDistance(
-        { x: canvasX, y: canvasY },
-        kRel,
-        src,
-        tgt,
-        assocNode
-      );
-      if (d <= bestDist) {
-        bestDist = d;
-        closestConn = rawConn;
-      }
-    }
-
-    return closestConn;
+    return this.relationshipManager.findClosestRelationshipAtCanvasPoint({
+      canvasX,
+      canvasY,
+      nodes: this.nodes(),
+      connections: this.connections(),
+      nodeGroupsMap: this.nodeGroupsMap,
+      activeDiagramType: this.activeDiagramType(),
+      sequenceActivationService: this.sequenceActivationService,
+      maxDistancePx,
+    });
   }
 
+  /**
+   * Actualiza el efecto visual de iluminación halo sobre la relación bajo el puntero.
+   *
+   * @param relId ID de la relación o null.
+   */
   private setHoveredRelationship(relId: string | null): void {
-    if (this.hoveredRelId === relId) return;
-
     const selectedConnIds = new Set([...this.selectedConnIds(), ...this.selectedConnIdsInternal()]);
-
-    if (this.hoveredRelId && !selectedConnIds.has(this.hoveredRelId)) {
-      const prevGroup = this.konvaRelGroupMap.get(this.hoveredRelId);
-      prevGroup?.find('.hover-halo').forEach((h) => h.opacity(0));
-    }
-
-    this.hoveredRelId = relId;
-
-    if (relId) {
-      const nextGroup = this.konvaRelGroupMap.get(relId);
-      nextGroup?.find('.hover-halo').forEach((h) => h.opacity(1));
-    }
-
-    this.relLayer?.batchDraw();
+    this.relationshipManager.setHoveredRelationship(relId, selectedConnIds, this.relLayer);
   }
 
+  /**
+   * Instancia el grupo Konva correspondiente al tipo de nodo UML.
+   *
+   * @param node Modelo Konva del nodo.
+   * @param isSelected Indica si el nodo se encuentra seleccionado.
+   * @returns Grupo Konva.Group construido.
+   */
   private buildNodeGroup(node: UmlNode, isSelected: boolean): Konva.Group {
     switch (node.type) {
       case 'class':
@@ -1451,6 +1016,12 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * Asocia controladores de interacción a un nodo (arrastre individual, selección múltiple, contención, redimensión).
+   *
+   * @param group Grupo Konva del nodo.
+   * @param origNode Modelo original del nodo.
+   */
   private attachNodeInteractions(group: Konva.Group, origNode: UmlClassNode): void {
     const isLocked = this.isNodeLockedByOther(origNode.id);
     const canDrag = !this.isReadOnly() && !isLocked && this.selectedRelationType() === null;
@@ -1462,10 +1033,8 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         this.stage?.container().style.setProperty('cursor', this.selectedRelationType() ? 'crosshair' : 'move');
       }
 
-      // Al pasar el cursor por las clases con el botón izquierdo presionado, agregarla a la selección
       const mouseEvt = e.evt as MouseEvent;
       if (mouseEvt && mouseEvt.buttons === 1 && !this.selectedRelationType() && !this.isDraggingNode) {
-        // No auto-seleccionar contenedores grandes por arrastre de puntero para no eclipsar componentes
         if (!this.isContainerNode(origNode) && !this.selectedNodeIdsInternal().includes(origNode.id)) {
           const updated = [...this.selectedNodeIdsInternal(), origNode.id];
           this.ngZone.run(() => {
@@ -1486,7 +1055,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     group.on('mousedown touchstart', (e) => {
       e.cancelBubble = true;
 
-      // Si el nodo clickeado es un contenedor, verificar si se hizo clic cerca de una relación (28px)
       if (this.isContainerNode(origNode) && !this.selectedRelationType()) {
         const mouseEvt = e.evt as MouseEvent;
         if (mouseEvt && (mouseEvt.button === 0 || mouseEvt.button === undefined)) {
@@ -1506,10 +1074,8 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         }
       }
 
-      // Si hay una relación seleccionada en la barra de herramientas, crear conexión de A -> B
       const activeRelType = this.selectedRelationType();
       if (activeRelType) {
-        // Resolver nodo de destino considerando contención geométrica interna
         const targetNode = this.resolveTargetNodeAtPointer(origNode);
         this.ngZone.run(() => {
           const pendingSrc = this.pendingSourceNodeId();
@@ -1538,7 +1104,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      // Selección al presionar sobre la clase
       const mouseEvt = e.evt as MouseEvent;
       if (mouseEvt && (mouseEvt.button === 0 || mouseEvt.button === undefined)) {
         const isAlreadySelected = this.selectedNodeIdsInternal().includes(origNode.id);
@@ -1554,13 +1119,11 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
               this.nodeClick.emit({ nodeId: origNode.id, event: mouseEvt });
             }
           } else {
-            // El nodo ya estaba seleccionado: si usa Shift/Ctrl, alternar remoción
             if (mouseEvt.shiftKey || mouseEvt.ctrlKey) {
               const updated = this.selectedNodeIdsInternal().filter((id) => id !== origNode.id);
               this.select(updated, []);
               this.selectionChange.emit({ nodeIds: updated, connectionIds: [] });
             }
-            // Si no tiene Shift/Ctrl, no alteramos la selección aquí para permitir arrastre en grupo
           }
         });
       }
@@ -1570,12 +1133,9 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       if (this.selectedRelationType()) return;
       e.cancelBubble = true;
 
-      // Si hubo movimiento de arrastre, no procesar clic para preservar la multiselección
       if (this.isDraggingNode) return;
 
       const mouseEvt = e.evt as MouseEvent;
-      // Si fue un clic simple sin arrastre sobre un elemento que pertenecía a un grupo multiseleccionado,
-      // reducir la selección a este único elemento
       if (mouseEvt && !mouseEvt.shiftKey && !mouseEvt.ctrlKey && this.selectedNodeIdsInternal().length > 1) {
         this.ngZone.run(() => {
           this.select([origNode.id], []);
@@ -1604,11 +1164,10 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       });
     });
 
-    // Control de arrastre fluido individual y sincronizado (multi-selección y secuencial)
     let dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
     const siblingStartPositions = new Map<string, { x: number; y: number }>();
 
-    group.on('dragstart', (e) => {
+    group.on('dragstart', () => {
       this.isDraggingNode = true;
       this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
 
@@ -1622,19 +1181,16 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
       siblingStartPositions.clear();
 
-      // Si el nodo que se arrastra no estaba seleccionado, seleccionarlo como único
       if (!this.selectedNodeIdsInternal().includes(origNode.id)) {
         this.select([origNode.id], []);
         this.selectionChange.emit({ nodeIds: [origNode.id], connectionIds: [] });
       }
 
-      // Ocultar temporalmente el transformer para máxima fluidez durante el arrastre
       if (this.transformer) {
         this.transformer.nodes([]);
         this.uiLayer?.batchDraw();
       }
 
-      // Registrar posiciones iniciales de todos los nodos seleccionados
       for (const id of this.selectedNodeIdsInternal()) {
         const otherG = this.nodeGroupsMap.get(id);
         if (otherG) {
@@ -1642,7 +1198,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         }
       }
 
-      // Sincronizar coordenadas actuales de los nodos en el lienzo antes de consultar contención
       const currentNodes = this.nodes().map((n) => {
         const g = this.nodeGroupsMap.get(n.id);
         return {
@@ -1672,12 +1227,10 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    // Actualización de líneas en vivo durante el arrastre
     group.on('dragmove', () => {
       this.isDraggingNode = true;
       this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
 
-      // En diagramas de secuencia, la línea de vida solo se mueve horizontalmente en X
       if (this.activeDiagramType() === DiagramType.SEQUENCE || origNode.nodeType === 'lifeline') {
         group.y(origNode.position ? origNode.position.y : 30);
       }
@@ -1718,7 +1271,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       currentNode.position = { x: curX, y: curY };
       origNode.position = { x: curX, y: curY };
 
-      // Mover los demás nodos seleccionados o descendientes contenidos de manera coordinada
       if (siblingStartPositions.size > 1 && siblingStartPositions.has(origNode.id)) {
         for (const [id, start] of siblingStartPositions.entries()) {
           if (id !== origNode.id) {
@@ -1736,12 +1288,10 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
             }
           }
         }
-        // Redibujar tanto frameLayer como nodeLayer para sincronizar capas a 60 FPS
         this.frameLayer?.batchDraw();
         this.nodeLayer?.batchDraw();
       }
 
-      // Si es arrastre individual sin hijos ni hermanos
       if (siblingStartPositions.size <= 1) {
         this.nodePositionChange.emit({ node: currentNode, newPosition: { x: curX, y: curY } });
       }
@@ -1765,7 +1315,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       currentNode.position = newPosition;
       origNode.position = newPosition;
 
-      // Si había hermanos movidos por multiselección o descendientes contenidos, emitir el movimiento en lote
       if (siblingStartPositions.size > 1 && siblingStartPositions.has(origNode.id)) {
         const movedPayload: Array<{ id: string; position: { x: number; y: number } }> = [];
         for (const [id] of siblingStartPositions.entries()) {
@@ -1811,7 +1360,6 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
     });
 
-    // Redimensión fluida de nodo mediante Transformer
     group.on('transform', () => {
       this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
       const sX = group.scaleX();
@@ -1889,84 +1437,41 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  /**
+   * Redimensiona fluidamente los elementos internos de un nodo según su tipo UML.
+   *
+   * @param group Grupo Konva del nodo.
+   * @param node Modelo Konva del nodo.
+   * @param newW Nuevo ancho en píxeles.
+   * @param newH Nuevo alto en píxeles.
+   */
   private applyFluidNodeResize(
     group: Konva.Group,
     node: UmlNode,
     newW: number,
     newH: number
   ): void {
-    switch (node.type) {
-      case 'class':
-        resizeClassKonvaNode(group, newW, newH, node);
-        break;
-      case 'actor':
-        resizeActorKonvaNode(group, newW, newH, node.name, true);
-        break;
-      case 'use_case':
-        resizeUseCaseKonvaNode(group, newW, newH);
-        break;
-      case 'boundary':
-        resizeBoundaryKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
-        break;
-      case 'control':
-        resizeControlKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
-        break;
-      case 'entity':
-        resizeEntityKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
-        break;
-      case 'lifeline':
-        resizeLifelineKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'deployment_node':
-        resizeDeploymentKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'component':
-        resizeComponentKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'package':
-        resizePackageKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'package_layer':
-        resizePackageLayerKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'note':
-        resizeNoteKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'activity_initial':
-      case 'activity_final':
-      case 'activity_action':
-      case 'activity_decision':
-      case 'activity_fork':
-        resizeActivityKonvaNode(group, node, newW, newH, true);
-        break;
-    }
+    this.nodeInteraction.applyFluidNodeResize(group, node, newW, newH);
   }
 
+  /**
+   * Sincroniza la posición y nodos asignados al transformador de redimensión (Konva.Transformer).
+   */
   private syncTransformer(): void {
-    if (!this.transformer || !this.uiLayer) return;
-
     const selectedIds = Array.from(
       new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()])
     );
-    if (selectedIds.length === 0 || this.isReadOnly()) {
-      this.transformer.nodes([]);
-      this.uiLayer.batchDraw();
-      return;
-    }
-
-    const groups: Konva.Group[] = [];
-    for (const id of selectedIds) {
-      const g = this.nodeGroupsMap.get(id);
-      if (g) groups.push(g);
-    }
-
-    this.transformer.nodes(groups);
-    this.transformer.forceUpdate();
-    this.uiLayer.batchDraw();
+    this.nodeInteraction.syncTransformer({
+      selectedNodeIds: selectedIds,
+      nodeGroupsMap: this.nodeGroupsMap,
+      isReadOnly: this.isReadOnly(),
+      uiLayer: this.uiLayer,
+    });
   }
 
-  // Métodos de compatibilidad y control público del Canvas
-
+  /**
+   * Fuerza el redibujado integral del lienzo y actualiza la detección de cambios.
+   */
   redraw(): void {
     this.cdr.detectChanges();
     this.updateStageDimensions();
@@ -1976,182 +1481,121 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * Restablece la selección activa y regresa la vista a su estado inicial.
+   */
   reset(): void {
     this.clearSelection();
     this.resetView();
   }
 
+  /**
+   * Restablece el zoom al 100% y centra la vista del tablero.
+   */
   resetView(): void {
-    this.setZoom(100, false);
-    this.centerViewportOnBoard();
+    this.viewportManager.resetView(
+      this.flowContainerRef?.nativeElement,
+      this.diagramId(),
+      () => this.updateStageDimensions()
+    );
+    this.zoomChange.emit(this.zoomLevel());
   }
 
+  /**
+   * Encuadra automáticamente todos los nodos del diagrama dentro del área visible.
+   */
   fitView(): void {
-    const container = this.flowContainerRef?.nativeElement;
-    const nodes = this.nodes().filter((n) => !n.isAnchor);
-    if (!container || nodes.length === 0) {
-      this.resetView();
-      return;
-    }
-
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const node of nodes) {
-      if (!node.position) continue;
-      const nx = node.position.x;
-      const ny = node.position.y;
-      const nw = node.width || (node.nodeType === 'actor' ? 65 : 220);
-      const nh = node.height || (node.nodeType === 'lifeline' ? 600 : 120);
-
-      if (nx < minX) minX = nx;
-      if (ny < minY) minY = ny;
-      if (nx + nw > maxX) maxX = nx + nw;
-      if (ny + nh > maxY) maxY = ny + nh;
-    }
-
-    if (!isFinite(minX) || !isFinite(maxX)) {
-      this.resetView();
-      return;
-    }
-
-    const padding = 60;
-    const diagramWidth = Math.max(100, maxX - minX + padding * 2);
-    const diagramHeight = Math.max(100, maxY - minY + padding * 2);
-
-    const availableWidth = container.clientWidth || 800;
-    const availableHeight = container.clientHeight || 600;
-
-    const scaleX = availableWidth / diagramWidth;
-    const scaleY = availableHeight / diagramHeight;
-    const targetScale = Math.min(1.25, Math.max(0.3, Math.min(scaleX, scaleY)));
-    const targetZoom = Math.round(targetScale * 100);
-
-    this.setZoom(targetZoom, false);
-
-    requestAnimationFrame(() => {
-      container.scrollLeft = Math.max(0, Math.round(minX * targetScale - padding * targetScale));
-      container.scrollTop = Math.max(0, Math.round(minY * targetScale - padding * targetScale));
-    });
+    this.viewportManager.fitView(
+      this.flowContainerRef?.nativeElement,
+      this.nodes(),
+      this.diagramId(),
+      () => this.updateStageDimensions()
+    );
+    this.zoomChange.emit(this.zoomLevel());
   }
 
+  /**
+   * Incrementa el zoom en pasos escalonados.
+   */
   zoomIn(): void {
-    const current = this.zoomLevel();
-    const next = current < 100 ? current + 10 : Math.min(125, current + 25);
-    this.setZoom(next, true);
+    const clamped = this.viewportManager.zoomIn(
+      this.flowContainerRef?.nativeElement,
+      this.diagramId(),
+      () => this.updateStageDimensions()
+    );
+    this.zoomChange.emit(clamped);
   }
 
+  /**
+   * Reduce el zoom en pasos escalonados.
+   */
   zoomOut(): void {
-    const current = this.zoomLevel();
-    const next = current <= 100 ? current - 10 : current - 25;
-    this.setZoom(next, true);
+    const clamped = this.viewportManager.zoomOut(
+      this.flowContainerRef?.nativeElement,
+      this.diagramId(),
+      () => this.updateStageDimensions()
+    );
+    this.zoomChange.emit(clamped);
   }
 
+  /**
+   * Ajusta el nivel de zoom a un valor específico con soporte de enfoque en el cursor.
+   *
+   * @param targetPct Porcentaje de zoom objetivo (15% a 125%).
+   * @param autoAdjustScroll Indica si el desplazamiento debe ajustarse al punto focal.
+   * @param focusPoint Coordenadas del cursor en pantalla para enfoque puntual.
+   * @param persistToStorage Indica si el valor debe guardarse en sessionStorage.
+   */
   setZoom(
     targetPct: number,
     autoAdjustScroll = true,
     focusPoint?: { clientX: number; clientY: number },
     persistToStorage = true,
   ): void {
-    const clamped = Math.max(25, Math.min(125, Math.round(targetPct)));
-    const oldZoom = this.zoomLevel();
-    if (oldZoom === clamped && this.stage?.scaleX() === clamped / 100) {
-      return;
-    }
-
-    const container = this.flowContainerRef?.nativeElement;
-    const oldScale = oldZoom / 100;
-    const newScale = clamped / 100;
-
-    let contentFocusX = 0;
-    let contentFocusY = 0;
-    let viewFocusX = 0;
-    let viewFocusY = 0;
-
-    if (container && autoAdjustScroll) {
-      const rect = container.getBoundingClientRect();
-      if (focusPoint) {
-        viewFocusX = focusPoint.clientX - rect.left;
-        viewFocusY = focusPoint.clientY - rect.top;
-      } else {
-        viewFocusX = container.clientWidth / 2;
-        viewFocusY = container.clientHeight / 2;
-      }
-      contentFocusX = (container.scrollLeft + viewFocusX) / oldScale;
-      contentFocusY = (container.scrollTop + viewFocusY) / oldScale;
-    }
-
-    this.zoomLevel.set(clamped);
-    this.updateStageDimensions();
+    const clamped = this.viewportManager.setZoom({
+      targetPct,
+      container: this.flowContainerRef?.nativeElement,
+      autoAdjustScroll,
+      focusPoint,
+      diagramId: this.diagramId(),
+      persistToStorage,
+      onDimensionsUpdate: () => this.updateStageDimensions(),
+    });
     this.zoomChange.emit(clamped);
-
-    if (persistToStorage) {
-      const dId = this.diagramId();
-      if (dId) {
-        try {
-          const raw = sessionStorage.getItem(`diagram_view_state_${dId}`);
-          const current = raw ? JSON.parse(raw) : { scrollLeft: 0, scrollTop: 0 };
-          sessionStorage.setItem(
-            `diagram_view_state_${dId}`,
-            JSON.stringify({ ...current, zoom: clamped }),
-          );
-        } catch (_) {}
-      }
-    }
-
-    if (container && autoAdjustScroll) {
-      requestAnimationFrame(() => {
-        const newScrollLeft = Math.max(0, Math.round(contentFocusX * newScale - viewFocusX));
-        const newScrollTop = Math.max(0, Math.round(contentFocusY * newScale - viewFocusY));
-        container.scrollLeft = newScrollLeft;
-        container.scrollTop = newScrollTop;
-      });
-    }
   }
 
+  /**
+   * Sincroniza la señal zoomLevel a partir de la escala actual de Konva.
+   */
   syncZoomFromCanvas(): void {
-    if (this.stage) {
-      const pct = Math.round(this.stage.scaleX() * 100);
-      if (pct !== this.zoomLevel()) {
-        this.zoomLevel.set(pct);
-        this.zoomChange.emit(pct);
-      }
-    }
+    this.viewportManager.syncZoomFromCanvas(this.stage, (z: number) => this.zoomChange.emit(z));
   }
 
+  /**
+   * Restaura el estado de desplazamiento y zoom previamente almacenados para el diagrama.
+   *
+   * @param diagramId Identificador del diagrama a restaurar.
+   */
   restoreViewportScroll(diagramId: string | null): void {
-    if (!diagramId) return;
-    const viewStateRaw = sessionStorage.getItem(`diagram_view_state_${diagramId}`);
-    if (viewStateRaw) {
-      try {
-        const state = JSON.parse(viewStateRaw);
-        if (state && typeof state.zoom === 'number') {
-          this.applyViewState(state);
-          return;
-        }
-      } catch (_) {}
-    }
-    const saved = sessionStorage.getItem(`diagram_scroll_${diagramId}`);
-    if (saved && this.flowContainerRef?.nativeElement) {
-      try {
-        const { left, top } = JSON.parse(saved);
-        this.flowContainerRef.nativeElement.scrollLeft = left;
-        this.flowContainerRef.nativeElement.scrollTop = top;
-        return;
-      } catch (_) {}
-    }
-    this.centerViewportOnBoard();
+    this.viewportManager.restoreViewportScroll(
+      diagramId,
+      this.flowContainerRef?.nativeElement,
+      () => this.updateStageDimensions()
+    );
   }
 
+  /**
+   * Centra el desplazamiento del contenedor sobre el origen del tablero.
+   */
   centerViewportOnBoard(): void {
-    const el = this.flowContainerRef?.nativeElement;
-    if (!el) return;
-    el.scrollLeft = 0;
-    el.scrollTop = 0;
+    this.viewportManager.centerViewportOnBoard(this.flowContainerRef?.nativeElement);
   }
 
+  /**
+   * Notifica cambios en el scroll del viewport y persiste el estado en sessionStorage.
+   *
+   * @param event Evento DOM de scroll.
+   */
   onViewportScroll(event: Event): void {
     this.viewportScroll.emit(event);
     const el = this.flowContainerRef?.nativeElement;
@@ -2172,40 +1616,27 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * Maneja el zoom interactivo con la rueda del ratón al presionar Ctrl/Meta con amortiguación RAF.
+   *
+   * @param event Evento WheelEvent de la rueda del ratón.
+   */
   onContainerWheel(event: WheelEvent): void {
-    if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
-      event.stopPropagation();
-      const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
-      if (Math.abs(delta) < 1) return;
-
-      const zoomStep = Math.abs(delta) > 50 ? 15 : 5;
-      const direction = delta < 0 ? 1 : -1;
-
-      // Calcular el próximo zoom acumulativo sobre el valor pendiente o el actual
-      const baseZoom = this.pendingWheelZoom ? this.pendingWheelZoom.nextZoom : this.zoomLevel();
-      const nextZoom = Math.max(25, Math.min(125, baseZoom + direction * zoomStep));
-
-      this.pendingWheelZoom = {
-        nextZoom,
-        focusPoint: { clientX: event.clientX, clientY: event.clientY },
-      };
-
-      if (this.wheelAnimFrameId === null) {
-        this.wheelAnimFrameId = requestAnimationFrame(() => {
-          this.wheelAnimFrameId = null;
-          if (this.pendingWheelZoom) {
-            const { nextZoom: targetZoom, focusPoint } = this.pendingWheelZoom;
-            this.pendingWheelZoom = null;
-            this.ngZone.run(() => {
-              this.setZoom(targetZoom, true, focusPoint);
-            });
-          }
-        });
-      }
-    }
+    this.viewportManager.handleWheelZoom(
+      event,
+      this.flowContainerRef?.nativeElement,
+      this.diagramId(),
+      () => this.updateStageDimensions(),
+      (z: number) => this.zoomChange.emit(z)
+    );
   }
 
+  /**
+   * Selecciona programáticamente un conjunto de nodos y conexiones en el lienzo.
+   *
+   * @param nodeIds Lista de IDs de nodos a seleccionar.
+   * @param connIds Lista de IDs de conexiones a seleccionar.
+   */
   select(nodeIds: string[], connIds: string[]): void {
     this.selectedNodeIdsInternal.set(nodeIds);
     this.selectedConnIdsInternal.set(connIds);
@@ -2214,6 +1645,9 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.renderRelationshipsOnly();
   }
 
+  /**
+   * Deselecciona todos los elementos y limpia las guías y transformadores activos.
+   */
   clearSelection(): void {
     this.clearSmartGuides();
     this.selectedNodeIdsInternal.set([]);
@@ -2228,144 +1662,74 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.renderRelationshipsOnly();
   }
 
+  /**
+   * Inicia el modo de edición en línea del nombre de un nodo.
+   *
+   * @param nodeId Identificador del nodo a renombrar.
+   */
   startRenameNode(nodeId: string): void {
     this.renamingNodeId.set(nodeId);
   }
 
+  /**
+   * Obtiene una instantánea del estado actual de zoom y scroll del viewport.
+   *
+   * @returns Estado actual del lienzo DiagramCanvasViewState.
+   */
   getViewState(): DiagramCanvasViewState {
-    const el = this.flowContainerRef?.nativeElement;
-    return {
-      zoom: this.zoomLevel(),
-      scrollLeft: el?.scrollLeft || 0,
-      scrollTop: el?.scrollTop || 0,
-    };
+    return this.viewportManager.getViewState(this.flowContainerRef?.nativeElement);
   }
 
+  /**
+   * Aplica un estado de vista previamente capturado (zoom y scroll).
+   *
+   * @param state Estado de la vista a aplicar.
+   */
   applyViewState(state: DiagramCanvasViewState): void {
-    this.setZoom(state.zoom, false, undefined, false);
-    const el = this.flowContainerRef?.nativeElement;
-    if (el) {
-      requestAnimationFrame(() => {
-        el.scrollLeft = Math.max(0, state.scrollLeft);
-        el.scrollTop = Math.max(0, state.scrollTop);
-      });
-    }
+    this.viewportManager.applyViewState(
+      state,
+      this.flowContainerRef?.nativeElement,
+      () => this.updateStageDimensions()
+    );
   }
 
+  /**
+   * Obtiene la referencia al elemento contenedor exportable.
+   *
+   * @returns Elemento HTML que contiene el tablero exportable.
+   */
   getExportElement(): HTMLElement | undefined {
     return this.boardElementRef?.nativeElement || this.stageContainerRef?.nativeElement;
   }
 
   /**
    * Exporta el contenido vectorial del lienzo Konva a un HTMLCanvasElement optimizado,
-   * calculando el bounding box envolvente de todos los nodos y relaciones en coordenadas absolutas del modelo (escala 1x),
-   * ocultando temporalmente la rejilla, marquesina de selección y transformer,
-   * y renderizando a alta resolución (pixelRatio: 2 por defecto para nitidez Retina).
+   * calculando el bounding box envolvente y renderizando en alta resolución.
+   *
+   * @param pixelRatio Ratio de resolución de píxeles (2 por defecto para nitidez Retina).
+   * @param padding Margen perimetral de seguridad en píxeles.
+   * @returns Elemento HTMLCanvasElement renderizado o null si el diagrama está vacío.
    */
   exportContentCanvas(pixelRatio = 2, padding = 40): HTMLCanvasElement | null {
-    if (!this.stage) return null;
-
-    const validNodes = this.nodes().filter((n) => !n.isAnchor);
-    if (validNodes.length === 0) {
-      return null;
-    }
-
-    // 1. Calcular el bounding box envolvente de todos los nodos y elementos del modelo
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const rawNode of this.nodes()) {
-      const group = this.nodeGroupsMap.get(rawNode.id);
-      const x = group ? group.x() : rawNode.position.x;
-      const y = group ? group.y() : rawNode.position.y;
-      const w = group?.width() || this.getNodeWidth(rawNode) || 200;
-      const h = group?.height() || this.getNodeHeight(rawNode) || 80;
-
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, y + h);
-    }
-
-    // Incorporar relaciones con bounds seguros si existen capas de relación renderizadas
-    if (this.relLayer && this.relLayer.children.length > 0) {
-      try {
-        const relRect = this.relLayer.getClientRect({ skipTransform: true });
-        if (Number.isFinite(relRect.x) && Number.isFinite(relRect.width) && relRect.width > 0 && relRect.width < 50000) {
-          minX = Math.min(minX, relRect.x);
-          minY = Math.min(minY, relRect.y);
-          maxX = Math.max(maxX, relRect.x + relRect.width);
-          maxY = Math.max(maxY, relRect.y + relRect.height);
-        }
-      } catch {
-        // Fallback a coordenadas de nodos
-      }
-    }
-
-    // Margen de seguridad alrededor del diagrama
-    const cropX = Math.floor(minX - padding);
-    const cropY = Math.floor(minY - padding);
-    const cropW = Math.max(120, Math.ceil(maxX - minX + padding * 2));
-    const cropH = Math.max(80, Math.ceil(maxY - minY + padding * 2));
-
-    // 2. Preparar el stage de Konva: aislar de zoom temporal y ocultar UI interactiva
-    const prevScale = { x: this.stage.scaleX(), y: this.stage.scaleY() };
-    const prevPos = { x: this.stage.x(), y: this.stage.y() };
-    const prevGridVisible = this.gridGroup ? this.gridGroup.visible() : true;
-    const prevUiVisible = this.uiLayer ? this.uiLayer.visible() : true;
-    const prevBgColor = this.bgRect ? (this.bgRect.fill() as string) : '#FAF9F5';
-    const prevTransformerNodes = this.transformer ? [...this.transformer.nodes()] : [];
-
-    try {
-      if (this.transformer) {
-        this.transformer.nodes([]);
-      }
-      if (this.uiLayer) {
-        this.uiLayer.visible(false);
-      }
-      if (this.gridGroup) {
-        this.gridGroup.visible(false);
-      }
-      if (this.bgRect) {
-        this.bgRect.fill('#FFFFFF');
-      }
-
-      // Normalizar stage a escala 1x y posición 0,0 para captura matemática exacta
-      this.stage.scale({ x: 1, y: 1 });
-      this.stage.position({ x: 0, y: 0 });
-
-      // Generar el canvas con la API nativa de Konva
-      const contentCanvas = this.stage.toCanvas({
-        x: cropX,
-        y: cropY,
-        width: cropW,
-        height: cropH,
-        pixelRatio,
-      });
-
-      return contentCanvas;
-    } finally {
-      // Restaurar el estado interactivo original del usuario
-      this.stage.scale(prevScale);
-      this.stage.position(prevPos);
-      if (this.gridGroup) {
-        this.gridGroup.visible(prevGridVisible);
-      }
-      if (this.uiLayer) {
-        this.uiLayer.visible(prevUiVisible);
-      }
-      if (this.bgRect) {
-        this.bgRect.fill(prevBgColor);
-      }
-      if (this.transformer && prevTransformerNodes.length > 0) {
-        this.transformer.nodes(prevTransformerNodes);
-      }
-      this.stage.batchDraw();
-    }
+    return this.collabExport.exportContentCanvas({
+      stage: this.stage,
+      nodes: this.nodes(),
+      nodeGroupsMap: this.nodeGroupsMap,
+      relLayer: this.relLayer,
+      uiLayer: this.uiLayer,
+      gridGroup: this.gridGroup,
+      bgRect: this.bgRect,
+      transformer: this.transformer,
+      pixelRatio,
+      padding,
+    });
   }
 
+  /**
+   * Objeto de compatibilidad que expone la API de transformación de coordenadas del lienzo.
+   *
+   * @returns Objeto simulador con escala, reseteo y redibujado.
+   */
   get canvas(): any {
     const self = this;
     return {
@@ -2387,21 +1751,38 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         };
       },
       resetScale: () => this.resetView(),
-      setScale: (scale: number, _origin?: { x: number; y: number }) => {
+      setScale: (scale: number) => {
         this.setZoom(Math.round(scale * 100), false);
       },
       redraw: () => this.redraw(),
     };
   }
 
+  /**
+   * Limpia las líneas magnéticas de la capa UI y solicita actualización visual.
+   */
   clearSmartGuides(): void {
-    if (!this.guideLinesGroup) return;
-    if (this.guideLinesGroup.children.length > 0) {
+    if (this.nodeInteraction) {
+      this.nodeInteraction.clearSmartGuides(this.uiLayer, this.guideLinesGroup);
+      return;
+    }
+    if (this.guideLinesGroup && this.guideLinesGroup.children.length > 0) {
       this.guideLinesGroup.destroyChildren();
       this.uiLayer?.batchDraw();
     }
   }
 
+  /**
+   * Calcula el ajuste magnético con nodos cercanos (umbral 8px) y dibuja las líneas guía visuales.
+   *
+   * @param draggedId Identificador del nodo en movimiento.
+   * @param currentX Posición X actual antes de ajustar.
+   * @param currentY Posición Y actual antes de ajustar.
+   * @param width Ancho del nodo en movimiento.
+   * @param height Alto del nodo en movimiento.
+   * @param ignoredIds Conjunto de IDs de nodos a ignorar durante el cálculo.
+   * @returns Coordenadas { x, y } resultantes con el ajuste magnético aplicado si corresponde.
+   */
   private calculateAndDrawSmartGuides(
     draggedId: string,
     currentX: number,
@@ -2410,231 +1791,140 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     height: number,
     ignoredIds: Set<string>
   ): { x: number; y: number } {
-    if (!this.guideLinesGroup || !this.stage) {
-      return { x: currentX, y: currentY };
-    }
-
-    const SNAP_THRESHOLD = 8;
-    const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
-
-    const dragLeft = currentX;
-    const dragCenterX = currentX + width / 2;
-    const dragRight = currentX + width;
-
-    const dragTop = currentY;
-    const dragCenterY = currentY + height / 2;
-    const dragBottom = currentY + height;
-
-    interface SnapCandidateX {
-      snappedX: number;
-      guideX: number;
-      diff: number;
-      minY: number;
-      maxY: number;
-    }
-
-    interface SnapCandidateY {
-      snappedY: number;
-      guideY: number;
-      diff: number;
-      minX: number;
-      maxX: number;
-    }
-
-    let bestSnapX: SnapCandidateX | null = null;
-    let bestSnapY: SnapCandidateY | null = null;
-
-    const currentNodes = this.nodes();
-    for (const other of currentNodes) {
-      if (other.isAnchor || other.id === draggedId || ignoredIds.has(other.id)) {
-        continue;
-      }
-
-      const g = this.nodeGroupsMap.get(other.id);
-      if (!g || !g.visible()) continue;
-
-      const tX = Math.round(g.x());
-      const tY = Math.round(g.y());
-      const tW = g.width() || getNodeWidth(other);
-      const tH = g.height() || getNodeHeight(other) || 100;
-
-      const targetLeft = tX;
-      const targetCenterX = tX + tW / 2;
-      const targetRight = tX + tW;
-
-      const targetTop = tY;
-      const targetCenterY = tY + tH / 2;
-      const targetBottom = tY + tH;
-
-      // Opciones de alineación magnética en X
-      const xOptions: Array<{ snappedX: number; guideX: number; diff: number }> = [
-        { snappedX: targetLeft, guideX: targetLeft, diff: Math.abs(dragLeft - targetLeft) },
-        { snappedX: targetCenterX, guideX: targetCenterX, diff: Math.abs(dragLeft - targetCenterX) },
-        { snappedX: targetRight, guideX: targetRight, diff: Math.abs(dragLeft - targetRight) },
-        { snappedX: targetCenterX - width / 2, guideX: targetCenterX, diff: Math.abs(dragCenterX - targetCenterX) },
-        { snappedX: targetLeft - width / 2, guideX: targetLeft, diff: Math.abs(dragCenterX - targetLeft) },
-        { snappedX: targetRight - width / 2, guideX: targetRight, diff: Math.abs(dragCenterX - targetRight) },
-        { snappedX: targetRight - width, guideX: targetRight, diff: Math.abs(dragRight - targetRight) },
-        { snappedX: targetCenterX - width, guideX: targetCenterX, diff: Math.abs(dragRight - targetCenterX) },
-        { snappedX: targetLeft - width, guideX: targetLeft, diff: Math.abs(dragRight - targetLeft) },
-      ];
-
-      for (const opt of xOptions) {
-        if (opt.diff <= SNAP_THRESHOLD) {
-          if (!bestSnapX || opt.diff < bestSnapX.diff) {
-            bestSnapX = {
-              snappedX: Math.round(opt.snappedX),
-              guideX: Math.round(opt.guideX),
-              diff: opt.diff,
-              minY: targetTop,
-              maxY: targetBottom,
-            };
-          } else if (bestSnapX && Math.abs(bestSnapX.guideX - Math.round(opt.guideX)) < 1) {
-            bestSnapX.minY = Math.min(bestSnapX.minY, targetTop);
-            bestSnapX.maxY = Math.max(bestSnapX.maxY, targetBottom);
-          }
-        }
-      }
-
-      // Opciones de alineación magnética en Y (no aplica si es secuencia o lifeline)
-      if (!isSequence && other.nodeType !== 'lifeline') {
-        const yOptions: Array<{ snappedY: number; guideY: number; diff: number }> = [
-          { snappedY: targetTop, guideY: targetTop, diff: Math.abs(dragTop - targetTop) },
-          { snappedY: targetCenterY, guideY: targetCenterY, diff: Math.abs(dragTop - targetCenterY) },
-          { snappedY: targetBottom, guideY: targetBottom, diff: Math.abs(dragTop - targetBottom) },
-          { snappedY: targetCenterY - height / 2, guideY: targetCenterY, diff: Math.abs(dragCenterY - targetCenterY) },
-          { snappedY: targetTop - height / 2, guideY: targetTop, diff: Math.abs(dragCenterY - targetTop) },
-          { snappedY: targetBottom - height / 2, guideY: targetBottom, diff: Math.abs(dragCenterY - targetBottom) },
-          { snappedY: targetBottom - height, guideY: targetBottom, diff: Math.abs(dragBottom - targetBottom) },
-          { snappedY: targetCenterY - height, guideY: targetCenterY, diff: Math.abs(dragBottom - targetCenterY) },
-          { snappedY: targetTop - height, guideY: targetTop, diff: Math.abs(dragBottom - targetTop) },
-        ];
-
-        for (const opt of yOptions) {
-          if (opt.diff <= SNAP_THRESHOLD) {
-            if (!bestSnapY || opt.diff < bestSnapY.diff) {
-              bestSnapY = {
-                snappedY: Math.round(opt.snappedY),
-                guideY: Math.round(opt.guideY),
-                diff: opt.diff,
-                minX: targetLeft,
-                maxX: targetRight,
-              };
-            } else if (bestSnapY && Math.abs(bestSnapY.guideY - Math.round(opt.guideY)) < 1) {
-              bestSnapY.minX = Math.min(bestSnapY.minX, targetLeft);
-              bestSnapY.maxX = Math.max(bestSnapY.maxX, targetRight);
-            }
-          }
-        }
-      }
-    }
-
-    const finalX = bestSnapX ? bestSnapX.snappedX : currentX;
-    const finalY = bestSnapY ? bestSnapY.snappedY : currentY;
-
-    // Redibujar guías visuales en uiLayer
-    this.guideLinesGroup.destroyChildren();
-
-    if (bestSnapX) {
-      const minY = Math.min(finalY, bestSnapX.minY) - 30;
-      const maxY = Math.max(finalY + height, bestSnapX.maxY) + 30;
-      const vLine = new Konva.Line({
-        points: [bestSnapX.guideX, minY, bestSnapX.guideX, maxY],
-        stroke: '#0ea5e9',
-        strokeWidth: 1.5,
-        strokeScaleEnabled: false,
-        dash: [5, 4],
-        listening: false,
-        perfectDrawEnabled: false,
-      });
-      this.guideLinesGroup.add(vLine);
-    }
-
-    if (bestSnapY) {
-      const minX = Math.min(finalX, bestSnapY.minX) - 30;
-      const maxX = Math.max(finalX + width, bestSnapY.maxX) + 30;
-      const hLine = new Konva.Line({
-        points: [minX, bestSnapY.guideY, maxX, bestSnapY.guideY],
-        stroke: '#0ea5e9',
-        strokeWidth: 1.5,
-        strokeScaleEnabled: false,
-        dash: [5, 4],
-        listening: false,
-        perfectDrawEnabled: false,
-      });
-      this.guideLinesGroup.add(hLine);
-    }
-
-    this.uiLayer?.batchDraw();
-
-    return { x: finalX, y: finalY };
+    const service = this.nodeInteraction || new CanvasNodeInteractionService();
+    return service.calculateAndDrawSmartGuides({
+      draggedId,
+      currentX,
+      currentY,
+      width,
+      height,
+      ignoredIds,
+      nodes: this.nodes(),
+      nodeGroupsMap: this.nodeGroupsMap,
+      activeDiagramType: this.activeDiagramType(),
+      uiLayer: this.uiLayer,
+      guideLinesGroup: this.guideLinesGroup,
+    });
   }
 
+  /**
+   * Obtiene el ancho nominal de un nodo según sus características y métricas de texto.
+   *
+   * @param node Modelo de datos del nodo.
+   * @returns Ancho calculado en píxeles.
+   */
   getNodeWidth(node: UmlClassNode): number {
     return getNodeWidth(node);
   }
 
+  /**
+   * Obtiene el alto nominal de un nodo según sus características y métricas de texto.
+   *
+   * @param node Modelo de datos del nodo.
+   * @returns Alto calculado en píxeles o null si es dinámico.
+   */
   getNodeHeight(node: UmlClassNode): number | null {
     return getNodeHeight(node);
   }
 
+  /**
+   * Convierte coordenadas de pantalla del cliente (ClientX, ClientY) a coordenadas del lienzo Konva.
+   *
+   * @param clientX Coordenada horizontal del cursor en pantalla.
+   * @param clientY Coordenada vertical del cursor en pantalla.
+   * @returns Coordenadas { x, y } mapeadas al espacio virtual del lienzo.
+   */
   clientToCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } {
-    const container = this.stageContainerRef?.nativeElement;
-    const scale = Math.max(0.2, this.zoomLevel() / 100);
-    if (!container) return { x: clientX, y: clientY };
-    const rect = container.getBoundingClientRect();
-    const x = (clientX - rect.left) / scale;
-    const y = (clientY - rect.top) / scale;
-    return {
-      x: Math.max(10, Math.round(x)),
-      y: Math.max(10, Math.round(y)),
-    };
+    return this.viewportManager.clientToCanvasCoordinates(
+      clientX,
+      clientY,
+      this.stageContainerRef?.nativeElement
+    );
   }
 
-  // Helpers de posición de cursores remotos en pantalla
+  /**
+   * Calcula la posición horizontal en pantalla de un cursor remoto colaborativo.
+   *
+   * @param canvasX Coordenada horizontal del cursor en el lienzo.
+   * @returns Posición en píxeles escalada según el nivel de zoom activo.
+   */
   getCursorScreenX(canvasX: number): number {
-    return Math.round(canvasX * (this.zoomLevel() / 100));
+    return this.viewportManager.getCursorScreenX(canvasX);
   }
 
+  /**
+   * Calcula la posición vertical en pantalla de un cursor remoto colaborativo.
+   *
+   * @param canvasY Coordenada vertical del cursor en el lienzo.
+   * @returns Posición en píxeles escalada según el nivel de zoom activo.
+   */
   getCursorScreenY(canvasY: number): number {
-    return Math.round(canvasY * (this.zoomLevel() / 100));
+    return this.viewportManager.getCursorScreenY(canvasY);
   }
 
+  /**
+   * Obtiene la información de bloqueo concurrencial de un nodo.
+   *
+   * @param nodeId Identificador del nodo a consultar.
+   * @returns Datos del bloqueo NodeLock o null si el nodo está libre.
+   */
   getNodeLock(nodeId: string): NodeLock | null {
-    const locks = this.nodeLocks();
-    if (locks instanceof Map) {
-      return locks.get(nodeId) ?? null;
-    } else if (locks && typeof locks === 'object') {
-      return (locks as Record<string, NodeLock>)[nodeId] ?? null;
-    }
-    return null;
+    return this.collabExport.getNodeLock(nodeId, this.nodeLocks());
   }
 
+  /**
+   * Determina si un nodo se encuentra bloqueado por otro usuario concurrente.
+   *
+   * @param nodeId Identificador del nodo a consultar.
+   * @returns True si el nodo está bloqueado por un usuario distinto al local.
+   */
   isNodeLockedByOther(nodeId: string): boolean {
-    const lock = this.getNodeLock(nodeId);
-    const myId = this.currentUserId();
-    return !!lock && lock.userId !== myId;
+    return this.collabExport.isNodeLockedByOther(nodeId, this.nodeLocks(), this.currentUserId());
   }
 
-  // Manejadores de eventos del contenedor HTML
+  /**
+   * Emite el evento de mousedown sobre el contenedor del lienzo.
+   *
+   * @param event Evento MouseEvent capturado.
+   */
   onCanvasMouseDown(event: MouseEvent): void {
     this.canvasMouseDown.emit(event);
   }
 
+  /**
+   * Emite el evento de mousemove sobre el contenedor del lienzo.
+   *
+   * @param event Evento MouseEvent capturado.
+   */
   onCanvasMouseMove(event: MouseEvent): void {
     this.canvasMouseMove.emit(event);
   }
 
+  /**
+   * Emite el evento de clic sobre el fondo del lienzo.
+   *
+   * @param event Evento MouseEvent capturado opcional.
+   */
   onCanvasBackgroundClick(event?: MouseEvent): void {
     this.canvasBackgroundClick.emit(event);
   }
 
+  /**
+   * Maneja el menú contextual sobre el lienzo y calcula las coordenadas del clic.
+   *
+   * @param event Evento MouseEvent del clic secundario.
+   */
   onCanvasContextMenu(event: MouseEvent): void {
     event.preventDefault();
     const canvasPos = this.clientToCanvasCoordinates(event.clientX, event.clientY);
     this.canvasContextMenu.emit({ event, canvasPos });
   }
 
+  /**
+   * Maneja el evento de arrastre sobre el contenedor desde el Toolbox de componentes.
+   *
+   * @param event Evento DragEvent del navegador.
+   */
   onCanvasDragOver(event: DragEvent): void {
     event.preventDefault();
     if (event.dataTransfer) {
@@ -2643,10 +1933,20 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.isDragOverCanvas.set(true);
   }
 
+  /**
+   * Maneja la salida del puntero durante una operación de arrastre.
+   *
+   * @param event Evento DragEvent del navegador.
+   */
   onCanvasDragLeave(event: DragEvent): void {
     this.isDragOverCanvas.set(false);
   }
 
+  /**
+   * Maneja el soltado (drop) de un nuevo elemento desde el Toolbox y calcula su posición.
+   *
+   * @param event Evento DragEvent con los datos del elemento soltado.
+   */
   onCanvasDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragOverCanvas.set(false);
