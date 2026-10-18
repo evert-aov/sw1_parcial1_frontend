@@ -925,7 +925,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
     requestAnimationFrame(() => {
       this.updateConnectionEndpoints();
-      this.diagramCanvas?.reset();
+      this.diagramCanvas?.clearSelection();
       this.isApplyingHistory = false;
     });
     this.collabCoordinator.sendDiagramSync(
@@ -1012,7 +1012,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.setPointerMode();
     requestAnimationFrame(() => {
       this.updateConnectionEndpoints();
-      this.diagramCanvas?.reset();
+      this.diagramCanvas?.redraw();
     });
   }
 

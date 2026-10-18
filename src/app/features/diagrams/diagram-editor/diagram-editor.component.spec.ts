@@ -377,4 +377,29 @@ describe('DiagramEditorComponent: persistencia de altura en diagramas de desplie
 
     expect(editor.nodes()[0].position).toEqual({ x: 350, y: 280 });
   });
+
+  it('aplica snapshots de historial (undo/redo) preservando el zoom y vista sin llamar a diagramCanvas.reset()', () => {
+    let resetCalled = false;
+    let clearSelectionCalled = false;
+    const mockCanvas = {
+      reset: () => { resetCalled = true; },
+      clearSelection: () => { clearSelectionCalled = true; },
+    };
+    (editor as any).diagramCanvas = mockCanvas;
+    (editor as any).diagramSelectionService = { clearSelection: () => {} };
+    (editor as any).markAsUnsaved = () => {};
+    (editor as any).updateConnectionEndpoints = () => {};
+    (editor as any).diagramCollaborationCoordinatorService = { sendDiagramSync: () => {} };
+    (editor as any).diagramPersistenceService = { triggerAutoSave: () => {} };
+
+    const snapshot = {
+      nodes: [{ id: 'n1', name: 'Test', position: { x: 50, y: 50 }, attributes: [], methods: [] }],
+      connections: [],
+      defaultLineStyle: 'straight' as const,
+    };
+
+    (editor as any).applyHistorySnapshot(snapshot, 'undo');
+
+    expect(resetCalled).toBe(false);
+  });
 });

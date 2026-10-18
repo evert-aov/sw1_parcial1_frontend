@@ -235,6 +235,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   private gridGroup: Konva.Group | null = null;
   private bgRect: Konva.Rect | null = null;
   private previewLineGroup: Konva.Group | null = null;
+  private guideLinesGroup: Konva.Group | null = null;
 
   private nodeGroupsMap = new Map<string, Konva.Group>();
   private readonly konvaRelGroupMap = new Map<string, Konva.Group>();
@@ -379,6 +380,13 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         this.restoreViewportScroll(dId);
       });
     });
+
+    // 7. Sincronizar estado de guías inteligentes
+    effect(() => {
+      if (!this.smartGuidesEnabled()) {
+        this.clearSmartGuides();
+      }
+    });
   }
 
   private computeStructureSignature(): string {
@@ -486,6 +494,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearSmartGuides();
     if (this.onWindowMouseUpHandler && typeof window !== 'undefined') {
       window.removeEventListener('mouseup', this.onWindowMouseUpHandler);
     }
@@ -558,6 +567,9 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
       this.previewLineGroup = new Konva.Group({ listening: false });
       this.uiLayer.add(this.previewLineGroup);
+
+      this.guideLinesGroup = new Konva.Group({ listening: false, name: 'smart-guidelines-group' });
+      this.uiLayer.add(this.guideLinesGroup);
 
       // Transformer para redimensionamiento fluido de nodos
       this.transformer = new Konva.Transformer({
@@ -1670,8 +1682,33 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         group.y(origNode.position ? origNode.position.y : 30);
       }
 
-      const curX = Math.max(10, Math.round(group.x()));
-      const curY = Math.max(10, Math.round(group.y()));
+      let rawX = Math.max(10, Math.round(group.x()));
+      let rawY = Math.max(10, Math.round(group.y()));
+
+      if (this.smartGuidesEnabled()) {
+        const ignoredIds = new Set<string>();
+        ignoredIds.add(origNode.id);
+        if (siblingStartPositions.size > 0) {
+          for (const sId of siblingStartPositions.keys()) {
+            ignoredIds.add(sId);
+          }
+        }
+        const snapped = this.calculateAndDrawSmartGuides(
+          origNode.id,
+          rawX,
+          rawY,
+          group.width() || getNodeWidth(origNode),
+          group.height() || getNodeHeight(origNode) || 100,
+          ignoredIds
+        );
+        rawX = snapped.x;
+        rawY = snapped.y;
+      } else {
+        this.clearSmartGuides();
+      }
+
+      const curX = rawX;
+      const curY = rawY;
       group.x(curX);
       group.y(curY);
       const dx = curX - dragStartPos.x;
@@ -1712,6 +1749,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     });
 
     group.on('dragend', () => {
+      this.clearSmartGuides();
       this.lastLocalMoveTimestamps.set(origNode.id, Date.now());
 
       if (this.activeDiagramType() === DiagramType.SEQUENCE || origNode.nodeType === 'lifeline') {
@@ -2177,6 +2215,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   clearSelection(): void {
+    this.clearSmartGuides();
     this.selectedNodeIdsInternal.set([]);
     this.selectedConnIdsInternal.set([]);
     this.pendingSourceNodeId.set(null);
@@ -2353,6 +2392,182 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       },
       redraw: () => this.redraw(),
     };
+  }
+
+  clearSmartGuides(): void {
+    if (!this.guideLinesGroup) return;
+    if (this.guideLinesGroup.children.length > 0) {
+      this.guideLinesGroup.destroyChildren();
+      this.uiLayer?.batchDraw();
+    }
+  }
+
+  private calculateAndDrawSmartGuides(
+    draggedId: string,
+    currentX: number,
+    currentY: number,
+    width: number,
+    height: number,
+    ignoredIds: Set<string>
+  ): { x: number; y: number } {
+    if (!this.guideLinesGroup || !this.stage) {
+      return { x: currentX, y: currentY };
+    }
+
+    const SNAP_THRESHOLD = 8;
+    const isSequence = this.activeDiagramType() === DiagramType.SEQUENCE;
+
+    const dragLeft = currentX;
+    const dragCenterX = currentX + width / 2;
+    const dragRight = currentX + width;
+
+    const dragTop = currentY;
+    const dragCenterY = currentY + height / 2;
+    const dragBottom = currentY + height;
+
+    interface SnapCandidateX {
+      snappedX: number;
+      guideX: number;
+      diff: number;
+      minY: number;
+      maxY: number;
+    }
+
+    interface SnapCandidateY {
+      snappedY: number;
+      guideY: number;
+      diff: number;
+      minX: number;
+      maxX: number;
+    }
+
+    let bestSnapX: SnapCandidateX | null = null;
+    let bestSnapY: SnapCandidateY | null = null;
+
+    const currentNodes = this.nodes();
+    for (const other of currentNodes) {
+      if (other.isAnchor || other.id === draggedId || ignoredIds.has(other.id)) {
+        continue;
+      }
+
+      const g = this.nodeGroupsMap.get(other.id);
+      if (!g || !g.visible()) continue;
+
+      const tX = Math.round(g.x());
+      const tY = Math.round(g.y());
+      const tW = g.width() || getNodeWidth(other);
+      const tH = g.height() || getNodeHeight(other) || 100;
+
+      const targetLeft = tX;
+      const targetCenterX = tX + tW / 2;
+      const targetRight = tX + tW;
+
+      const targetTop = tY;
+      const targetCenterY = tY + tH / 2;
+      const targetBottom = tY + tH;
+
+      // Opciones de alineación magnética en X
+      const xOptions: Array<{ snappedX: number; guideX: number; diff: number }> = [
+        { snappedX: targetLeft, guideX: targetLeft, diff: Math.abs(dragLeft - targetLeft) },
+        { snappedX: targetCenterX, guideX: targetCenterX, diff: Math.abs(dragLeft - targetCenterX) },
+        { snappedX: targetRight, guideX: targetRight, diff: Math.abs(dragLeft - targetRight) },
+        { snappedX: targetCenterX - width / 2, guideX: targetCenterX, diff: Math.abs(dragCenterX - targetCenterX) },
+        { snappedX: targetLeft - width / 2, guideX: targetLeft, diff: Math.abs(dragCenterX - targetLeft) },
+        { snappedX: targetRight - width / 2, guideX: targetRight, diff: Math.abs(dragCenterX - targetRight) },
+        { snappedX: targetRight - width, guideX: targetRight, diff: Math.abs(dragRight - targetRight) },
+        { snappedX: targetCenterX - width, guideX: targetCenterX, diff: Math.abs(dragRight - targetCenterX) },
+        { snappedX: targetLeft - width, guideX: targetLeft, diff: Math.abs(dragRight - targetLeft) },
+      ];
+
+      for (const opt of xOptions) {
+        if (opt.diff <= SNAP_THRESHOLD) {
+          if (!bestSnapX || opt.diff < bestSnapX.diff) {
+            bestSnapX = {
+              snappedX: Math.round(opt.snappedX),
+              guideX: Math.round(opt.guideX),
+              diff: opt.diff,
+              minY: targetTop,
+              maxY: targetBottom,
+            };
+          } else if (bestSnapX && Math.abs(bestSnapX.guideX - Math.round(opt.guideX)) < 1) {
+            bestSnapX.minY = Math.min(bestSnapX.minY, targetTop);
+            bestSnapX.maxY = Math.max(bestSnapX.maxY, targetBottom);
+          }
+        }
+      }
+
+      // Opciones de alineación magnética en Y (no aplica si es secuencia o lifeline)
+      if (!isSequence && other.nodeType !== 'lifeline') {
+        const yOptions: Array<{ snappedY: number; guideY: number; diff: number }> = [
+          { snappedY: targetTop, guideY: targetTop, diff: Math.abs(dragTop - targetTop) },
+          { snappedY: targetCenterY, guideY: targetCenterY, diff: Math.abs(dragTop - targetCenterY) },
+          { snappedY: targetBottom, guideY: targetBottom, diff: Math.abs(dragTop - targetBottom) },
+          { snappedY: targetCenterY - height / 2, guideY: targetCenterY, diff: Math.abs(dragCenterY - targetCenterY) },
+          { snappedY: targetTop - height / 2, guideY: targetTop, diff: Math.abs(dragCenterY - targetTop) },
+          { snappedY: targetBottom - height / 2, guideY: targetBottom, diff: Math.abs(dragCenterY - targetBottom) },
+          { snappedY: targetBottom - height, guideY: targetBottom, diff: Math.abs(dragBottom - targetBottom) },
+          { snappedY: targetCenterY - height, guideY: targetCenterY, diff: Math.abs(dragBottom - targetCenterY) },
+          { snappedY: targetTop - height, guideY: targetTop, diff: Math.abs(dragBottom - targetTop) },
+        ];
+
+        for (const opt of yOptions) {
+          if (opt.diff <= SNAP_THRESHOLD) {
+            if (!bestSnapY || opt.diff < bestSnapY.diff) {
+              bestSnapY = {
+                snappedY: Math.round(opt.snappedY),
+                guideY: Math.round(opt.guideY),
+                diff: opt.diff,
+                minX: targetLeft,
+                maxX: targetRight,
+              };
+            } else if (bestSnapY && Math.abs(bestSnapY.guideY - Math.round(opt.guideY)) < 1) {
+              bestSnapY.minX = Math.min(bestSnapY.minX, targetLeft);
+              bestSnapY.maxX = Math.max(bestSnapY.maxX, targetRight);
+            }
+          }
+        }
+      }
+    }
+
+    const finalX = bestSnapX ? bestSnapX.snappedX : currentX;
+    const finalY = bestSnapY ? bestSnapY.snappedY : currentY;
+
+    // Redibujar guías visuales en uiLayer
+    this.guideLinesGroup.destroyChildren();
+
+    if (bestSnapX) {
+      const minY = Math.min(finalY, bestSnapX.minY) - 30;
+      const maxY = Math.max(finalY + height, bestSnapX.maxY) + 30;
+      const vLine = new Konva.Line({
+        points: [bestSnapX.guideX, minY, bestSnapX.guideX, maxY],
+        stroke: '#0ea5e9',
+        strokeWidth: 1.5,
+        strokeScaleEnabled: false,
+        dash: [5, 4],
+        listening: false,
+        perfectDrawEnabled: false,
+      });
+      this.guideLinesGroup.add(vLine);
+    }
+
+    if (bestSnapY) {
+      const minX = Math.min(finalX, bestSnapY.minX) - 30;
+      const maxX = Math.max(finalX + width, bestSnapY.maxX) + 30;
+      const hLine = new Konva.Line({
+        points: [minX, bestSnapY.guideY, maxX, bestSnapY.guideY],
+        stroke: '#0ea5e9',
+        strokeWidth: 1.5,
+        strokeScaleEnabled: false,
+        dash: [5, 4],
+        listening: false,
+        perfectDrawEnabled: false,
+      });
+      this.guideLinesGroup.add(hLine);
+    }
+
+    this.uiLayer?.batchDraw();
+
+    return { x: finalX, y: finalY };
   }
 
   getNodeWidth(node: UmlClassNode): number {
