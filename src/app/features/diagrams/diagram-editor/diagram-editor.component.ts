@@ -9,6 +9,7 @@ import {
   inject,
   computed,
 } from '@angular/core';
+import type { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -47,7 +48,10 @@ import {
 import { environment } from '../../../../environments/environment';
 import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
 import { DiagramSidebarComponent } from './components/diagram-sidebar/diagram-sidebar.component';
-import { DiagramCanvasComponent, DiagramCanvasViewState } from './components/diagram-canvas/diagram-canvas.component';
+import {
+  DiagramCanvasComponent,
+  DiagramCanvasViewState,
+} from './components/diagram-canvas/diagram-canvas.component';
 import { DiagramStatusbarComponent } from './components/diagram-statusbar/diagram-statusbar.component';
 import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
@@ -57,19 +61,31 @@ import { EditConnectionModalComponent } from './components/edit-connection-modal
 import { JsonModalComponent } from './components/json-modal/json-modal.component';
 import { CreateDiagramModalComponent } from './components/create-diagram-modal/create-diagram-modal.component';
 import { DiagramTabsComponent, DiagramTab } from './components/diagram-tabs/diagram-tabs.component';
-import { DiagramContextMenuComponent, DiagramContextMenuState } from './components/diagram-context-menu/diagram-context-menu.component';
+import {
+  DiagramContextMenuComponent,
+  DiagramContextMenuState,
+} from './components/diagram-context-menu/diagram-context-menu.component';
 import { DiagramHistoryService, DiagramHistorySnapshot } from './services/diagram-history.service';
 import { DiagramClipboardService } from './services/diagram-clipboard.service';
 import { DiagramAlignmentService } from './services/diagram-alignment.service';
 import { DiagramNodeFactoryService } from './services/diagram-node-factory.service';
-import { DiagramNodeOperationsService, DropNodePayload } from './services/diagram-node-operations.service';
+import {
+  DiagramNodeOperationsService,
+  DropNodePayload,
+} from './services/diagram-node-operations.service';
 import { DiagramExportService } from './services/diagram-export.service';
 import { DiagramImportService, DiagramImportResult } from './services/diagram-import.service';
 import { DiagramConnectionLayoutService } from './services/diagram-connection-layout.service';
 import { DiagramConnectionOperationsService } from './services/diagram-connection-operations.service';
 import { DiagramSelectionService } from './services/diagram-selection.service';
 import { DiagramTabManagerService } from './services/diagram-tab-manager.service';
-import { DiagramAiSyncService, PREDEFINED_DATA_TYPES, PREDEFINED_RETURN_TYPES } from './services/diagram-ai-sync.service';
+import {
+  AiRawConnection,
+  AiRawNode,
+  DiagramAiSyncService,
+  PREDEFINED_DATA_TYPES,
+  PREDEFINED_RETURN_TYPES,
+} from './services/diagram-ai-sync.service';
 import { DiagramHotkeysService } from './services/diagram-hotkeys.service';
 import { DiagramViewportService } from './services/diagram-viewport.service';
 import { DiagramModalService } from './services/diagram-modal.service';
@@ -127,7 +143,8 @@ export type { DiagramHistorySnapshot, DiagramTab, DiagramContextMenuState };
     DiagramContextMenuComponent,
     TranslatePipe,
   ],
-  providers: [provideIcons(DIAGRAM_EDITOR_ICONS)],
+  // El historial se acota a cada instancia del editor para que undo/redo nunca cruce de pestaña.
+  providers: [provideIcons(DIAGRAM_EDITOR_ICONS), DiagramHistoryService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './diagram-editor.component.html',
   styleUrl: './diagram-editor.component.css',
@@ -147,53 +164,94 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly toastService = inject(ToastService);
   readonly diagramHistoryService = inject(DiagramHistoryService);
   readonly diagramClipboardService = inject(DiagramClipboardService);
-  readonly diagramNodeFactoryService = inject(DiagramNodeFactoryService, { optional: true }) ?? new DiagramNodeFactoryService();
-  readonly diagramNodeOperationsService = inject(DiagramNodeOperationsService, { optional: true }) ?? new DiagramNodeOperationsService();
-  readonly diagramExportService = inject(DiagramExportService, { optional: true }) ?? new DiagramExportService();
-  readonly diagramAlignmentService = inject(DiagramAlignmentService, { optional: true }) ?? new DiagramAlignmentService();
-  readonly diagramConnectionLayoutService = inject(DiagramConnectionLayoutService, { optional: true }) ?? new DiagramConnectionLayoutService();
-  readonly diagramConnectionOperationsService = inject(DiagramConnectionOperationsService, { optional: true }) ?? new DiagramConnectionOperationsService();
-  readonly diagramSelectionService = inject(DiagramSelectionService, { optional: true }) ?? new DiagramSelectionService();
-  readonly diagramTabManagerService = inject(DiagramTabManagerService, { optional: true }) ?? new DiagramTabManagerService();
-  readonly diagramAiSyncService = inject(DiagramAiSyncService, { optional: true }) ?? new DiagramAiSyncService();
-  readonly diagramImportService = inject(DiagramImportService, { optional: true }) ?? new DiagramImportService();
-  readonly diagramHotkeysService = inject(DiagramHotkeysService, { optional: true }) ?? new DiagramHotkeysService();
-  readonly diagramViewportService = inject(DiagramViewportService, { optional: true }) ?? new DiagramViewportService();
-  readonly diagramModalService = inject(DiagramModalService, { optional: true }) ?? new DiagramModalService();
-  readonly diagramPersistenceService = inject(DiagramPersistenceService, { optional: true }) ?? new DiagramPersistenceService();
-  readonly diagramContainmentService = inject(DiagramContainmentService, { optional: true }) ?? new DiagramContainmentService();
-  readonly diagramCanvasInteractionService = inject(DiagramCanvasInteractionService, { optional: true }) ?? new DiagramCanvasInteractionService(this.containmentService);
-  readonly diagramCollaborationCoordinatorService = inject(DiagramCollaborationCoordinatorService, { optional: true }) ?? new DiagramCollaborationCoordinatorService();
-  readonly diagramContextMenuService = inject(DiagramContextMenuService, { optional: true }) ?? new DiagramContextMenuService(this.selectionService);
-  readonly diagramToolbarService = inject(DiagramToolbarService, { optional: true }) ?? new DiagramToolbarService(
-    this.alignmentService,
-    this.selectionService,
-    this.nodeOps,
-  );
+  readonly diagramNodeFactoryService = inject(DiagramNodeFactoryService);
+  readonly diagramNodeOperationsService = inject(DiagramNodeOperationsService);
+  readonly diagramExportService = inject(DiagramExportService);
+  readonly diagramAlignmentService = inject(DiagramAlignmentService);
+  readonly diagramConnectionLayoutService = inject(DiagramConnectionLayoutService);
+  readonly diagramConnectionOperationsService = inject(DiagramConnectionOperationsService);
+  readonly diagramSelectionService = inject(DiagramSelectionService);
+  readonly diagramTabManagerService = inject(DiagramTabManagerService);
+  readonly diagramAiSyncService = inject(DiagramAiSyncService);
+  readonly diagramImportService = inject(DiagramImportService);
+  readonly diagramHotkeysService = inject(DiagramHotkeysService);
+  readonly diagramViewportService = inject(DiagramViewportService);
+  readonly diagramModalService = inject(DiagramModalService);
+  readonly diagramPersistenceService = inject(DiagramPersistenceService);
+  readonly diagramContainmentService = inject(DiagramContainmentService);
+  readonly diagramCanvasInteractionService = inject(DiagramCanvasInteractionService);
+  readonly diagramCollaborationCoordinatorService = inject(DiagramCollaborationCoordinatorService);
+  readonly diagramContextMenuService = inject(DiagramContextMenuService);
+  readonly diagramToolbarService = inject(DiagramToolbarService);
 
-  private get nodeFactory(): DiagramNodeFactoryService { return this.diagramNodeFactoryService || new DiagramNodeFactoryService(); }
-  private get nodeOps(): DiagramNodeOperationsService { return this.diagramNodeOperationsService || new DiagramNodeOperationsService(this.nodeFactory); }
-  private get exportService(): DiagramExportService { return this.diagramExportService || new DiagramExportService(); }
-  private get importService(): DiagramImportService { return this.diagramImportService || new DiagramImportService(); }
-  private get alignmentService(): DiagramAlignmentService { return this.diagramAlignmentService || new DiagramAlignmentService(); }
-  private get connectionLayoutService(): DiagramConnectionLayoutService { return this.diagramConnectionLayoutService || new DiagramConnectionLayoutService(); }
-  private get connectionOps(): DiagramConnectionOperationsService { return this.diagramConnectionOperationsService || new DiagramConnectionOperationsService(this.connectionLayoutService); }
-  private get selectionService(): DiagramSelectionService { return this.diagramSelectionService || new DiagramSelectionService(); }
-  private get tabManager(): DiagramTabManagerService { return this.diagramTabManagerService || new DiagramTabManagerService(); }
-  private get aiSyncService(): DiagramAiSyncService { return this.diagramAiSyncService || new DiagramAiSyncService(); }
-  private get hotkeysService(): DiagramHotkeysService { return this.diagramHotkeysService || new DiagramHotkeysService(); }
-  private get viewportService(): DiagramViewportService { return this.diagramViewportService || new DiagramViewportService(); }
-  private get modalService(): DiagramModalService { return this.diagramModalService || new DiagramModalService(); }
-  private get persistenceService(): DiagramPersistenceService { return this.diagramPersistenceService || new DiagramPersistenceService(); }
-  private get containmentService(): DiagramContainmentService { return this.diagramContainmentService || new DiagramContainmentService(); }
-  private get interactionService(): DiagramCanvasInteractionService { return this.diagramCanvasInteractionService || new DiagramCanvasInteractionService(this.containmentService); }
-  private get collabCoordinator(): DiagramCollaborationCoordinatorService { return this.diagramCollaborationCoordinatorService || new DiagramCollaborationCoordinatorService(); }
-  private get contextMenuService(): DiagramContextMenuService { return this.diagramContextMenuService || new DiagramContextMenuService(this.selectionService); }
+  // Seam de testabilidad: si los colaboradores no fueron resueltos por DI
+  // (p. ej. instanciación directa en specs), se aprovisiona una instancia local.
+  private get nodeFactory(): DiagramNodeFactoryService {
+    return this.diagramNodeFactoryService || new DiagramNodeFactoryService();
+  }
+  private get nodeOps(): DiagramNodeOperationsService {
+    return this.diagramNodeOperationsService || new DiagramNodeOperationsService(this.nodeFactory);
+  }
+  private get exportService(): DiagramExportService {
+    return this.diagramExportService || new DiagramExportService();
+  }
+  private get importService(): DiagramImportService {
+    return this.diagramImportService || new DiagramImportService();
+  }
+  private get alignmentService(): DiagramAlignmentService {
+    return this.diagramAlignmentService || new DiagramAlignmentService();
+  }
+  private get connectionLayoutService(): DiagramConnectionLayoutService {
+    return this.diagramConnectionLayoutService || new DiagramConnectionLayoutService();
+  }
+  private get connectionOps(): DiagramConnectionOperationsService {
+    return (
+      this.diagramConnectionOperationsService ||
+      new DiagramConnectionOperationsService(this.connectionLayoutService)
+    );
+  }
+  private get selectionService(): DiagramSelectionService {
+    return this.diagramSelectionService || new DiagramSelectionService();
+  }
+  private get tabManager(): DiagramTabManagerService {
+    return this.diagramTabManagerService || new DiagramTabManagerService();
+  }
+  private get aiSyncService(): DiagramAiSyncService {
+    return this.diagramAiSyncService || new DiagramAiSyncService();
+  }
+  private get hotkeysService(): DiagramHotkeysService {
+    return this.diagramHotkeysService || new DiagramHotkeysService();
+  }
+  private get viewportService(): DiagramViewportService {
+    return this.diagramViewportService || new DiagramViewportService();
+  }
+  private get modalService(): DiagramModalService {
+    return this.diagramModalService || new DiagramModalService();
+  }
+  private get persistenceService(): DiagramPersistenceService {
+    return this.diagramPersistenceService || new DiagramPersistenceService();
+  }
+  private get containmentService(): DiagramContainmentService {
+    return this.diagramContainmentService || new DiagramContainmentService();
+  }
+  private get interactionService(): DiagramCanvasInteractionService {
+    return (
+      this.diagramCanvasInteractionService ||
+      new DiagramCanvasInteractionService(this.containmentService)
+    );
+  }
+  private get collabCoordinator(): DiagramCollaborationCoordinatorService {
+    return (
+      this.diagramCollaborationCoordinatorService || new DiagramCollaborationCoordinatorService()
+    );
+  }
+  private get contextMenuService(): DiagramContextMenuService {
+    return this.diagramContextMenuService || new DiagramContextMenuService(this.selectionService);
+  }
   private get toolbarService(): DiagramToolbarService {
-    return this.diagramToolbarService || new DiagramToolbarService(
-      this.alignmentService,
-      this.selectionService,
-      this.nodeOps,
+    return (
+      this.diagramToolbarService ||
+      new DiagramToolbarService(this.alignmentService, this.selectionService, this.nodeOps)
     );
   }
 
@@ -279,18 +337,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   // Marcar cambios pendientes y actualizar borrador local
   markAsUnsaved(): void {
-    this.persistenceService.markAsUnsaved(
-      this.isReadOnly(),
-      this.currentDiagramId(),
-      {
-        nodes: this.nodes(),
-        connections: this.connections(),
-        defaultLineStyle: this.defaultLineStyle(),
-      },
-    );
+    this.persistenceService.markAsUnsaved(this.isReadOnly(), this.currentDiagramId(), {
+      nodes: this.nodes(),
+      connections: this.connections(),
+      defaultLineStyle: this.defaultLineStyle(),
+    });
   }
 
-  private clearLocalDraft(diagramId: string): void { this.persistenceService.clearLocalDraft(diagramId); }
+  private clearLocalDraft(diagramId: string): void {
+    this.persistenceService.clearLocalDraft(diagramId);
+  }
 
   // Rol del usuario actual en el proyecto
   currentUserRole = signal<string>('EDITOR');
@@ -319,12 +375,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   });
   defaultLineStyle = signal<UmlLineStyle>('segment');
   mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
-  get smartGuidesEnabled() { return this.toolbarService.smartGuidesEnabled; }
-  get showGrid() { return this.toolbarService.showGrid; }
+  get smartGuidesEnabled() {
+    return this.toolbarService.smartGuidesEnabled;
+  }
+  get showGrid() {
+    return this.toolbarService.showGrid;
+  }
 
   private isApplyingHistory = false;
-  get hasMovedDuringPointerDown(): boolean { return this.interactionService.hasMovedDuringPointerDown; }
-  set hasMovedDuringPointerDown(val: boolean) { this.interactionService.hasMovedDuringPointerDown = val; }
+  get hasMovedDuringPointerDown(): boolean {
+    return this.interactionService.hasMovedDuringPointerDown;
+  }
+  set hasMovedDuringPointerDown(val: boolean) {
+    this.interactionService.hasMovedDuringPointerDown = val;
+  }
 
   historyUndoCount = computed(() => this.diagramHistoryService.undoCount());
   historyRedoCount = computed(() => this.diagramHistoryService.redoCount());
@@ -386,8 +450,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.updateConnectionEndpoints();
   }
 
+  /** Suscripciones de colaboración; se liberan en `ngOnDestroy` para evitar fugas. */
+  private collabSubscriptions: Subscription[] = [];
+
+  /** Ventana (ms) tras una sincronización remota durante la cual se bloquean undo/redo (§5-A). */
+  private static readonly REMOTE_SYNC_UNDO_GUARD_MS = 300;
+  private lastRemoteSyncAt = 0;
+
+  private isRemoteSyncInProgress(): boolean {
+    return Date.now() - this.lastRemoteSyncAt < DiagramEditorComponent.REMOTE_SYNC_UNDO_GUARD_MS;
+  }
+
   private initCollaborationSubscriptions(): void {
-    this.collabCoordinator.setupSubscriptions({
+    this.collabSubscriptions.forEach((s) => s.unsubscribe());
+    this.collabSubscriptions = this.collabCoordinator.setupSubscriptions({
       onRemoteNodeDrag: (data) => {
         this.nodes.update((list) =>
           list.map((n) => (n.id === data.nodeId ? { ...n, position: data.position } : n)),
@@ -407,7 +483,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  private applyRemoteDiagramSync(data: { action: string; nodes?: UmlClassNode[]; connections?: UmlConnection[] }): void {
+  private applyRemoteDiagramSync(data: {
+    action: string;
+    nodes?: UmlClassNode[];
+    connections?: UmlConnection[];
+  }): void {
+    this.lastRemoteSyncAt = Date.now();
     if (data.action === 'ai_mutation' && data.nodes) {
       this.applyAiMutationWithAnimation(data.nodes, data.connections || []);
     } else if (data.nodes) {
@@ -422,11 +503,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private handleNodeLockRejected(data: { nodeId: string; lockedBy: { userId: string; userName: string } }): void {
+  private handleNodeLockRejected(data: {
+    nodeId: string;
+    lockedBy: { userId: string; userName: string };
+  }): void {
     if (this.editingNode()?.id === data.nodeId) {
       this.isEditNodeModalOpen.set(false);
       this.editingNode.set(null);
-      this.toastService.warning(`La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
+      this.toastService.warning(
+        `La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`,
+      );
     }
   }
 
@@ -483,6 +569,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.collabSubscriptions.forEach((s) => s.unsubscribe());
+    this.collabSubscriptions = [];
+    this.aiRedrawAbort?.abort();
+    this.aiRedrawAbort = undefined;
     if (this.editingNode()) {
       this.collabCoordinator.releaseNodeLock(this.editingNode()!.id);
     }
@@ -529,7 +619,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
         this.syncProjectInfo(diagram.projectId);
 
         this.hasUnsavedChanges.set(false);
-        this.viewportService.restoreCanvasViewState(this.diagramCanvas, diagramId, () => this.updateConnectionEndpoints());
+        this.viewportService.restoreCanvasViewState(this.diagramCanvas, diagramId, () =>
+          this.updateConnectionEndpoints(),
+        );
       },
     });
   }
@@ -545,7 +637,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  isNodeLockedByOther(nodeId: string): boolean { return this.collabCoordinator.isNodeLockedByOther(nodeId, this.authService.currentUser()?.id); }
+  isNodeLockedByOther(nodeId: string): boolean {
+    return this.collabCoordinator.isNodeLockedByOther(nodeId, this.authService.currentUser()?.id);
+  }
 
   @HostListener('window:pagehide')
   onPageHide(): void {
@@ -582,8 +676,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  @HostListener('window:mousedown') onWindowMouseDown(): void { this.interactionService.handleWindowMouseDown(); }
-  @HostListener('window:mouseup') onWindowMouseUp(): void { this.interactionService.handleWindowMouseUp(); }
+  @HostListener('window:mousedown') onWindowMouseDown(): void {
+    this.interactionService.handleWindowMouseDown();
+  }
+  @HostListener('window:mouseup') onWindowMouseUp(): void {
+    this.interactionService.handleWindowMouseUp();
+  }
 
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent): void {
@@ -632,9 +730,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       this.connections(),
       (n: UmlClassNode) => this.getNodeWidth(n),
       (n: UmlClassNode) => this.getNodeHeight(n),
-      (nodeType?: string | null, stereotype?: string | null) => this.getDefaultColorForNodeType(nodeType, stereotype),
+      (nodeType?: string | null, stereotype?: string | null) =>
+        this.getDefaultColorForNodeType(nodeType, stereotype),
       (m: any, defaultSeq?: string) => this.normalizeUmlMessage(m, defaultSeq),
-      (conns: UmlConnection[], preserveOrder?: boolean) => this.recalculateSequenceNumbers(conns, preserveOrder),
+      (conns: UmlConnection[], preserveOrder?: boolean) =>
+        this.recalculateSequenceNumbers(conns, preserveOrder),
     );
   }
 
@@ -650,7 +750,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       diagramId,
       this.buildSaveAstPayload(),
       silent,
-      () => this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'save', this.defaultLineStyle()),
+      () =>
+        this.collabCoordinator.sendDiagramSync(
+          this.nodes(),
+          this.connections(),
+          'save',
+          this.defaultLineStyle(),
+        ),
     );
   }
 
@@ -691,7 +797,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     // Actualización inmutable reactiva de las posiciones en el signal de nodos
     this.nodes.update((currentNodes) =>
-      currentNodes.map((n) => (n.id === node.id ? { ...n, position: { ...newPosition } } : { ...n, position: { ...n.position } })),
+      currentNodes.map((n) =>
+        n.id === node.id
+          ? { ...n, position: { ...newPosition } }
+          : { ...n, position: { ...n.position } },
+      ),
     );
 
     if (shouldRedraw) this.diagramCanvas?.redraw();
@@ -738,11 +848,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (coords) this.mouseCanvasPos.set(coords);
   }
 
-  getDynamicNodeWidth(node: UmlClassNode): number { return getDynamicNodeWidth(node); }
-  getNodeWidth(node: UmlClassNode): number { return getNodeWidth(node); }
-  getNodeHeight(node: UmlClassNode): number { return getNodeHeight(node); }
+  getDynamicNodeWidth(node: UmlClassNode): number {
+    return getDynamicNodeWidth(node);
+  }
+  getNodeWidth(node: UmlClassNode): number {
+    return getNodeWidth(node);
+  }
+  getNodeHeight(node: UmlClassNode): number {
+    return getNodeHeight(node);
+  }
 
-  onNodeSizeChanged(event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }): void {
+  onNodeSizeChanged(event: {
+    node: UmlClassNode;
+    width: number;
+    height?: number;
+    position: { x: number; y: number };
+  }): void {
     if (this.isReadOnly() || this.isNodeLockedByOther(event.node.id)) return;
     this.commitDiagramMutation({
       nodes: this.nodeOps.updateNodeSize(this.nodes(), event),
@@ -769,7 +890,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       updateConnectionEndpoints: () => this.updateConnectionEndpoints(),
       redrawCanvas: () => this.diagramCanvas?.redraw(),
       sendNodeDrag: (id, pos) => this.collabCoordinator.sendNodeDrag(id, pos),
-      sendDiagramSync: (nodes, conns, act, style) => this.collabCoordinator.sendDiagramSync(nodes, conns, act, style),
+      sendDiagramSync: (nodes, conns, act, style) =>
+        this.collabCoordinator.sendDiagramSync(nodes, conns, act, style),
     });
   }
 
@@ -809,8 +931,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
   }
 
-  getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
-    return this.connectionLayoutService.getOptimalConnectorId(sourceNode, targetNode, (n) => this.getNodeWidth(n), (n) => this.getNodeHeight(n));
+  getOptimalConnectorId(
+    sourceNode: UmlClassNode,
+    targetNode: UmlClassNode,
+  ): { sourceId: string; targetId: string } {
+    return this.connectionLayoutService.getOptimalConnectorId(
+      sourceNode,
+      targetNode,
+      (n) => this.getNodeWidth(n),
+      (n) => this.getNodeHeight(n),
+    );
   }
 
   getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
@@ -846,11 +976,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   onSelectionChange(event: DiagramSelectionChangeEvent): void {
-    this.selectionService.onSelectionChange(event, this.nodes(), this.connections(), this.selectedRelationType());
+    this.selectionService.onSelectionChange(
+      event,
+      this.nodes(),
+      this.connections(),
+      this.selectedRelationType(),
+    );
   }
 
   selectAllClasses(): void {
-    this.selectionService.selectAllClasses(this.nodes(), this.selectedRelationType(), (allIds) => this.diagramCanvas?.select(allIds, []));
+    this.selectionService.selectAllClasses(this.nodes(), this.selectedRelationType(), (allIds) =>
+      this.diagramCanvas?.select(allIds, []),
+    );
   }
 
   deleteSelected(): void {
@@ -865,11 +1002,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     let currentConns = this.connections();
 
     if (nodeIds.length > 0) {
-      const res = this.nodeOps.executeCascadeDeleteNodes(
-        nodeIds,
-        currentNodes,
-        currentConns,
-        (c) => this.recalculateSequenceNumbers(c),
+      const res = this.nodeOps.executeCascadeDeleteNodes(nodeIds, currentNodes, currentConns, (c) =>
+        this.recalculateSequenceNumbers(c),
       );
       currentNodes = res.remainingNodes;
       currentConns = res.remainingConnections;
@@ -877,7 +1011,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     if (connIds.length > 0) {
       const connSet = new Set(connIds);
-      currentConns = this.recalculateSequenceNumbers(currentConns.filter((c) => !connSet.has(c.id)));
+      currentConns = this.recalculateSequenceNumbers(
+        currentConns.filter((c) => !connSet.has(c.id)),
+      );
     }
 
     this.commitDiagramMutation({
@@ -892,7 +1028,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   onConnectionSelect(connId: string, event: MouseEvent): void {
     if (this.contextMenu()) this.closeContextMenu();
-    this.selectionService.onConnectionSelect(connId, event, this.selectedRelationType(), (n, c) => this.diagramCanvas?.select(n, c));
+    this.selectionService.onConnectionSelect(connId, event, this.selectedRelationType(), (n, c) =>
+      this.diagramCanvas?.select(n, c),
+    );
   }
 
   onNodeSelect(nodeId: string, event: MouseEvent): void {
@@ -908,7 +1046,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   private cloneSnapshot(): DiagramHistorySnapshot {
-    return this.diagramHistoryService.cloneSnapshot(this.nodes(), this.connections(), this.defaultLineStyle());
+    return this.diagramHistoryService.cloneSnapshot(
+      this.nodes(),
+      this.connections(),
+      this.defaultLineStyle(),
+    );
   }
 
   pushSnapshot(): void {
@@ -938,18 +1080,18 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   undo(): void {
-    if (this.isReadOnly() || !this.diagramHistoryService.canUndo()) return;
+    if (this.isReadOnly() || this.isRemoteSyncInProgress() || !this.diagramHistoryService.canUndo())
+      return;
     const prev = this.diagramHistoryService.undo(this.cloneSnapshot());
     if (prev) this.applyHistorySnapshot(prev, 'undo');
   }
 
   redo(): void {
-    if (this.isReadOnly() || !this.diagramHistoryService.canRedo()) return;
+    if (this.isReadOnly() || this.isRemoteSyncInProgress() || !this.diagramHistoryService.canRedo())
+      return;
     const next = this.diagramHistoryService.redo(this.cloneSnapshot());
     if (next) this.applyHistorySnapshot(next, 'redo');
   }
-
-
 
   private generateNextSequenceMessage(
     sourceNode?: UmlClassNode,
@@ -1003,7 +1145,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private applyCreatedAssociationClass(result: { nodes: UmlClassNode[]; connections: UmlConnection[] }): void {
+  private applyCreatedAssociationClass(result: {
+    nodes: UmlClassNode[];
+    connections: UmlConnection[];
+  }): void {
     this.commitDiagramMutation({
       nodes: result.nodes,
       connections: result.connections,
@@ -1031,7 +1176,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       nodes: this.nodes(),
       connections: this.connections(),
       isNodeLockedByOther: (id) => this.isNodeLockedByOther(id),
-      generateNextSequenceMessage: (src, tgt, isReturn) => this.generateNextSequenceMessage(src, tgt, isReturn),
+      generateNextSequenceMessage: (src, tgt, isReturn) =>
+        this.generateNextSequenceMessage(src, tgt, isReturn),
       onApplyNewConnection: (newConn, isSeqRel) => this.applyNewConnection(newConn, isSeqRel),
       onApplyAssocClass: (res) => this.applyCreatedAssociationClass(res),
     });
@@ -1104,18 +1250,42 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.commitNewNode(newNode, autoRename);
   }
 
-  addClass(pos?: { x: number; y: number }, stereotype?: UmlStereotype | string | null): void { this.addValidatedNode('class', pos, true, stereotype); }
-  addComponent(pos?: { x: number; y: number }): void { this.addValidatedNode('component', pos); }
-  addDevice(pos?: { x: number; y: number }): void { this.addValidatedNode('device', pos); }
-  addExecutionEnvironment(pos?: { x: number; y: number }): void { this.addValidatedNode('executionEnvironment', pos); }
-  addBoundaryBox(pos?: { x: number; y: number }): void { this.addValidatedNode('boundary_box', pos, false); }
-  addActor(pos?: { x: number; y: number }): void { this.addValidatedNode('actor', pos); }
-  addUseCase(pos?: { x: number; y: number }): void { this.addValidatedNode('use_case', pos); }
-  addPackage(pos?: { x: number; y: number }): void { this.addValidatedNode('package', pos); }
-  addBoundary(pos?: { x: number; y: number }): void { this.addValidatedNode('boundary', pos); }
-  addControl(pos?: { x: number; y: number }): void { this.addValidatedNode('control', pos); }
-  addEntity(pos?: { x: number; y: number }): void { this.addValidatedNode('entity', pos); }
-  addLifeline(pos?: { x: number; y: number }): void { this.addValidatedNode('lifeline', pos); }
+  addClass(pos?: { x: number; y: number }, stereotype?: UmlStereotype | string | null): void {
+    this.addValidatedNode('class', pos, true, stereotype);
+  }
+  addComponent(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('component', pos);
+  }
+  addDevice(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('device', pos);
+  }
+  addExecutionEnvironment(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('executionEnvironment', pos);
+  }
+  addBoundaryBox(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('boundary_box', pos, false);
+  }
+  addActor(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('actor', pos);
+  }
+  addUseCase(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('use_case', pos);
+  }
+  addPackage(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('package', pos);
+  }
+  addBoundary(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('boundary', pos);
+  }
+  addControl(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('control', pos);
+  }
+  addEntity(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('entity', pos);
+  }
+  addLifeline(pos?: { x: number; y: number }): void {
+    this.addValidatedNode('lifeline', pos);
+  }
 
   copySelectedNodes(): void {
     const result = this.diagramClipboardService.copyNodes(
@@ -1140,7 +1310,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
     if (!result) return;
 
-    const newConns = result.newConnections.length > 0 ? [...this.connections(), ...result.newConnections] : undefined;
+    const newConns =
+      result.newConnections.length > 0
+        ? [...this.connections(), ...result.newConnections]
+        : undefined;
     this.commitDiagramMutation({
       nodes: [...this.nodes(), ...result.newNodes],
       connections: newConns,
@@ -1150,7 +1323,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.selectedNodeId.set(result.newPastedIds[0]);
     this.diagramCanvas?.select(result.newPastedIds, []);
     this.closeContextMenu();
-    this.showQuickToast(this.diagramClipboardService.formatPasteToast(result.newNodes, result.newConnections));
+    this.showQuickToast(
+      this.diagramClipboardService.formatPasteToast(result.newNodes, result.newConnections),
+    );
   }
 
   cutSelectedNodes(): void {
@@ -1217,8 +1392,10 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   attachAssociationClassToConnection(conn: UmlConnection): void {
     if (this.isReadOnly()) return;
-    const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
-    const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
+    const baseSourceId =
+      conn.sourceNodeId || conn.sourceId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
+    const baseTargetId =
+      conn.targetNodeId || conn.targetId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
 
     const srcNode = this.nodes().find((n) => n.id === baseSourceId);
     const tgtNode = this.nodes().find((n) => n.id === baseTargetId);
@@ -1250,7 +1427,12 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.modalService.showIncompatibleElementModal(diagType, this.confirmDialogService);
   }
 
-  handleCopyNodeFromExplorer(event: { node: UmlClassNode; sourceDiagramId?: string; sourceDiagramType?: DiagramType; position?: { x: number; y: number } }): void {
+  handleCopyNodeFromExplorer(event: {
+    node: UmlClassNode;
+    sourceDiagramId?: string;
+    sourceDiagramType?: DiagramType;
+    position?: { x: number; y: number };
+  }): void {
     const newNode = this.diagramClipboardService.executeCopyFromExplorer({
       isReadOnly: this.isReadOnly(),
       node: event.node,
@@ -1278,21 +1460,17 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onNodeDropped(event: { payload: DropNodePayload; position: { x: number; y: number } }): void {
     this.nodeOps.handleNodeDropped(event, {
       isReadOnly: this.isReadOnly(),
-      onDropToolbox: (type, pos, st) => this.addValidatedNode(type, pos, type !== 'boundary_box', st),
+      onDropToolbox: (type, pos, st) =>
+        this.addValidatedNode(type, pos, type !== 'boundary_box', st),
       onCopyExplorer: (data) => this.handleCopyNodeFromExplorer(data),
     });
   }
 
   handleSelectNodeFromExplorer(nodeId: string): void {
-    this.nodeOps.handleSelectNodeFromExplorer(
-      nodeId,
-      this.nodes(),
-      this.diagramCanvas,
-      (id) => {
-        this.selectedNodeId.set(id);
-        this.selectedNodeIds.set(new Set([id]));
-      },
-    );
+    this.nodeOps.handleSelectNodeFromExplorer(nodeId, this.nodes(), this.diagramCanvas, (id) => {
+      this.selectedNodeId.set(id);
+      this.selectedNodeIds.set(new Set([id]));
+    });
   }
 
   removeClass(nodeId: string, event?: MouseEvent, recordHistory = true): void {
@@ -1322,7 +1500,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
     if (this.isNodeLockedByOther(node.id)) {
       const lock = this.collabCoordinator.getNodeLock(node.id);
-      this.toastService.warning(`Esta tabla está bloqueada por ${lock?.userName || 'otro usuario'}.`);
+      this.toastService.warning(
+        `Esta tabla está bloqueada por ${lock?.userName || 'otro usuario'}.`,
+      );
       return;
     }
 
@@ -1340,7 +1520,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (event) event.stopPropagation();
     if (!this.isReadOnly()) this.modalService.openEditConnModal(conn);
   }
-  closeEditConnModal(): void { this.modalService.closeEditConnModal(); }
+  closeEditConnModal(): void {
+    this.modalService.closeEditConnModal();
+  }
 
   removeConnection(connId: string, event?: MouseEvent): void {
     if (event) event.stopPropagation();
@@ -1361,14 +1543,24 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.closeEditConnModal();
   }
 
-  onAiMutation(event: { nodes: UmlClassNode[]; connections: UmlConnection[]; summary: string }): void {
+  onAiMutation(event: {
+    nodes: UmlClassNode[];
+    connections: UmlConnection[];
+    summary: string;
+  }): void {
     if (event.nodes && event.nodes.length > 0) {
       this.applyAiMutationWithAnimation(event.nodes, event.connections || []);
       this.collabCoordinator.sendDiagramSync(event.nodes, event.connections || [], 'ai_mutation');
     }
   }
 
-  private processAiMutation(targetNodes: any[], targetConns: any[]): { cleanNodes: UmlClassNode[]; cleanConns: UmlConnection[] } {
+  /** Controla la cadena de redibujado posterior a una mutación por IA (cancelable al destruir/re-mutar). */
+  private aiRedrawAbort?: AbortController;
+
+  private processAiMutation(
+    targetNodes: AiRawNode[],
+    targetConns: AiRawConnection[],
+  ): { cleanNodes: UmlClassNode[]; cleanConns: UmlConnection[] } {
     return this.aiSyncService.processAiMutation({
       targetNodes,
       targetConns,
@@ -1381,17 +1573,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  private applyAiMutationWithAnimation(targetNodes: UmlClassNode[], targetConns: UmlConnection[]): void {
+  private applyAiMutationWithAnimation(
+    targetNodes: UmlClassNode[],
+    targetConns: UmlConnection[],
+  ): void {
     const { cleanNodes, cleanConns } = this.processAiMutation(targetNodes, targetConns);
     this.nodes.set(cleanNodes);
     this.connections.set(cleanConns);
     this.markAsUnsaved();
-    this.aiSyncService.schedulePostMutationRedraw({
-      updateEndpoints: () => this.updateConnectionEndpoints(),
-      resetCanvas: () => this.diagramCanvas?.reset(),
-      fitView: () => this.fitView(),
-      redrawCanvas: () => this.diagramCanvas?.redraw(),
-    });
+    this.aiRedrawAbort?.abort();
+    this.aiRedrawAbort = new AbortController();
+    this.aiSyncService.schedulePostMutationRedraw(
+      {
+        updateEndpoints: () => this.updateConnectionEndpoints(),
+        resetCanvas: () => this.diagramCanvas?.reset(),
+        fitView: () => this.fitView(),
+        redrawCanvas: () => this.diagramCanvas?.redraw(),
+      },
+      this.aiRedrawAbort.signal,
+    );
   }
 
   public normalizeUmlMessage(m: any, defaultSeq = '1'): UmlMessage {
@@ -1507,27 +1707,42 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       multiUserBlockedMsg: this.translationService.translate('appbar.multiUserImportBlocked'),
       normalizeDataType: (t) => this.aiSyncService.normalizeDataType(t),
       normalizeReturnType: (rt) => this.aiSyncService.normalizeReturnType(rt),
-      onSuccess: (result) => this.applyImportSuccess(result, result.format === 'xmi' ? 'import_xmi' : 'import_json'),
+      onSuccess: (result) =>
+        this.applyImportSuccess(result, result.format === 'xmi' ? 'import_xmi' : 'import_json'),
     });
   }
 
-  triggerSpringBootGeneration(): void { this.modalService.openSpringBootModal(); }
-  openProfileModal(): void { this.modalService.openProfileModal(); }
-  syncZoomFromCanvas(): void { this.viewportService.syncZoomFromCanvas(this.diagramCanvas); }
+  triggerSpringBootGeneration(): void {
+    this.modalService.openSpringBootModal();
+  }
+  openProfileModal(): void {
+    this.modalService.openProfileModal();
+  }
+  syncZoomFromCanvas(): void {
+    this.viewportService.syncZoomFromCanvas(this.diagramCanvas);
+  }
   onZoomChanged(zoom: number): void {
     if (this.contextMenu()) this.closeContextMenu();
     this.viewportService.onZoomChanged(zoom, this.currentDiagramId());
   }
 
-  zoomIn(): void { this.viewportService.zoomIn(this.diagramCanvas); }
-  zoomOut(): void { this.viewportService.zoomOut(this.diagramCanvas); }
+  zoomIn(): void {
+    this.viewportService.zoomIn(this.diagramCanvas);
+  }
+  zoomOut(): void {
+    this.viewportService.zoomOut(this.diagramCanvas);
+  }
   onViewportScroll(event: Event): void {
     if (this.contextMenu()) this.closeContextMenu();
     this.viewportService.onViewportScroll(event, this.currentDiagramId());
   }
 
-  resetView(): void { this.viewportService.resetView(this.diagramCanvas); }
-  fitView(): void { this.viewportService.fitView(this.diagramCanvas); }
+  resetView(): void {
+    this.viewportService.resetView(this.diagramCanvas);
+  }
+  fitView(): void {
+    this.viewportService.fitView(this.diagramCanvas);
+  }
   onDiagramTypeChange(type: DiagramType): void {
     if (this.currentDiagramId()) {
       return;
@@ -1553,7 +1768,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
 
     this.commitDiagramMutation({
-      connections: isSeq ? this.recalculateSequenceNumbers(updatedConnections, true) : updatedConnections,
+      connections: isSeq
+        ? this.recalculateSequenceNumbers(updatedConnections, true)
+        : updatedConnections,
       action: 'update_connection',
     });
     this.closeEditConnModal();
@@ -1584,15 +1801,20 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       pushSnapshot: () => this.pushSnapshot(),
       setNodes: (n) => this.nodes.set(n),
       markAsUnsaved: () => this.markAsUnsaved(),
-      sendDiagramSync: (nodes, conns, act, style) => this.collabCoordinator.sendDiagramSync(nodes, conns, act, style),
+      sendDiagramSync: (nodes, conns, act, style) =>
+        this.collabCoordinator.sendDiagramSync(nodes, conns, act, style),
       getDefaultColor: (t, s) => this.getDefaultColorForNodeType(t, s),
     });
   }
 
   // --- MÉTODOS DEL EXPLORADOR DE DIAGRAMAS POR TIPO ---
 
-  openCreateDiagramModal(lockedType: DiagramType | null = null): void { this.modalService.openCreateDiagramModal(lockedType); }
-  closeCreateDiagramModal(): void { this.modalService.closeCreateDiagramModal(); }
+  openCreateDiagramModal(lockedType: DiagramType | null = null): void {
+    this.modalService.openCreateDiagramModal(lockedType);
+  }
+  closeCreateDiagramModal(): void {
+    this.modalService.closeCreateDiagramModal();
+  }
 
   handleCreateDiagram(data: { name: string; type: DiagramType }): void {
     this.tabManager.handleCreateDiagram(
@@ -1633,7 +1855,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   closeTab(tabId: string, event: MouseEvent): void {
     event.stopPropagation();
-    if (this.currentDiagramId() === tabId && this.hasUnsavedChanges() && !this.isReadOnly()) this.saveToBackend(true);
+    if (this.currentDiagramId() === tabId && this.hasUnsavedChanges() && !this.isReadOnly())
+      this.saveToBackend(true);
     const result = this.tabManager.closeTab(tabId, this.currentDiagramId());
     if (result?.nextTabId) this.onSelectDiagram(result.nextTabId);
   }
@@ -1644,20 +1867,29 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   async onDeleteDiagram(diagramId: string): Promise<void> {
     if (this.isReadOnly()) return;
-    await this.tabManager.deleteDiagram(diagramId, this.currentDiagramId(), this.projectDiagrams(), (nextId) => {
-      if (nextId) {
-        this.onSelectDiagram(nextId);
-      } else {
-        this.currentDiagramId.set(null);
-        this.nodes.set([]);
-        this.connections.set([]);
-      }
-    });
+    await this.tabManager.deleteDiagram(
+      diagramId,
+      this.currentDiagramId(),
+      this.projectDiagrams(),
+      (nextId) => {
+        if (nextId) {
+          this.onSelectDiagram(nextId);
+        } else {
+          this.currentDiagramId.set(null);
+          this.nodes.set([]);
+          this.connections.set([]);
+        }
+      },
+    );
   }
 
   onNodeRename(event: { nodeId: string; newName: string }): void {
     if (this.isReadOnly()) return;
-    const { anyChanged, updatedNodes } = this.nodeOps.renameNode(this.nodes(), event.nodeId, event.newName);
+    const { anyChanged, updatedNodes } = this.nodeOps.renameNode(
+      this.nodes(),
+      event.nodeId,
+      event.newName,
+    );
     if (!anyChanged) return;
 
     this.commitDiagramMutation({
@@ -1666,4 +1898,3 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
   }
 }
-

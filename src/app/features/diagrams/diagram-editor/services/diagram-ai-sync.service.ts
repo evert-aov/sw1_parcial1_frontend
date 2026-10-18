@@ -10,23 +10,67 @@ import {
   UmlRelationshipType,
 } from '../../../../core/models/diagram.model';
 import { DiagramConnectionLayoutService } from './diagram-connection-layout.service';
+import { DiagramAstNormalizerService } from './diagram-ast-normalizer.service';
 import { isSequenceConnection } from '../components/diagram-canvas/nodes';
 
 export const PREDEFINED_DATA_TYPES: string[] = [
-  'UUID', 'String', 'Integer', 'Long', 'Boolean', 'Double',
-  'Float', 'BigDecimal', 'LocalDate', 'LocalDateTime', 'Date', 'Text', 'byte[]',
+  'UUID',
+  'String',
+  'Integer',
+  'Long',
+  'Boolean',
+  'Double',
+  'Float',
+  'BigDecimal',
+  'LocalDate',
+  'LocalDateTime',
+  'Date',
+  'Text',
+  'byte[]',
 ];
 
 export const PREDEFINED_RETURN_TYPES: string[] = [
-  'void', 'UUID', 'String', 'Integer', 'Long', 'Boolean',
-  'Double', 'BigDecimal', 'LocalDate', 'LocalDateTime', 'List<Object>', 'Object',
+  'void',
+  'UUID',
+  'String',
+  'Integer',
+  'Long',
+  'Boolean',
+  'Double',
+  'BigDecimal',
+  'LocalDate',
+  'LocalDateTime',
+  'List<Object>',
+  'Object',
 ];
+
+/**
+ * Nodo crudo proveniente de IA o sincronización remota: todos los campos son opcionales
+ * y puede traer coordenadas planas (`positionX` / `positionY`) en lugar de `position`.
+ */
+export type AiRawNode = Partial<UmlClassNode> & {
+  positionX?: number;
+  positionY?: number;
+};
+
+/** Conexión cruda proveniente de IA o sincronización remota. */
+export type AiRawConnection = Partial<UmlConnection>;
+
+/** Callbacks de las fases del redibujado posterior a una mutación por IA. */
+export interface PostMutationCallbacks {
+  updateEndpoints: () => void;
+  resetCanvas?: () => void;
+  fitView?: () => void;
+  redrawCanvas?: () => void;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class DiagramAiSyncService {
   private readonly connectionLayoutService: DiagramConnectionLayoutService;
+  // Normalizador sin estado: se instancia directamente para seguir siendo válido fuera de DI.
+  private readonly astNormalizer = new DiagramAstNormalizerService();
 
   constructor(layoutService?: DiagramConnectionLayoutService) {
     if (layoutService) {
@@ -47,16 +91,21 @@ export class DiagramAiSyncService {
    */
   precalculateAnchorPositions(
     cleanNodes: UmlClassNode[],
-    targetConns: UmlConnection[],
-    getOptimalConnectorId: (sourceNode: UmlClassNode, targetNode: UmlClassNode) => { sourceId: string; targetId: string },
+    targetConns: AiRawConnection[],
+    getOptimalConnectorId: (
+      sourceNode: UmlClassNode,
+      targetNode: UmlClassNode,
+    ) => { sourceId: string; targetId: string },
     getConnectorPoint: (node: UmlClassNode, side: string) => { x: number; y: number },
   ): void {
     const nodeMap = new Map(cleanNodes.map((n) => [n.id, n]));
     for (const conn of targetConns) {
       if (conn.assocAnchorNodeId) {
         const anchorNode = nodeMap.get(conn.assocAnchorNodeId);
-        const baseSourceId = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-        const baseTargetId = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        const baseSourceId =
+          conn.sourceNodeId || this.astNormalizer.extractBaseNodeId(conn.sourceId);
+        const baseTargetId =
+          conn.targetNodeId || this.astNormalizer.extractBaseNodeId(conn.targetId);
         const sourceNode = baseSourceId ? nodeMap.get(baseSourceId) : undefined;
         const targetNode = baseTargetId ? nodeMap.get(baseTargetId) : undefined;
         if (anchorNode && sourceNode && targetNode) {
@@ -77,43 +126,72 @@ export class DiagramAiSyncService {
   /**
    * Redibujado secuencial de tres fases tras mutaciones estructurales por IA
    * (Fase 1: cálculo de extremos; Fase 2: reset del layout DOM; Fase 3: encuadre y refresco final).
+   *
+   * La cadena es cancelable: tanto mediante el `AbortSignal` opcional como con la función
+   * de cancelación retornada, que libera los rAF/setTimeout pendientes.
+   *
+   * @param callbacks Acciones de cada fase.
+   * @param signal Señal de aborto opcional (p. ej. al destruir el componente).
+   * @returns Función que cancela las fases aún no ejecutadas.
    */
-  schedulePostMutationRedraw(callbacks: {
-    updateEndpoints: () => void;
-    resetCanvas?: () => void;
-    fitView?: () => void;
-    redrawCanvas?: () => void;
-  }): void {
-    requestAnimationFrame(() => {
+  schedulePostMutationRedraw(callbacks: PostMutationCallbacks, signal?: AbortSignal): () => void {
+    let raf1: number | undefined;
+    let raf2: number | undefined;
+    let t1: ReturnType<typeof setTimeout> | undefined;
+    let t2: ReturnType<typeof setTimeout> | undefined;
+
+    const cancel = (): void => {
+      if (raf1 !== undefined) cancelAnimationFrame(raf1);
+      if (raf2 !== undefined) cancelAnimationFrame(raf2);
+      if (t1 !== undefined) clearTimeout(t1);
+      if (t2 !== undefined) clearTimeout(t2);
+      raf1 = raf2 = t1 = t2 = undefined;
+    };
+
+    signal?.addEventListener('abort', cancel, { once: true });
+    const isAborted = (): boolean => !!signal?.aborted;
+
+    raf1 = requestAnimationFrame(() => {
+      if (isAborted()) return;
       callbacks.updateEndpoints();
-      requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (isAborted()) return;
         callbacks.updateEndpoints();
         callbacks.resetCanvas?.();
-        setTimeout(() => {
+        t1 = setTimeout(() => {
+          if (isAborted()) return;
           callbacks.updateEndpoints();
           callbacks.fitView?.();
-          setTimeout(() => {
-            callbacks.redrawCanvas?.();
+          t2 = setTimeout(() => {
+            if (!isAborted()) callbacks.redrawCanvas?.();
           }, 80);
         }, 80);
       });
     });
+
+    return cancel;
   }
 
   /**
    * Procesa la mutación completa por IA: valida nodos, precalcula anclas y sanitiza conexiones.
    */
   processAiMutation(params: {
-    targetNodes: any[];
-    targetConns: any[];
+    targetNodes: AiRawNode[];
+    targetConns: AiRawConnection[];
     activeDiagramType: DiagramType;
     defaultLineStyle: UmlLineStyle;
     getDefaultColorForNodeType: (nodeType?: string | null, stereotype?: string | null) => string;
-    getOptimalConnectorId: (sourceNode: UmlClassNode, targetNode: UmlClassNode) => { sourceId: string; targetId: string };
+    getOptimalConnectorId: (
+      sourceNode: UmlClassNode,
+      targetNode: UmlClassNode,
+    ) => { sourceId: string; targetId: string };
     getConnectorPoint: (node: UmlClassNode, side: string) => { x: number; y: number };
     recalculateSequenceNumbers: (conns: UmlConnection[], preserve?: boolean) => UmlConnection[];
   }): { cleanNodes: UmlClassNode[]; cleanConns: UmlConnection[] } {
-    const cleanNodes = this.applyAiNodesMutation(params.targetNodes, params.getDefaultColorForNodeType);
+    const cleanNodes = this.applyAiNodesMutation(
+      params.targetNodes,
+      params.getDefaultColorForNodeType,
+    );
     this.precalculateAnchorPositions(
       cleanNodes,
       params.targetConns,
@@ -138,7 +216,9 @@ export class DiagramAiSyncService {
 
   normalizeReturnType(type: string): string {
     if (!type) return 'void';
-    const found = PREDEFINED_RETURN_TYPES.find((rt) => rt.toLowerCase() === type.trim().toLowerCase());
+    const found = PREDEFINED_RETURN_TYPES.find(
+      (rt) => rt.toLowerCase() === type.trim().toLowerCase(),
+    );
     return found || 'void';
   }
 
@@ -218,9 +298,13 @@ export class DiagramAiSyncService {
 
     // 3. Fallback final para fn
     if (!fn || fn.toLowerCase() === 'msj' || fn.toLowerCase() === 'mensaje') {
-      const fallbackName = m.name && m.name !== 'msj' && m.name !== 'mensaje()' && m.name !== 'mensaje'
-        ? m.name.replace(/\(\)/g, '').replace(/^(\d+(?:\.\d+)*)\s*[:.\s-]\s*/, '').trim()
-        : '';
+      const fallbackName =
+        m.name && m.name !== 'msj' && m.name !== 'mensaje()' && m.name !== 'mensaje'
+          ? m.name
+              .replace(/\(\)/g, '')
+              .replace(/^(\d+(?:\.\d+)*)\s*[:.\s-]\s*/, '')
+              .trim()
+          : '';
       fn = fallbackName || 'msj';
     }
 
@@ -237,9 +321,12 @@ export class DiagramAiSyncService {
     const isReturn = m.type === 'reply' || !!m.isReturn;
     // En comunicación, direction es relativo al enlace; reply no implica invertir
     // un conector de secuencia que ya tiene los extremos dirigidos.
-    const direction = m.direction === 'forward' || m.direction === 'reverse'
-      ? m.direction
-      : isReturn ? 'reverse' : 'forward';
+    const direction =
+      m.direction === 'forward' || m.direction === 'reverse'
+        ? m.direction
+        : isReturn
+          ? 'reverse'
+          : 'forward';
 
     return {
       id: m.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -250,37 +337,58 @@ export class DiagramAiSyncService {
       direction,
       type: isReturn ? 'reply' : (m.type as UmlMessageType) || 'sync',
       isReturn,
-      orderIndex: typeof m.orderIndex === 'number' && Number.isFinite(m.orderIndex) ? m.orderIndex : undefined,
-      positionY: typeof m.positionY === 'number' && Number.isFinite(m.positionY) ? m.positionY : undefined,
+      orderIndex:
+        typeof m.orderIndex === 'number' && Number.isFinite(m.orderIndex)
+          ? m.orderIndex
+          : undefined,
+      positionY:
+        typeof m.positionY === 'number' && Number.isFinite(m.positionY) ? m.positionY : undefined,
       color: m.color || undefined,
     };
   }
 
   applyAiNodesMutation(
-    targetNodes: any[],
+    targetNodes: AiRawNode[],
     getDefaultColor: (nodeType?: string | null, stereotype?: string | null) => string,
   ): UmlClassNode[] {
     return targetNodes.map((n, i) => {
       let nodeType: UmlNodeType | string = n.nodeType || 'class';
-      if (/^cu[-_ \d]/i.test(n.name || '') || (typeof n.name === 'string' && /caso\s+de\s+uso/i.test(n.name))) {
+      if (
+        /^cu[-_ \d]/i.test(n.name || '') ||
+        (typeof n.name === 'string' && /caso\s+de\s+uso/i.test(n.name))
+      ) {
         nodeType = 'use_case';
-      } else if (nodeType === 'boundary_box' || n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) {
+      } else if (
+        nodeType === 'boundary_box' ||
+        n.id?.startsWith('boundary_box_') ||
+        n.id?.startsWith('bbox_')
+      ) {
         nodeType = 'boundary_box';
-      } else if (nodeType === 'class' || (nodeType === 'package' && (n.id?.startsWith('uc_') || n.id?.startsWith('use_case_')))) {
+      } else if (
+        nodeType === 'class' ||
+        (nodeType === 'package' && (n.id?.startsWith('uc_') || n.id?.startsWith('use_case_')))
+      ) {
         if (n.id?.startsWith('actor_')) nodeType = 'actor';
         else if (n.id?.startsWith('use_case_') || n.id?.startsWith('uc_')) nodeType = 'use_case';
         else if (n.id?.startsWith('package_') || n.id?.startsWith('pkg_')) nodeType = 'package';
-        else if (n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) nodeType = 'boundary_box';
+        else if (n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_'))
+          nodeType = 'boundary_box';
         else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
         else if (n.id?.startsWith('control_')) nodeType = 'control';
         else if (n.id?.startsWith('entity_')) nodeType = 'entity';
         else if (n.id?.startsWith('lifeline_')) nodeType = 'lifeline';
-        else if (n.id?.startsWith('comp_') || n.id?.startsWith('component_')) nodeType = 'component';
+        else if (n.id?.startsWith('comp_') || n.id?.startsWith('component_'))
+          nodeType = 'component';
         else if (n.id?.startsWith('dev_') || n.id?.startsWith('device_')) nodeType = 'device';
-        else if (n.id?.startsWith('exec_') || n.id?.startsWith('executionEnvironment_')) nodeType = 'executionEnvironment';
+        else if (n.id?.startsWith('exec_') || n.id?.startsWith('executionEnvironment_'))
+          nodeType = 'executionEnvironment';
       }
-      const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
-      const isManuallyResized = !!n.isCustomSize || (!!n.customHeight && n.customHeight > 0) || isExplicitSizeNode || (!!(n.height && n.height > 0) && nodeType === 'class');
+      const isExplicitSizeNode = this.astNormalizer.isExplicitSizeNodeType(nodeType);
+      const isManuallyResized =
+        !!n.isCustomSize ||
+        (!!n.customHeight && n.customHeight > 0) ||
+        isExplicitSizeNode ||
+        (!!(n.height && n.height > 0) && nodeType === 'class');
       let defaultWidth = 220;
       let defaultHeight: number | undefined = undefined;
       if (nodeType === 'actor') {
@@ -313,31 +421,55 @@ export class DiagramAiSyncService {
       }
 
       const isBce = ['boundary', 'control', 'entity'].includes(nodeType);
-      const resolvedW = n.isAnchor ? 0 : (isBce ? 70 : (n.width || defaultWidth));
-      const resolvedH = n.isAnchor ? 0 : nodeType === 'lifeline' ? 60 : (isBce ? 70 : (n.height || defaultHeight));
+      const resolvedW = n.isAnchor ? 0 : isBce ? 70 : n.width || defaultWidth;
+      const resolvedH = n.isAnchor
+        ? 0
+        : nodeType === 'lifeline'
+          ? 60
+          : isBce
+            ? 70
+            : n.height || defaultHeight;
 
       return {
         id: n.id || `class_ai_${Date.now()}_${i}`,
-        name: n.name || (n.isAnchor ? '' : (nodeType === 'boundary_box' ? 'BoundaryBox' : `Clase_${i + 1}`)),
-        position: {
-          x: n.position?.x ?? (n.positionX ?? (100 + (i % 3) * 260)),
-          y: n.position?.y ?? (n.positionY ?? (100 + Math.floor(i / 3) * 220)),
-        },
+        name:
+          n.name ||
+          (n.isAnchor ? '' : nodeType === 'boundary_box' ? 'BoundaryBox' : `Clase_${i + 1}`),
+        position: this.astNormalizer.resolveNodePosition(n, {
+          x: 100 + (i % 3) * 260,
+          y: 100 + Math.floor(i / 3) * 220,
+        }),
         width: resolvedW,
         height: resolvedH,
         customWidth: n.customWidth || (isExplicitSizeNode ? resolvedW : undefined),
         customHeight: n.customHeight || (isExplicitSizeNode ? resolvedH : undefined),
         isCustomSize: isManuallyResized,
-        color: (!n.color || ((n.color === '#FFFDDD' || n.color === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType)))
-          ? getDefaultColor(nodeType, n.stereotype)
-          : n.color,
+        color:
+          !n.color ||
+          ((n.color === '#FFFDDD' || n.color === '#FDFAF3') &&
+            [
+              'device',
+              'executionEnvironment',
+              'component',
+              'node',
+              'boundary_box',
+              'boundary',
+              'control',
+              'entity',
+              'lifeline',
+              'actor',
+              'use_case',
+              'package',
+            ].includes(nodeType))
+            ? getDefaultColor(nodeType, n.stereotype)
+            : n.color,
         nodeType,
         stereotype: n.stereotype || null,
         activations: n.activations || [],
         labelOffset: n.labelOffset,
         isAnchor: !!n.isAnchor,
         assocMainConnId: n.assocMainConnId,
-        attributes: (n.attributes || []).map((a: any) => ({
+        attributes: (n.attributes || []).map((a) => ({
           ...a,
           name: a.name,
           type: this.normalizeDataType(a.type),
@@ -346,7 +478,7 @@ export class DiagramAiSyncService {
           length: a.length !== undefined ? a.length : 255,
           defaultValue: a.defaultValue ?? a.default ?? null,
         })),
-        methods: (n.methods || []).map((m: any) => ({
+        methods: (n.methods || []).map((m) => ({
           name: m.name,
           parameters: m.parameters || '',
           returnType: this.normalizeReturnType(m.returnType),
@@ -364,12 +496,8 @@ export class DiagramAiSyncService {
   ): UmlConnection[] {
     const nodeMap = new Map(validNodes.map((n) => [n.id, n]));
     const nodeIds = new Set(validNodes.map((n) => n.id));
-    const extractBaseNodeId = (rawId?: string) => {
-      if (!rawId) return '';
-      return rawId
-        .replace(/_(top|bottom|left|right)$/, '')
-        .replace(/_slot_\d+$/, '');
-    };
+    const extractBaseNodeId = (rawId?: string) =>
+      this.astNormalizer.extractBaseNodeId(rawId, { stripSlot: true });
 
     const isSeqDiagram = activeDiagramType === DiagramType.SEQUENCE;
     const isCommDiagram = activeDiagramType === DiagramType.COMMUNICATION;
@@ -390,9 +518,12 @@ export class DiagramAiSyncService {
 
       if (isSeqConn) {
         // EN DIAGRAMAS DE SECUENCIA: CADA MENSAJE DEBE SER SU PROPIA CONEXIÓN
-        const rawMsgs = (c.messages && c.messages.length > 0)
-          ? c.messages
-          : (c.name ? [{ name: c.name, type: c.type }] : [{ functionName: 'msj', type: c.type || 'sync' }]);
+        const rawMsgs =
+          c.messages && c.messages.length > 0
+            ? c.messages
+            : c.name
+              ? [{ name: c.name, type: c.type }]
+              : [{ functionName: 'msj', type: c.type || 'sync' }];
 
         rawMsgs.forEach((m: any, mIdx: number) => {
           const norm = this.normalizeUmlMessage(m, `${seqConns.length + 1}`);
@@ -408,7 +539,10 @@ export class DiagramAiSyncService {
           norm.direction = 'forward';
           seqConns.push({
             ...c,
-            id: rawMsgs.length === 1 && c.id ? c.id : `msg_${Date.now()}_${seqConns.length}_${Math.random().toString(36).substring(2, 5)}`,
+            id:
+              rawMsgs.length === 1 && c.id
+                ? c.id
+                : `msg_${Date.now()}_${seqConns.length}_${Math.random().toString(36).substring(2, 5)}`,
             sourceNodeId: effectiveSource,
             targetNodeId: effectiveTarget,
             type: norm.type || (isMsgReverse ? 'reply' : 'sync'),
@@ -421,16 +555,19 @@ export class DiagramAiSyncService {
       } else if (isCommDiagram) {
         // EN DIAGRAMAS DE COMUNICACIÓN: Una sola línea de asociación entre cada par de objetos
         const pairKey = [s, t].sort().join('___');
-        const rawMsgs = (c.messages && c.messages.length > 0)
-          ? c.messages
-          : (c.name ? [{ name: c.name }] : []);
+        const rawMsgs =
+          c.messages && c.messages.length > 0 ? c.messages : c.name ? [{ name: c.name }] : [];
 
         if (commMergedMap.has(pairKey)) {
           const existing = commMergedMap.get(pairKey);
-          const isReversedPair = (existing.sourceNodeId || extractBaseNodeId(existing.sourceId)) !== s;
+          const isReversedPair =
+            (existing.sourceNodeId || extractBaseNodeId(existing.sourceId)) !== s;
 
           const normalizedNewMsgs = rawMsgs.map((m: any, mIdx: number) => {
-            const norm = this.normalizeUmlMessage(m, `${(existing.messages || []).length + mIdx + 1}`);
+            const norm = this.normalizeUmlMessage(
+              m,
+              `${(existing.messages || []).length + mIdx + 1}`,
+            );
             if (isReversedPair) {
               norm.direction = norm.direction === 'reverse' ? 'forward' : 'reverse';
             }
@@ -440,7 +577,8 @@ export class DiagramAiSyncService {
           existing.messages = existing.messages || [];
           for (const nm of normalizedNewMsgs) {
             const exists = existing.messages.some(
-              (em: any) => em.sequenceNumber === nm.sequenceNumber && em.functionName === nm.functionName
+              (em: any) =>
+                em.sequenceNumber === nm.sequenceNumber && em.functionName === nm.functionName,
             );
             if (!exists) {
               existing.messages.push(nm);
@@ -448,7 +586,7 @@ export class DiagramAiSyncService {
           }
         } else {
           const normalizedMsgs = rawMsgs.map((m: any, mIdx: number) =>
-            this.normalizeUmlMessage(m, `${mIdx + 1}`)
+            this.normalizeUmlMessage(m, `${mIdx + 1}`),
           );
 
           commMergedMap.set(pairKey, {
@@ -482,7 +620,7 @@ export class DiagramAiSyncService {
     const normalizedSeqConns: UmlConnection[] = seqConns.map((conn) => {
       const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
       const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
-      let slot = sMatch ? parseInt(sMatch[1], 10) : (tMatch ? parseInt(tMatch[1], 10) : -1);
+      let slot = sMatch ? parseInt(sMatch[1], 10) : tMatch ? parseInt(tMatch[1], 10) : -1;
 
       if (slot < 0 || usedSlots.has(slot)) {
         while (usedSlots.has(nextFreeSlot)) {
@@ -516,7 +654,10 @@ export class DiagramAiSyncService {
       const targetNodeId = c.targetNodeId || extractBaseNodeId(c.targetId);
 
       const sortedMessages = (c.messages || []).slice().sort((a: any, b: any) => {
-        const parseSeq = (str: string) => String(str || '').split('.').map((n) => parseInt(n, 10) || 0);
+        const parseSeq = (str: string) =>
+          String(str || '')
+            .split('.')
+            .map((n) => parseInt(n, 10) || 0);
         const pa = parseSeq(a.sequenceNumber);
         const pb = parseSeq(b.sequenceNumber);
         for (let k = 0; k < Math.max(pa.length, pb.length); k++) {
@@ -535,7 +676,7 @@ export class DiagramAiSyncService {
         targetId: c.targetId || `${targetNodeId}_left`,
         type: (c.type as UmlRelationshipType) || 'association',
         lineStyle: (c.lineStyle as UmlLineStyle) || 'straight',
-        name: sortedMessages.length > 0 ? undefined : (c.name || undefined),
+        name: sortedMessages.length > 0 ? undefined : c.name || undefined,
         sourceMultiplicity: '',
         targetMultiplicity: '',
         assocAnchorNodeId: undefined,
@@ -559,20 +700,32 @@ export class DiagramAiSyncService {
           targetId = targetId || `${targetNodeId}_right`;
         } else if (c.type === 'association_class') {
           if (sourceNode.isAnchor) {
-            const optimal = this.connectionLayoutService.getOptimalConnectorId(sourceNode, targetNode);
+            const optimal = this.connectionLayoutService.getOptimalConnectorId(
+              sourceNode,
+              targetNode,
+            );
             sourceId = sourceNode.id;
             targetId = optimal.targetId;
           } else if (targetNode.isAnchor) {
-            const optimal = this.connectionLayoutService.getOptimalConnectorId(sourceNode, targetNode);
+            const optimal = this.connectionLayoutService.getOptimalConnectorId(
+              sourceNode,
+              targetNode,
+            );
             sourceId = optimal.sourceId;
             targetId = targetNode.id;
           } else {
-            const optimal = this.connectionLayoutService.getOptimalConnectorId(sourceNode, targetNode);
+            const optimal = this.connectionLayoutService.getOptimalConnectorId(
+              sourceNode,
+              targetNode,
+            );
             sourceId = optimal.sourceId;
             targetId = optimal.targetId;
           }
         } else if (!sourceNode.isAnchor && !targetNode.isAnchor) {
-          const optimal = this.connectionLayoutService.getOptimalConnectorId(sourceNode, targetNode);
+          const optimal = this.connectionLayoutService.getOptimalConnectorId(
+            sourceNode,
+            targetNode,
+          );
           sourceId = optimal.sourceId;
           targetId = optimal.targetId;
         }

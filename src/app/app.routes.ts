@@ -1,32 +1,39 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './features/auth/login/login.component';
-import { RegisterComponent } from './features/auth/register/register.component';
-import { ProjectListComponent } from './features/projects/project-list/project-list.component';
-import { DiagramEditorComponent } from './features/diagrams/diagram-editor/diagram-editor.component';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
-    component: LoginComponent,
+    loadComponent: () =>
+      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
     path: 'register',
-    component: RegisterComponent,
+    loadComponent: () =>
+      import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
   },
   {
     path: 'projects',
-    component: ProjectListComponent,
+    loadComponent: () =>
+      import('./features/projects/project-list/project-list.component').then(
+        (m) => m.ProjectListComponent,
+      ),
     canActivate: [authGuard],
   },
   {
     path: 'diagram',
-    component: DiagramEditorComponent,
+    loadComponent: () =>
+      import('./features/diagrams/diagram-editor/diagram-editor.component').then(
+        (m) => m.DiagramEditorComponent,
+      ),
     canActivate: [authGuard],
   },
   {
     path: 'diagrams/:id',
-    component: DiagramEditorComponent,
+    loadComponent: () =>
+      import('./features/diagrams/diagram-editor/diagram-editor.component').then(
+        (m) => m.DiagramEditorComponent,
+      ),
     canActivate: [authGuard],
   },
   {

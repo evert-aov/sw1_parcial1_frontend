@@ -1,49 +1,47 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, ProviderToken, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { CollaborationService, NodeLock } from '../../../../core/services/collaboration.service';
 import { AuthService } from '../../../../core/services/auth.service';
-import {
-  UmlClassNode,
-  UmlConnection,
-  UmlLineStyle,
-} from '../../../../core/models/diagram.model';
+import { UmlClassNode, UmlConnection, UmlLineStyle } from '../../../../core/models/diagram.model';
 
 export interface DiagramCollaborationActions {
   onRemoteNodeDrag: (data: { nodeId: string; position: { x: number; y: number } }) => void;
-  onRemoteDiagramSync: (data: { action: string; nodes?: UmlClassNode[]; connections?: UmlConnection[] }) => void;
-  onNodeLockRejected: (data: { nodeId: string; lockedBy: { userId: string; userName: string } }) => void;
+  onRemoteDiagramSync: (data: {
+    action: string;
+    nodes?: UmlClassNode[];
+    connections?: UmlConnection[];
+  }) => void;
+  onNodeLockRejected: (data: {
+    nodeId: string;
+    lockedBy: { userId: string; userName: string };
+  }) => void;
   onServerSave: (data: { diagramId: string; savedAt: string }) => void;
   onReconnected: () => void;
+}
+
+/**
+ * Inyección opcional que devuelve `null` si el token no está provisto o si se instancia fuera de un
+ * contexto de inyección (p. ej. pruebas unitarias con `new`).
+ */
+function injectOrNull<T>(token: ProviderToken<T>): T | null {
+  try {
+    return inject(token, { optional: true });
+  } catch {
+    return null;
+  }
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class DiagramCollaborationCoordinatorService {
-  private readonly collabService: CollaborationService;
-  private readonly auth: AuthService | undefined;
+  // Inyección opcional con tipado honesto: `null` cuando el servicio no está disponible.
+  private readonly collabService: CollaborationService | null = injectOrNull(CollaborationService);
+  private readonly auth: AuthService | null = injectOrNull(AuthService);
 
-  constructor(collabService?: CollaborationService, auth?: AuthService) {
-    if (collabService) {
-      this.collabService = collabService;
-    } else {
-      try {
-        this.collabService = inject(CollaborationService);
-      } catch (_) {
-        this.collabService = undefined as any;
-      }
-    }
-
-    if (auth) {
-      this.auth = auth;
-    } else {
-      try {
-        this.auth = inject(AuthService);
-      } catch (_) {
-        this.auth = undefined;
-      }
-    }
-  }
+  /** Posiciones de arrastre pendientes de enviar; se acumulan y se vacían una vez por frame. */
+  private readonly pendingNodeDrags = new Map<string, { x: number; y: number }>();
+  private dragFlushHandle: number | ReturnType<typeof setTimeout> | null = null;
 
   setupSubscriptions(actions: DiagramCollaborationActions): Subscription[] {
     if (!this.collabService) return [];
@@ -121,6 +119,7 @@ export class DiagramCollaborationCoordinatorService {
   }
 
   leaveRoom(): void {
+    this.cancelPendingNodeDrags();
     this.collabService?.leaveRoom();
   }
 
@@ -131,8 +130,43 @@ export class DiagramCollaborationCoordinatorService {
     this.joinRoom(nextDiagramId);
   }
 
+  /**
+   * Encola la posición de un nodo arrastrado. Solo la última posición de cada nodo se envía,
+   * con un lote por frame, para evitar inundar el WebSocket durante `dragmove`.
+   */
   sendNodeDrag(nodeId: string, position: { x: number; y: number }): void {
-    this.collabService?.sendNodeDrag(nodeId, position);
+    if (!this.collabService) return;
+    this.pendingNodeDrags.set(nodeId, position);
+    if (this.dragFlushHandle !== null) return;
+
+    const flush = (): void => {
+      this.dragFlushHandle = null;
+      this.flushPendingNodeDrags();
+    };
+    this.dragFlushHandle =
+      typeof requestAnimationFrame === 'function'
+        ? requestAnimationFrame(flush)
+        : setTimeout(flush, 16);
+  }
+
+  private flushPendingNodeDrags(): void {
+    const pending = Array.from(this.pendingNodeDrags);
+    this.pendingNodeDrags.clear();
+    for (const [id, pos] of pending) {
+      this.collabService?.sendNodeDrag(id, pos);
+    }
+  }
+
+  private cancelPendingNodeDrags(): void {
+    if (this.dragFlushHandle !== null) {
+      if (typeof cancelAnimationFrame === 'function' && typeof this.dragFlushHandle === 'number') {
+        cancelAnimationFrame(this.dragFlushHandle);
+      } else {
+        clearTimeout(this.dragFlushHandle as ReturnType<typeof setTimeout>);
+      }
+      this.dragFlushHandle = null;
+    }
+    this.pendingNodeDrags.clear();
   }
 
   sendCursorPosition(canvasX: number, canvasY: number): void {

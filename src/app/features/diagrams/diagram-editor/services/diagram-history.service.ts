@@ -7,9 +7,11 @@ export interface DiagramHistorySnapshot {
   defaultLineStyle: UmlLineStyle;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+/**
+ * Historial de deshacer/rehacer. Se provee a nivel de `DiagramEditorComponent` (no en `root`),
+ * por lo que cada editor tiene sus propias pilas y undo/redo no puede restaurar snapshots ajenos.
+ */
+@Injectable()
 export class DiagramHistoryService {
   private historyUndoStack: DiagramHistorySnapshot[] = [];
   private historyRedoStack: DiagramHistorySnapshot[] = [];
