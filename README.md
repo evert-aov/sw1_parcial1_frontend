@@ -1,6 +1,6 @@
 # 🎨 UML/ER Collaborative Studio - Frontend
 
-Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow (`@foblex/flow`)** y **Tailwind CSS v4**. Ofrece un entorno integral para el modelado visual colaborativo de diagramas de clases UML, asistencia de Inteligencia Artificial en caliente (**Google Gemini**), interoperabilidad con **Enterprise Architect (XMI 2.1)** y previsualización interactiva de código generado para **Spring Boot** y **Flutter**.
+Aplicación web moderna y reactiva construida con **Angular 19 Standalone**, motor gráfico **Konva.js 2D**, **Tailwind CSS v4** y **Heroicons**. Ofrece un entorno integral para el modelado visual colaborativo de diagramas UML 2.5, asistencia de Inteligencia Artificial en caliente (**Google Gemini**), interoperabilidad bidireccional con **Enterprise Architect (XMI 2.1)** y previsualización interactiva de código generado para **Spring Boot** y **Flutter**.
 
 > 📘 **Documentación Oficial para Desarrolladores**: Para consultar la arquitectura técnica detallada, el lienzo de nodos modulares, sincronización colaborativa y suite de componentes reutilizables, revisa la [**Guía Integral del Desarrollador del Frontend**](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/README.md).
 
@@ -21,7 +21,11 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
 
 ## ✨ Características Principales
 
-* **Soporte Multidiagrama UML 2.5 Completo (@foblex/flow & SVG)**:
+* **Lienzo Gráfico Nodal de Alto Rendimiento (Konva.js 2D)**:
+  * **13 Nodos Modulares Desacoplados**: Renderers independientes para Clases, Actores, Casos de Uso, Análisis BCE, Lifelines, Componentes, Paquetes, Capas, Despliegue, Actividad y Notas.
+  * **Zoom Acotado y Eficiente (15% a 125%)**: Control fino de escalado que previene picos de consumo de memoria RAM o degradación en el navegador al realizar transiciones graduales.
+  * **Personalización Cromática con Persistencia**: Paleta de colores seleccionable desde la cinta de herramientas, sincronizada en tiempo real vía WebSockets y guardada en el backend.
+  * **Clases Asociativas Refinadas**: Conexión reactiva por rama discontinua (*dashed stem*), espaciado simétrico de atributos (`| + atributo: tipo |`) y eliminación de estereotipos redundantes.
   * **Diagrama de Clases (Class Diagram)**:
     * Clases, interfaces, enumeraciones, paquetes y clases de asociación.
     * Gestión granular de atributos y operaciones con visibilidades (`+`, `-`, `#`, `~`), tipos de datos de base de datos/Java, modificadores (`PK`, `AutoIncrement`, `Nullable`, `Unique`) y parámetros de métodos tipados.
@@ -62,7 +66,7 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
 
 * **Agrupación Jerárquica y Arrastre Recursivo de Contenedores (`boundary_box`)**:
   * **Detección Geométrica de Contención**: El motor calcula en tiempo real si un nodo se encuentra espacialmente delimitado dentro de una caja de agrupación.
-  * **Arrastre Coordinado Nativo con `fNodeParentId`**: Las cajas vinculan dinámicamente sus nodos hijos mediante la directiva `fNodeParentId` de `@foblex/flow`, permitiendo desplazar la caja contenedora y arrastrar automáticamente todos los componentes y nodos contenidos de forma fluida.
+  * **Arrastre Coordinado Jerárquico**: Las cajas vinculan dinámicamente sus nodos contenidos mediante `DiagramContainmentService` y el motor nodal Konva.js, permitiendo desplazar la caja contenedora y arrastrar automáticamente todos los componentes y nodos contenidos de forma fluida.
   * **Apilamiento Inteligente de `z-index` por Área Efectiva**: Los contenedores más amplios se posicionan automáticamente en capas inferiores y los elementos contenidos al frente, evitando oclusiones visuales y facilitando la interacción.
 
 * **Motor de Interacción y Relaciones UML de Alta Precisión**:
@@ -123,13 +127,12 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
 
 ## 🛠 Stack Tecnológico
 
-* **Framework:** Angular 22+ (Standalone Components, Signals & Reactive Forms).
-* **Motor de Diagramación:** `@foblex/flow` v19 + `@foblex/2d`.
-* **Renderizado SVG:** Componentes vectoriales personalizados para Actores, Jacobson Robustness (Boundary, Control, Entity), Activaciones y Marcadores UML.
-* **Colaboración:** `socket.io-client`.
-* **Estilos & Diseño:** Tailwind CSS v4 + Heroicons (`@ng-icons/heroicons`).
-* **Formatos & Utilidades:** `fast-xml-parser` (XMI Parsing), `html-to-image` (Exportación PNG).
-* **Pruebas:** Vitest.
+* **Framework:** Angular 19 (Standalone Components, Signals & Reactive Forms).
+* **Motor de Diagramación 2D:** Konva.js (`konva` v10+) para renderizado vectorial acelerado por Canvas 2D de alto rendimiento y bajo consumo de memoria.
+* **Iconografía & Estilos:** Tailwind CSS v4 + Heroicons (`@ng-icons/heroicons`) + banderas SVG vectoriales nativas.
+* **Colaboración en Tiempo Real:** `socket.io-client` para sincronización bidireccional, cursores remotos y bloqueos concurrentes.
+* **Formatos, Exportación & Utilidades:** Motor de exportación ultraligero (<1MB) vía `Konva.Stage.toCanvas()`, `fast-xml-parser` (XMI 2.1 Parsing) y `highlight.js`.
+* **Pruebas Automatizadas:** Vitest (82 pruebas unitarias, 100% pasando).
 
 ---
 
@@ -494,7 +497,7 @@ El editor de diagramas ha sido reestructurado desde un archivo monolítico de m�
 | `npm start` | Inicia el servidor de desarrollo web local en `http://localhost:4200/`. |
 | `npm run build` | Compila la aplicación web optimizada para producción en `dist/frontend`. |
 | `npm run watch` | Compila y escucha cambios continuos en Angular en modo desarrollo. |
-| `npm test` | Ejecuta las pruebas unitarias del proyecto con Vitest. |
+| `npm test` | Ejecuta las pruebas unitarias del proyecto con Vitest (82 pruebas unitarias, 100% pasando). |
 | `npm run build:electron` | Compila la aplicación para Electron apuntando al backend local (`http://localhost:4000/api`). |
 | `npm run build:electron:prod` | Compila la aplicación para Electron apuntando al backend de producción. |
 | `npm run electron:start` | Compila y ejecuta la aplicación de escritorio nativa conectada a local. |

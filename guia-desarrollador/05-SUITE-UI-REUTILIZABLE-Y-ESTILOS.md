@@ -104,3 +104,15 @@ La suite exporta de manera unificada la constante `SHARED_DIAGRAM_UI_COMPONENTS`
    - Colección de componentes SVG puros (`<app-actor-svg>`, `<app-relationship-svg>`, `<app-use-case-svg>`, `<app-component-svg>`, etc.) que garantizan nitidez perfecta en cualquier factor de escala y resolución de pantalla.
 2. **`uml-webgl/`**:
    - Renderers acelerados por hardware en WebGL para diagramas densos con cientos de nodos concurrentes.
+
+---
+
+## 4. Iconografía Vectorial Estandarizada e Inclusión Visual en Modo Oscuro
+
+1. **Reemplazo Integral de Emojis por Iconos Vectoriales**:
+   - Para mantener una consistencia visual rigurosa, profesional y multiplataforma, se eliminaron los emojis no estandarizados del DOM y se sustituyeron por componentes vectoriales de **Heroicons** (`@ng-icons/heroicons`) y banderas en SVG nativo para el selector de idioma (ES/EN).
+   - Los iconos de candados de bloqueo multiusuario (`heroLockClosed`), indicadores de conexión, advertencias y herramientas de diseño utilizan ahora renderizado vectorial escalable sin depender de las fuentes del sistema operativo.
+
+2. **Contraste de Advertencias en Modo Oscuro**:
+   - Los banners y notificaciones de advertencia en modo oscuro implementan fondos sólidos `#231A08` con bordes de contraste reforzado `border-amber-400` y textos legibles `text-amber-200`, garantizando el cumplimiento de las pautas de accesibilidad WCAG AAA incluso en salas multiusuario con iluminación tenue.
+
