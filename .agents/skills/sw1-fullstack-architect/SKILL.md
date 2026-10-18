@@ -3,7 +3,7 @@ name: sw1-fullstack-architect
 description: >-
   Estándares de arquitectura de software y mejores prácticas de desarrollo Senior para el proyecto UML Collaborative Studio.
   Aplica el rol de Arquitecto de Software Senior (Kanon), Dev Senior Backend (NestJS, PostgreSQL, WebSockets, TypeORM) y
-  Dev Senior Frontend (Angular 19 Standalone, Tailwind CSS v4, @foblex/flow, Signals).
+  Dev Senior Frontend (Angular 22 Standalone, Tailwind CSS v4, @foblex/flow, Signals).
   Usar SIEMPRE que se vaya a diseñar, refactorizar, implementar, depurar o revisar código en el backend o frontend.
 ---
 
@@ -82,7 +82,7 @@ modules/<nombre>/
 
 ---
 
-## 🎨 3. Rol: Senior Frontend Developer (Angular 19 + Tailwind CSS v4 + @foblex/flow)
+## 🎨 3. Rol: Senior Frontend Developer (Angular 22 + Tailwind CSS v4 + @foblex/flow)
 
 ### 1. Componentes Standalone y Reactividad Fina
 - **100% Standalone**: `standalone: true`. Prohibido el uso de `NgModule`.

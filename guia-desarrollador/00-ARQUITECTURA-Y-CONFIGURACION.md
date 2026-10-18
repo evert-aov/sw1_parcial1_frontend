@@ -1,7 +1,7 @@
 # 00 - Arquitectura y Configuración del Frontend
 
 ## 1. Visión General del Sistema
-El frontend es una aplicación de modelado visual de software avanzada desarrollada con **Angular 19 Standalone**, estilizada con **Tailwind CSS v4** y potenciada con **Konva.js 2D** para el renderizado vectorial de alto rendimiento de grafos de nodos y conexiones orientadas a objetos.
+El frontend es una aplicación de modelado visual de software avanzada desarrollada con **Angular 22 Standalone**, estilizada con **Tailwind CSS v4** y potenciada con **Konva.js 2D** para el renderizado vectorial de alto rendimiento de grafos de nodos y conexiones orientadas a objetos.
 
 Puede ejecutarse tanto en **navegadores web modernos** como empaquetada como **aplicación de escritorio multiplataforma (Linux, Windows, macOS)** mediante **Electron**.
 
@@ -13,7 +13,7 @@ Puede ejecutarse tanto en **navegadores web modernos** como empaquetada como **a
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           ANGULAR 19 APLICACIÓN                             │
+│                           ANGULAR 22 APLICACIÓN                             │
 │                                                                             │
 │  ┌─────────────────────────┐  ┌───────────────────────────────────────────┐ │
 │  │     CORE SINGLETONS     │  │                ROUTING                    │ │
@@ -93,5 +93,5 @@ Ubicados en `src/environments/`:
 | :--- | :--- |
 | `npm start` | Inicia el servidor de desarrollo de Angular en `http://localhost:4200`. |
 | `npm run build` | Compila el bundle de producción en `dist/frontend` con tree-shaking agresivo. |
-| `npm test` | Ejecuta la suite de pruebas unitarias automatizadas con **Vitest** (82 pruebas, 100% pasando). |
+| `npm test` | Ejecuta la suite de pruebas unitarias automatizadas con **Vitest** (91 pruebas, 100% pasando). |
 | `npm run electron:serve` | Compila el frontend e inicia la ventana nativa de **Electron**. |

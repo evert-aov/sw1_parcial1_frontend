@@ -1083,7 +1083,7 @@ export const UML_DIAGRAM_PRESETS: Record<DiagramType, UmlDiagramPreset> = {
       {
         id: 'comp-ui',
         type: 'component',
-        name: 'WebUI / Angular 19',
+        name: 'WebUI / Angular 22',
         x: 80,
         y: 65,
         width: 240,

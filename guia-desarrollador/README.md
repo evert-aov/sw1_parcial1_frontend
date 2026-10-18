@@ -1,4 +1,4 @@
-# 📖 Guía Integral del Desarrollador - Frontend (Angular 19 Standalone + Tailwind CSS + WebSockets + Electron)
+# 📖 Guía Integral del Desarrollador - Frontend (Angular 22 Standalone + Tailwind CSS + WebSockets + Electron)
 
 Bienvenido a la **Guía Integral del Desarrollador del Frontend**. Este documento ha sido elaborado por el Arquitecto de Software para brindar una referencia exhaustiva, detallada y práctica sobre la implementación del cliente web y de escritorio.
 
@@ -10,7 +10,7 @@ La guía está estructurada en **7 capítulos modulares**:
 
 | Capítulo | Documento | Descripción Temática |
 | :--- | :--- | :--- |
-| **00** | [Arquitectura y Configuración](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/00-ARQUITECTURA-Y-CONFIGURACION.md) | Visión global, stack tecnológico, Angular 19 Standalone, Signals, Tailwind CSS v4, entorno Electron y scripts. |
+| **00** | [Arquitectura y Configuración](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/00-ARQUITECTURA-Y-CONFIGURACION.md) | Visión global, stack tecnológico, Angular 22 Standalone, Signals, Tailwind CSS v4, entorno Electron y scripts. |
 | **01** | [Core, Servicios e Internacionalización](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/01-CORE-SERVICIOS-E-I18N.md) | Sistema i18n reactivo (`TranslatePipe`), `ThemeService` (Dark/Light), `AuthGuard`, `JwtInterceptor` y clientes HTTP. |
 | **02** | [Arquitectura del Editor de Diagramas](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/02-ARQUITECTURA-DEL-EDITOR-DE-DIAGRAMAS.md) | Desacoplamiento de `DiagramEditorComponent` en 14 servicios de dominio especializados (Bajo Acoplamiento + Alta Cohesión). |
 | **03** | [Lienzo y Nodos Modulares (Konva.js)](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/03-LIENZO-Y-NODOS-MODULARES.md) | Arquitectura del lienzo `DiagramCanvasComponent` con Konva.js, transformaciones espaciales y los 13 renderers de nodos UML modulares. |

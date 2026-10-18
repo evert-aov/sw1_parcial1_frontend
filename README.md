@@ -1,6 +1,6 @@
 # 🎨 UML/ER Collaborative Studio - Frontend
 
-Aplicación web moderna y reactiva construida con **Angular 19 Standalone**, motor gráfico **Konva.js 2D**, **Tailwind CSS v4** y **Heroicons**. Ofrece un entorno integral para el modelado visual colaborativo de diagramas UML 2.5, asistencia de Inteligencia Artificial en caliente (**Google Gemini**), interoperabilidad bidireccional con **Enterprise Architect (XMI 2.1)** y previsualización interactiva de código generado para **Spring Boot** y **Flutter**.
+Aplicación web moderna y reactiva construida con **Angular 22 Standalone**, motor gráfico **Konva.js 2D**, **Tailwind CSS v4** y **Heroicons**. Ofrece un entorno integral para el modelado visual colaborativo de diagramas UML 2.5, asistencia de Inteligencia Artificial en caliente (**Google Gemini**), interoperabilidad bidireccional con **Enterprise Architect (XMI 2.1)** y previsualización interactiva de código generado para **Spring Boot** y **Flutter**.
 
 > 📘 **Documentación Oficial para Desarrolladores**: Para consultar la arquitectura técnica detallada, el lienzo de nodos modulares, sincronización colaborativa y suite de componentes reutilizables, revisa la [**Guía Integral del Desarrollador del Frontend**](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/README.md).
 
@@ -127,12 +127,12 @@ Aplicación web moderna y reactiva construida con **Angular 19 Standalone**, mot
 
 ## 🛠 Stack Tecnológico
 
-* **Framework:** Angular 19 (Standalone Components, Signals & Reactive Forms).
+* **Framework:** Angular 22 (Standalone Components, Signals & Reactive Forms).
 * **Motor de Diagramación 2D:** Konva.js (`konva` v10+) para renderizado vectorial acelerado por Canvas 2D de alto rendimiento y bajo consumo de memoria.
 * **Iconografía & Estilos:** Tailwind CSS v4 + Heroicons (`@ng-icons/heroicons`) + banderas SVG vectoriales nativas.
 * **Colaboración en Tiempo Real:** `socket.io-client` para sincronización bidireccional, cursores remotos y bloqueos concurrentes.
 * **Formatos, Exportación & Utilidades:** Motor de exportación ultraligero (<1MB) vía `Konva.Stage.toCanvas()`, `fast-xml-parser` (XMI 2.1 Parsing) y `highlight.js`.
-* **Pruebas Automatizadas:** Vitest (82 pruebas unitarias, 100% pasando).
+* **Pruebas Automatizadas:** Vitest (91 pruebas unitarias, 100% pasando).
 
 ---
 

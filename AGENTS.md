@@ -11,7 +11,7 @@ Lee y aplica estrictamente la skill del proyecto:
 
 ---
 
-## 🎨 Reglas del Dev Senior Frontend (Angular 19 + Tailwind CSS + Konva.js)
+## 🎨 Reglas del Dev Senior Frontend (Angular 22 + Tailwind CSS + Konva.js)
 
 1. **Standalone Puro**: Todos los componentes deben ser `standalone: true` con `ChangeDetectionStrategy.OnPush`.
 2. **Reactividad con Signals**: Usa `signal()`, `computed()`, `effect()`, `input()` y `output()`.
