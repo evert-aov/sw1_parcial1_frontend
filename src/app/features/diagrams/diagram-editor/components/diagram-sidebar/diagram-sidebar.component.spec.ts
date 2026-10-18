@@ -87,5 +87,33 @@ describe('DiagramSidebarComponent', () => {
     expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('boundary')).toBe(false);
     expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('control')).toBe(false);
     expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('entity')).toBe(false);
+
+    fixture.componentRef.setInput('activeDiagramType', DiagramType.CLASS);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('class')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('actor')).toBe(false);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('use_case')).toBe(false);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('package')).toBe(false);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('device')).toBe(false);
+  });
+
+  it('no debe emitir copyNodeToCurrent si el nodo de otro diagrama es incompatible', () => {
+    const fixture = TestBed.createComponent(DiagramSidebarComponent);
+    fixture.componentRef.setInput('activeDiagramType', DiagramType.CLASS);
+    fixture.componentRef.setInput('currentDiagramId', 'diag_class_1');
+
+    let copyEmitted = false;
+    fixture.componentInstance.copyNodeToCurrent.subscribe(() => {
+      copyEmitted = true;
+    });
+
+    const foreignDiag: any = { id: 'diag_uc_1', type: DiagramType.USE_CASE };
+    const actorNode: any = { id: 'node_actor_1', name: 'Cliente', nodeType: 'actor' };
+
+    fixture.componentInstance.onCopyNode(foreignDiag, actorNode);
+    expect(copyEmitted).toBe(false);
+
+    const classNode: any = { id: 'node_class_1', name: 'User', nodeType: 'class' };
+    fixture.componentInstance.onCopyNode(foreignDiag, classNode);
+    expect(copyEmitted).toBe(true);
   });
 });

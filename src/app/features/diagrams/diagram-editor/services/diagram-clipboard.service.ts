@@ -85,26 +85,8 @@ export class DiagramClipboardService {
   }
 
   isPasteCompatible(clip: ClipboardData, currentType: DiagramType): boolean {
-    if (currentType === DiagramType.USE_CASE) {
-      return !clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'use_case');
-    } else if (currentType === DiagramType.PACKAGE) {
-      return !clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case' && n.nodeType !== 'actor');
-    } else if (currentType === DiagramType.COMMUNICATION) {
-      return !clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor');
-    } else if (currentType === DiagramType.SEQUENCE) {
-      return !clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'lifeline' && n.nodeType !== 'class' && n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity');
-    } else if (currentType === DiagramType.CLASS_ANALYSIS) {
-      return !clip.nodes.some((n) => (n.nodeType !== 'class' && n.nodeType !== undefined) && n.nodeType !== 'actor');
-    } else if (currentType === DiagramType.COMPONENT) {
-      return !clip.nodes.some((n) => n.nodeType !== 'component' && n.nodeType !== 'boundary_box' && n.nodeType !== 'package');
-    } else if (currentType === DiagramType.DEPLOYMENT) {
-      return !clip.nodes.some((n) => n.nodeType === 'actor' || n.nodeType === 'use_case' || n.nodeType === 'lifeline');
-    } else if (currentType === DiagramType.LAYERED) {
-      return !clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'boundary_box');
-    } else if (currentType === DiagramType.CLASS) {
-      return !clip.nodes.some((n) => n.nodeType && n.nodeType !== 'class');
-    }
-    return true;
+    if (!clip || !clip.nodes || clip.nodes.length === 0) return true;
+    return !clip.nodes.some((node) => !this.isNodeCompatibleWithDiagramType(node, currentType));
   }
 
   createPastedElements(
@@ -202,7 +184,7 @@ export class DiagramClipboardService {
     const isPureBceNode = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
 
     if (currentType === DiagramType.USE_CASE) {
-      return node.nodeType === 'actor' || node.nodeType === 'use_case';
+      return node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'boundary_box';
     } else if (currentType === DiagramType.PACKAGE) {
       return node.nodeType === 'package' || node.nodeType === 'use_case' || node.nodeType === 'actor';
     } else if (currentType === DiagramType.COMMUNICATION) {
@@ -212,7 +194,7 @@ export class DiagramClipboardService {
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
       return !isPureBceNode && (isClassNode || node.nodeType === 'actor');
     } else if (currentType === DiagramType.COMPONENT) {
-      return node.nodeType === 'component' || node.nodeType === 'boundary_box' || node.nodeType === 'package';
+      return node.nodeType === 'component' || node.nodeType === 'boundary_box' || node.nodeType === 'package' || isClassNode;
     } else if (currentType === DiagramType.DEPLOYMENT) {
       return (
         node.nodeType === 'device' ||
@@ -224,11 +206,11 @@ export class DiagramClipboardService {
         isClassNode
       );
     } else if (currentType === DiagramType.LAYERED) {
-      return node.nodeType === 'package' || node.nodeType === 'boundary_box';
+      return node.nodeType === 'package' || node.nodeType === 'boundary_box' || isClassNode;
     } else if (currentType === DiagramType.CLASS) {
       return isClassNode;
     }
-    return true;
+    return false;
   }
 
   /**

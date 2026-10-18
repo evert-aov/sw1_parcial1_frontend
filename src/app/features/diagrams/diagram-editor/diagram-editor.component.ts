@@ -1529,6 +1529,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   resetView(): void { this.viewportService.resetView(this.diagramCanvas); }
   fitView(): void { this.viewportService.fitView(this.diagramCanvas); }
   onDiagramTypeChange(type: DiagramType): void {
+    if (this.currentDiagramId()) {
+      return;
+    }
     this.activeDiagramType.set(type);
     this.collabCoordinator.setCurrentDiagramType(type);
   }

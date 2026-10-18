@@ -269,14 +269,12 @@ export class DiagramNodeOperationsService {
     },
   ): UmlClassNode | null {
     if (params.isReadOnly) return null;
-    if (type !== 'boundary_box') {
-      const validation = this.validateNodeAddition(type, params.activeDiagramType);
-      if (!validation.allowed) {
-        params.onIncompatible(params.activeDiagramType);
-        return null;
-      }
-      type = validation.redirectType || type;
+    const validation = this.validateNodeAddition(type, params.activeDiagramType);
+    if (!validation.allowed) {
+      params.onIncompatible(params.activeDiagramType);
+      return null;
     }
+    type = validation.redirectType || type;
     return this.createNode(type, {
       nodes: params.nodes,
       activeDiagramType: params.activeDiagramType,
@@ -400,37 +398,66 @@ export class DiagramNodeOperationsService {
     nodeType: string,
     currentType: DiagramType,
   ): { allowed: boolean; redirectType?: string } {
-    if (nodeType === 'class') {
-      if (currentType === DiagramType.COMMUNICATION) {
-        return { allowed: false };
-      }
-      if (currentType === DiagramType.COMPONENT) {
-        return { allowed: true, redirectType: 'component' };
-      }
-      if (currentType === DiagramType.DEPLOYMENT) {
-        return { allowed: true, redirectType: 'executionEnvironment' };
-      }
-      if (currentType === DiagramType.LAYERED) {
-        return { allowed: true, redirectType: 'package' };
-      }
-      return { allowed: true };
-    }
+    const isClass = !nodeType || nodeType === 'class';
+    const isPureBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
+    const isActor = nodeType === 'actor';
+    const isUseCase = nodeType === 'use_case';
+    const isPackage = nodeType === 'package';
+    const isComponent = nodeType === 'component';
+    const isDeploymentNode =
+      nodeType === 'device' || nodeType === 'node' || nodeType === 'executionEnvironment';
+    const isLifeline = nodeType === 'lifeline';
+    const isBoundaryBox = nodeType === 'boundary_box';
 
-    if (nodeType === 'actor') {
-      if (currentType === DiagramType.CLASS) {
+    switch (currentType) {
+      case DiagramType.CLASS:
+        // En diagramas de clases: solo clases estándar
+        if (isClass) return { allowed: true };
         return { allowed: false };
-      }
-      return { allowed: true };
-    }
 
-    if (nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') {
-      if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
+      case DiagramType.USE_CASE:
+        // En casos de uso: solo actores, casos de uso y recuadro delimitador del sistema
+        if (isActor || isUseCase || isBoundaryBox) return { allowed: true };
         return { allowed: false };
-      }
-      return { allowed: true };
-    }
 
-    return { allowed: true };
+      case DiagramType.SEQUENCE:
+        // En secuencia: lifelines, actores, clases o BCE que actúan como líneas de vida
+        if (isLifeline || isActor || isClass || isPureBce) return { allowed: true };
+        return { allowed: false };
+
+      case DiagramType.COMMUNICATION:
+        // En comunicación: solo actores y símbolos BCE puros (boundary, control, entity)
+        if (isActor || isPureBce) return { allowed: true };
+        return { allowed: false };
+
+      case DiagramType.CLASS_ANALYSIS:
+        // En análisis de clases: clases (con estereotipos) y actores; no BCE puros ni casos de uso
+        if (isClass || isActor) return { allowed: true };
+        return { allowed: false };
+
+      case DiagramType.PACKAGE:
+        // En paquetes: paquetes, casos de uso, actores
+        if (isPackage || isUseCase || isActor) return { allowed: true };
+        return { allowed: false };
+
+      case DiagramType.COMPONENT:
+        if (isComponent || isBoundaryBox || isPackage) return { allowed: true };
+        if (isClass) return { allowed: true, redirectType: 'component' };
+        return { allowed: false };
+
+      case DiagramType.DEPLOYMENT:
+        if (isDeploymentNode || isComponent || isBoundaryBox || isPackage) return { allowed: true };
+        if (isClass) return { allowed: true, redirectType: 'executionEnvironment' };
+        return { allowed: false };
+
+      case DiagramType.LAYERED:
+        if (isPackage || isBoundaryBox) return { allowed: true };
+        if (isClass) return { allowed: true, redirectType: 'package' };
+        return { allowed: false };
+
+      default:
+        return { allowed: true };
+    }
   }
 
   /**

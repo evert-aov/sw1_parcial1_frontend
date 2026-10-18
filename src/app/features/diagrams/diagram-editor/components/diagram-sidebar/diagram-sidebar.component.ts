@@ -329,7 +329,7 @@ export class DiagramSidebarComponent {
       return type === 'class';
     }
     if (currentType === DiagramType.USE_CASE) {
-      return type === 'actor' || type === 'use_case';
+      return type === 'actor' || type === 'use_case' || type === 'boundary_box';
     }
     if (currentType === DiagramType.PACKAGE) {
       return type === 'package' || type === 'use_case' || type === 'actor';
@@ -361,7 +361,7 @@ export class DiagramSidebarComponent {
     if (currentType === DiagramType.LAYERED) {
       return type === 'package' || type === 'boundary_box' || type === 'class';
     }
-    return true;
+    return false;
   }
 
   getCopyTooltip(diag: DiagramDto, node: any): string {
@@ -388,6 +388,9 @@ export class DiagramSidebarComponent {
   onCopyNode(diag: DiagramDto, node: any, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
+    if (diag.id !== this.currentDiagramId() && !this.isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type)) {
+      return;
+    }
     this.copyNodeToCurrent.emit({
       node,
       sourceDiagramId: diag.id,
@@ -400,7 +403,9 @@ export class DiagramSidebarComponent {
     if (diag.id === this.currentDiagramId()) {
       this.selectNode.emit(node.id);
     } else {
-      this.onCopyNode(diag, node);
+      if (this.isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type)) {
+        this.onCopyNode(diag, node);
+      }
     }
   }
 
@@ -608,14 +613,19 @@ export class DiagramSidebarComponent {
   onNodeDragStart(diag: DiagramDto, node: any, event: DragEvent): void {
     if (this.isReadOnly()) return;
     event.stopPropagation();
-    const isCompatible = this.isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type);
+    const isCurrent = diag.id === this.currentDiagramId();
+    const isCompatible = isCurrent || this.isNodeTypeCompatibleWithCurrent(node.nodeType, diag.type);
+    if (!isCompatible) {
+      event.preventDefault();
+      return;
+    }
     const payload = {
       type: 'explorer_node',
       nodeType: node.nodeType || 'class',
       sourceDiagramId: diag.id,
       sourceDiagramType: diag.type as DiagramType,
       nodeData: node,
-      isCompatible,
+      isCompatible: true,
     };
     this.draggedNodeId.set(node.id);
     if (event.dataTransfer) {
