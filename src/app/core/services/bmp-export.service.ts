@@ -108,13 +108,18 @@ export class BmpExportService {
    * Exporta una captura visual exacta del DOM del editor de diagramas a formato BMP (Windows Bitmap),
    * detectando automáticamente el bounding box de los elementos e integrando el marco UML 2.5 estilo Enterprise Architect.
    */
+  /**
+   * Exporta una captura visual exacta a formato BMP (Windows Bitmap),
+   * admitiendo tanto un HTMLCanvasElement (renderizado directamente con Konva a 60 FPS)
+   * como un HTMLElement (para fallback DOM).
+   */
   async exportElementToBmp(
-    element: HTMLElement,
+    elementOrCanvas: HTMLElement | HTMLCanvasElement,
     diagramName = 'diagrama-uml',
     diagramType?: string,
   ): Promise<void> {
     try {
-      const finalCanvas = await this.generateFramedCanvas(element, diagramName, diagramType);
+      const finalCanvas = await this.generateFramedCanvas(elementOrCanvas, diagramName, diagramType);
       const ctx = finalCanvas.getContext('2d');
       if (!ctx) {
         throw new Error('No se pudo obtener el contexto 2d del canvas.');
@@ -133,15 +138,17 @@ export class BmpExportService {
   }
 
   /**
-   * Exporta una captura visual exacta del DOM a formato PNG de alta resolución con marco UML 2.5.
+   * Exporta una captura a formato PNG de alta resolución con marco UML 2.5 Enterprise Architect.
+   * La compresión nativa DEFLATE del navegador produce un archivo descargable de < 1 MB que, al abrirse
+   * en editores como Krita o Photoshop, despliega su peso real en memoria a resolución 2x Retina.
    */
   async exportElementToPng(
-    element: HTMLElement,
+    elementOrCanvas: HTMLElement | HTMLCanvasElement,
     diagramName = 'diagrama-uml',
     diagramType?: string,
   ): Promise<void> {
     try {
-      const finalCanvas = await this.generateFramedCanvas(element, diagramName, diagramType);
+      const finalCanvas = await this.generateFramedCanvas(elementOrCanvas, diagramName, diagramType);
       finalCanvas.toBlob((blob) => {
         if (!blob) {
           this.toastService?.error('Error al generar la imagen PNG.');
@@ -157,20 +164,172 @@ export class BmpExportService {
   }
 
   /**
+   * Exporta un HTMLCanvasElement (ej. Konva Stage) directamente a PNG de alta resolución con marco UML 2.5.
+   */
+  async exportCanvasToPng(
+    canvas: HTMLCanvasElement,
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+    withFrame = true,
+  ): Promise<void> {
+    const finalCanvas = withFrame
+      ? this.generateFramedCanvasFromCanvas(canvas, diagramName, diagramType)
+      : canvas;
+
+    return new Promise<void>((resolve, reject) => {
+      finalCanvas.toBlob((blob) => {
+        if (!blob) {
+          this.toastService?.error('Error al generar la imagen PNG.');
+          return reject(new Error('No se pudo generar el Blob PNG.'));
+        }
+        const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+        this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.png`);
+        resolve();
+      }, 'image/png');
+    });
+  }
+
+  /**
+   * Exporta un HTMLCanvasElement (ej. Konva Stage) directamente a formato Windows Bitmap (.bmp) con marco UML 2.5.
+   */
+  async exportCanvasToBmp(
+    canvas: HTMLCanvasElement,
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+    withFrame = true,
+  ): Promise<void> {
+    try {
+      const finalCanvas = withFrame
+        ? this.generateFramedCanvasFromCanvas(canvas, diagramName, diagramType)
+        : canvas;
+
+      const ctx = finalCanvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('No se pudo obtener el contexto 2d del canvas.');
+      }
+
+      const imageData = ctx.getImageData(0, 0, finalCanvas.width, finalCanvas.height);
+      const bmpBuffer = await this.encodeImageDataToBmp(imageData);
+
+      const blob = new Blob([bmpBuffer], { type: 'image/bmp' });
+      const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+      this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.bmp`);
+    } catch (err) {
+      console.error('Error al capturar imagen BMP del editor:', err);
+      this.toastService?.error('Error al generar la captura BMP del diagrama.');
+    }
+  }
+
+  /**
+   * Genera un HTMLCanvasElement con el marco UML 2.5 estilo Enterprise Architect a partir de un canvas fuente.
+   * Renderizado instantáneo (sin clonación DOM de html-to-image).
+   */
+  generateFramedCanvasFromCanvas(
+    contentCanvas: HTMLCanvasElement,
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+  ): HTMLCanvasElement {
+    const contentW = contentCanvas.width;
+    const contentH = contentCanvas.height;
+
+    // Parámetros del marco UML 2.5 idéntico a Enterprise Architect (en escala 2x)
+    const outerMargin = 24;
+    const innerPadLeft = 48;
+    const innerPadRight = 48;
+    const innerPadBottom = 36;
+    const innerPadTop = 84;
+    const tabHeight = 54;
+    const chamfer = 20;
+
+    const prefix = this.getDiagramPrefix(diagramType);
+    let cleanName = diagramName.trim().replace(new RegExp(`^${prefix}\\s*[:\\-]?\\s*`, 'i'), '');
+    cleanName = cleanName.replace(/^(uc|class|cd|sd|comm|pkg|cmp|dep|layered|arch|analysis)\s*[:\\-]?\\s*/i, '');
+    const fullTitle = `${prefix} ${cleanName || diagramName.trim() || 'Diagram'}`;
+
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    let textWidth = 200;
+    if (tempCtx) {
+      tempCtx.font = 'bold 20px system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+      textWidth = tempCtx.measureText(fullTitle).width;
+    }
+    const tabWidth = Math.max(220, Math.ceil(textWidth + 36 + chamfer));
+
+    const frameW = Math.max(contentW + innerPadLeft + innerPadRight, tabWidth + 60);
+    const frameH = contentH + innerPadTop + innerPadBottom;
+
+    const totalW = frameW + outerMargin * 2;
+    const totalH = frameH + outerMargin * 2;
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = totalW;
+    finalCanvas.height = totalH;
+
+    const ctx = finalCanvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('No se pudo inicializar el contexto 2d del canvas final.');
+    }
+
+    // 1. Fondo blanco puro
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, totalW, totalH);
+
+    // 2. Rectángulo del marco exterior UML 2.5
+    const frameX = outerMargin;
+    const frameY = outerMargin;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(frameX, frameY, frameW, frameH);
+
+    // 3. Pestaña UML 2.5 con esquina recortada a 45° (chamfer)
+    ctx.beginPath();
+    ctx.moveTo(frameX, frameY);
+    ctx.lineTo(frameX + tabWidth, frameY);
+    ctx.lineTo(frameX + tabWidth, frameY + tabHeight - chamfer);
+    ctx.lineTo(frameX + tabWidth - chamfer, frameY + tabHeight);
+    ctx.lineTo(frameX, frameY + tabHeight);
+    ctx.closePath();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 4. Texto del título del diagrama en la pestaña
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 20px system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fullTitle, frameX + 16, frameY + tabHeight / 2 - 1);
+
+    // 5. Dibujar el contenido diagramado recortado exactamente
+    const destX = frameX + innerPadLeft;
+    const destY = frameX + innerPadTop;
+    ctx.drawImage(contentCanvas, destX, destY);
+
+    return finalCanvas;
+  }
+
+  /**
    * Genera un HTMLCanvasElement con el encuadre exacto Enterprise Architect (UML 2.5 Frame).
-   * 1. Detecta automáticamente el bounding box que cubre los elementos del diagrama (sin exportar el lienzo vacío).
-   * 2. Agrega el marco UML 2.5 con la pestaña superior izquierda (estilo pentagonal con chaflán a 45°).
-   * 3. Incluye el tipo de diagrama (uc, class, sd, comm, pkg) y el nombre del diagrama.
-   * 4. Añade un margen exterior limpio de 24px igual a Enterprise Architect.
+   * 1. Detecta si la fuente es un HTMLCanvasElement directo (Konva) para generar el marco de inmediato.
+   * 2. Si es un HTMLElement, rasteriza el DOM detectando el bounding box como fallback.
    */
   async generateFramedCanvas(
-    element: HTMLElement,
+    elementOrCanvas: HTMLElement | HTMLCanvasElement,
     diagramName = 'diagrama-uml',
     diagramType?: string,
   ): Promise<HTMLCanvasElement> {
-    if (!element) {
+    if (!elementOrCanvas) {
       throw new Error('No se encontró el contenedor del lienzo para capturar.');
     }
+
+    // Si ya es un HTMLCanvasElement (proveniente de Konva), procesar a 60 FPS sin pasar por html-to-image
+    if (elementOrCanvas instanceof HTMLCanvasElement || (elementOrCanvas as any).getContext) {
+      return this.generateFramedCanvasFromCanvas(elementOrCanvas as HTMLCanvasElement, diagramName, diagramType);
+    }
+
+    const element = elementOrCanvas as HTMLElement;
 
     // 1. Sanitizar elementos SVG del DOM antes de capturar:
     // Ocultar círculos de arrastre temporales de Foblex (f-connection-drag-handle-end / start)

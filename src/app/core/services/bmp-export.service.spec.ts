@@ -363,6 +363,120 @@ describe('BmpExportService', () => {
     }
   });
 
+  describe('exportación basada en HTMLCanvasElement (Konva)', () => {
+    const realCreateElement = document.createElement.bind(document);
+
+    function createMockCanvas(width = 800, height = 600): HTMLCanvasElement {
+      const canvas = realCreateElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = {
+        fillStyle: '',
+        strokeStyle: '',
+        lineWidth: 1,
+        font: '',
+        textBaseline: '',
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        closePath: vi.fn(),
+        fill: vi.fn(),
+        stroke: vi.fn(),
+        fillText: vi.fn(),
+        drawImage: vi.fn(),
+        measureText: vi.fn().mockReturnValue({ width: 120 }),
+        getImageData: vi.fn().mockReturnValue({
+          width,
+          height,
+          data: new Uint8ClampedArray(width * height * 4),
+        }),
+      };
+      canvas.getContext = vi.fn().mockReturnValue(ctx);
+      canvas.toBlob = vi.fn((cb: (blob: Blob | null) => void) => {
+        cb(new Blob(['fake-png-data'], { type: 'image/png' }));
+      });
+      return canvas;
+    }
+
+    beforeEach(() => {
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        if (tag === 'canvas') {
+          return createMockCanvas(800, 600);
+        }
+        return realCreateElement(tag);
+      });
+    });
+
+    it('generateFramedCanvasFromCanvas debe envolver un canvas fuente en el marco UML 2.5 Enterprise Architect', () => {
+      const sourceCanvas = createMockCanvas(500, 300);
+      const framed = service.generateFramedCanvasFromCanvas(sourceCanvas, 'Sistema Pedidos', 'class');
+
+      expect(framed).toBeDefined();
+      expect(framed.width).toBeGreaterThanOrEqual(640);
+      expect(framed.height).toBe(468);
+    });
+
+    it('generateFramedCanvas debe delegar directamente a generateFramedCanvasFromCanvas cuando el argumento es un HTMLCanvasElement', async () => {
+      const sourceCanvas = createMockCanvas(400, 250);
+      const spy = vi.spyOn(service, 'generateFramedCanvasFromCanvas');
+
+      const framed = await service.generateFramedCanvas(sourceCanvas, 'Diagrama Tienda', 'use_case');
+
+      expect(spy).toHaveBeenCalledWith(sourceCanvas, 'Diagrama Tienda', 'use_case');
+      expect(framed).toBeDefined();
+    });
+
+    it('exportCanvasToPng debe generar un Blob PNG y disparar la descarga del archivo .png', async () => {
+      const sourceCanvas = createMockCanvas(600, 400);
+      const clickSpy = vi.fn();
+
+      vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:http://localhost/png-test');
+      vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
+
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        if (tag === 'canvas') {
+          return createMockCanvas(800, 600);
+        }
+        if (tag === 'a') {
+          const a = realCreateElement('a');
+          a.click = clickSpy;
+          return a;
+        }
+        return realCreateElement(tag);
+      });
+
+      await service.exportCanvasToPng(sourceCanvas, 'Mi Diagrama Clases', 'class');
+
+      expect(clickSpy).toHaveBeenCalled();
+    });
+
+    it('exportCanvasToBmp debe generar un archivo BMP y disparar la descarga del archivo .bmp', async () => {
+      const sourceCanvas = createMockCanvas(400, 300);
+      const clickSpy = vi.fn();
+
+      vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:http://localhost/bmp-test');
+      vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
+
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        if (tag === 'canvas') {
+          return createMockCanvas(600, 500);
+        }
+        if (tag === 'a') {
+          const a = realCreateElement('a');
+          a.click = clickSpy;
+          return a;
+        }
+        return realCreateElement(tag);
+      });
+
+      await service.exportCanvasToBmp(sourceCanvas, 'Mi Diagrama BMP', 'class');
+
+      expect(clickSpy).toHaveBeenCalled();
+    });
+  });
+
   describe('encodeImageDataToBmp', () => {
     it('debe codificar un ImageData de forma asíncrona mediante encodeImageDataToBmp', async () => {
       const width = 4;
