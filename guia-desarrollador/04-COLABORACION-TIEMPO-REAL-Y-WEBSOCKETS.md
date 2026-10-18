@@ -1,7 +1,9 @@
 # 04 - Colaboración en Tiempo Real y WebSockets
 
 ## 1. Visión General
+
 La experiencia colaborativa multiusuario del frontend está gestionada por dos capas complementarias:
+
 1. **`CollaborationService`** ([`src/app/core/services/collaboration.service.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/services/collaboration.service.ts)): Conexión de transporte de bajo nivel con `Socket.IO`.
 2. **`DiagramCollaborationCoordinatorService`** ([`src/app/features/diagrams/diagram-editor/services/diagram-collaboration-coordinator.service.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/services/diagram-collaboration-coordinator.service.ts)): Orquestación de eventos de dominio, cursores y candados visuales sobre el lienzo.
 
@@ -49,16 +51,25 @@ La experiencia colaborativa multiusuario del frontend está gestionada por dos c
   - En el template del nodo (`uml-class-node`, etc.), se activa un borde con el color del colaborador y un icono de candado con tooltip informativo:
     ```html
     @if (isNodeLocked(node.id)) {
-      <div class="absolute -top-3 -right-2 px-1.5 py-0.5 rounded text-[10px] bg-red-500 text-white flex items-center gap-1 shadow">
-        <ng-icon name="heroLockClosed"></ng-icon>
-        <span>{{ getLockOwner(node.id) }}</span>
-      </div>
+    <div
+      class="absolute -top-3 -right-2 px-1.5 py-0.5 rounded text-[10px] bg-red-500 text-white flex items-center gap-1 shadow"
+    >
+      <ng-icon name="heroLockClosed"></ng-icon>
+      <span>{{ getLockOwner(node.id) }}</span>
+    </div>
     }
     ```
   - El usuario local tiene deshabilitado el doble clic y el arrastre de ese nodo mientras permanezca bloqueado.
 
 ---
 
-## 5. Resiliencia y Reconexión Suave
-- Si el servidor WebSocket se reinicia o se pierde la red momentáneamente, `socket.io-client` reintenta automáticamente la conexión con retroceso exponencial (*exponential backoff*).
+## 5. Tráfico de Arrastre y Condiciones de Carrera
+
+- **Lote por frame**: `DiagramCollaborationCoordinatorService.sendNodeDrag` acumula la última posición de cada nodo y emite un único lote por `requestAnimationFrame`. Además, `CollaborationService.sendNodeDrag` mantiene su throttle por nodo (~25 fps) como segunda barrera.
+- **Undo vs. sincronización remota**: `DiagramEditorComponent.undo()/redo()` se bloquean 300 ms tras un `remoteDiagramSync` (`REMOTE_SYNC_UNDO_GUARD_MS`). Es una mitigación mínima, no un mecanismo de resolución de conflictos (OT/CRDT).
+- **Mutación por IA vs. arrastre de un peer**: sigue sin cubrirse (la mutación de IA reemplaza el array de nodos). Pendiente de diseño.
+
+## 6. Resiliencia y Reconexión Suave
+
+- Si el servidor WebSocket se reinicia o se pierde la red momentáneamente, `socket.io-client` reintenta automáticamente la conexión con retroceso exponencial (_exponential backoff_).
 - Al reconectarse, el cliente vuelve a emitir `join_project` para restablecer el estado sin que el usuario tenga que recargar la página.

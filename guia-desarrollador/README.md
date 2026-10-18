@@ -37,7 +37,7 @@ npm install
 # Iniciar servidor de desarrollo en http://localhost:4200
 npm start
 
-# Ejecutar pruebas unitarias automatizadas con Vitest (82 tests pasando)
+# Ejecutar pruebas unitarias automatizadas con Vitest (142 tests pasando en 18 suites)
 npm test -- --watch=false
 
 # Compilar para producción (0 errores)

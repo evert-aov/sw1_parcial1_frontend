@@ -1,9 +1,11 @@
 # 03 - Lienzo y Nodos Modulares (Konva.js 2D Canvas Engine)
 
 ## 1. Visión General del Lienzo
+
 El lienzo de dibujo está implementado en [`DiagramCanvasComponent`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/components/diagram-canvas/diagram-canvas.component.ts) y utiliza el motor gráfico de alto rendimiento **Konva.js**.
 
 El lienzo Konva se encarga de:
+
 1. **Lienzo Multi-Capa Optimizado**:
    - `bgLayer`: Grilla infinita paramétrica y fondo interactivo.
    - `relLayer`: Capa independiente para renderizado de relaciones con animación progresiva a 60 FPS.
@@ -41,6 +43,7 @@ konva/nodes/
 ```
 
 ### 1. `class.node.ts`
+
 - Renderiza el rectángulo tripartito estándar de UML 2.5:
   - **Cabecera**: Estereotipo (`«interface»`, `«abstract»`, `«entity»`), nombre de la clase y fondo estilizado.
   - **Compartimento de Atributos**: Visibilidad (`+`, `-`, `#`, `~`), nombre y tipo.
@@ -48,27 +51,34 @@ konva/nodes/
 - Incluye `computeClassAutoBounds` para dimensionamiento dinámico libre de recorte de texto.
 
 ### 2. `use_case.node.ts`
+
 - Renderiza el óvalo de caso de uso UML con sombra suave y texto centrado.
 
 ### 3. `actor.node.ts`
-- Renderiza la figura humana clásica (*stickman*) con cabeza, tronco, brazos y piernas en trazo 2D nítido.
+
+- Renderiza la figura humana clásica (_stickman_) con cabeza, tronco, brazos y piernas en trazo 2D nítido.
 
 ### 4. Nodos de Robustez BCE (`boundary.node.ts`, `control.node.ts`, `entity.node.ts`)
+
 - **Boundary**: Círculo con barra vertical lateral y puente horizontal (`├─◯`).
 - **Control**: Círculo con flecha superior orientada hacia la derecha.
 - **Entity**: Círculo con línea horizontal de base subrayada.
 
 ### 5. `lifeline.node.ts`
+
 - Renderiza la cabecera (participante o actor), la línea discontinua vertical y las cajas de activación temporal.
 
 ### 6. `component.node.ts`
+
 - Renderiza el cuerpo principal y el icono de componente UML 2.5 en la esquina superior derecha con sus dos puertos característicos.
 
 ### 7. `package.node.ts` y `package_layer.node.ts`
+
 - **Package**: Carpeta con pestaña superior izquierda y cuerpo agrupador.
 - **Package Layer**: Contenedor de capa arquitectónica amplia para visualización por niveles.
 
 ### 8. `activity.node.ts`
+
 - **Initial**: Círculo negro sólido con etiqueta superior.
 - **Final**: Bullseye con anillo exterior verde suave y núcleo negro.
 - **Action**: Rectángulo con esquinas redondeadas y gradiente cálido.
@@ -76,13 +86,15 @@ konva/nodes/
 - **Fork / Join**: Barra horizontal oscura de sincronización y bifurcación concurrente.
 
 ### 9. `note.node.ts`
-- Rectángulo de nota con esquina superior derecha doblada (*dog-ear flap*), cabecera `«note»` y soporte multilínea.
+
+- Rectángulo de nota con esquina superior derecha doblada (_dog-ear flap_), cabecera `«note»` y soporte multilínea.
 
 ---
 
 ## 3. Conexiones y Relaciones (`uml-relationship.renderer.ts`)
 
 Soporta todas las geometrías de la especificación UML 2.5:
+
 1. **Asociación**: Línea continua directa con etiquetas de multiplicidad en extremos (`sourceMultiplicity`, `targetMultiplicity`).
 2. **Generalización**: Flecha cerrada triangular blanca.
 3. **Composición**: Rombo relleno oscuro en el extremo de contención fuerte.
@@ -99,7 +111,9 @@ Soporta todas las geometrías de la especificación UML 2.5:
 ## 4. Estilos de Línea y Captura Magnética de Proximidad
 
 ### Estilos de Línea (UML Line Styles)
+
 El motor de relaciones calcula polilíneas con 10 estilos de enrutamiento:
+
 - `direct` (`straight`): Conexión directa y limpia entre los bordes de los nodos.
 - `auto_routing` / `orthogonal_square` (`segment`): Enrutamiento ortogonal con ángulos rectos de 90°.
 - `orthogonal_rounded` (`adaptive-curve`): Enrutamiento ortogonal con esquinas redondeadas (radio 14px).
@@ -108,9 +122,10 @@ El motor de relaciones calcula polilíneas con 10 estilos de enrutamiento:
 - `tree_horizontal`: Enrutamiento estilo árbol horizontal con conexiones en bordes laterales.
 - `lateral_vertical`: Enrutamiento lateral vertical en forma de L.
 - `lateral_horizontal`: Enrutamiento lateral horizontal en forma de L.
-- `custom`: Polilínea guiada por puntos de quiebre (*waypoints*).
+- `custom`: Polilínea guiada por puntos de quiebre (_waypoints_).
 
 ### Zona de Captura de 46px y Detección Geométrica de 28px
+
 - **Corredor de captura invisible de 46px (`hitStrokeWidth: 46`)**: Cada relación (incluyendo sus segmentos, mensajes y el stem de clase asociativa) cuenta con una geometría invisible de 46px de ancho para que hacer clic o seleccionar sea sumamente fluido sin necesidad de apuntar al píxel exacto.
 - **Detección de proximidad de 28px (`getPointToRelationshipDistance`)**: Al acercar el cursor a menos de 28px de cualquier relación, el lienzo detecta la proximidad geométrica euclidiana, ilumina suavemente el halo de preselección (`.hover-halo`), cambia el cursor a `pointer`, y permite seleccionar o desplegar el menú contextual con un solo clic.
 
@@ -119,14 +134,28 @@ El motor de relaciones calcula polilíneas con 10 estilos de enrutamiento:
 ## 5. Optimizaciones de Rendimiento y Refinamiento Visual
 
 ### Control de Zoom y Rendimiento de Memoria (15% - 125%)
+
 - **Rango acotado**: El factor de escala del lienzo está estrictamente delimitado entre `0.15` (15%) y `1.25` (125%). Esto garantiza máxima nitidez visual sin disparar el consumo de memoria RAM o degradar el rendimiento de renderizado en navegadores cuando se realizan transiciones graduales de zoom.
 - **Redibujado selectivo**: Se optimizan los ciclos de actualización evitando reconstrucciones completas de capas Konva cuando el zoom o paneo permanece dentro del umbral de tolerancia.
 
+### Rendimiento del lienzo (auditoría técnica)
+
+- **Eventos Konva fuera de NgZone**: `CanvasStageEventsService.bindStageEvents` registra todos los listeners dentro de `ngZone.runOutsideAngular()` y solo reentra con `ngZone.run()` ante un cambio real de estado. El marquee emite `onSelect`/`onSelectionChange` únicamente cuando cambia el conjunto de nodos intersectados. El listener global `window mouseup` se desregistra antes de volver a registrarse (sin duplicados). _(La app es zoneless, por lo que esto protege además ante una futura reactivación de Zone.js.)_
+- **Resize por diff-update**: los 13 renderers (`resizeXxxKonvaNode`) reutilizan los objetos Konva existentes y solo cambian atributos con `setAttrs`. Cada parte tiene un nombre semántico adicional (p. ej. `actor-part actor-head`); si falta alguna parte (nodo legado) se reconstruye el subárbol como respaldo. La geometría vive en funciones puras `computeXxxGeometry`.
+- **Medición de texto con Canvas 2D**: `computeClassAutoBounds` usa `measureTextWidth()` (`konva/text-measure.util.ts`) en lugar de crear `Konva.Text` huérfanos; con fallback proporcional si no hay contexto 2D.
+- **Hit-testing**: `bgLayer` y `bgRect` usan `listening: false`; los clics sobre el vacío llegan con `target === stage`, que los handlers ya aceptan.
+- **Registro declarativo de renderers**: `NODE_RENDERER_REGISTRY` (`konva/nodes/node-renderer.registry.ts`, `Record<UmlNodeType, NodeRenderer>`) reemplaza los dos `switch` de `CanvasNodeRenderingService`. Añadir un tipo de nodo = registrar una entrada (TypeScript obliga a cubrir todos los tipos).
+- **Clasificación tipada**: `isContainerNode` / `getNodeZWeight` viven en `konva/node-classification.util.ts` con el set `CONTAINER_NODE_TYPES`, sin `as any`.
+- **Mapa `lastLocalMoveTimestamps`**: se poda en `syncNodePositionsAndColors` (nodos eliminados o marcas > 5 s) y se limpia al cambiar de diagrama y al destruir el componente.
+- **Sin `cache()` de grupos (decisión)**: no se rasterizan los nodos de clase/despliegue porque la caché de Konva se rasteriza a la escala del momento y se vería borrosa al hacer zoom, y exigiría invalidar la caché en todas las rutas que mutan hijos (selección, color, resize). Se retomará con un `pixelRatio` dependiente del zoom si el perfilado lo justifica.
+
 ### Clases Asociativas Refinadas
+
 - **Sin estereotipo redundante**: Las clases asociativas se muestran limpias sin la cabecera `«association_class»`, conforme a las directivas de diseño visual.
 - **Espaciado simétrico**: Cálculo balanceado del padding izquierdo y derecho en la lista de atributos (`| + atributo: tipo |`), eliminando espacios vacíos desproporcionados a la derecha.
 - **Estabilidad de animación**: Las animaciones de flujo en las conexiones no se reinician de manera disruptiva al actualizar atributos de un nodo.
 
 ### Personalización de Color de Nodos con Persistencia en Backend
+
 - La cinta de herramientas superior permite elegir la paleta cromática para cualquier nodo seleccionado.
 - El color se almacena en el modelo de datos (`customColor`), se transmite vía WebSockets a colaboradores concurrentes y se persiste en PostgreSQL a través del backend.
