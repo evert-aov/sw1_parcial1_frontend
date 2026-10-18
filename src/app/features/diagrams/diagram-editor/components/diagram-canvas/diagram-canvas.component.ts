@@ -1,6 +1,5 @@
 import {
   Component,
-  Directive,
   AfterViewInit,
   OnDestroy,
   input,
@@ -13,8 +12,6 @@ import {
   ChangeDetectionStrategy,
   inject,
   NgZone,
-  effect,
-  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -30,7 +27,6 @@ import {
 } from '../../../../../core/models/diagram.model';
 import { RemoteCursor, NodeLock } from '../../../../../core/services/collaboration.service';
 import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
-import { DropNodePayload } from '../../services/diagram-node-operations.service';
 import {
   getNodeWidth,
   getNodeHeight,
@@ -47,71 +43,28 @@ import {
   CanvasNodeInteractionService,
   CanvasCollabExportService,
   DiagramCanvasViewState,
-  NodeInteractionContext,
 } from './services';
+import { DiagramDropPayload } from './diagram-canvas.types';
+import { setupDiagramCanvasEffects } from './diagram-canvas.effects';
+import {
+  buildNodeInteractionContext,
+  buildStageEventsContext,
+  createCanvasTransformAdapter,
+} from './diagram-canvas.wiring';
 
+export * from './diagram-canvas.types';
 export type { DiagramCanvasViewState };
-export type DiagramDropPayload = DropNodePayload;
-
-export interface NodeResizeRect {
-  width: number;
-  height: number;
-  x?: number;
-  y?: number;
-}
-
-export interface CanvasCreateConnectionEvent {
-  fOutputId: string;
-  fInputId: string;
-  [key: string]: unknown;
-}
-
-export interface CanvasReassignConnectionEvent {
-  connectionId: string;
-  newSourceId?: string;
-  newTargetId?: string;
-  [key: string]: unknown;
-}
-
-export interface CanvasMoveNodesEvent {
-  nodeIds: string[];
-  [key: string]: unknown;
-}
-
-export interface CanvasSelectionChangeEvent {
-  nodes: string[];
-  connections: string[];
-}
-
-@Directive({
-  selector: 'input[appAutofocusInput]',
-  standalone: true,
-})
-export class AutofocusInputDirective implements AfterViewInit {
-  private readonly el = inject(ElementRef<HTMLInputElement>);
-
-  ngAfterViewInit(): void {
-    const input = this.el.nativeElement;
-    const focusAndSelect = () => {
-      try {
-        input.focus({ preventScroll: true });
-        input.select();
-      } catch (_) {}
-    };
-    requestAnimationFrame(focusAndSelect);
-    setTimeout(focusAndSelect, 30);
-  }
-}
 
 /**
- * Componente principal del lienzo nodal UML (DiagramCanvasComponent).
+ * Componente orquestador del lienzo nodal UML (DiagramCanvasComponent).
  *
- * Actúa como orquestador desacoplado delegando todas sus áreas funcionales en 5 servicios especializados:
- * - `CanvasStageManagerService`: Escenario Konva, cuantización por bloques (Bucket Sizing 512px) y grid.
- * - `CanvasViewportManagerService`: Cámara, zoom adaptativo (15%-125%), scroll suave y punto focal.
- * - `CanvasRelationshipManagerService`: Conexiones, animación a 60 FPS, previsualización y proximidad magnética.
- * - `CanvasNodeInteractionService`: Manipulación de nodos, arrastre coordinado, guías inteligentes y transformer.
- * - `CanvasCollabExportService`: Bloqueos concurrentes, cursores y exportación vectorial nativa de alta resolución.
+ * Coordina la inicialización y el ciclo de vida de Konva.Stage delegando la lógica
+ * en sus servicios especializados:
+ * - `CanvasStageManagerService`: Escenario Konva, cuantización (Bucket Sizing) y grid.
+ * - `CanvasViewportManagerService`: Cámara, zoom adaptativo (15%-125%) y scroll focal.
+ * - `CanvasRelationshipManagerService`: Relaciones, animación 60 FPS y snapping.
+ * - `CanvasNodeInteractionService`: Manipulación de nodos, arrastre coordinado y transformer.
+ * - `CanvasCollabExportService`: Bloqueos, cursores remotos y exportación vectorial nativa.
  */
 @Component({
   selector: 'app-diagram-canvas',
@@ -205,7 +158,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   readonly renamingNodeId = signal<string | null>(null);
   readonly pendingSourceNodeId = signal<string | null>(null);
 
-  // Referencias a capas de Konva y mapas de elementos
+  // Capas de Konva y estructuras internas
   private stage: Konva.Stage | null = null;
   private bgLayer: Konva.Layer | null = null;
   private frameLayer: Konva.Layer | null = null;
@@ -250,109 +203,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
-    // 1. Sincronizar estructura de nodos y conexiones
-    effect(() => {
-      const nodes = this.nodes();
-      this.connections();
-      this.activeDiagramType();
-
-      if (!this.stage || !this.nodeLayer) return;
-      if (this.isDraggingNode) return;
-
-      const currentSig = this.computeStructureSignature();
-      if (currentSig !== this.lastRenderedSignature) {
-        this.lastRenderedSignature = currentSig;
-        this.renderFullDiagram(false);
-      } else {
-        const now = Date.now();
-        for (const rawNode of nodes) {
-          const group = this.nodeGroupsMap.get(rawNode.id);
-          if (!group) continue;
-
-          const lastMove = this.lastLocalMoveTimestamps.get(rawNode.id) || 0;
-          if (group.isDragging() || now - lastMove < 400) {
-            rawNode.position = { x: Math.round(group.x()), y: Math.round(group.y()) };
-            continue;
-          }
-
-          if (Math.round(group.x()) !== rawNode.position.x || Math.round(group.y()) !== rawNode.position.y) {
-            group.position({ x: rawNode.position.x, y: rawNode.position.y });
-          }
-          this.nodeInteraction.applyLiveGroupColor(group, rawNode);
-        }
-        this.renderRelationshipsOnly();
-        this.syncTransformer();
-        this.frameLayer?.batchDraw();
-        this.nodeLayer?.batchDraw();
-        this.stage.batchDraw();
-      }
-    });
-
-    // 2. Sincronizar selección visual
-    effect(() => {
-      this.selectedNodeIds();
-      this.selectedConnIds();
-
-      if (!this.stage || !this.nodeLayer) return;
-      if (this.isDraggingNode) return;
-
-      this.syncTransformer();
-      this.renderRelationshipsOnly();
-      const selectedIds = new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]);
-      this.nodeInteraction.updateNodesSelectionAppearance({
-        nodeGroupsMap: this.nodeGroupsMap,
-        selectedNodeIds: selectedIds,
-        pendingSourceNodeId: this.pendingSourceNodeId(),
-        frameLayer: this.frameLayer,
-        nodeLayer: this.nodeLayer,
-      });
-    });
-
-    // 3. Sincronizar interactividad según tipo de relación activo
-    effect(() => {
-      const relType = this.selectedRelationType();
-      if (!this.stage || !this.nodeLayer) return;
-
-      const canDrag = !this.isReadOnly() && relType === null;
-      for (const [id, group] of this.nodeGroupsMap.entries()) {
-        const isLocked = this.isNodeLockedByOther(id);
-        group.draggable(canDrag && !isLocked);
-      }
-    });
-
-    // 4. Sincronizar dimensiones y escala del stage
-    effect(() => {
-      this.scaledBoardWidth();
-      this.scaledBoardHeight();
-      this.zoomLevel();
-      untracked(() => {
-        this.updateStageDimensions();
-      });
-    });
-
-    // 5. Sincronizar visibilidad de la cuadrícula
-    effect(() => {
-      this.showGrid();
-      untracked(() => {
-        this.drawGrid();
-      });
-    });
-
-    // 6. Sincronizar y restaurar vista cuando cambia el diagrama
-    effect(() => {
-      const dId = this.diagramId();
-      if (!dId || !this.stage) return;
-      untracked(() => {
-        this.restoreViewportScroll(dId);
-      });
-    });
-
-    // 7. Sincronizar estado de guías inteligentes
-    effect(() => {
-      if (!this.smartGuidesEnabled()) {
-        this.clearSmartGuides();
-      }
-    });
+    setupDiagramCanvasEffects(this);
   }
 
   /**
@@ -393,7 +244,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Inicializa el escenario Konva.Stage, registra las 5 capas y enlaza observadores de interacción.
+   * Inicializa el escenario Konva.Stage, registra las capas y enlaza observadores de interacción.
    */
   private initKonvaStage(): void {
     const container = this.stageContainerRef?.nativeElement;
@@ -432,96 +283,13 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     }
 
     this.renderFullDiagram(true);
-
-    this.stageEventsCleanup = this.nodeInteraction.bindStageEvents({
-      stage: this.stage,
-      bgRect: this.bgRect,
-      uiLayer: this.uiLayer,
-      nodeLayer: this.nodeLayer,
-      relLayer: this.relLayer,
-      nodeGroupsMap: this.nodeGroupsMap,
-      nodes: () => this.nodes(),
-      connections: () => this.connections(),
-      activeDiagramType: () => this.activeDiagramType(),
-      selectedRelationType: () => this.selectedRelationType(),
-      pendingSourceNodeId: () => this.pendingSourceNodeId(),
-      setPendingSourceNodeId: (id) => this.pendingSourceNodeId.set(id),
-      isReadOnly: () => this.isReadOnly(),
-      isDraggingNode: () => this.isDraggingNode,
-      selectedConnIds: () => [...this.selectedConnIds(), ...this.selectedConnIdsInternal()],
-      sequenceActivationService: this.sequenceActivationService,
-      relationshipManager: this.relationshipManager,
-      ngZone: this.ngZone,
-      callbacks: {
-        onConnectionClick: (connId, event) => this.connectionClick.emit({ connId, event }),
-        onConnectionDblClick: (conn, event) => this.connectionDblClick.emit({ conn, event }),
-        onConnectionContextMenu: (conn, event) => this.connectionContextMenu.emit({ conn, event }),
-        onCanvasBackgroundClick: (event) => this.canvasBackgroundClick.emit(event),
-        onCanvasMouseDown: (event) => this.canvasMouseDown.emit(event),
-        onCanvasMouseMove: (event) => this.canvasMouseMove.emit(event),
-        onCanvasContextMenu: (payload) => this.canvasContextMenu.emit(payload),
-        onSelectionChange: (payload) => this.selectionChange.emit(payload),
-        onSelect: (nodeIds, connIds) => this.select(nodeIds, connIds),
-        onClearSelection: () => this.clearSelection(),
-        onLivePreview: (sourceId, x, y) => this.drawLiveConnectionPreview(sourceId, x, y),
-        onClearLivePreview: () => this.clearLivePreviewLine(),
-      },
-    });
-  }
-
-  /**
-   * Construye el contexto de interacción necesario para conectar eventos sobre los nodos.
-   *
-   * @returns Contexto NodeInteractionContext configurado.
-   */
-  private getNodeInteractionContext(): NodeInteractionContext {
-    return {
-      stage: this.stage,
-      nodeLayer: this.nodeLayer,
-      frameLayer: this.frameLayer,
-      uiLayer: this.uiLayer,
-      nodeGroupsMap: this.nodeGroupsMap,
-      nodes: () => this.nodes(),
-      connections: () => this.connections(),
-      activeDiagramType: () => this.activeDiagramType(),
-      selectedRelationType: () => this.selectedRelationType(),
-      pendingSourceNodeId: () => this.pendingSourceNodeId(),
-      setPendingSourceNodeId: (id) => this.pendingSourceNodeId.set(id),
-      hoveredNodeId: () => this.hoveredNodeId(),
-      setHoveredNodeId: (id) => this.hoveredNodeId.set(id),
-      selectedNodeIdsInternal: () => this.selectedNodeIdsInternal(),
-      select: (nodeIds, connIds) => this.select(nodeIds, connIds),
-      isReadOnly: () => this.isReadOnly(),
-      smartGuidesEnabled: () => this.smartGuidesEnabled(),
-      isNodeLockedByOther: (nodeId) => this.isNodeLockedByOther(nodeId),
-      containmentService: this.containmentService,
-      relationshipManager: this.relationshipManager,
-      sequenceActivationService: this.sequenceActivationService,
-      ngZone: this.ngZone,
-      lastLocalMoveTimestamps: this.lastLocalMoveTimestamps,
-      callbacks: {
-        onNodeClick: (nodeId, event) => this.nodeClick.emit({ nodeId, event }),
-        onNodeDblClick: (node, event) => this.nodeDblClick.emit({ node, event }),
-        onNodeContextMenu: (node, event) => this.nodeContextMenu.emit({ node, event }),
-        onConnectionClick: (connId, event) => this.connectionClick.emit({ connId, event }),
-        onConnectionCreated: (event) => this.connectionCreated.emit(event),
-        onNodePositionChange: (event) => this.nodePositionChange.emit(event),
-        onNodeSizeChange: (event) => this.nodeSizeChange.emit(event),
-        onMoveNodes: (event) => this.moveNodes.emit(event),
-        onSelectionChange: (event) => this.selectionChange.emit(event),
-        onRenderRelationships: () => this.renderRelationshipsOnly(),
-        onClearLivePreview: () => this.clearLivePreviewLine(),
-        onDragStateChange: (isDragging) => {
-          this.isDraggingNode = isDragging;
-        },
-      },
-    };
+    this.stageEventsCleanup = this.nodeInteraction.bindStageEvents(buildStageEventsContext(this));
   }
 
   /**
    * Actualiza las dimensiones físicas del canvas Konva aplicando cuantización (Bucket Sizing de 512px).
    */
-  private updateStageDimensions(): void {
+  updateStageDimensions(): void {
     if (!this.stage) return;
     this.stageManager.updateStageDimensions({
       container: this.stageContainerRef?.nativeElement,
@@ -538,7 +306,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   /**
    * Dibuja o actualiza la cuadrícula de fondo en el lienzo.
    */
-  private drawGrid(): void {
+  drawGrid(): void {
     this.stageManager.drawGrid(this.showGrid(), this.boardWidth(), this.boardHeight());
   }
 
@@ -549,7 +317,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    * @param cursorX Posición horizontal X del cursor.
    * @param cursorY Posición vertical Y del cursor.
    */
-  private drawLiveConnectionPreview(sourceId: string, cursorX: number, cursorY: number): void {
+  drawLiveConnectionPreview(sourceId: string, cursorX: number, cursorY: number): void {
     this.relationshipManager.drawLiveConnectionPreview(
       sourceId,
       cursorX,
@@ -563,7 +331,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   /**
    * Elimina la línea interactiva de previsualización de conexión.
    */
-  private clearLivePreviewLine(): void {
+  clearLivePreviewLine(): void {
     this.relationshipManager.clearLivePreviewLine(this.uiLayer);
   }
 
@@ -572,7 +340,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    *
    * @returns Cadena de texto representativa de la estructura del diagrama.
    */
-  private computeStructureSignature(): string {
+  computeStructureSignature(): string {
     const nodeSig = this.nodes()
       .filter((n) => !n.isAnchor)
       .map((n) => {
@@ -608,7 +376,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       activeDiagramType: this.activeDiagramType(),
       sequenceActivationService: this.sequenceActivationService,
       isReadOnly: this.isReadOnly(),
-      nodeInteractionContext: this.getNodeInteractionContext(),
+      nodeInteractionContext: buildNodeInteractionContext(this),
     });
 
     if (animateEntrance) {
@@ -627,7 +395,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   /**
    * Renderiza exclusivamente la capa de conexiones (relLayer).
    */
-  private renderRelationshipsOnly(): void {
+  renderRelationshipsOnly(): void {
     const selectedConnIds = new Set([...this.selectedConnIds(), ...this.selectedConnIdsInternal()]);
     this.relationshipManager.renderRelationshipsOnly({
       relLayer: this.relLayer,
@@ -652,7 +420,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   /**
    * Sincroniza la posición y nodos asignados al transformador de redimensión (Konva.Transformer).
    */
-  private syncTransformer(): void {
+  syncTransformer(): void {
     const selectedIds = Array.from(
       new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()])
     );
@@ -793,22 +561,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    */
   onViewportScroll(event: Event): void {
     this.viewportScroll.emit(event);
-    const el = this.flowContainerRef?.nativeElement;
-    const dId = this.diagramId();
-    if (el && dId) {
-      sessionStorage.setItem(
-        `diagram_scroll_${dId}`,
-        JSON.stringify({ left: el.scrollLeft, top: el.scrollTop }),
-      );
-      try {
-        const raw = sessionStorage.getItem(`diagram_view_state_${dId}`);
-        const current = raw ? JSON.parse(raw) : { zoom: this.zoomLevel() };
-        sessionStorage.setItem(
-          `diagram_view_state_${dId}`,
-          JSON.stringify({ ...current, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop }),
-        );
-      } catch (_) {}
-    }
+    this.viewportManager.persistViewportScroll(this.diagramId(), this.flowContainerRef?.nativeElement);
   }
 
   /**
@@ -941,31 +694,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    * @returns Objeto simulador con escala, reseteo y redibujado.
    */
   get canvas(): any {
-    const self = this;
-    return {
-      get transform() {
-        return {
-          get scale() {
-            return self.zoomLevel() ? self.zoomLevel() / 100 : (self.stage ? self.stage.scaleX() : 1);
-          },
-          set scale(s: number) {
-            self.setZoom(Math.round(s * 100), false);
-          },
-          get position() {
-            return { x: 0, y: 0 };
-          },
-          set position(_pos: { x: number; y: number }) {
-            // Stage position is locked to (0, 0)
-          },
-          scaledPosition: { x: 0, y: 0 },
-        };
-      },
-      resetScale: () => this.resetView(),
-      setScale: (scale: number) => {
-        this.setZoom(Math.round(scale * 100), false);
-      },
-      redraw: () => this.redraw(),
-    };
+    return createCanvasTransformAdapter(this);
   }
 
   /**
@@ -1172,4 +901,25 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       console.error('Error parseando payload soltado en canvas Konva:', err);
     }
   }
+
+  // Métodos de acceso interno utilizados por wiring y effects
+  getStage(): Konva.Stage | null { return this.stage; }
+  getNodeLayer(): Konva.Layer | null { return this.nodeLayer; }
+  getFrameLayer(): Konva.Layer | null { return this.frameLayer; }
+  getRelLayer(): Konva.Layer | null { return this.relLayer; }
+  getUiLayer(): Konva.Layer | null { return this.uiLayer; }
+  getBgRect(): Konva.Rect | null { return this.bgRect; }
+  getNodeGroupsMap(): Map<string, Konva.Group> { return this.nodeGroupsMap; }
+  getSelectedNodeIdsInternal(): string[] { return this.selectedNodeIdsInternal(); }
+  getSelectedConnIdsInternal(): string[] { return this.selectedConnIdsInternal(); }
+  getIsDraggingNode(): boolean { return this.isDraggingNode; }
+  setIsDraggingNode(val: boolean): void { this.isDraggingNode = val; }
+  getLastRenderedSignature(): string { return this.lastRenderedSignature; }
+  setLastRenderedSignature(sig: string): void { this.lastRenderedSignature = sig; }
+  getLastLocalMoveTimestamps(): Map<string, number> { return this.lastLocalMoveTimestamps; }
+  getNodeInteraction(): CanvasNodeInteractionService { return this.nodeInteraction; }
+  getContainmentService(): DiagramContainmentService { return this.containmentService; }
+  getRelationshipManager(): CanvasRelationshipManagerService { return this.relationshipManager; }
+  getSequenceActivationService(): DiagramSequenceActivationService { return this.sequenceActivationService; }
+  getNgZone(): NgZone { return this.ngZone; }
 }

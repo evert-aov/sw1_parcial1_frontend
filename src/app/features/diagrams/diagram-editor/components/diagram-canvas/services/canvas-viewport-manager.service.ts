@@ -382,7 +382,30 @@ export class CanvasViewportManagerService {
   }
 
   /**
+   * Persiste la posición actual de desplazamiento del viewport en sessionStorage.
+   *
+   * @param diagramId Identificador del diagrama activo.
+   * @param container Elemento contenedor con scroll.
+   */
+  persistViewportScroll(diagramId: string | null, container?: HTMLElement | null): void {
+    if (!container || !diagramId) return;
+    sessionStorage.setItem(
+      `diagram_scroll_${diagramId}`,
+      JSON.stringify({ left: container.scrollLeft, top: container.scrollTop }),
+    );
+    try {
+      const raw = sessionStorage.getItem(`diagram_view_state_${diagramId}`);
+      const current = raw ? JSON.parse(raw) : { zoom: this.zoomLevel() };
+      sessionStorage.setItem(
+        `diagram_view_state_${diagramId}`,
+        JSON.stringify({ ...current, scrollLeft: container.scrollLeft, scrollTop: container.scrollTop }),
+      );
+    } catch (_) {}
+  }
+
+  /**
    * Sincroniza la señal zoomLevel a partir de la escala actual del escenario Konva.
+
    *
    * @param stage Escenario Konva.Stage.
    * @param onZoomChange Callback que notifica el nuevo nivel de zoom en porcentaje.
