@@ -1,5 +1,6 @@
 import Konva from 'konva';
 import { UmlNode } from '../models/uml.model';
+import { measureTextWidth } from '../text-measure.util';
 
 /**
  * Automatically computes the minimum required width and height of a Class Node
@@ -11,41 +12,40 @@ export function computeClassAutoBounds(node: UmlNode): { width: number; height: 
   const methods = node.methods || [];
 
   // Ancho del título de la clase
-  const titleMeasure = new Konva.Text({
-    text: node.name || 'Clase',
-    fontSize: 14,
-    fontFamily: 'Plus Jakarta Sans',
-    fontStyle: 'bold',
-  });
-  let maxContentWidth = titleMeasure.width() + 4;
+  let maxContentWidth =
+    measureTextWidth(node.name || 'Clase', {
+      fontSize: 14,
+      fontFamily: 'Plus Jakarta Sans',
+      fontStyle: 'bold',
+    }) + 4;
 
   // Ancho del estereotipo si está presente
   if (node.stereotype) {
     const stereoStr = node.stereotype.startsWith('«') ? node.stereotype : `«${node.stereotype}»`;
-    const stereoMeasure = new Konva.Text({
-      text: stereoStr,
-      fontSize: 11,
-      fontFamily: 'JetBrains Mono',
-      fontStyle: 'italic',
-    });
-    maxContentWidth = Math.max(maxContentWidth, stereoMeasure.width());
+    maxContentWidth = Math.max(
+      maxContentWidth,
+      measureTextWidth(stereoStr, {
+        fontSize: 11,
+        fontFamily: 'JetBrains Mono',
+        fontStyle: 'italic',
+      }),
+    );
   }
 
   // Ancho de atributos: | 10px | [-] nombre : tipo | 10px | -> Espaciado exactamente simétrico a ambos lados
   for (const attr of attrs) {
-    const nameMeasure = new Konva.Text({
-      text: `${attr.visibility} ${attr.name}`,
-      fontSize: 12,
-      fontFamily: 'Plus Jakarta Sans',
-      fontStyle: 'bold',
-    });
-    const typeMeasure = new Konva.Text({
-      text: `: ${attr.type}`,
-      fontSize: 12,
-      fontFamily: 'Plus Jakarta Sans',
-      fontStyle: 'normal',
-    });
-    const attrW = nameMeasure.width() + 3 + typeMeasure.width();
+    const attrW =
+      measureTextWidth(`${attr.visibility} ${attr.name}`, {
+        fontSize: 12,
+        fontFamily: 'Plus Jakarta Sans',
+        fontStyle: 'bold',
+      }) +
+      3 +
+      measureTextWidth(`: ${attr.type}`, {
+        fontSize: 12,
+        fontFamily: 'Plus Jakarta Sans',
+        fontStyle: 'normal',
+      });
     if (attrW > maxContentWidth) {
       maxContentWidth = attrW;
     }
@@ -53,12 +53,10 @@ export function computeClassAutoBounds(node: UmlNode): { width: number; height: 
 
   // Ancho de métodos
   for (const m of methods) {
-    const mMeasure = new Konva.Text({
-      text: `${m.visibility} ${m.name}(${m.params}): ${m.returnType}`,
+    const mW = measureTextWidth(`${m.visibility} ${m.name}(${m.params}): ${m.returnType}`, {
       fontSize: 11.5,
       fontFamily: 'JetBrains Mono',
     });
-    const mW = mMeasure.width();
     if (mW > maxContentWidth) {
       maxContentWidth = mW;
     }
@@ -68,24 +66,25 @@ export function computeClassAutoBounds(node: UmlNode): { width: number; height: 
   const calculatedWidth = Math.max(90, Math.ceil(maxContentWidth + 20));
 
   // Si el usuario redimensionó manualmente el nodo con transformer, respetar su tamaño personalizado
-  const customW = node.isCustomSize && ((node.customWidth && node.customWidth > 0) || (node.width && node.width > 0))
-    ? (node.customWidth || node.width || 0)
-    : 0;
-  const autoWidth = customW > 0
-    ? Math.max(calculatedWidth, customW)
-    : calculatedWidth;
+  const customW =
+    node.isCustomSize &&
+    ((node.customWidth && node.customWidth > 0) || (node.width && node.width > 0))
+      ? node.customWidth || node.width || 0
+      : 0;
+  const autoWidth = customW > 0 ? Math.max(calculatedWidth, customW) : calculatedWidth;
 
   // Altura requerida basada en encabezado, atributos y métodos
   let requiredHeight = headerHeight + 14 + attrs.length * 20;
   if (methods.length > 0) {
     requiredHeight += 14 + methods.length * 19;
   }
-  const customH = node.isCustomSize && ((node.customHeight && node.customHeight > 0) || (node.height && node.height > 0))
-    ? (node.customHeight || node.height || 0)
-    : 0;
-  const autoHeight = customH > 0
-    ? Math.max(customH, requiredHeight + 6)
-    : Math.max(80, requiredHeight + 6);
+  const customH =
+    node.isCustomSize &&
+    ((node.customHeight && node.customHeight > 0) || (node.height && node.height > 0))
+      ? node.customHeight || node.height || 0
+      : 0;
+  const autoHeight =
+    customH > 0 ? Math.max(customH, requiredHeight + 6) : Math.max(80, requiredHeight + 6);
 
   return { width: autoWidth, height: autoHeight };
 }
@@ -252,7 +251,7 @@ export function resizeClassKonvaNode(
   group: Konva.Group,
   newWidth: number,
   newHeight: number,
-  node?: UmlNode
+  node?: UmlNode,
 ): void {
   let minAllowedW = 90;
   let minAllowedH = 60;

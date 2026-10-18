@@ -1,6 +1,5 @@
 import {
   Component,
-  AfterViewInit,
   OnDestroy,
   input,
   output,
@@ -11,6 +10,7 @@ import {
   ChangeDetectorRef,
   ChangeDetectionStrategy,
   inject,
+  afterNextRender,
   NgZone,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -44,7 +44,7 @@ import {
   CanvasCollabExportService,
   DiagramCanvasViewState,
 } from './services';
-import { DiagramDropPayload } from './diagram-canvas.types';
+import { CanvasTransformAdapter, DiagramDropPayload } from './diagram-canvas.types';
 import { setupDiagramCanvasEffects } from './diagram-canvas.effects';
 import {
   buildNodeInteractionContext,
@@ -84,7 +84,7 @@ export type { DiagramCanvasViewState };
   templateUrl: './diagram-canvas.component.html',
   styleUrl: './diagram-canvas.component.css',
 })
-export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
+export class DiagramCanvasComponent implements OnDestroy {
   @ViewChild('stageContainer', { static: false })
   stageContainerRef?: ElementRef<HTMLDivElement>;
 
@@ -130,8 +130,16 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   readonly connectionReassigned = output<any>();
   readonly moveNodes = output<any>();
   readonly selectionChange = output<any>();
-  readonly nodePositionChange = output<{ node: UmlClassNode; newPosition: { x: number; y: number } }>();
-  readonly nodeSizeChange = output<{ node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }>();
+  readonly nodePositionChange = output<{
+    node: UmlClassNode;
+    newPosition: { x: number; y: number };
+  }>();
+  readonly nodeSizeChange = output<{
+    node: UmlClassNode;
+    width: number;
+    height?: number;
+    position: { x: number; y: number };
+  }>();
   readonly nodeClick = output<{ nodeId: string; event: MouseEvent }>();
   readonly nodeDblClick = output<{ node: UmlClassNode; event: MouseEvent }>();
   readonly connectionClick = output<{ connId: string; event: MouseEvent }>();
@@ -144,9 +152,15 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   readonly zoomChange = output<number>();
   readonly viewportScroll = output<Event>();
   readonly nodeRename = output<{ nodeId: string; newName: string }>();
-  readonly nodeLabelOffsetChange = output<{ node: UmlClassNode; offset: { x: number; y: number } }>();
+  readonly nodeLabelOffsetChange = output<{
+    node: UmlClassNode;
+    offset: { x: number; y: number };
+  }>();
   readonly sequenceMessageMove = output<{ connectionId: string; targetSlot: number }>();
-  readonly nodeDropped = output<{ payload: DiagramDropPayload; position: { x: number; y: number } }>();
+  readonly nodeDropped = output<{
+    payload: DiagramDropPayload;
+    position: { x: number; y: number };
+  }>();
   readonly nodeContextMenu = output<{ node: UmlClassNode; event: MouseEvent }>();
   readonly connectionContextMenu = output<{ conn: UmlConnection; event: MouseEvent }>();
   readonly canvasContextMenu = output<{ event: MouseEvent; canvasPos: { x: number; y: number } }>();
@@ -204,20 +218,11 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     setupDiagramCanvasEffects(this);
-  }
-
-  /**
-   * Ciclo de vida posterior a la inicialización de la vista. Inicializa el canvas de Konva
-   * y restaura el estado previo del viewport.
-   */
-  ngAfterViewInit(): void {
-    if (typeof window === 'undefined') return;
-
-    setTimeout(() => {
+    afterNextRender(() => {
       this.initKonvaStage();
       this.restoreViewportScroll(this.diagramId());
       this.flowLoaded.emit();
-    }, 40);
+    });
   }
 
   /**
@@ -229,6 +234,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       this.stageEventsCleanup();
       this.stageEventsCleanup = undefined;
     }
+    this.lastLocalMoveTimestamps.clear();
     this.relationshipManager.cancelAnimation();
     this.nodeInteraction.destroy();
     this.stageManager.destroy();
@@ -263,7 +269,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         showGrid: this.showGrid(),
         onResize: () => this.updateStageDimensions(),
       },
-      this.ngZone
+      this.ngZone,
     );
 
     if (!this.stage) return;
@@ -324,7 +330,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       cursorY,
       this.nodes(),
       this.activeDiagramType(),
-      this.uiLayer
+      this.uiLayer,
     );
   }
 
@@ -344,8 +350,12 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     const nodeSig = this.nodes()
       .filter((n) => !n.isAnchor)
       .map((n) => {
-        const attrs = (n.attributes || []).map((a) => `${a.name}:${a.type}:${a.visibility}`).join(',');
-        const methods = (n.methods || []).map((m) => `${m.name}:${m.parameters}:${m.returnType}:${m.visibility}`).join(',');
+        const attrs = (n.attributes || [])
+          .map((a) => `${a.name}:${a.type}:${a.visibility}`)
+          .join(',');
+        const methods = (n.methods || [])
+          .map((m) => `${m.name}:${m.parameters}:${m.returnType}:${m.visibility}`)
+          .join(',');
         return `${n.id}:${n.name}:${n.stereotype || ''}:${n.nodeType}:${n.color || ''}:${attrs}:${methods}:${n.customWidth ?? 0}:${n.customHeight ?? 0}`;
       })
       .join('|');
@@ -412,7 +422,8 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
         onConnectionClick: (connId, event) => this.connectionClick.emit({ connId, event }),
         onConnectionDblClick: (conn, event) => this.connectionDblClick.emit({ conn, event }),
         onConnectionContextMenu: (conn, event) => this.connectionContextMenu.emit({ conn, event }),
-        onSequenceMessageMove: (connectionId, targetSlot) => this.sequenceMessageMove.emit({ connectionId, targetSlot }),
+        onSequenceMessageMove: (connectionId, targetSlot) =>
+          this.sequenceMessageMove.emit({ connectionId, targetSlot }),
       },
     });
   }
@@ -422,7 +433,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    */
   syncTransformer(): void {
     const selectedIds = Array.from(
-      new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()])
+      new Set([...this.selectedNodeIds(), ...this.selectedNodeIdsInternal()]),
     );
     this.nodeInteraction.syncTransformer({
       selectedNodeIds: selectedIds,
@@ -456,10 +467,8 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    * Restablece el zoom al 100% y centra la vista del tablero.
    */
   resetView(): void {
-    this.viewportManager.resetView(
-      this.flowContainerRef?.nativeElement,
-      this.diagramId(),
-      () => this.updateStageDimensions()
+    this.viewportManager.resetView(this.flowContainerRef?.nativeElement, this.diagramId(), () =>
+      this.updateStageDimensions(),
     );
     this.zoomChange.emit(this.zoomLevel());
   }
@@ -472,7 +481,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       this.flowContainerRef?.nativeElement,
       this.nodes(),
       this.diagramId(),
-      () => this.updateStageDimensions()
+      () => this.updateStageDimensions(),
     );
     this.zoomChange.emit(this.zoomLevel());
   }
@@ -484,7 +493,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     const clamped = this.viewportManager.zoomIn(
       this.flowContainerRef?.nativeElement,
       this.diagramId(),
-      () => this.updateStageDimensions()
+      () => this.updateStageDimensions(),
     );
     this.zoomChange.emit(clamped);
   }
@@ -496,7 +505,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     const clamped = this.viewportManager.zoomOut(
       this.flowContainerRef?.nativeElement,
       this.diagramId(),
-      () => this.updateStageDimensions()
+      () => this.updateStageDimensions(),
     );
     this.zoomChange.emit(clamped);
   }
@@ -543,7 +552,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     this.viewportManager.restoreViewportScroll(
       diagramId,
       this.flowContainerRef?.nativeElement,
-      () => this.updateStageDimensions()
+      () => this.updateStageDimensions(),
     );
   }
 
@@ -561,7 +570,10 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    */
   onViewportScroll(event: Event): void {
     this.viewportScroll.emit(event);
-    this.viewportManager.persistViewportScroll(this.diagramId(), this.flowContainerRef?.nativeElement);
+    this.viewportManager.persistViewportScroll(
+      this.diagramId(),
+      this.flowContainerRef?.nativeElement,
+    );
   }
 
   /**
@@ -575,7 +587,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       this.flowContainerRef?.nativeElement,
       this.diagramId(),
       () => this.updateStageDimensions(),
-      (z: number) => this.zoomChange.emit(z)
+      (z: number) => this.zoomChange.emit(z),
     );
   }
 
@@ -649,10 +661,8 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    * @param state Estado de la vista a aplicar.
    */
   applyViewState(state: DiagramCanvasViewState): void {
-    this.viewportManager.applyViewState(
-      state,
-      this.flowContainerRef?.nativeElement,
-      () => this.updateStageDimensions()
+    this.viewportManager.applyViewState(state, this.flowContainerRef?.nativeElement, () =>
+      this.updateStageDimensions(),
     );
   }
 
@@ -682,7 +692,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
       uiLayer: this.uiLayer,
       gridGroup: this.gridGroup,
       bgRect: this.bgRect,
-      transformer: (this.nodeInteraction as any).transformer,
+      transformer: this.nodeInteraction.getTransformer(),
       pixelRatio,
       padding,
     });
@@ -693,7 +703,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
    *
    * @returns Objeto simulador con escala, reseteo y redibujado.
    */
-  get canvas(): any {
+  get canvas(): CanvasTransformAdapter {
     return createCanvasTransformAdapter(this);
   }
 
@@ -728,7 +738,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     currentY: number,
     width: number,
     height: number,
-    ignoredIds: Set<string>
+    ignoredIds: Set<string>,
   ): { x: number; y: number } {
     const service = this.nodeInteraction || new CanvasNodeInteractionService();
     return service.calculateAndDrawSmartGuides({
@@ -777,7 +787,7 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
     return this.viewportManager.clientToCanvasCoordinates(
       clientX,
       clientY,
-      this.stageContainerRef?.nativeElement
+      this.stageContainerRef?.nativeElement,
     );
   }
 
@@ -903,23 +913,61 @@ export class DiagramCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   // Métodos de acceso interno utilizados por wiring y effects
-  getStage(): Konva.Stage | null { return this.stage; }
-  getNodeLayer(): Konva.Layer | null { return this.nodeLayer; }
-  getFrameLayer(): Konva.Layer | null { return this.frameLayer; }
-  getRelLayer(): Konva.Layer | null { return this.relLayer; }
-  getUiLayer(): Konva.Layer | null { return this.uiLayer; }
-  getBgRect(): Konva.Rect | null { return this.bgRect; }
-  getNodeGroupsMap(): Map<string, Konva.Group> { return this.nodeGroupsMap; }
-  getSelectedNodeIdsInternal(): string[] { return this.selectedNodeIdsInternal(); }
-  getSelectedConnIdsInternal(): string[] { return this.selectedConnIdsInternal(); }
-  getIsDraggingNode(): boolean { return this.isDraggingNode; }
-  setIsDraggingNode(val: boolean): void { this.isDraggingNode = val; }
-  getLastRenderedSignature(): string { return this.lastRenderedSignature; }
-  setLastRenderedSignature(sig: string): void { this.lastRenderedSignature = sig; }
-  getLastLocalMoveTimestamps(): Map<string, number> { return this.lastLocalMoveTimestamps; }
-  getNodeInteraction(): CanvasNodeInteractionService { return this.nodeInteraction; }
-  getContainmentService(): DiagramContainmentService { return this.containmentService; }
-  getRelationshipManager(): CanvasRelationshipManagerService { return this.relationshipManager; }
-  getSequenceActivationService(): DiagramSequenceActivationService { return this.sequenceActivationService; }
-  getNgZone(): NgZone { return this.ngZone; }
+  getStage(): Konva.Stage | null {
+    return this.stage;
+  }
+  getNodeLayer(): Konva.Layer | null {
+    return this.nodeLayer;
+  }
+  getFrameLayer(): Konva.Layer | null {
+    return this.frameLayer;
+  }
+  getRelLayer(): Konva.Layer | null {
+    return this.relLayer;
+  }
+  getUiLayer(): Konva.Layer | null {
+    return this.uiLayer;
+  }
+  getBgRect(): Konva.Rect | null {
+    return this.bgRect;
+  }
+  getNodeGroupsMap(): Map<string, Konva.Group> {
+    return this.nodeGroupsMap;
+  }
+  getSelectedNodeIdsInternal(): string[] {
+    return this.selectedNodeIdsInternal();
+  }
+  getSelectedConnIdsInternal(): string[] {
+    return this.selectedConnIdsInternal();
+  }
+  getIsDraggingNode(): boolean {
+    return this.isDraggingNode;
+  }
+  setIsDraggingNode(val: boolean): void {
+    this.isDraggingNode = val;
+  }
+  getLastRenderedSignature(): string {
+    return this.lastRenderedSignature;
+  }
+  setLastRenderedSignature(sig: string): void {
+    this.lastRenderedSignature = sig;
+  }
+  getLastLocalMoveTimestamps(): Map<string, number> {
+    return this.lastLocalMoveTimestamps;
+  }
+  getNodeInteraction(): CanvasNodeInteractionService {
+    return this.nodeInteraction;
+  }
+  getContainmentService(): DiagramContainmentService {
+    return this.containmentService;
+  }
+  getRelationshipManager(): CanvasRelationshipManagerService {
+    return this.relationshipManager;
+  }
+  getSequenceActivationService(): DiagramSequenceActivationService {
+    return this.sequenceActivationService;
+  }
+  getNgZone(): NgZone {
+    return this.ngZone;
+  }
 }

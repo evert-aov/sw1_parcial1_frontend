@@ -29,32 +29,55 @@ export function createNoteKonvaNode(node: UmlNode, isSelected: boolean): Konva.G
   return group;
 }
 
+const NOTE_FOLD_SIZE = 16;
+
+/** Geometría calculada (pura) de todas las partes de la nota para un tamaño dado. */
+interface NoteGeometry {
+  bodyPoints: number[];
+  flapPoints: number[];
+  headerWidth: number;
+  bodyTextWidth: number;
+  bodyTextHeight: number;
+}
+
+function computeNoteGeometry(width: number, height: number): NoteGeometry {
+  const foldSize = NOTE_FOLD_SIZE;
+  return {
+    bodyPoints: [0, 0, width - foldSize, 0, width, foldSize, width, height, 0, height],
+    flapPoints: [width - foldSize, 0, width - foldSize, foldSize, width, foldSize],
+    headerWidth: width - foldSize - 14,
+    bodyTextWidth: width - 20,
+    bodyTextHeight: Math.max(24, height - 30),
+  };
+}
+
+function noteStrokeColor(node: UmlNode, isSelected: boolean): string {
+  return isSelected ? '#059669' : node.stroke || '#A89F81';
+}
+
+function noteHeaderText(node: UmlNode): string {
+  return node.stereotype ? `«${node.stereotype}»` : '«note»';
+}
+
+function noteBodyText(node: UmlNode): string {
+  return node.name || 'Escribe el contenido de la nota aquí...';
+}
+
 function drawNoteGeometry(
   group: Konva.Group,
   node: UmlNode,
   width: number,
   height: number,
-  isSelected: boolean
+  isSelected: boolean,
 ): void {
-  const foldSize = 16;
-  const strokeColor = isSelected ? '#059669' : node.stroke || '#A89F81';
+  const geo = computeNoteGeometry(width, height);
+  const strokeColor = noteStrokeColor(node, isSelected);
   const baseFill = node.fill || '#FEF9C3';
 
   // Polygon with top-right corner cut for the dog-ear fold
   const noteBody = new Konva.Line({
-    name: 'note-part',
-    points: [
-      0,
-      0,
-      width - foldSize,
-      0,
-      width,
-      foldSize,
-      width,
-      height,
-      0,
-      height,
-    ],
+    name: 'note-part note-body',
+    points: geo.bodyPoints,
     closed: true,
     fillLinearGradientStartPoint: { x: 0, y: 0 },
     fillLinearGradientEndPoint: { x: width, y: height },
@@ -70,15 +93,8 @@ function drawNoteGeometry(
 
   // Dog-ear folded corner triangle at top-right
   const foldFlap = new Konva.Line({
-    name: 'note-part',
-    points: [
-      width - foldSize,
-      0,
-      width - foldSize,
-      foldSize,
-      width,
-      foldSize,
-    ],
+    name: 'note-part note-flap',
+    points: geo.flapPoints,
     closed: true,
     fill: '#FDE68A',
     stroke: strokeColor,
@@ -89,11 +105,11 @@ function drawNoteGeometry(
 
   // Subtle top header tag «note»
   const headerTag = new Konva.Text({
-    name: 'note-part',
+    name: 'note-part note-header',
     x: 10,
     y: 7,
-    width: width - foldSize - 14,
-    text: node.stereotype ? `«${node.stereotype}»` : '«note»',
+    width: geo.headerWidth,
+    text: noteHeaderText(node),
     fontSize: 10,
     fontFamily: 'JetBrains Mono',
     fontStyle: 'italic',
@@ -103,12 +119,12 @@ function drawNoteGeometry(
 
   // Editable Note Body Text
   const bodyText = new Konva.Text({
-    name: 'note-part',
+    name: 'note-part note-text',
     x: 10,
     y: 23,
-    width: width - 20,
-    height: Math.max(24, height - 30),
-    text: node.name || 'Escribe el contenido de la nota aquí...',
+    width: geo.bodyTextWidth,
+    height: geo.bodyTextHeight,
+    text: noteBodyText(node),
     fontSize: 12,
     fontFamily: 'Plus Jakarta Sans',
     fontStyle: 'normal',
@@ -121,12 +137,54 @@ function drawNoteGeometry(
   group.add(noteBody, foldFlap, headerTag, bodyText);
 }
 
+/**
+ * Actualiza por diff las partes existentes de la nota (sin destruir ni recrear el subárbol).
+ *
+ * @returns `true` si todas las partes existían y fueron actualizadas.
+ */
+function updateNoteGeometry(
+  group: Konva.Group,
+  node: UmlNode,
+  width: number,
+  height: number,
+  isSelected: boolean,
+): boolean {
+  const body = group.findOne<Konva.Line>('.note-body');
+  const flap = group.findOne<Konva.Line>('.note-flap');
+  const header = group.findOne<Konva.Text>('.note-header');
+  const text = group.findOne<Konva.Text>('.note-text');
+  if (!body || !flap || !header || !text) return false;
+
+  const geo = computeNoteGeometry(width, height);
+  const strokeColor = noteStrokeColor(node, isSelected);
+
+  body.setAttrs({
+    points: geo.bodyPoints,
+    fillLinearGradientEndPoint: { x: width, y: height },
+    fillLinearGradientColorStops: [0, '#FFFBEB', 1, node.fill || '#FEF9C3'],
+    stroke: strokeColor,
+    strokeWidth: isSelected ? 2.1 : 1.4,
+  });
+  flap.setAttrs({
+    points: geo.flapPoints,
+    stroke: strokeColor,
+    strokeWidth: isSelected ? 1.8 : 1.3,
+  });
+  header.setAttrs({ width: geo.headerWidth, text: noteHeaderText(node) });
+  text.setAttrs({
+    width: geo.bodyTextWidth,
+    height: geo.bodyTextHeight,
+    text: noteBodyText(node),
+  });
+  return true;
+}
+
 export function resizeNoteKonvaNode(
   group: Konva.Group,
   node: UmlNode,
   newWidth: number,
   newHeight: number,
-  isSelected: boolean
+  isSelected: boolean,
 ): void {
   const minW = Math.max(135, Math.round(newWidth));
   const minH = Math.max(65, Math.round(newHeight));
@@ -134,6 +192,9 @@ export function resizeNoteKonvaNode(
   group.width(minW);
   group.height(minH);
 
-  group.find('.note-part').forEach((c) => c.destroy());
-  drawNoteGeometry(group, node, minW, minH, isSelected);
+  // Diff-update; solo si el subárbol no existe (nodo legado) se reconstruye.
+  if (!updateNoteGeometry(group, node, minW, minH, isSelected)) {
+    group.find('.note-part').forEach((c) => c.destroy());
+    drawNoteGeometry(group, node, minW, minH, isSelected);
+  }
 }

@@ -1,6 +1,11 @@
 import { Injectable, NgZone, inject } from '@angular/core';
 import Konva from 'konva';
-import { DiagramType, UmlClassNode, UmlConnection, UmlRelationshipType } from '../../../../../../core/models/diagram.model';
+import {
+  DiagramType,
+  UmlClassNode,
+  UmlConnection,
+  UmlRelationshipType,
+} from '../../../../../../core/models/diagram.model';
 import { DiagramSequenceActivationService } from '../../../services/diagram-sequence-activation.service';
 import { CanvasRelationshipManagerService } from './canvas-relationship-manager.service';
 
@@ -62,6 +67,7 @@ export class CanvasStageEventsService {
   private marqueeRect: Konva.Rect | null = null;
   private isMarqueeSelecting = false;
   private marqueeStartPos = { x: 0, y: 0 };
+  private lastMarqueeSelectionKey = '';
   private onWindowMouseUpHandler?: () => void;
 
   /**
@@ -104,45 +110,61 @@ export class CanvasStageEventsService {
    * @returns Función de limpieza para desvincular observadores globales de ventana.
    */
   bindStageEvents(ctx: StageEventsContext): () => void {
-    if (!ctx.stage) return () => {};
+    const stage = ctx.stage;
+    if (!stage) return () => {};
 
-    ctx.stage.on('mousedown touchstart', (e: Konva.KonvaEventObject<MouseEvent>) => {
-      this.handleMouseDown(e, ctx);
-    });
-
-    ctx.stage.on('dblclick dbltap', (e: Konva.KonvaEventObject<MouseEvent>) => {
-      this.handleDblClick(e, ctx);
-    });
-
-    ctx.stage.on('contextmenu', (e: Konva.KonvaEventObject<MouseEvent>) => {
-      this.handleContextMenu(e, ctx);
-    });
-
-    ctx.stage.on('mousemove touchmove', (e: Konva.KonvaEventObject<MouseEvent>) => {
-      this.handleMouseMove(e, ctx);
-    });
+    // Evita duplicar el listener global si bindStageEvents se invoca más de una vez.
+    this.removeWindowMouseUpListener();
 
     const finishMarquee = () => {
       if (this.isMarqueeSelecting) {
         this.isMarqueeSelecting = false;
+        this.lastMarqueeSelectionKey = '';
         if (this.marqueeRect) {
           this.marqueeRect.visible(false);
           ctx.uiLayer?.batchDraw();
         }
       }
     };
-    ctx.stage.on('mouseup touchend', finishMarquee);
-    this.onWindowMouseUpHandler = finishMarquee;
-    if (typeof window !== 'undefined') {
-      window.addEventListener('mouseup', finishMarquee);
-    }
 
-    return () => {
-      if (this.onWindowMouseUpHandler && typeof window !== 'undefined') {
-        window.removeEventListener('mouseup', this.onWindowMouseUpHandler);
-        this.onWindowMouseUpHandler = undefined;
+    // Los listeners Konva viven fuera de NgZone; solo se reentra con ngZone.run()
+    // cuando ocurre un cambio real de estado (selección, clic, menú contextual...).
+    ctx.ngZone.runOutsideAngular(() => {
+      stage.on('mousedown touchstart', (e: Konva.KonvaEventObject<MouseEvent>) => {
+        this.handleMouseDown(e, ctx);
+      });
+
+      stage.on('dblclick dbltap', (e: Konva.KonvaEventObject<MouseEvent>) => {
+        this.handleDblClick(e, ctx);
+      });
+
+      stage.on('contextmenu', (e: Konva.KonvaEventObject<MouseEvent>) => {
+        this.handleContextMenu(e, ctx);
+      });
+
+      stage.on('mousemove touchmove', (e: Konva.KonvaEventObject<MouseEvent>) => {
+        this.handleMouseMove(e, ctx);
+      });
+
+      stage.on('mouseup touchend', finishMarquee);
+
+      this.onWindowMouseUpHandler = finishMarquee;
+      if (typeof window !== 'undefined') {
+        window.addEventListener('mouseup', finishMarquee);
       }
-    };
+    });
+
+    return () => this.removeWindowMouseUpListener();
+  }
+
+  /**
+   * Elimina el listener global de `mouseup` registrado por `bindStageEvents`.
+   */
+  private removeWindowMouseUpListener(): void {
+    if (this.onWindowMouseUpHandler && typeof window !== 'undefined') {
+      window.removeEventListener('mouseup', this.onWindowMouseUpHandler);
+    }
+    this.onWindowMouseUpHandler = undefined;
   }
 
   /**
@@ -184,6 +206,7 @@ export class CanvasStageEventsService {
 
     if (isLeftClick && !ctx.selectedRelationType() && !ctx.isReadOnly()) {
       this.isMarqueeSelecting = true;
+      this.lastMarqueeSelectionKey = '';
       this.marqueeStartPos = { x: canvasX, y: canvasY };
       if (this.marqueeRect) {
         this.marqueeRect.position({ x: canvasX, y: canvasY });
@@ -319,10 +342,14 @@ export class CanvasStageEventsService {
         }
       }
 
-      ctx.ngZone.run(() => {
-        ctx.callbacks.onSelect(intersectingIds, []);
-        ctx.callbacks.onSelectionChange({ nodeIds: intersectingIds, connectionIds: [] });
-      });
+      const selectionKey = intersectingIds.slice().sort().join('|');
+      if (selectionKey !== this.lastMarqueeSelectionKey) {
+        this.lastMarqueeSelectionKey = selectionKey;
+        ctx.ngZone.run(() => {
+          ctx.callbacks.onSelect(intersectingIds, []);
+          ctx.callbacks.onSelectionChange({ nodeIds: intersectingIds, connectionIds: [] });
+        });
+      }
       ctx.uiLayer?.batchDraw();
     }
 
@@ -342,12 +369,20 @@ export class CanvasStageEventsService {
           sequenceActivationService: ctx.sequenceActivationService,
           maxDistancePx: 28,
         });
-        ctx.relationshipManager.setHoveredRelationship(nearConn?.id ?? null, new Set(ctx.selectedConnIds()), ctx.relLayer);
+        ctx.relationshipManager.setHoveredRelationship(
+          nearConn?.id ?? null,
+          new Set(ctx.selectedConnIds()),
+          ctx.relLayer,
+        );
         if (ctx.stage.container()) {
           ctx.stage.container().style.cursor = nearConn ? 'pointer' : 'default';
         }
       } else {
-        ctx.relationshipManager.setHoveredRelationship(null, new Set(ctx.selectedConnIds()), ctx.relLayer);
+        ctx.relationshipManager.setHoveredRelationship(
+          null,
+          new Set(ctx.selectedConnIds()),
+          ctx.relLayer,
+        );
         if (ctx.stage.container()) {
           ctx.stage.container().style.cursor = 'default';
         }
@@ -361,10 +396,7 @@ export class CanvasStageEventsService {
    * Libera observadores de ventana y destruye el rectángulo Marquee.
    */
   destroy(): void {
-    if (this.onWindowMouseUpHandler && typeof window !== 'undefined') {
-      window.removeEventListener('mouseup', this.onWindowMouseUpHandler);
-      this.onWindowMouseUpHandler = undefined;
-    }
+    this.removeWindowMouseUpListener();
     if (this.marqueeRect) {
       this.marqueeRect.destroy();
       this.marqueeRect = null;

@@ -11,4 +11,5 @@ export * from './package.node';
 export * from './package_layer.node';
 export * from './activity.node';
 export * from './note.node';
+export * from './node-renderer.registry';
 export * from './uml-relationship.renderer';

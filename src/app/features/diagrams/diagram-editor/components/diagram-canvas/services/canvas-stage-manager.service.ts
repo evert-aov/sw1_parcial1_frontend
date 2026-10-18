@@ -114,18 +114,41 @@ export class CanvasStageManagerService {
    * @returns Instancia de Konva.Stage creada.
    */
   initStage(options: StageInitOptions, ngZone: NgZone): Konva.Stage | null {
-    const { container, parentContainer, initialZoom, boardWidth, boardHeight, scaledBoardWidth, scaledBoardHeight, showGrid, onResize } = options;
+    const {
+      container,
+      parentContainer,
+      initialZoom,
+      boardWidth,
+      boardHeight,
+      scaledBoardWidth,
+      scaledBoardHeight,
+      showGrid,
+      onResize,
+    } = options;
     if (!container) return null;
 
     const scale = Math.max(0.2, initialZoom / 100);
-    const rawTargetW = Math.max(parentContainer?.clientWidth || 0, container.clientWidth || 0, scaledBoardWidth, 2200);
-    const rawTargetH = Math.max(parentContainer?.clientHeight || 0, container.clientHeight || 0, scaledBoardHeight, 1400);
+    const rawTargetW = Math.max(
+      parentContainer?.clientWidth || 0,
+      container.clientWidth || 0,
+      scaledBoardWidth,
+      2200,
+    );
+    const rawTargetH = Math.max(
+      parentContainer?.clientHeight || 0,
+      container.clientHeight || 0,
+      scaledBoardHeight,
+      1400,
+    );
 
     // Cuantización de dimensiones a bloques de 512px (Bucket Sizing para optimizar RAM)
     const width = Math.ceil(rawTargetW / 512) * 512;
     const height = Math.ceil(rawTargetH / 512) * 512;
 
-    Konva.pixelRatio = Math.min(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1, 1.5);
+    Konva.pixelRatio = Math.min(
+      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+      1.5,
+    );
     Konva.dragDistance = 3;
 
     ngZone.runOutsideAngular(() => {
@@ -139,7 +162,8 @@ export class CanvasStageManagerService {
       this.stage.scale({ x: scale, y: scale });
       this.stage.position({ x: 0, y: 0 });
 
-      this.bgLayer = new Konva.Layer({ listening: true });
+      // Capa de fondo estática: sin hit-testing. Los clics sobre el vacío llegan con target = Stage.
+      this.bgLayer = new Konva.Layer({ listening: false });
       this.frameLayer = new Konva.Layer({ listening: true });
       this.relLayer = new Konva.Layer();
       this.nodeLayer = new Konva.Layer();
@@ -154,7 +178,8 @@ export class CanvasStageManagerService {
         width: effectiveW,
         height: effectiveH,
         fill: '#FAF9F5',
-        listening: true,
+        listening: false,
+        perfectDrawEnabled: false,
       });
       this.bgLayer.add(this.bgRect);
 
@@ -201,10 +226,27 @@ export class CanvasStageManagerService {
   }): { dimensionsChanged: boolean; scaleChanged: boolean } {
     if (!this.stage) return { dimensionsChanged: false, scaleChanged: false };
 
-    const { container, parentContainer, zoomLevel, boardWidth, boardHeight, scaledBoardWidth, scaledBoardHeight, showGrid } = params;
+    const {
+      container,
+      parentContainer,
+      zoomLevel,
+      boardWidth,
+      boardHeight,
+      scaledBoardWidth,
+      scaledBoardHeight,
+      showGrid,
+    } = params;
     const scale = Math.max(0.2, zoomLevel / 100);
-    const rawTargetW = Math.max(parentContainer?.clientWidth || 0, container?.clientWidth || 0, scaledBoardWidth);
-    const rawTargetH = Math.max(parentContainer?.clientHeight || 0, container?.clientHeight || 0, scaledBoardHeight);
+    const rawTargetW = Math.max(
+      parentContainer?.clientWidth || 0,
+      container?.clientWidth || 0,
+      scaledBoardWidth,
+    );
+    const rawTargetH = Math.max(
+      parentContainer?.clientHeight || 0,
+      container?.clientHeight || 0,
+      scaledBoardHeight,
+    );
 
     const targetW = Math.ceil(rawTargetW / 512) * 512;
     const targetH = Math.ceil(rawTargetH / 512) * 512;
@@ -270,7 +312,8 @@ export class CanvasStageManagerService {
             stroke: isMajor ? 'rgba(120, 113, 108, 0.15)' : 'rgba(120, 113, 108, 0.05)',
             strokeWidth: 1,
             listening: false,
-          })
+            perfectDrawEnabled: false,
+          }),
         );
       }
 
@@ -282,7 +325,8 @@ export class CanvasStageManagerService {
             stroke: isMajor ? 'rgba(120, 113, 108, 0.15)' : 'rgba(120, 113, 108, 0.05)',
             strokeWidth: 1,
             listening: false,
-          })
+            perfectDrawEnabled: false,
+          }),
         );
       }
     }

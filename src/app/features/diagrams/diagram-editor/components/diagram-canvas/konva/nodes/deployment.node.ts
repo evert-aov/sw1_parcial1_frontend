@@ -16,23 +16,71 @@ export function createDeploymentKonvaNode(node: UmlNode, isSelected: boolean): K
   return group;
 }
 
+/** Vértices (puros) del cubo 3D para un tamaño dado. */
+function computeCubeGeometry(width: number, height: number) {
+  const depth = 14;
+  const frontW = width - depth;
+  const frontH = height - depth;
+  return {
+    depth,
+    frontW,
+    frontH,
+    topPoints: [0, depth, depth, 0, width, 0, frontW, depth],
+    rightPoints: [frontW, depth, width, 0, width, frontH, frontW, height],
+  };
+}
+
+/**
+ * Actualiza por diff las caras y textos del cubo existente (sin destruir ni recrear el subárbol).
+ *
+ * @returns `true` si todas las partes existían y fueron actualizadas.
+ */
+function updateDeploymentCube(
+  group: Konva.Group,
+  node: UmlNode,
+  width: number,
+  height: number,
+  isSelected: boolean,
+): boolean {
+  const top = group.findOne<Konva.Line>('.deploy-top');
+  const right = group.findOne<Konva.Line>('.deploy-right');
+  const front = group.findOne<Konva.Rect>('.deploy-front');
+  const stereo = group.findOne<Konva.Text>('.deploy-stereo');
+  const title = group.findOne<Konva.Text>('.deploy-title');
+  if (!top || !right || !front || !stereo || !title) return false;
+
+  const { frontW, frontH, topPoints, rightPoints } = computeCubeGeometry(width, height);
+  const strokeColor = isSelected ? '#059669' : '#64748B';
+
+  top.setAttrs({ points: topPoints, stroke: strokeColor });
+  right.setAttrs({ points: rightPoints, stroke: strokeColor });
+  front.setAttrs({
+    width: frontW,
+    height: frontH,
+    stroke: strokeColor,
+    strokeWidth: isSelected ? 2 : 1.4,
+    fill: node.fill || '#F1F5F9',
+  });
+  stereo.setAttrs({ width: frontW - 16, text: `«${node.stereotype || 'device'}»` });
+  title.setAttrs({ width: frontW - 16, text: node.name });
+  return true;
+}
+
 function drawDeploymentCube(
   group: Konva.Group,
   node: UmlNode,
   width: number,
   height: number,
-  isSelected: boolean
+  isSelected: boolean,
 ): void {
-  const depth = 14;
-  const frontW = width - depth;
-  const frontH = height - depth;
+  const { depth, frontW, frontH, topPoints, rightPoints } = computeCubeGeometry(width, height);
   const strokeColor = isSelected ? '#059669' : '#64748B';
   const baseFill = node.fill || '#F1F5F9';
 
   // Top 3D Face
   const topFace = new Konva.Line({
-    name: 'deploy-part',
-    points: [0, depth, depth, 0, width, 0, frontW, depth],
+    name: 'deploy-part deploy-top',
+    points: topPoints,
     closed: true,
     fill: '#E2E8F0',
     stroke: strokeColor,
@@ -41,8 +89,8 @@ function drawDeploymentCube(
 
   // Right 3D Face
   const rightFace = new Konva.Line({
-    name: 'deploy-part',
-    points: [frontW, depth, width, 0, width, frontH, frontW, height],
+    name: 'deploy-part deploy-right',
+    points: rightPoints,
     closed: true,
     fill: '#CBD5E1',
     stroke: strokeColor,
@@ -51,7 +99,7 @@ function drawDeploymentCube(
 
   // Front Face
   const frontFace = new Konva.Rect({
-    name: 'deploy-part',
+    name: 'deploy-part deploy-front',
     x: 0,
     y: depth,
     width: frontW,
@@ -67,7 +115,7 @@ function drawDeploymentCube(
   });
 
   const stereo = new Konva.Text({
-    name: 'deploy-part',
+    name: 'deploy-part deploy-stereo',
     x: 8,
     y: depth + 10,
     width: frontW - 16,
@@ -81,7 +129,7 @@ function drawDeploymentCube(
   });
 
   const title = new Konva.Text({
-    name: 'deploy-part',
+    name: 'deploy-part deploy-title',
     x: 8,
     y: depth + 28,
     width: frontW - 16,
@@ -102,7 +150,7 @@ export function resizeDeploymentKonvaNode(
   node: UmlNode,
   newWidth: number,
   newHeight: number,
-  isSelected: boolean
+  isSelected: boolean,
 ): void {
   const minW = Math.max(150, Math.round(newWidth));
   const minH = Math.max(90, Math.round(newHeight));
@@ -110,6 +158,9 @@ export function resizeDeploymentKonvaNode(
   group.width(minW);
   group.height(minH);
 
-  group.find('.deploy-part').forEach((c) => c.destroy());
-  drawDeploymentCube(group, node, minW, minH, isSelected);
+  // Diff-update; solo si el subárbol no existe (nodo legado) se reconstruye.
+  if (!updateDeploymentCube(group, node, minW, minH, isSelected)) {
+    group.find('.deploy-part').forEach((c) => c.destroy());
+    drawDeploymentCube(group, node, minW, minH, isSelected);
+  }
 }

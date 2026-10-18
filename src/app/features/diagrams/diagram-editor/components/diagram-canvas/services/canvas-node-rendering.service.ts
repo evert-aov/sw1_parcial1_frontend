@@ -2,34 +2,11 @@ import { Injectable } from '@angular/core';
 import Konva from 'konva';
 import { UmlClassNode } from '../../../../../../core/models/diagram.model';
 import { UmlNode } from '../konva/models/uml.model';
+import { hasNodeRenderer, resolveNodeRenderer } from '../konva/nodes/node-renderer.registry';
 import {
-  createClassKonvaNode,
-  resizeClassKonvaNode,
-  createActorKonvaNode,
-  resizeActorKonvaNode,
-  createUseCaseKonvaNode,
-  resizeUseCaseKonvaNode,
-  createBoundaryKonvaNode,
-  resizeBoundaryKonvaNode,
-  createControlKonvaNode,
-  resizeControlKonvaNode,
-  createEntityKonvaNode,
-  resizeEntityKonvaNode,
-  createLifelineKonvaNode,
-  resizeLifelineKonvaNode,
-  createDeploymentKonvaNode,
-  resizeDeploymentKonvaNode,
-  createComponentKonvaNode,
-  resizeComponentKonvaNode,
-  createPackageKonvaNode,
-  resizePackageKonvaNode,
-  createPackageLayerKonvaNode,
-  resizePackageLayerKonvaNode,
-  createActivityKonvaNode,
-  resizeActivityKonvaNode,
-  createNoteKonvaNode,
-  resizeNoteKonvaNode,
-} from '../konva/nodes';
+  getNodeZWeight as resolveNodeZWeight,
+  isContainerNode as resolveIsContainerNode,
+} from '../konva/node-classification.util';
 
 /**
  * Servicio encargado de la renderización, estilización y jerarquía Z de figuras Konva para nodos UML.
@@ -46,40 +23,7 @@ export class CanvasNodeRenderingService {
    * @returns Grupo Konva construido.
    */
   buildNodeGroup(node: UmlNode, isSelected: boolean): Konva.Group {
-    switch (node.type) {
-      case 'class':
-        return createClassKonvaNode(node, isSelected);
-      case 'actor':
-        return createActorKonvaNode(node, isSelected);
-      case 'use_case':
-        return createUseCaseKonvaNode(node, isSelected);
-      case 'boundary':
-        return createBoundaryKonvaNode(node, isSelected);
-      case 'control':
-        return createControlKonvaNode(node, isSelected);
-      case 'entity':
-        return createEntityKonvaNode(node, isSelected);
-      case 'lifeline':
-        return createLifelineKonvaNode(node, isSelected);
-      case 'deployment_node':
-        return createDeploymentKonvaNode(node, isSelected);
-      case 'component':
-        return createComponentKonvaNode(node, isSelected);
-      case 'package':
-        return createPackageKonvaNode(node, isSelected);
-      case 'package_layer':
-        return createPackageLayerKonvaNode(node, isSelected);
-      case 'note':
-        return createNoteKonvaNode(node, isSelected);
-      case 'activity_initial':
-      case 'activity_final':
-      case 'activity_action':
-      case 'activity_decision':
-      case 'activity_fork':
-        return createActivityKonvaNode(node, isSelected);
-      default:
-        return createClassKonvaNode(node, isSelected);
-    }
+    return resolveNodeRenderer(node.type).create(node, isSelected);
   }
 
   /**
@@ -125,8 +69,8 @@ export class CanvasNodeRenderingService {
     if (layerBg && layerBg.fill() !== color) layerBg.fill(color);
 
     const notePart = group.findOne<Konva.Shape>('.note-part');
-    if (notePart && (notePart as any).fill && (notePart as any).fill() !== color) {
-      (notePart as any).fill(color);
+    if (notePart && notePart.fill() !== color) {
+      notePart.fill(color);
     }
   }
 
@@ -139,51 +83,8 @@ export class CanvasNodeRenderingService {
    * @param newH Nuevo alto en píxeles.
    */
   applyFluidNodeResize(group: Konva.Group, node: UmlNode, newW: number, newH: number): void {
-    switch (node.type) {
-      case 'class':
-        resizeClassKonvaNode(group, newW, newH, node);
-        break;
-      case 'actor':
-        resizeActorKonvaNode(group, newW, newH, node.name, true);
-        break;
-      case 'use_case':
-        resizeUseCaseKonvaNode(group, newW, newH);
-        break;
-      case 'boundary':
-        resizeBoundaryKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
-        break;
-      case 'control':
-        resizeControlKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
-        break;
-      case 'entity':
-        resizeEntityKonvaNode(group, newW, newH, node.name, node.fill || '#E0F2F1', true);
-        break;
-      case 'lifeline':
-        resizeLifelineKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'deployment_node':
-        resizeDeploymentKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'component':
-        resizeComponentKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'package':
-        resizePackageKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'package_layer':
-        resizePackageLayerKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'note':
-        resizeNoteKonvaNode(group, node, newW, newH, true);
-        break;
-      case 'activity_initial':
-      case 'activity_final':
-      case 'activity_action':
-      case 'activity_decision':
-      case 'activity_fork':
-        resizeActivityKonvaNode(group, node, newW, newH, true);
-        break;
-    }
+    if (!hasNodeRenderer(node.type)) return;
+    resolveNodeRenderer(node.type).resize(group, node, newW, newH, true);
   }
 
   /**
@@ -232,25 +133,7 @@ export class CanvasNodeRenderingService {
    * @returns True si el nodo es un contenedor estructural.
    */
   isContainerNode(node?: UmlClassNode | UmlNode | null): boolean {
-    if (!node) return false;
-    const n = node as any;
-    const t = (n.nodeType || n.type || '').toLowerCase();
-    const id = (n.id || '').toLowerCase();
-    return (
-      t === 'boundary_box' ||
-      t === 'package_layer' ||
-      t === 'package' ||
-      t === 'device' ||
-      t === 'executionenvironment' ||
-      t === 'execution_environment' ||
-      t === 'exec_env' ||
-      t === 'deployment_node' ||
-      t === 'node' ||
-      t === 'subsystem' ||
-      id.startsWith('boundary_box_') ||
-      id.startsWith('bbox_') ||
-      id.startsWith('package_')
-    );
+    return resolveIsContainerNode(node);
   }
 
   /**
@@ -260,30 +143,7 @@ export class CanvasNodeRenderingService {
    * @returns Peso numérico en el eje Z (0: fondo, 100: tope).
    */
   getNodeZWeight(node: UmlClassNode | UmlNode): number {
-    const n = node as any;
-    const t = (n.nodeType || n.type || '').toLowerCase();
-    const id = (n.id || '').toLowerCase();
-    if (t === 'boundary_box' || t === 'package_layer' || id.startsWith('boundary_box_') || id.startsWith('bbox_')) {
-      return 0;
-    }
-    if (t === 'package' || id.startsWith('package_')) {
-      return 1;
-    }
-    if (
-      t === 'device' ||
-      t === 'executionenvironment' ||
-      t === 'execution_environment' ||
-      t === 'exec_env' ||
-      t === 'deployment_node' ||
-      t === 'node' ||
-      t === 'subsystem'
-    ) {
-      return 2;
-    }
-    if (t === 'component' || t === 'artifact') {
-      return 100;
-    }
-    return 10;
+    return resolveNodeZWeight(node);
   }
 
   /**
@@ -351,8 +211,8 @@ export class CanvasNodeRenderingService {
     const candidates = nodes.filter((n) => {
       if (n.id === clickedNode.id || n.isAnchor) return false;
       const group = nodeGroupsMap.get(n.id);
-      const nx = group ? group.x() : n.position?.x ?? 0;
-      const ny = group ? group.y() : n.position?.y ?? 0;
+      const nx = group ? group.x() : (n.position?.x ?? 0);
+      const ny = group ? group.y() : (n.position?.y ?? 0);
       const nw = group ? group.width() : n.width || 200;
       const nh = group ? group.height() : n.height || 100;
       return px >= nx && px <= nx + nw && py >= ny && py <= ny + nh;

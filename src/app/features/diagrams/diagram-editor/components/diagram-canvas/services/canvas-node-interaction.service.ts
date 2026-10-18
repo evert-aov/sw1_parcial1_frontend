@@ -8,7 +8,10 @@ import {
 } from '../../../../../../core/models/diagram.model';
 import { getNodeHeight, getNodeWidth } from '../../../utils/node-metrics.util';
 import { toKonvaNode } from '../konva/konva-adapter.util';
-import { isSequenceRelationshipType, findNextAvailableSlot } from '../nodes/uml-lifeline-node/uml-lifeline.logic';
+import {
+  isSequenceRelationshipType,
+  findNextAvailableSlot,
+} from '../nodes/uml-lifeline-node/uml-lifeline.logic';
 import { DiagramContainmentService } from '../../../services/diagram-containment.service';
 import { DiagramSequenceActivationService } from '../../../services/diagram-sequence-activation.service';
 import { CanvasRelationshipManagerService } from './canvas-relationship-manager.service';
@@ -31,9 +34,19 @@ export interface NodeInteractionCallbacks {
   onNodeContextMenu: (node: UmlClassNode, event: MouseEvent) => void;
   onConnectionClick: (connId: string, event: MouseEvent) => void;
   onConnectionCreated: (event: { fOutputId: string; fInputId: string }) => void;
-  onNodePositionChange: (event: { node: UmlClassNode; newPosition: { x: number; y: number } }) => void;
-  onNodeSizeChange: (event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }) => void;
-  onMoveNodes: (event: { nodes: Array<{ id: string; position: { x: number; y: number } }> }) => void;
+  onNodePositionChange: (event: {
+    node: UmlClassNode;
+    newPosition: { x: number; y: number };
+  }) => void;
+  onNodeSizeChange: (event: {
+    node: UmlClassNode;
+    width: number;
+    height?: number;
+    position: { x: number; y: number };
+  }) => void;
+  onMoveNodes: (event: {
+    nodes: Array<{ id: string; position: { x: number; y: number } }>;
+  }) => void;
   onSelectionChange: (event: { nodeIds: string[]; connectionIds: string[] }) => void;
   onRenderRelationships: () => void;
   onClearLivePreview: () => void;
@@ -98,7 +111,6 @@ export class CanvasNodeInteractionService {
     this.stageEvents = se ?? new CanvasStageEventsService();
   }
 
-
   /**
    * Inicializa y registra en la capa UI los componentes de interacción: guías, transformer y marquee.
    *
@@ -160,6 +172,15 @@ export class CanvasNodeInteractionService {
   }
 
   /**
+   * Obtiene el `Konva.Transformer` activo (usado, p. ej., para ocultarlo durante la exportación).
+   *
+   * @returns El transformer o `null` si la capa UI aún no fue inicializada.
+   */
+  getTransformer(): Konva.Transformer | null {
+    return this.transformer;
+  }
+
+  /**
    * Sincroniza las cajas de control del Konva.Transformer con los nodos seleccionados.
    *
    * @param params Nodos seleccionados, mapa de grupos Konva, permisos de sólo lectura y capa UI.
@@ -197,7 +218,11 @@ export class CanvasNodeInteractionService {
    * @param origNode Modelo original del nodo.
    * @param ctx Contexto con referencias al escenario, capas, señales y callbacks.
    */
-  attachNodeInteractions(group: Konva.Group, origNode: UmlClassNode, ctx: NodeInteractionContext): void {
+  attachNodeInteractions(
+    group: Konva.Group,
+    origNode: UmlClassNode,
+    ctx: NodeInteractionContext,
+  ): void {
     const isLocked = ctx.isNodeLockedByOther(origNode.id);
     const canDrag = !ctx.isReadOnly() && !isLocked && ctx.selectedRelationType() === null;
     group.draggable(canDrag);
@@ -214,16 +239,25 @@ export class CanvasNodeInteractionService {
    * @param origNode Modelo del nodo.
    * @param ctx Contexto de interacción.
    */
-  private bindNodeMouseEvents(group: Konva.Group, origNode: UmlClassNode, ctx: NodeInteractionContext): void {
+  private bindNodeMouseEvents(
+    group: Konva.Group,
+    origNode: UmlClassNode,
+    ctx: NodeInteractionContext,
+  ): void {
     group.on('mouseenter', (e: Konva.KonvaEventObject<MouseEvent>) => {
       ctx.setHoveredNodeId(origNode.id);
       if (!ctx.isReadOnly() && !ctx.isNodeLockedByOther(origNode.id)) {
-        ctx.stage?.container().style.setProperty('cursor', ctx.selectedRelationType() ? 'crosshair' : 'move');
+        ctx.stage
+          ?.container()
+          .style.setProperty('cursor', ctx.selectedRelationType() ? 'crosshair' : 'move');
       }
 
       const mouseEvt = e.evt;
       if (mouseEvt && mouseEvt.buttons === 1 && !ctx.selectedRelationType()) {
-        if (!this.nodeRendering.isContainerNode(origNode) && !ctx.selectedNodeIdsInternal().includes(origNode.id)) {
+        if (
+          !this.nodeRendering.isContainerNode(origNode) &&
+          !ctx.selectedNodeIdsInternal().includes(origNode.id)
+        ) {
           const updated = [...ctx.selectedNodeIdsInternal(), origNode.id];
           ctx.ngZone.run(() => {
             ctx.select(updated, []);
@@ -273,7 +307,12 @@ export class CanvasNodeInteractionService {
 
       const activeRelType = ctx.selectedRelationType();
       if (activeRelType) {
-        const targetNode = this.nodeRendering.resolveTargetNodeAtPointer(origNode, ctx.stage, ctx.nodes(), ctx.nodeGroupsMap);
+        const targetNode = this.nodeRendering.resolveTargetNodeAtPointer(
+          origNode,
+          ctx.stage,
+          ctx.nodes(),
+          ctx.nodeGroupsMap,
+        );
         ctx.ngZone.run(() => {
           const pendingSrc = ctx.pendingSourceNodeId();
           if (!pendingSrc) {
@@ -331,7 +370,12 @@ export class CanvasNodeInteractionService {
       e.cancelBubble = true;
 
       const mouseEvt = e.evt;
-      if (mouseEvt && !mouseEvt.shiftKey && !mouseEvt.ctrlKey && ctx.selectedNodeIdsInternal().length > 1) {
+      if (
+        mouseEvt &&
+        !mouseEvt.shiftKey &&
+        !mouseEvt.ctrlKey &&
+        ctx.selectedNodeIdsInternal().length > 1
+      ) {
         ctx.ngZone.run(() => {
           ctx.select([origNode.id], []);
           ctx.callbacks.onSelectionChange({ nodeIds: [origNode.id], connectionIds: [] });
@@ -367,7 +411,11 @@ export class CanvasNodeInteractionService {
    * @param origNode Modelo del nodo.
    * @param ctx Contexto de interacción.
    */
-  private bindNodeDragEvents(group: Konva.Group, origNode: UmlClassNode, ctx: NodeInteractionContext): void {
+  private bindNodeDragEvents(
+    group: Konva.Group,
+    origNode: UmlClassNode,
+    ctx: NodeInteractionContext,
+  ): void {
     let dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
     const siblingStartPositions = new Map<string, { x: number; y: number }>();
 
@@ -380,7 +428,12 @@ export class CanvasNodeInteractionService {
       } else {
         group.moveToTop();
       }
-      this.nodeRendering.enforceZOrdering(ctx.nodeLayer, ctx.frameLayer, ctx.nodeGroupsMap, ctx.nodes());
+      this.nodeRendering.enforceZOrdering(
+        ctx.nodeLayer,
+        ctx.frameLayer,
+        ctx.nodeGroupsMap,
+        ctx.nodes(),
+      );
 
       dragStartPos = { x: Math.round(group.x()), y: Math.round(group.y()) };
       siblingStartPositions.clear();
@@ -413,19 +466,23 @@ export class CanvasNodeInteractionService {
       const getW = (n: UmlClassNode) => ctx.nodeGroupsMap.get(n.id)?.width() || getNodeWidth(n);
       const getH = (n: UmlClassNode) => ctx.nodeGroupsMap.get(n.id)?.height() || getNodeHeight(n);
 
-      const rootsToTrace = ctx.selectedNodeIdsInternal().length > 0 ? ctx.selectedNodeIdsInternal() : [origNode.id];
+      const rootsToTrace =
+        ctx.selectedNodeIdsInternal().length > 0 ? ctx.selectedNodeIdsInternal() : [origNode.id];
       const descendants = ctx.containmentService.collectDescendantsForRoots(
         rootsToTrace,
         currentNodes,
         getW,
-        getH
+        getH,
       );
 
       for (const descId of descendants) {
         if (!siblingStartPositions.has(descId)) {
           const descG = ctx.nodeGroupsMap.get(descId);
           if (descG) {
-            siblingStartPositions.set(descId, { x: Math.round(descG.x()), y: Math.round(descG.y()) });
+            siblingStartPositions.set(descId, {
+              x: Math.round(descG.x()),
+              y: Math.round(descG.y()),
+            });
           }
         }
       }
@@ -487,8 +544,11 @@ export class CanvasNodeInteractionService {
             if (otherG && otherNode) {
               const targetX = Math.max(10, Math.round(start.x + dx));
               const targetY =
-                ctx.activeDiagramType() === DiagramType.SEQUENCE || otherNode.nodeType === 'lifeline'
-                  ? (otherNode.position ? otherNode.position.y : 30)
+                ctx.activeDiagramType() === DiagramType.SEQUENCE ||
+                otherNode.nodeType === 'lifeline'
+                  ? otherNode.position
+                    ? otherNode.position.y
+                    : 30
                   : Math.max(10, Math.round(start.y + dy));
               otherG.position({ x: targetX, y: targetY });
               otherNode.position = { x: targetX, y: targetY };
@@ -501,7 +561,10 @@ export class CanvasNodeInteractionService {
       }
 
       if (siblingStartPositions.size <= 1) {
-        ctx.callbacks.onNodePositionChange({ node: currentNode, newPosition: { x: curX, y: curY } });
+        ctx.callbacks.onNodePositionChange({
+          node: currentNode,
+          newPosition: { x: curX, y: curY },
+        });
       }
       ctx.callbacks.onRenderRelationships();
     });
@@ -527,7 +590,8 @@ export class CanvasNodeInteractionService {
         const movedPayload: Array<{ id: string; position: { x: number; y: number } }> = [];
         for (const [id] of siblingStartPositions.entries()) {
           const otherG = ctx.nodeGroupsMap.get(id);
-          const otherNode = ctx.nodes().find((n) => n.id === id) || (id === origNode.id ? origNode : null);
+          const otherNode =
+            ctx.nodes().find((n) => n.id === id) || (id === origNode.id ? origNode : null);
           if (otherG && otherNode) {
             const targetPos = {
               x: Math.max(10, Math.round(otherG.x())),
@@ -548,7 +612,12 @@ export class CanvasNodeInteractionService {
             isReadOnly: ctx.isReadOnly(),
             uiLayer: ctx.uiLayer,
           });
-          this.nodeRendering.enforceZOrdering(ctx.nodeLayer, ctx.frameLayer, ctx.nodeGroupsMap, ctx.nodes());
+          this.nodeRendering.enforceZOrdering(
+            ctx.nodeLayer,
+            ctx.frameLayer,
+            ctx.nodeGroupsMap,
+            ctx.nodes(),
+          );
           setTimeout(() => {
             ctx.callbacks.onDragStateChange(false);
           }, 50);
@@ -562,7 +631,12 @@ export class CanvasNodeInteractionService {
             isReadOnly: ctx.isReadOnly(),
             uiLayer: ctx.uiLayer,
           });
-          this.nodeRendering.enforceZOrdering(ctx.nodeLayer, ctx.frameLayer, ctx.nodeGroupsMap, ctx.nodes());
+          this.nodeRendering.enforceZOrdering(
+            ctx.nodeLayer,
+            ctx.frameLayer,
+            ctx.nodeGroupsMap,
+            ctx.nodes(),
+          );
           setTimeout(() => {
             ctx.callbacks.onDragStateChange(false);
           }, 50);
@@ -581,7 +655,11 @@ export class CanvasNodeInteractionService {
    * @param origNode Modelo del nodo.
    * @param ctx Contexto de interacción.
    */
-  private bindNodeTransformEvents(group: Konva.Group, origNode: UmlClassNode, ctx: NodeInteractionContext): void {
+  private bindNodeTransformEvents(
+    group: Konva.Group,
+    origNode: UmlClassNode,
+    ctx: NodeInteractionContext,
+  ): void {
     group.on('transformstart', () => {
       ctx.callbacks.onDragStateChange(true);
       ctx.lastLocalMoveTimestamps.set(origNode.id, Date.now());
@@ -603,10 +681,10 @@ export class CanvasNodeInteractionService {
           origNode,
           ctx.activeDiagramType(),
           ctx.connections(),
-          ctx.sequenceActivationService
+          ctx.sequenceActivationService,
         ),
         nextW,
-        nextH
+        nextH,
       );
 
       const actualW = Math.round(group.width());
@@ -661,7 +739,12 @@ export class CanvasNodeInteractionService {
           isReadOnly: ctx.isReadOnly(),
           uiLayer: ctx.uiLayer,
         });
-        this.nodeRendering.enforceZOrdering(ctx.nodeLayer, ctx.frameLayer, ctx.nodeGroupsMap, ctx.nodes());
+        this.nodeRendering.enforceZOrdering(
+          ctx.nodeLayer,
+          ctx.frameLayer,
+          ctx.nodeGroupsMap,
+          ctx.nodes(),
+        );
         setTimeout(() => {
           ctx.callbacks.onDragStateChange(false);
         }, 50);
@@ -722,7 +805,9 @@ export class CanvasNodeInteractionService {
     nodeGroupsMap.clear();
 
     const currentNodes = nodes.filter((n) => !n.isAnchor);
-    currentNodes.sort((a, b) => this.nodeRendering.getNodeZWeight(a) - this.nodeRendering.getNodeZWeight(b));
+    currentNodes.sort(
+      (a, b) => this.nodeRendering.getNodeZWeight(a) - this.nodeRendering.getNodeZWeight(b),
+    );
 
     const selectedIds = new Set([...selectedNodeIds, ...selectedNodeIdsInternal]);
 
@@ -763,9 +848,14 @@ export class CanvasNodeInteractionService {
   syncNodePositionsAndColors(
     nodes: UmlClassNode[],
     nodeGroupsMap: Map<string, Konva.Group>,
-    lastLocalMoveTimestamps: Map<string, number>
+    lastLocalMoveTimestamps: Map<string, number>,
   ): void {
     const now = Date.now();
+    // Poda marcas obsoletas (nodos eliminados o movimientos fuera de la ventana de supresión)
+    // para que el mapa no crezca indefinidamente durante sesiones largas.
+    for (const [id, ts] of lastLocalMoveTimestamps) {
+      if (!nodeGroupsMap.has(id) || now - ts > 5000) lastLocalMoveTimestamps.delete(id);
+    }
     for (const rawNode of nodes) {
       const group = nodeGroupsMap.get(rawNode.id);
       if (!group) continue;
@@ -776,7 +866,10 @@ export class CanvasNodeInteractionService {
         continue;
       }
 
-      if (Math.round(group.x()) !== rawNode.position.x || Math.round(group.y()) !== rawNode.position.y) {
+      if (
+        Math.round(group.x()) !== rawNode.position.x ||
+        Math.round(group.y()) !== rawNode.position.y
+      ) {
         group.position({ x: rawNode.position.x, y: rawNode.position.y });
       }
       this.nodeRendering.applyLiveGroupColor(group, rawNode);

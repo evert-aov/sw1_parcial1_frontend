@@ -29,37 +29,28 @@ export function createControlKonvaNode(node: UmlNode, isSelected: boolean): Konv
   return group;
 }
 
-function drawControlParts(
-  group: Konva.Group,
-  width: number,
-  height: number,
-  label: string,
-  fill: string,
-  isSelected: boolean
-): void {
+/** Geometría calculada (pura) de todas las partes del símbolo Control. */
+interface ControlGeometry {
+  circle: { x: number; y: number; radius: number };
+  arrowPoints: number[];
+  pill: { x: number; y: number; width: number };
+}
+
+function computeControlGeometry(width: number, height: number, label: string): ControlGeometry {
   const iconAreaH = Math.max(48, height - 34);
   const radius = Math.max(16, Math.min(width * 0.3, iconAreaH * 0.4));
   const centerX = width / 2;
   const centerY = iconAreaH * 0.52;
-  const strokeColor = isSelected ? '#059669' : '#292524';
-
-  const circle = new Konva.Circle({
-    name: 'control-part',
-    x: centerX,
-    y: centerY,
-    radius,
-    fill,
-    stroke: strokeColor,
-    strokeWidth: 2.2,
-    listening: false,
-  });
 
   // Top arrow head of the UML Control icon
   const topY = centerY - radius;
   const arrowSize = Math.max(6, radius * 0.28);
-  const arrowHead = new Konva.Line({
-    name: 'control-part',
-    points: [
+
+  const pillW = Math.max(width, label.length * 7.2 + 20);
+
+  return {
+    circle: { x: centerX, y: centerY, radius },
+    arrowPoints: [
       centerX + arrowSize * 0.9,
       topY - arrowSize * 0.85,
       centerX - arrowSize * 0.3,
@@ -67,6 +58,39 @@ function drawControlParts(
       centerX + arrowSize * 0.9,
       topY + arrowSize * 0.85,
     ],
+    pill: { x: (width - pillW) / 2, y: height - 26, width: pillW },
+  };
+}
+
+function controlStrokeColor(isSelected: boolean): string {
+  return isSelected ? '#059669' : '#292524';
+}
+
+function drawControlParts(
+  group: Konva.Group,
+  width: number,
+  height: number,
+  label: string,
+  fill: string,
+  isSelected: boolean,
+): void {
+  const geo = computeControlGeometry(width, height, label);
+  const strokeColor = controlStrokeColor(isSelected);
+
+  const circle = new Konva.Circle({
+    name: 'control-part control-circle',
+    x: geo.circle.x,
+    y: geo.circle.y,
+    radius: geo.circle.radius,
+    fill,
+    stroke: strokeColor,
+    strokeWidth: 2.2,
+    listening: false,
+  });
+
+  const arrowHead = new Konva.Line({
+    name: 'control-part control-arrow',
+    points: geo.arrowPoints,
     stroke: strokeColor,
     strokeWidth: 2.2,
     lineCap: 'round',
@@ -75,15 +99,11 @@ function drawControlParts(
   });
 
   // Bottom Label Pill
-  const pillW = Math.max(width, label.length * 7.2 + 20);
-  const pillX = (width - pillW) / 2;
-  const pillY = height - 26;
-
   const labelBg = new Konva.Rect({
-    name: 'control-part',
-    x: pillX,
-    y: pillY,
-    width: pillW,
+    name: 'control-part control-label-bg',
+    x: geo.pill.x,
+    y: geo.pill.y,
+    width: geo.pill.width,
     height: 24,
     cornerRadius: 6,
     fill: '#FFFFFF',
@@ -97,10 +117,10 @@ function drawControlParts(
   });
 
   const labelText = new Konva.Text({
-    name: 'control-part',
-    x: pillX + 4,
-    y: pillY + 6,
-    width: pillW - 8,
+    name: 'control-part control-label',
+    x: geo.pill.x + 4,
+    y: geo.pill.y + 6,
+    width: geo.pill.width - 8,
     text: label,
     fontSize: 12,
     fontFamily: 'Plus Jakarta Sans',
@@ -113,13 +133,49 @@ function drawControlParts(
   group.add(circle, arrowHead, labelBg, labelText);
 }
 
+/**
+ * Actualiza por diff las partes existentes del Control (sin destruir ni recrear el subárbol).
+ *
+ * @returns `true` si todas las partes existían y fueron actualizadas.
+ */
+function updateControlParts(
+  group: Konva.Group,
+  width: number,
+  height: number,
+  label: string,
+  fill: string,
+  isSelected: boolean,
+): boolean {
+  const circle = group.findOne<Konva.Circle>('.control-circle');
+  const arrowHead = group.findOne<Konva.Line>('.control-arrow');
+  const labelBg = group.findOne<Konva.Rect>('.control-label-bg');
+  const labelText = group.findOne<Konva.Text>('.control-label');
+  if (!circle || !arrowHead || !labelBg || !labelText) return false;
+
+  const geo = computeControlGeometry(width, height, label);
+  const strokeColor = controlStrokeColor(isSelected);
+
+  circle.setAttrs({
+    x: geo.circle.x,
+    y: geo.circle.y,
+    radius: geo.circle.radius,
+    fill,
+    stroke: strokeColor,
+  });
+  arrowHead.setAttrs({ points: geo.arrowPoints, stroke: strokeColor });
+  labelBg.setAttrs({ x: geo.pill.x, y: geo.pill.y, width: geo.pill.width });
+  labelText.setAttrs({ x: geo.pill.x + 4, y: geo.pill.y + 6, width: geo.pill.width - 8 });
+  if (labelText.text() !== label) labelText.text(label);
+  return true;
+}
+
 export function resizeControlKonvaNode(
   group: Konva.Group,
   newWidth: number,
   newHeight: number,
   label: string,
   fill: string,
-  isSelected: boolean
+  isSelected: boolean,
 ): void {
   const minW = Math.max(95, Math.round(newWidth));
   const minH = Math.max(90, Math.round(newHeight));
@@ -133,6 +189,9 @@ export function resizeControlKonvaNode(
     hitRect.height(minH);
   }
 
-  group.find('.control-part').forEach((c) => c.destroy());
-  drawControlParts(group, minW, minH, label, fill, isSelected);
+  // Diff-update; solo si el subárbol no existe (nodo legado) se reconstruye.
+  if (!updateControlParts(group, minW, minH, label, fill, isSelected)) {
+    group.find('.control-part').forEach((c) => c.destroy());
+    drawControlParts(group, minW, minH, label, fill, isSelected);
+  }
 }

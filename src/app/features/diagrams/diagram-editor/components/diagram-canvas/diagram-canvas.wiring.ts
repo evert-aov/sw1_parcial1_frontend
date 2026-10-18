@@ -1,6 +1,7 @@
 import { DiagramType } from '../../../../../core/models/diagram.model';
 import { NodeInteractionContext, StageEventsContext } from './services';
 import type { DiagramCanvasComponent } from './diagram-canvas.component';
+import type { CanvasTransformAdapter } from './diagram-canvas.types';
 
 /**
  * Construye el objeto de compatibilidad `canvas` que expone la API de transformación de coordenadas.
@@ -8,13 +9,15 @@ import type { DiagramCanvasComponent } from './diagram-canvas.component';
  * @param canvas Instancia del componente DiagramCanvasComponent.
  * @returns Objeto simulador con escala, reseteo y redibujado.
  */
-export function createCanvasTransformAdapter(canvas: DiagramCanvasComponent): any {
+export function createCanvasTransformAdapter(
+  canvas: DiagramCanvasComponent,
+): CanvasTransformAdapter {
   return {
     get transform() {
       return {
         get scale() {
           const z = canvas.zoomLevel();
-          return z ? z / 100 : (canvas.getStage() ? canvas.getStage()!.scaleX() : 1);
+          return z ? z / 100 : canvas.getStage() ? canvas.getStage()!.scaleX() : 1;
         },
         set scale(s: number) {
           canvas.setZoom(Math.round(s * 100), false);
@@ -42,7 +45,9 @@ export function createCanvasTransformAdapter(canvas: DiagramCanvasComponent): an
  * @param canvas Instancia del componente DiagramCanvasComponent.
  * @returns Contexto NodeInteractionContext configurado.
  */
-export function buildNodeInteractionContext(canvas: DiagramCanvasComponent): NodeInteractionContext {
+export function buildNodeInteractionContext(
+  canvas: DiagramCanvasComponent,
+): NodeInteractionContext {
   return {
     stage: canvas.getStage(),
     nodeLayer: canvas.getNodeLayer(),

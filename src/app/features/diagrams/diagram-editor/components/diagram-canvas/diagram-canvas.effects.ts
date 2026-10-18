@@ -22,11 +22,13 @@ export function setupDiagramCanvasEffects(canvas: DiagramCanvasComponent): void 
       canvas.setLastRenderedSignature(currentSig);
       canvas.renderFullDiagram(false);
     } else {
-      canvas.getNodeInteraction().syncNodePositionsAndColors(
-        nodes,
-        canvas.getNodeGroupsMap(),
-        canvas.getLastLocalMoveTimestamps()
-      );
+      canvas
+        .getNodeInteraction()
+        .syncNodePositionsAndColors(
+          nodes,
+          canvas.getNodeGroupsMap(),
+          canvas.getLastLocalMoveTimestamps(),
+        );
       canvas.renderRelationshipsOnly();
       canvas.syncTransformer();
       canvas.getFrameLayer()?.batchDraw();
@@ -45,7 +47,10 @@ export function setupDiagramCanvasEffects(canvas: DiagramCanvasComponent): void 
 
     canvas.syncTransformer();
     canvas.renderRelationshipsOnly();
-    const selectedIds = new Set([...canvas.selectedNodeIds(), ...canvas.getSelectedNodeIdsInternal()]);
+    const selectedIds = new Set([
+      ...canvas.selectedNodeIds(),
+      ...canvas.getSelectedNodeIdsInternal(),
+    ]);
     canvas.getNodeInteraction().updateNodesSelectionAppearance({
       nodeGroupsMap: canvas.getNodeGroupsMap(),
       selectedNodeIds: selectedIds,
@@ -90,6 +95,8 @@ export function setupDiagramCanvasEffects(canvas: DiagramCanvasComponent): void 
     const dId = canvas.diagramId();
     if (!dId || !canvas.getStage()) return;
     untracked(() => {
+      // Las marcas de movimiento local pertenecen al diagrama anterior.
+      canvas.getLastLocalMoveTimestamps().clear();
       canvas.restoreViewportScroll(dId);
     });
   });
