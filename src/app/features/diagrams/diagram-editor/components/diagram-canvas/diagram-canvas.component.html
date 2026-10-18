@@ -1,15 +1,63 @@
 <div
   #flowContainer
+  (scroll)="onViewportScroll($event)"
+  (wheel)="onContainerWheel($event)"
   (dragover)="onCanvasDragOver($event)"
   (dragleave)="onCanvasDragLeave($event)"
   (drop)="onCanvasDrop($event)"
-  class="flex-1 relative w-full h-full overflow-hidden cursor-default bg-[#FAF9F5] dark:bg-[#0B0F19] uml-viewport select-none"
+  class="flex-1 relative w-full h-full overflow-auto cursor-default bg-white dark:bg-[#0B0F19] uml-viewport select-none"
+  [class.show-grid]="showGrid()"
   [class.ring-2]="isDragOverCanvas()"
   [class.ring-inset]="isDragOverCanvas()"
   [class.ring-blue-500/70]="isDragOverCanvas()">
 
-  <!-- CONTENEDOR PRINCIPAL DEL STAGE DE KONVA -->
-  <div #stageContainer class="absolute inset-0 w-full h-full"></div>
+  <!-- TABLERO / LIENZO FIJO ESTILO ENTERPRISE ARCHITECT (ESCALADO CON ZOOM) -->
+  <div
+    #boardElement
+    [style.min-width.px]="scaledBoardWidth()"
+    [style.min-height.px]="scaledBoardHeight()"
+    class="relative w-full h-full bg-white dark:bg-[#0B0F19]">
+
+    <!-- CONTENEDOR PRINCIPAL DEL STAGE DE KONVA -->
+    <div #stageContainer class="absolute inset-0 w-full h-full"></div>
+
+    <!-- Cursores Remotos Colaborativos en Vivo (posicionados sobre la hoja) -->
+    @for (cursor of remoteCursors(); track cursor.userId) {
+      <div
+        class="absolute pointer-events-none z-40 flex items-center gap-1 transition-all duration-75"
+        [style.left.px]="getCursorScreenX(cursor.x)"
+        [style.top.px]="getCursorScreenY(cursor.y)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="drop-shadow-md">
+          <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z" [attr.fill]="cursor.color" stroke="white" stroke-width="1.5" />
+        </svg>
+        <span
+          class="text-[9.5px] font-mono font-bold text-white px-1.5 py-0.5 rounded shadow-md whitespace-nowrap"
+          [style.backgroundColor]="cursor.color">
+          {{ cursor.userName }}
+        </span>
+      </div>
+    }
+
+    <!-- EMPTY STATE WATERMARK: Guía visual cuando el lienzo está vacío -->
+    @if (hasNoRealNodes()) {
+      <div
+        class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 select-none"
+        aria-hidden="true">
+        <div class="flex flex-col items-center gap-3 opacity-25 dark:opacity-20">
+          <!-- Icono SVG de lienzo vacío -->
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="text-slate-400 dark:text-slate-500">
+            <rect x="8" y="8" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 3" fill="none"/>
+            <line x1="8" y1="22" x2="56" y2="22" stroke="currentColor" stroke-width="2"/>
+            <line x1="8" y1="32" x2="56" y2="32" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M24 50 L32 44 L40 50" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide text-center max-w-[280px]">
+            {{ canvasEmptyStateMessage() }}
+          </p>
+        </div>
+      </div>
+    }
+  </div>
 
   <!-- Overlay visual cuando se arrastra un elemento desde el Toolbox hacia el lienzo -->
   @if (isDragOverCanvas()) {
@@ -17,43 +65,6 @@
       <div class="bg-blue-600 text-white px-4 py-2 rounded-full shadow-xl text-xs font-semibold flex items-center gap-2 animate-bounce">
         <ng-icon name="heroPlus" class="text-sm"></ng-icon>
         <span>{{ 'editor.toolbox.dropToPosition' | translate }}</span>
-      </div>
-    </div>
-  }
-
-  <!-- Cursores Remotos Colaborativos en Vivo (posicionados sobre el lienzo) -->
-  @for (cursor of remoteCursors(); track cursor.userId) {
-    <div
-      class="absolute pointer-events-none z-40 flex items-center gap-1 transition-all duration-75"
-      [style.left.px]="getCursorScreenX(cursor.x)"
-      [style.top.px]="getCursorScreenY(cursor.y)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="drop-shadow-md">
-        <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z" [attr.fill]="cursor.color" stroke="white" stroke-width="1.5" />
-      </svg>
-      <span
-        class="text-[9.5px] font-mono font-bold text-white px-1.5 py-0.5 rounded shadow-md whitespace-nowrap"
-        [style.backgroundColor]="cursor.color">
-        {{ cursor.userName }}
-      </span>
-    </div>
-  }
-
-  <!-- EMPTY STATE WATERMARK: Guía visual cuando el lienzo está vacío -->
-  @if (hasNoRealNodes()) {
-    <div
-      class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 select-none"
-      aria-hidden="true">
-      <div class="flex flex-col items-center gap-3 opacity-25 dark:opacity-20">
-        <!-- Icono SVG de lienzo vacío -->
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="text-slate-400 dark:text-slate-500">
-          <rect x="8" y="8" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 3" fill="none"/>
-          <line x1="8" y1="22" x2="56" y2="22" stroke="currentColor" stroke-width="2"/>
-          <line x1="8" y1="32" x2="56" y2="32" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3"/>
-          <path d="M24 50 L32 44 L40 50" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide text-center max-w-[280px]">
-          {{ canvasEmptyStateMessage() }}
-        </p>
       </div>
     </div>
   }

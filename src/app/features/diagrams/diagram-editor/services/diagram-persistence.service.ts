@@ -265,12 +265,7 @@ export class DiagramPersistenceService {
             name = '.';
           }
           let nodeColor = n.color;
-          if (
-            (!nodeColor ||
-              ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') &&
-                ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) &&
-            getDefaultColor
-          ) {
+          if (!nodeColor && getDefaultColor) {
             nodeColor = getDefaultColor(nodeType, n.stereotype);
           }
           const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
@@ -410,12 +405,7 @@ export class DiagramPersistenceService {
       }
 
       let nodeColor = n.color;
-      if (
-        (!nodeColor ||
-          ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') &&
-            ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) &&
-        getDefaultColor
-      ) {
+      if (!nodeColor && getDefaultColor) {
         nodeColor = getDefaultColor(nodeType, n.stereotype);
       }
 

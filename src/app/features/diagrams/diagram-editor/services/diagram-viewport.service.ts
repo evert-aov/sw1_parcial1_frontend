@@ -40,6 +40,7 @@ export class DiagramViewportService {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed.zoom === 'number') {
+          parsed.zoom = Math.max(25, Math.min(125, parsed.zoom));
           this.diagramViewStates.set(diagramId, parsed);
           return parsed;
         }
@@ -118,14 +119,15 @@ export class DiagramViewportService {
   }
 
   restoreCanvasViewState(diagramCanvas: DiagramCanvasComponent | undefined, diagramId: string, onUpdateEndpoints: () => void): void {
+    if (!diagramId) return;
+    const targetState = this.getDiagramViewState(diagramId);
+    this.zoomLevel.set(targetState.zoom);
+
     requestAnimationFrame(() => {
       onUpdateEndpoints();
       requestAnimationFrame(() => {
         onUpdateEndpoints();
         diagramCanvas?.clearSelection();
-        diagramCanvas?.reset();
-        const targetState = this.getDiagramViewState(diagramId);
-        this.zoomLevel.set(targetState.zoom);
         diagramCanvas?.applyViewState(targetState);
       });
     });

@@ -1,4 +1,5 @@
 import { UmlAttribute, UmlClassNode, UmlConnection } from '../../../../../../../core/models/diagram.model';
+import { calculateClassDynamicWidth } from '../../../../utils/node-metrics.util';
 
 /**
  * Extrae la clave foránea adecuada para asociar a una entidad o clase según su clave primaria o nombre
@@ -65,12 +66,13 @@ export function buildAssociationClassElements(
     targetNodeId: targetNode.id,
     sourceId: `${sourceNode.id}_right`,
     targetId: `${targetNode.id}_left`,
-    type: 'association',
+    type: 'association_class',
     lineStyle: 'straight',
     name: assocName,
-    sourceMultiplicity: '',
-    targetMultiplicity: '',
+    sourceMultiplicity: '0..*',
+    targetMultiplicity: '0..*',
     assocAnchorNodeId: anchorId,
+    associationClassNodeId: assocNodeId,
   };
 
   const sourceFk = getEntityFk(sourceNode);
@@ -84,11 +86,20 @@ export function buildAssociationClassElements(
   const assocNode: UmlClassNode = {
     id: assocNodeId,
     name: assocName,
+    stereotype: undefined,
     position: {
       x: anchorNode.position.x - 110,
       y: anchorNode.position.y + 120,
     },
-    width: 220,
+    width: calculateClassDynamicWidth({
+      id: assocNodeId,
+      name: assocName,
+      nodeType: 'class',
+      position: { x: 0, y: 0 },
+      width: 0,
+      attributes: [sourceFk, targetFk],
+      methods: [],
+    }),
     attributes: [sourceFk, targetFk],
     methods: [],
     assocMainConnId: mainConnId,
@@ -117,9 +128,43 @@ export function createAssociationClassBetween(
   targetNode: UmlClassNode,
   currentNodes: UmlClassNode[],
   currentConns: UmlConnection[],
+  targetConnectionId?: string,
 ): { nodes: UmlClassNode[]; connections: UmlConnection[] } {
   const { anchorNode, assocNode, mainConnection, dashedConnection } =
     buildAssociationClassElements(sourceNode, targetNode);
+
+  const existingConnIndex = targetConnectionId
+    ? currentConns.findIndex((c) => c.id === targetConnectionId)
+    : currentConns.findIndex((c) => {
+        const s = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+        const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+        return (
+          !c.id.includes('assoc_dashed') &&
+          ((s === sourceNode.id && t === targetNode.id) || (s === targetNode.id && t === sourceNode.id))
+        );
+      });
+
+  if (existingConnIndex >= 0) {
+    const existingConn = currentConns[existingConnIndex];
+    const updatedConn: UmlConnection = {
+      ...existingConn,
+      type: 'association_class',
+      assocAnchorNodeId: anchorNode.id,
+      associationClassNodeId: assocNode.id,
+      sourceMultiplicity: existingConn.sourceMultiplicity || '0..*',
+      targetMultiplicity: existingConn.targetMultiplicity || '0..*',
+    };
+    assocNode.assocMainConnId = existingConn.id;
+
+    const newConns = [...currentConns];
+    newConns[existingConnIndex] = updatedConn;
+    newConns.push(dashedConnection);
+
+    return {
+      nodes: [...currentNodes, anchorNode, assocNode],
+      connections: newConns,
+    };
+  }
 
   return {
     nodes: [...currentNodes, anchorNode, assocNode],

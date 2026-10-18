@@ -26,7 +26,7 @@ export function createActorKonvaNode(node: UmlNode, isSelected: boolean): Konva.
   });
   group.add(hitRect);
 
-  drawActorGeometry(group, node.width, node.height, node.name, isSelected);
+  drawActorGeometry(group, node.width, node.height, node.name, isSelected, node.fill);
   return group;
 }
 
@@ -35,7 +35,8 @@ function drawActorGeometry(
   width: number,
   height: number,
   label: string,
-  isSelected: boolean
+  isSelected: boolean,
+  fill?: string
 ): void {
   const figureHeight = Math.max(48, height - 34);
   const centerX = width / 2;
@@ -49,7 +50,7 @@ function drawActorGeometry(
     x: centerX,
     y: headCenterY,
     radius: headRadius,
-    fill: '#FEF9EE',
+    fill: fill || '#FEF2DD',
     stroke: strokeColor,
     strokeWidth: 2,
     listening: false,
@@ -146,7 +147,8 @@ export function resizeActorKonvaNode(
   newWidth: number,
   newHeight: number,
   label: string,
-  isSelected: boolean
+  isSelected: boolean,
+  fill?: string
 ): void {
   const minW = Math.max(80, Math.round(newWidth));
   const minH = Math.max(95, Math.round(newHeight));
@@ -161,5 +163,5 @@ export function resizeActorKonvaNode(
   }
 
   group.find('.actor-part').forEach((child) => child.destroy());
-  drawActorGeometry(group, minW, minH, label, isSelected);
+  drawActorGeometry(group, minW, minH, label, isSelected, fill);
 }

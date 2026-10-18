@@ -98,7 +98,7 @@ export class DiagramHotkeysService {
     } else if (isCtrlOrMeta && key === 'a') {
       event.preventDefault();
       actions.selectAll();
-    } else if (event.key === 'Delete') {
+    } else if (event.key === 'Delete' || event.key === 'Backspace') {
       if (!actions.isReadOnly()) {
         event.preventDefault();
         actions.deleteSelected();

@@ -116,7 +116,7 @@ export class DiagramConnectionOperationsService {
 
     if (isNodeLockedByOther(baseSourceId) || isNodeLockedByOther(baseTargetId)) {
       return {
-        errorMessage: '🔒 No se pueden crear conexiones hacia/desde una tabla que está siendo editada.',
+        errorMessage: 'No se pueden crear conexiones hacia/desde una tabla que está siendo editada.',
       };
     }
 
@@ -166,7 +166,7 @@ export class DiagramConnectionOperationsService {
           if (isSlotOccupied) {
             return {
               errorMessage:
-                '⚠️ No se permite colocar dos mensajes en la misma posición temporal (fila colineal). Cada mensaje debe ubicarse en una posición distinta.',
+                'No se permite colocar dos mensajes en la misma posición temporal (fila colineal). Cada mensaje debe ubicarse en una posición distinta.',
             };
           }
 
@@ -229,8 +229,15 @@ export class DiagramConnectionOperationsService {
     targetNode: UmlClassNode,
     currentNodes: UmlClassNode[],
     currentConns: UmlConnection[],
+    targetConnectionId?: string,
   ): { nodes: UmlClassNode[]; connections: UmlConnection[] } {
-    return createAssociationClassBetweenLogic(sourceNode, targetNode, currentNodes, currentConns);
+    return createAssociationClassBetweenLogic(
+      sourceNode,
+      targetNode,
+      currentNodes,
+      currentConns,
+      targetConnectionId,
+    );
   }
 
   /**
@@ -320,6 +327,9 @@ export class DiagramConnectionOperationsService {
 
     const conn = connections.find((c) => c.id === connId);
     if (conn) {
+      if (conn.associationClassNodeId) {
+        nodesToDelete.add(conn.associationClassNodeId);
+      }
       if (conn.assocAnchorNodeId) {
         nodesToDelete.add(conn.assocAnchorNodeId);
       }
@@ -329,14 +339,13 @@ export class DiagramConnectionOperationsService {
         }
       });
 
-      if (conn.type === 'association_class') {
-        const sourceBase = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const targetBase = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
-        const sourceNode = nodes.find((n) => n.id === sourceBase);
-        const targetNode = nodes.find((n) => n.id === targetBase);
-        if (sourceNode?.isAnchor) nodesToDelete.add(sourceNode.id);
-        if (targetNode?.isAnchor) nodesToDelete.add(targetNode.id);
-        if (sourceNode && !sourceNode.isAnchor) nodesToDelete.add(sourceNode.id);
+      const sourceBase = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
+      const targetBase = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
+      const sourceNode = nodes.find((n) => n.id === sourceBase);
+      const targetNode = nodes.find((n) => n.id === targetBase);
+      if (sourceNode?.isAnchor) nodesToDelete.add(sourceNode.id);
+      if (targetNode?.isAnchor) nodesToDelete.add(targetNode.id);
+      if (conn.id.includes('assoc_dashed')) {
         if (targetNode && !targetNode.isAnchor) nodesToDelete.add(targetNode.id);
       }
     }
@@ -747,7 +756,7 @@ export class DiagramConnectionOperationsService {
       options.activeDiagramType,
     );
     if (isOccupied) {
-      this.toastService?.warning('⚠️ No se pueden colocar dos mensajes en la misma posición temporal (fila colineal).');
+      this.toastService?.warning('No se pueden colocar dos mensajes en la misma posición temporal (fila colineal).');
       return;
     }
     options.onApplyReassigned(updatedList);

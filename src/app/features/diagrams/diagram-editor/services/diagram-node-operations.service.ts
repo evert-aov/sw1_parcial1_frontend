@@ -159,6 +159,34 @@ export class DiagramNodeOperationsService {
   }
 
   /**
+   * Ejecuta la eliminación en cascada de múltiples nodos seleccionados de forma atómica
+   */
+  executeCascadeDeleteNodes(
+    nodeIds: string[],
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    recalculateSequenceNumbers: (conns: UmlConnection[]) => UmlConnection[],
+  ): {
+    remainingNodes: UmlClassNode[];
+    remainingConnections: UmlConnection[];
+  } {
+    const allNodesToDelete = new Set<string>();
+    const allConnsToDelete = new Set<string>();
+
+    for (const nodeId of nodeIds) {
+      const { nodesToDelete, connsToDelete } = this.computeCascadeDeleteNode(nodeId, nodes, connections);
+      for (const nid of nodesToDelete) allNodesToDelete.add(nid);
+      for (const cid of connsToDelete) allConnsToDelete.add(cid);
+    }
+
+    const remainingNodes = nodes.filter((n) => !allNodesToDelete.has(n.id));
+    const filteredConns = connections.filter((c) => !allConnsToDelete.has(c.id));
+    const remainingConnections = recalculateSequenceNumbers(filteredConns);
+
+    return { remainingNodes, remainingConnections };
+  }
+
+  /**
    * Guarda las ediciones de un nodo saneando su estereotipo
    */
   saveEditedNode(
@@ -209,6 +237,16 @@ export class DiagramNodeOperationsService {
         return this.nodeFactory.createEntityNode(nodes, position, scrollOffset);
       case 'lifeline':
         return this.nodeFactory.createLifelineNode(nodes, activeDiagramType, position, scrollOffset);
+      case 'note':
+        return this.nodeFactory.createNoteNode(nodes, position, scrollOffset);
+      case 'package_layer':
+        return this.nodeFactory.createPackageLayerNode(nodes, position, scrollOffset);
+      case 'activity_initial':
+      case 'activity_final':
+      case 'activity_action':
+      case 'activity_decision':
+      case 'activity_fork':
+        return this.nodeFactory.createActivityNode(type, nodes, position, scrollOffset);
       case 'class':
       default:
         return this.nodeFactory.createClassNode(nodes, activeDiagramType, position, stereotype, scrollOffset);
@@ -282,17 +320,21 @@ export class DiagramNodeOperationsService {
     nodes: UmlClassNode[],
     targetIds: string[],
     color: string | null,
+    getDefaultColor?: (type?: string | null, stereotype?: string | null) => string,
   ): { anyChanged: boolean; updatedNodes: UmlClassNode[] } {
     if (targetIds.length === 0) return { anyChanged: false, updatedNodes: nodes };
-    const newColor = color || '#FDFAF3';
-    const anyChanged = nodes.some(
-      (node) => targetIds.includes(node.id) && !node.isAnchor && (node.color || '#FDFAF3') !== newColor,
-    );
+    const anyChanged = nodes.some((node) => {
+      if (!targetIds.includes(node.id) || node.isAnchor) return false;
+      const targetColor = color !== null ? color : (getDefaultColor ? getDefaultColor(node.nodeType, node.stereotype) : '#FDFAF3');
+      const currentColor = node.color || (getDefaultColor ? getDefaultColor(node.nodeType, node.stereotype) : '#FDFAF3');
+      return currentColor !== targetColor;
+    });
     if (!anyChanged) return { anyChanged: false, updatedNodes: nodes };
 
     const updatedNodes = nodes.map((node) => {
       if (targetIds.includes(node.id) && !node.isAnchor) {
-        return { ...node, color: newColor };
+        const targetColor = color !== null ? color : (getDefaultColor ? getDefaultColor(node.nodeType, node.stereotype) : '#FDFAF3');
+        return { ...node, color: targetColor };
       }
       return node;
     });

@@ -69,6 +69,9 @@ export class CollaborationService {
   // Control de frecuencia de cursores y drag colaborativo
   private lastCursorSent = 0;
   private readonly lastNodeDragSent = new Map<string, number>();
+  private readonly pendingCursorsMap = new Map<string, RemoteCursor>();
+  private cursorBatchFrameId: number | null = null;
+  private activeUserId: string | null = null;
 
   private getCurrentUser(): User | null {
     const fromAuth = this.authService.currentUser();
@@ -79,6 +82,10 @@ export class CollaborationService {
       if (stored) return JSON.parse(stored);
     } catch {}
     return null;
+  }
+
+  getMyUserId(): string {
+    return this.activeUserId || this.getCurrentUser()?.id || 'anon';
   }
 
   connect(): void {
@@ -108,6 +115,11 @@ export class CollaborationService {
 
     this.socket.on('disconnect', () => {
       this.isConnected.set(false);
+      this.pendingCursorsMap.clear();
+      if (this.cursorBatchFrameId !== null) {
+        cancelAnimationFrame(this.cursorBatchFrameId);
+        this.cursorBatchFrameId = null;
+      }
       this.remoteCursors.set([]);
       this.activeNodeLocks.set(new Map());
     });
@@ -136,6 +148,7 @@ export class CollaborationService {
 
     this.socket.on('user_left', (data: { userId: string; userName?: string }) => {
       this.collaborators.update((list) => list.filter((c) => c.userId !== data.userId));
+      this.pendingCursorsMap.delete(data.userId);
       this.remoteCursors.update((cursors) => cursors.filter((c) => c.userId !== data.userId));
       
       // Limpiar bloqueos de este usuario si quedaron
@@ -176,29 +189,37 @@ export class CollaborationService {
     });
 
     this.socket.on('cursor_moved', (data: RemoteCursor) => {
-      const currentUserId = this.getCurrentUser()?.id;
-      if (data.userId === currentUserId) return;
+      const myId = this.getMyUserId();
+      if (data.userId === myId) return;
 
-      this.remoteCursors.update((cursors) => {
-        const index = cursors.findIndex((c) => c.userId === data.userId);
-        if (index >= 0) {
-          const updated = [...cursors];
-          updated[index] = data;
-          return updated;
-        }
-        return [...cursors, data];
-      });
+      this.pendingCursorsMap.set(data.userId, data);
+
+      if (this.cursorBatchFrameId === null) {
+        this.cursorBatchFrameId = requestAnimationFrame(() => {
+          this.cursorBatchFrameId = null;
+          if (this.pendingCursorsMap.size === 0) return;
+
+          this.remoteCursors.update((cursors) => {
+            const cursorMap = new Map(cursors.map((c) => [c.userId, c]));
+            for (const [userId, cursor] of this.pendingCursorsMap.entries()) {
+              cursorMap.set(userId, cursor);
+            }
+            this.pendingCursorsMap.clear();
+            return Array.from(cursorMap.values());
+          });
+        });
+      }
     });
 
     this.socket.on('node_dragged', (data: { nodeId: string; position: { x: number; y: number }; userId: string }) => {
-      const currentUserId = this.getCurrentUser()?.id;
-      if (data.userId === currentUserId) return;
+      const myId = this.getMyUserId();
+      if (data.userId === myId) return;
       this.remoteNodeDrag$.next(data);
     });
 
     this.socket.on('diagram_synced', (data: { nodes: UmlClassNode[]; connections: UmlConnection[]; userId: string; action: string }) => {
-      const currentUserId = this.getCurrentUser()?.id;
-      if (data.userId === currentUserId) return;
+      const myId = this.getMyUserId();
+      if (data.userId === myId) return;
       this.remoteDiagramSync$.next(data);
     });
 
@@ -219,6 +240,7 @@ export class CollaborationService {
   private emitJoinRoom(diagramId: string, customRoomCode?: string): void {
     const user = this.getCurrentUser();
     const userId = user?.id || `anon_${Math.random().toString(36).substring(2, 7)}`;
+    this.activeUserId = userId;
     const userName = user?.fullName || user?.email || 'Colaborador';
 
     const assignedColor = this.generateUserColor(userName + userId);
@@ -322,7 +344,7 @@ export class CollaborationService {
 
   sendCursorPosition(x: number, y: number): void {
     const now = Date.now();
-    if (now - this.lastCursorSent < 25) return; // ~40 fps
+    if (now - this.lastCursorSent < 40) return; // ~25 fps para equilibrio óptimo entre fluidez humana y bajo uso de CPU/red
     this.lastCursorSent = now;
 
     const user = this.getCurrentUser();
@@ -344,10 +366,9 @@ export class CollaborationService {
   sendNodeDrag(nodeId: string, position: { x: number; y: number }): void {
     const now = Date.now();
     const last = this.lastNodeDragSent.get(nodeId) || 0;
-    if (now - last < 33) return; // ~30 fps throttle por nodo para evitar saturación de WebSocket
+    if (now - last < 40) return; // ~25 fps throttle por nodo
     this.lastNodeDragSent.set(nodeId, now);
 
-    const user = this.getCurrentUser();
     const diagramId = this.currentDiagramId();
     const roomCode = this.activeRoomCode();
     if (!this.socket || !diagramId) return;
@@ -360,7 +381,7 @@ export class CollaborationService {
         x: Math.round(position.x),
         y: Math.round(position.y),
       },
-      userId: user?.id || 'anon',
+      userId: this.getMyUserId(),
     });
   }
 
@@ -371,7 +392,6 @@ export class CollaborationService {
     defaultLineStyle = 'segment',
     diagramType?: string,
   ): void {
-    const user = this.getCurrentUser();
     const diagramId = this.currentDiagramId();
     const roomCode = this.activeRoomCode();
     if (!this.socket || !diagramId) return;
@@ -381,7 +401,7 @@ export class CollaborationService {
       roomCode,
       nodes,
       connections,
-      userId: user?.id || 'anon',
+      userId: this.getMyUserId(),
       action,
       defaultLineStyle,
       diagramType: diagramType || this.currentDiagramType() || undefined,

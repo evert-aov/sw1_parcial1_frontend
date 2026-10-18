@@ -363,4 +363,97 @@ export class DiagramNodeFactoryService {
       activations: [],
     };
   }
+
+  createNoteNode(
+    nodes: UmlClassNode[],
+    position?: { x: number; y: number },
+    scroll?: ScrollOffset,
+  ): UmlClassNode {
+    const pos = this.calcPos(position, 90, 38, scroll);
+    const count = nodes.filter((n) => n.nodeType === 'note').length + 1;
+    return {
+      id: `note_${Date.now()}`,
+      name: `Nota descriptiva ${count}...`,
+      nodeType: 'note',
+      stereotype: 'note',
+      position: pos,
+      width: 185,
+      height: 76,
+      customWidth: 185,
+      customHeight: 76,
+      isCustomSize: true,
+      color: '#FEF9C3',
+      attributes: [],
+      methods: [],
+    };
+  }
+
+  createPackageLayerNode(
+    nodes: UmlClassNode[],
+    position?: { x: number; y: number },
+    scroll?: ScrollOffset,
+  ): UmlClassNode {
+    const pos = this.calcPos(position, 210, 100, scroll);
+    const count = nodes.filter((n) => n.nodeType === 'package_layer').length + 1;
+    return {
+      id: `layer_${Date.now()}`,
+      name: `Capa Arquitectónica ${count}`,
+      nodeType: 'package_layer',
+      position: pos,
+      width: 420,
+      height: 200,
+      customWidth: 420,
+      customHeight: 200,
+      isCustomSize: true,
+      color: 'rgba(248, 250, 252, 0.65)',
+      attributes: [],
+      methods: [],
+    };
+  }
+
+  createActivityNode(
+    subType: 'activity_initial' | 'activity_final' | 'activity_action' | 'activity_decision' | 'activity_fork' | string,
+    nodes: UmlClassNode[],
+    position?: { x: number; y: number },
+    scroll?: ScrollOffset,
+  ): UmlClassNode {
+    let width = 155;
+    let height = 62;
+    let name = 'Acción';
+
+    if (subType === 'activity_initial') {
+      width = 44;
+      height = 48;
+      name = 'Initial';
+    } else if (subType === 'activity_final') {
+      width = 44;
+      height = 48;
+      name = 'Final';
+    } else if (subType === 'activity_decision') {
+      width = 65;
+      height = 65;
+      name = 'Decision';
+    } else if (subType === 'activity_fork') {
+      width = 220;
+      height = 14;
+      name = 'Fork/Join';
+    }
+
+    const pos = this.calcPos(position, width / 2, height / 2, scroll);
+    const count = nodes.filter((n) => n.nodeType === subType).length + 1;
+
+    return {
+      id: `${subType}_${Date.now()}`,
+      name: subType === 'activity_action' ? `Acción_${count}` : name,
+      nodeType: subType,
+      position: pos,
+      width,
+      height,
+      customWidth: width,
+      customHeight: height,
+      isCustomSize: true,
+      attributes: [],
+      methods: [],
+    };
+  }
 }

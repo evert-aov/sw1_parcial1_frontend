@@ -86,46 +86,43 @@ export function calculateClassDynamicWidth(node: UmlClassNode): number {
   const cached = classDynamicWidthCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
-  const padW = 20; // 10px padding-left + 10px padding-right (px-2.5 de Tailwind)
-  const symW = 6;  // Ancho estimado del símbolo '-' o '+'
-  const mrW = 6;   // Margen derecho del símbolo mr-1.5 (6px)
-  const mlW = 2;   // Margen izquierdo antes del tipo ml-0.5 (2px)
+  const padW = 20; // 10px padding-left + 10px padding-right simétrico
 
-  const bodyFont = '11px ui-sans-serif, system-ui, -apple-system, sans-serif';
-  const headerFont = 'bold 12px ui-sans-serif, system-ui, -apple-system, sans-serif';
-  const stereotypeFont = 'italic 9.5px ui-sans-serif, system-ui, -apple-system, sans-serif';
+  const bodyFont = '12px "Plus Jakarta Sans", system-ui, sans-serif';
+  const boldBodyFont = 'bold 12px "Plus Jakarta Sans", system-ui, sans-serif';
+  const headerFont = 'bold 14px "Plus Jakarta Sans", system-ui, sans-serif';
+  const stereotypeFont = 'italic 11px "JetBrains Mono", monospace';
 
   // 1. Encabezado de la clase
-  const nameW = measureTextWidth(node.name || '', headerFont);
-  const stereotypeW = node.stereotype ? measureTextWidth(`«${node.stereotype}»`, stereotypeFont) : 0;
+  const nameW = measureTextWidth(node.name || '', headerFont) + 4;
+  const isAssocStereotype =
+    (node.stereotype || '').toLowerCase() === 'associationclass' ||
+    (node.stereotype || '').toLowerCase() === '«associationclass»';
+  const stereotypeW = node.stereotype && !isAssocStereotype ? measureTextWidth(`«${node.stereotype}»`, stereotypeFont) : 0;
   const headerContentW = Math.max(nameW, stereotypeW);
-  // Padding horizontal (20px) + margen para icono de bloqueo o botón eliminar (20px)
-  let maxNeededWidth = headerContentW + padW + 20;
+  let maxNeededWidth = headerContentW + padW;
 
-  // 2. Atributos
-  // Estructura visual: | (10px) [-] (6px) [nombre] (2px) [: tipo] (10px) |
+  // 2. Atributos: | 10px | [-] nombre : tipo | 10px |
   for (const attr of node.attributes || []) {
-    const attrNameW = measureTextWidth(attr.name || '', bodyFont);
+    const attrNameW = measureTextWidth(`${attr.visibility || '-'} ${attr.name || ''}`, boldBodyFont);
     const attrTypeW = measureTextWidth(`: ${attr.type || ''}`, bodyFont);
-    const attrRowW = padW + symW + mrW + attrNameW + mlW + attrTypeW;
+    const attrRowW = padW + attrNameW + 3 + attrTypeW;
     if (attrRowW > maxNeededWidth) {
       maxNeededWidth = attrRowW;
     }
   }
 
-  // 3. Métodos
-  // Estructura visual: | (10px) [+] (6px) [nombre(parametros)] (2px) [: tipoRetorno] (10px) |
+  // 3. Métodos: | 10px | [+] nombre(params): retorno | 10px |
+  const methodFont = '11.5px "JetBrains Mono", monospace';
   for (const m of node.methods || []) {
-    const sigText = `${m.name || ''}(${m.parameters || ''})`;
-    const sigW = measureTextWidth(sigText, bodyFont);
-    const retW = measureTextWidth(`: ${m.returnType || 'void'}`, bodyFont);
-    const methodRowW = padW + symW + mrW + sigW + mlW + retW;
+    const sigText = `${m.visibility || '+'} ${m.name || ''}(${m.parameters || ''}): ${m.returnType || 'void'}`;
+    const methodRowW = padW + measureTextWidth(sigText, methodFont);
     if (methodRowW > maxNeededWidth) {
       maxNeededWidth = methodRowW;
     }
   }
 
-  // Ancho mínimo base de 90px para asegurar interacción táctil/puntero adecuada
+  // Ancho mínimo base de 90px
   const result = Math.max(90, Math.ceil(maxNeededWidth));
   if (classDynamicWidthCache.size > 2000) classDynamicWidthCache.clear();
   classDynamicWidthCache.set(cacheKey, result);
@@ -219,6 +216,37 @@ export function getNodeWidth(node: UmlClassNode): number {
     const nameLen = (node.name || '').length;
     return Math.max(230, Math.round(nameLen * 8.5 + 50));
   }
+  if (node.nodeType === 'package_layer') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    if (manualW && manualW > 0) return Math.max(240, manualW);
+    return 420;
+  }
+  if (node.nodeType === 'package') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    if (manualW && manualW > 0) return Math.max(140, manualW);
+    return 200;
+  }
+  if (node.nodeType === 'note') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    if (manualW && manualW > 0) return Math.max(135, manualW);
+    const lines = (node.name || '').split('\n');
+    const longest = lines.reduce((max, l) => Math.max(max, l.length), 12);
+    return Math.max(185, Math.min(340, longest * 6.8 + 32));
+  }
+  if (node.nodeType === 'activity_initial' || node.nodeType === 'activity_final') {
+    return 44;
+  }
+  if (node.nodeType === 'activity_action') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    return Math.max(110, manualW || 155);
+  }
+  if (node.nodeType === 'activity_decision') {
+    return 65;
+  }
+  if (node.nodeType === 'activity_fork') {
+    const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
+    return Math.max(120, manualW || 220);
+  }
   if (node.nodeType === 'boundary_box') {
     const manualW = node.customWidth || (node.isCustomSize ? (node.width || 0) : 0) || node.width;
     if (manualW && manualW > 0) {
@@ -239,6 +267,17 @@ export function getNodeHeight(node: UmlClassNode): number {
   if (node.nodeType === 'actor') return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 95;
 
   if (node.nodeType === 'package') return node.customHeight || node.height || 120;
+  if (node.nodeType === 'package_layer') return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 200;
+  if (node.nodeType === 'note') {
+    if (node.customHeight && node.customHeight > 0) return node.customHeight;
+    const lines = (node.name || '').split('\n');
+    const estimated = Math.max(lines.length, Math.ceil((node.name || '').length / 28));
+    return Math.max(76, estimated * 18 + 32);
+  }
+  if (node.nodeType === 'activity_initial' || node.nodeType === 'activity_final') return 48;
+  if (node.nodeType === 'activity_action') return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 62;
+  if (node.nodeType === 'activity_decision') return 65;
+  if (node.nodeType === 'activity_fork') return 14;
   if (node.nodeType === 'boundary_box') {
     return node.customHeight || (node.isCustomSize ? node.height : null) || node.height || 200;
   }

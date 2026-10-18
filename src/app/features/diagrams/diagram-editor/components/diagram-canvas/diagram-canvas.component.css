@@ -13,14 +13,21 @@
 .uml-viewport {
   overflow: auto !important;
   background-color: #FFFFFF !important;
+}
+
+.uml-viewport.show-grid {
   background-image: radial-gradient(#CBD5E1 1.2px, transparent 1.2px) !important;
   background-size: 20px 20px !important;
 }
 
 :host-context(.dark) .uml-viewport,
 .dark .uml-viewport {
-  background-color: #FFFFFF !important;
-  background-image: radial-gradient(#CBD5E1 1.2px, transparent 1.2px) !important;
+  background-color: #0B0F19 !important;
+}
+
+:host-context(.dark) .uml-viewport.show-grid,
+.dark .uml-viewport.show-grid {
+  background-image: radial-gradient(#334155 1.2px, transparent 1.2px) !important;
   background-size: 20px 20px !important;
 }
 

@@ -39,6 +39,7 @@ export interface ToolbarColorContext {
   setNodes: (nodes: UmlClassNode[]) => void;
   markAsUnsaved: () => void;
   sendDiagramSync: (nodes: UmlClassNode[], connections: UmlConnection[], action: string, style?: UmlLineStyle) => void;
+  getDefaultColor?: (type?: string | null, stereotype?: string | null) => string;
 }
 
 @Injectable({
@@ -50,6 +51,7 @@ export class DiagramToolbarService {
   private readonly nodeOps: DiagramNodeOperationsService;
 
   readonly smartGuidesEnabled = signal<boolean>(true);
+  readonly showGrid = signal<boolean>(false);
 
   constructor(
     alignmentService?: DiagramAlignmentService,
@@ -72,10 +74,14 @@ export class DiagramToolbarService {
     this.nodeOps = nodeOps ?? injectedNodeOps ?? new DiagramNodeOperationsService();
   }
 
-  // --- GUÍAS INTELIGENTES ---
+  // --- GUÍAS INTELIGENTES Y CUADRÍCULA ---
 
   toggleSmartGuides(): void {
     this.smartGuidesEnabled.update((val) => !val);
+  }
+
+  toggleGrid(): void {
+    this.showGrid.update((val) => !val);
   }
 
   // --- COLOR SELECCIONADO ---
@@ -93,7 +99,12 @@ export class DiagramToolbarService {
   applySelectedNodeColor(color: string | null, context: ToolbarColorContext): void {
     if (context.isReadOnly || context.selectedNodeIds.length === 0) return;
 
-    const { anyChanged, updatedNodes } = this.nodeOps.updateNodesColor(context.nodes, context.selectedNodeIds, color);
+    const { anyChanged, updatedNodes } = this.nodeOps.updateNodesColor(
+      context.nodes,
+      context.selectedNodeIds,
+      color,
+      context.getDefaultColor
+    );
     if (!anyChanged) return;
 
     context.pushSnapshot();

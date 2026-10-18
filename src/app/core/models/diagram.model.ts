@@ -101,6 +101,13 @@ export enum UmlNodeType {
   DEVICE = 'device',
   EXECUTION_ENVIRONMENT = 'executionEnvironment',
   BOUNDARY_BOX = 'boundary_box',
+  NOTE = 'note',
+  PACKAGE_LAYER = 'package_layer',
+  ACTIVITY_INITIAL = 'activity_initial',
+  ACTIVITY_FINAL = 'activity_final',
+  ACTIVITY_ACTION = 'activity_action',
+  ACTIVITY_DECISION = 'activity_decision',
+  ACTIVITY_FORK = 'activity_fork',
 }
 
 export const UML_NODE_DEFAULT_COLORS: Record<string, string> = {
@@ -117,6 +124,13 @@ export const UML_NODE_DEFAULT_COLORS: Record<string, string> = {
   [UmlNodeType.DEVICE]: '#F3FAF7',
   [UmlNodeType.NODE]: '#F3FAF7',
   [UmlNodeType.EXECUTION_ENVIRONMENT]: '#CDE5F5',
+  [UmlNodeType.NOTE]: '#FEF9C3',
+  [UmlNodeType.PACKAGE_LAYER]: 'rgba(248, 250, 252, 0.65)',
+  [UmlNodeType.ACTIVITY_INITIAL]: '#0A0A0A',
+  [UmlNodeType.ACTIVITY_FINAL]: '#C5DF9B',
+  [UmlNodeType.ACTIVITY_ACTION]: '#F7F1DF',
+  [UmlNodeType.ACTIVITY_DECISION]: '#C5DF9B',
+  [UmlNodeType.ACTIVITY_FORK]: '#3F3F3F',
 };
 
 export type UmlRelationshipType =
@@ -139,9 +153,24 @@ export type UmlRelationshipType =
   | 'async'
   | 'create'
   | 'self'
-  | 'assembly';
+  | 'assembly'
+  | 'control_flow'
+  | 'note_anchor';
 
-export type UmlLineStyle = 'segment' | 'straight' | 'bezier' | 'adaptive-curve';
+export type UmlLineStyle =
+  | 'segment'
+  | 'straight'
+  | 'bezier'
+  | 'adaptive-curve'
+  | 'direct'
+  | 'auto_routing'
+  | 'custom'
+  | 'tree_vertical'
+  | 'tree_horizontal'
+  | 'lateral_vertical'
+  | 'lateral_horizontal'
+  | 'orthogonal_square'
+  | 'orthogonal_rounded';
 
 export type UmlMessageType = 'sync' | 'async' | 'reply' | 'create';
 export type UmlMessageDirection = 'forward' | 'reverse';
@@ -234,15 +263,21 @@ export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [
   { id: 'access', label: '«access»', icon: '┄«access»▷', description: 'Importación privada del contenido de un paquete.' },
   { id: 'merge', label: '«merge»', icon: '┄«merge»▷', description: 'Fusión de definiciones complementarias de paquetes.' },
   { id: 'trace', label: '«trace»', icon: '┄«trace»▷', description: 'Trazabilidad conceptual o histórica entre paquetes.' },
+  { id: 'control_flow', label: 'Flujo de Control', icon: '──>', description: 'Flujo secuencial de actividad con condiciones de guarda [Guard].' },
+  { id: 'note_anchor', label: 'Anclaje de Nota', icon: '┈ ┈', description: 'Enlace punteado entre nota y elemento anotado.' },
   ...UML_SEQUENCE_RELATION_TYPES,
 ];
 
 
 export const UML_LINE_STYLES: UmlLineStyleItem[] = [
-  { id: 'segment', label: 'Custom Line (EA Default / Segmentos)', shortcut: 'Ctrl+Shift+C' },
   { id: 'straight', label: 'Direct (Directa / Recta)', shortcut: 'Ctrl+Shift+D' },
-  { id: 'bezier', label: 'Bezier (Curva Suave)' },
+  { id: 'segment', label: 'Orthogonal - Square (Ortogonal)', shortcut: 'Ctrl+Shift+C' },
   { id: 'adaptive-curve', label: 'Orthogonal - Rounded (Curva Adaptativa)' },
+  { id: 'bezier', label: 'Bezier (Curva Suave)' },
+  { id: 'tree_vertical', label: 'Tree Style - Vertical (Árbol Vertical)' },
+  { id: 'tree_horizontal', label: 'Tree Style - Horizontal (Árbol Horizontal)' },
+  { id: 'lateral_vertical', label: 'Lateral - Vertical' },
+  { id: 'lateral_horizontal', label: 'Lateral - Horizontal' },
 ];
 
 export const UML_MULTIPLICITY_OPTIONS: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];
@@ -315,6 +350,8 @@ export interface UmlConnection {
   sourceMultiplicity?: string;
   targetMultiplicity?: string;
   assocAnchorNodeId?: string;
+  associationClassNodeId?: string;
+  waypoints?: { x: number; y: number }[];
   messages?: UmlMessage[];
 }
 

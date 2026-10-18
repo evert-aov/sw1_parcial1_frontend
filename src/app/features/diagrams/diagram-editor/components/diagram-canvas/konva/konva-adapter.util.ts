@@ -56,10 +56,28 @@ function mapNodeTypeToKonva(nodeType?: string | null): UmlNodeType {
   if (nt === 'control') return 'control';
   if (nt === 'entity') return 'entity';
   if (nt === 'lifeline') return 'lifeline';
+  if (nt === 'component') return 'component';
+  if (nt === 'package') return 'package';
+  if (nt === 'package_layer' || nt === 'boundary_box') return 'package_layer';
+  if (nt === 'note') return 'note';
+  if (nt === 'activity_initial') return 'activity_initial';
+  if (nt === 'activity_final') return 'activity_final';
+  if (nt === 'activity_action') return 'activity_action';
+  if (nt === 'activity_decision') return 'activity_decision';
+  if (nt === 'activity_fork') return 'activity_fork';
   if (nt === 'device' || nt === 'executionenvironment' || nt === 'deployment_node' || nt === 'node') {
     return 'deployment_node';
   }
   return 'class';
+}
+
+function mapLineStyleToKonva(lineStyle?: string | null): any {
+  if (!lineStyle) return 'direct';
+  const ls = lineStyle.toLowerCase();
+  if (ls === 'straight') return 'direct';
+  if (ls === 'segment') return 'orthogonal_square';
+  if (ls === 'adaptive-curve') return 'orthogonal_rounded';
+  return ls;
 }
 
 /**
@@ -67,6 +85,7 @@ function mapNodeTypeToKonva(nodeType?: string | null): UmlNodeType {
  */
 function mapRelationshipTypeToKonva(type?: UmlRelationshipType | string | null): UmlRelationType {
   const t = (type || 'association').toLowerCase();
+  if (t === 'association_class') return 'association_class';
   if (t === 'generalization' || t === 'inheritance') return 'generalization';
   if (t === 'composition') return 'composition';
   if (t === 'aggregation') return 'aggregation';
@@ -74,6 +93,9 @@ function mapRelationshipTypeToKonva(type?: UmlRelationshipType | string | null):
   if (t === 'trace') return 'trace';
   if (t === 'sync' || t === 'sync_message' || t === 'message' || t === 'async' || t === 'create' || t === 'self') return 'sync_message';
   if (t === 'reply' || t === 'return_message') return 'return_message';
+  if (t === 'assembly') return 'assembly';
+  if (t === 'control_flow') return 'control_flow';
+  if (t === 'note_anchor') return 'note_anchor';
   return 'association';
 }
 
@@ -86,17 +108,40 @@ export function toKonvaNode(
   connections?: UmlConnection[],
   sequenceActivationService?: DiagramSequenceActivationService,
 ): UmlNode {
-  const isSequenceDiag = activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
+  const kType = mapNodeTypeToKonva(node.nodeType);
+  const isSequenceDiag = activeDiagramType === DiagramType.SEQUENCE || kType === 'lifeline';
 
   if (isSequenceDiag) {
     const isActorLifeline = node.nodeType === 'actor' || (node.stereotype || '').toLowerCase().includes('actor');
     const width = isActorLifeline ? 120 : Math.max(130, node.width || node.customWidth || getNodeWidth(node) || 150);
 
-    let lifelineHeight = node.height || node.customHeight;
-    if (!lifelineHeight && sequenceActivationService && connections) {
-      lifelineHeight = sequenceActivationService.getLifelineLength(node, connections);
+    const y = node.position ? node.position.y : 30;
+
+    // Calcular la posición Y más baja de todos los mensajes de secuencia
+    let maxMsgY = 220;
+    if (connections && connections.length > 0) {
+      for (const c of connections) {
+        const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+        const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+        const slot = sMatch ? parseInt(sMatch[1], 10) : tMatch ? parseInt(tMatch[1], 10) : 0;
+        const msgY = c.messages?.[0]?.positionY ?? (160 + slot * 50);
+        if (msgY > maxMsgY) {
+          maxMsgY = msgY;
+        }
+      }
     }
-    const height = Math.max(420, lifelineHeight || 490);
+
+    const requiredStemHeight = Math.max(490, (maxMsgY - y) + 110);
+    const computedServiceHeight = sequenceActivationService && connections
+      ? sequenceActivationService.getLifelineLength(node, connections)
+      : 0;
+
+    const height = Math.max(
+      node.height || 0,
+      node.customHeight || 0,
+      computedServiceHeight,
+      requiredStemHeight
+    );
 
     let activations: ActivationBox[] | undefined = undefined;
     if (sequenceActivationService && connections) {
@@ -116,8 +161,6 @@ export function toKonvaNode(
       }));
     }
 
-    const y = node.position ? node.position.y : 30;
-
     return {
       id: node.id,
       type: 'lifeline',
@@ -136,8 +179,74 @@ export function toKonvaNode(
     };
   }
 
-  const width = Math.max(90, node.width || node.customWidth || getNodeWidth(node) || 160);
-  const height = Math.max(50, node.height || node.customHeight || getNodeHeight(node) || 90);
+  // Dimensiones según el tipo específico de nodo UML
+  let defaultW = 160;
+  let defaultH = 90;
+
+  switch (kType) {
+    case 'component':
+      defaultW = 190;
+      defaultH = 75;
+      break;
+    case 'package':
+      defaultW = 200;
+      defaultH = 120;
+      break;
+    case 'package_layer':
+      defaultW = 420;
+      defaultH = 200;
+      break;
+    case 'note':
+      defaultW = 185;
+      defaultH = 76;
+      break;
+    case 'actor':
+      defaultW = 65;
+      defaultH = 95;
+      break;
+    case 'use_case':
+      defaultW = 140;
+      defaultH = 60;
+      break;
+    case 'boundary':
+    case 'control':
+    case 'entity':
+      defaultW = 70;
+      defaultH = 70;
+      break;
+    case 'deployment_node':
+      defaultW = 220;
+      defaultH = 140;
+      break;
+    case 'activity_initial':
+    case 'activity_final':
+      defaultW = 44;
+      defaultH = 48;
+      break;
+    case 'activity_action':
+      defaultW = 155;
+      defaultH = 62;
+      break;
+    case 'activity_decision':
+      defaultW = 65;
+      defaultH = 65;
+      break;
+    case 'activity_fork':
+      defaultW = 220;
+      defaultH = 14;
+      break;
+    default:
+      defaultW = 195;
+      defaultH = 90;
+      break;
+  }
+
+  const isCustomW = !!node.isCustomSize && ((!!node.customWidth && node.customWidth > 0) || (!!node.width && node.width > 0));
+  const isCustomH = !!node.isCustomSize && ((!!node.customHeight && node.customHeight > 0) || (!!node.height && node.height > 0));
+  const customW = node.customWidth || node.width;
+  const customH = node.customHeight || node.height;
+  const width = Math.max(36, (isCustomW ? customW! : 0) || getNodeWidth(node) || defaultW);
+  const height = Math.max(14, (isCustomH ? customH! : 0) || getNodeHeight(node) || defaultH);
 
   const attributes: UmlClassAttribute[] = (node.attributes || []).map((a: UmlAttribute, i: number) => ({
     id: `attr_${i}`,
@@ -154,11 +263,17 @@ export function toKonvaNode(
     visibility: normalizeVisibility(m.visibility),
   }));
 
+  // La clase asociativa no debe tener estereotipo visible según la especificación del usuario
+  const isAssocStereotype =
+    (node.stereotype || '').toLowerCase() === 'associationclass' ||
+    (node.stereotype || '').toLowerCase() === '«associationclass»';
+  const stereotype = isAssocStereotype ? undefined : (node.stereotype || undefined);
+
   return {
     id: node.id,
-    type: mapNodeTypeToKonva(node.nodeType),
-    name: node.name || 'Clase',
-    stereotype: node.stereotype || undefined,
+    type: kType,
+    name: node.name || 'Elemento',
+    stereotype,
     x: node.position ? node.position.x : 100,
     y: node.position ? node.position.y : 100,
     width,
@@ -167,6 +282,9 @@ export function toKonvaNode(
     stroke: undefined,
     attributes,
     methods,
+    isCustomSize: node.isCustomSize,
+    customWidth: node.customWidth || (node.isCustomSize ? node.width : undefined),
+    customHeight: node.customHeight || (node.isCustomSize ? node.height : undefined),
     isActorLifeline: node.nodeType === 'actor',
   };
 }
@@ -177,6 +295,8 @@ export function toKonvaNode(
 export function toKonvaRelationship(
   conn: UmlConnection,
   activeDiagramType?: DiagramType,
+  allNodes?: UmlClassNode[],
+  allConnections?: UmlConnection[],
 ): UmlRelationship {
   const sourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
   const targetId = conn.targetNodeId || conn.targetId.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
@@ -240,13 +360,77 @@ export function toKonvaRelationship(
 
   const connAny = conn as any;
 
+  let assocClassNodeId = conn.associationClassNodeId;
+
+  // Heurística 1: Buscar nodo en allNodes que declare assocMainConnId === conn.id
+  if (!assocClassNodeId && allNodes) {
+    const assocNode = allNodes.find((n) => n.assocMainConnId === conn.id && !n.isAnchor);
+    if (assocNode) {
+      assocClassNodeId = assocNode.id;
+    }
+  }
+
+  // Heurística 2: Si conn tiene assocAnchorNodeId, buscar la conexión discontinua que apunta a la clase
+  if (!assocClassNodeId && conn.assocAnchorNodeId && allConnections) {
+    const dashed = allConnections.find((c) => {
+      const srcBase = c.sourceNodeId || c.sourceId?.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
+      return srcBase === conn.assocAnchorNodeId;
+    });
+    if (dashed) {
+      const tgtBase = dashed.targetNodeId || dashed.targetId?.replace(/_(top|right|bottom|left|slot_\d+)$/, '');
+      if (tgtBase && !allNodes?.some((n) => n.id === tgtBase && n.isAnchor)) {
+        assocClassNodeId = tgtBase;
+      }
+    }
+  }
+
+  // Heurística 3: Si conn.assocAnchorNodeId apunta directamente a un nodo no ancla
+  if (!assocClassNodeId && conn.assocAnchorNodeId && allNodes) {
+    const byAnchor = allNodes.find((n) => n.id === conn.assocAnchorNodeId && !n.isAnchor);
+    if (byAnchor) {
+      assocClassNodeId = byAnchor.id;
+    }
+  }
+
+  // Heurística 4: Buscar nodo asociativo por coincidencia de nombre Source_Target o Target_Source
+  if (!assocClassNodeId && allNodes) {
+    const srcNode = allNodes.find((n) => n.id === sourceId);
+    const tgtNode = allNodes.find((n) => n.id === targetId);
+    if (srcNode && tgtNode) {
+      const match = allNodes.find((n) => {
+        if (n.isAnchor) return false;
+        const isStereo =
+          n.stereotype === 'associationClass' ||
+          (n.stereotype || '').toLowerCase().includes('associationclass');
+        const isNameMatch =
+          n.name === `${srcNode.name}_${tgtNode.name}` ||
+          n.name === `${tgtNode.name}_${srcNode.name}`;
+        return isStereo || isNameMatch;
+      });
+      if (match) {
+        assocClassNodeId = match.id;
+      }
+    }
+  }
+
+  if (!assocClassNodeId && connAny.assocNodeId) {
+    assocClassNodeId = connAny.assocNodeId;
+  }
+
+  const isAssocRel = !!assocClassNodeId || conn.type === 'association_class';
+  const relType = isAssocRel ? 'association_class' : mapRelationshipTypeToKonva(conn.type);
+  const lineStyle = mapLineStyleToKonva(conn.lineStyle);
+
   return {
     id: conn.id,
-    type: mapRelationshipTypeToKonva(conn.type),
+    type: relType,
     sourceId,
     targetId,
+    associationClassNodeId: assocClassNodeId,
+    lineStyle,
+    waypoints: conn.waypoints,
     name: conn.name,
-    stereotype: connAny.stereotype || undefined,
+    stereotype: connAny.stereotype || (['include', 'extend', 'trace', 'assembly'].includes(conn.type) ? `«${conn.type}»` : undefined),
     sourceMultiplicity: conn.sourceMultiplicity,
     targetMultiplicity: conn.targetMultiplicity,
     messages: messages.length > 0 ? messages : undefined,
