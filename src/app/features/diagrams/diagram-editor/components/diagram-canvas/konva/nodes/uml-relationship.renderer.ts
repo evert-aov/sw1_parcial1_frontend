@@ -8,8 +8,7 @@ export interface Point {
 
 /**
  * Computes the exact start and end coordinates for a relationship
- * taking into account its lineStyle (e.g. Tree Vertical attaches to top/bottom edges,
- * Tree Horizontal attaches to left/right edges, etc.)
+ * taking into account its lineStyle and adaptive geometry between source and target nodes.
  */
 export function getRelationshipEndpoints(
   rel: UmlRelationship,
@@ -35,16 +34,29 @@ export function getRelationshipEndpoints(
   const tCx = targetNode.x + targetNode.width / 2;
   const tCy = targetNode.y + targetNode.height / 2;
 
+  if (
+    style === 'auto_routing' ||
+    style === 'orthogonal_square' ||
+    style === 'orthogonal_rounded' ||
+    style === 'bezier'
+  ) {
+    const orthoPts = computeAdaptiveOrthogonalPath(sourceNode, targetNode);
+    return {
+      start: orthoPts[0],
+      end: orthoPts[orthoPts.length - 1],
+    };
+  }
+
   if (style === 'tree_vertical') {
     const goingDown = tCy >= sCy;
     return {
       start: {
-        x: sCx,
-        y: goingDown ? sourceNode.y + sourceNode.height + 2 : sourceNode.y - 2,
+        x: Math.round(sCx),
+        y: Math.round(goingDown ? sourceNode.y + sourceNode.height + 2 : sourceNode.y - 2),
       },
       end: {
-        x: tCx,
-        y: goingDown ? targetNode.y - 2 : targetNode.y + targetNode.height + 2,
+        x: Math.round(tCx),
+        y: Math.round(goingDown ? targetNode.y - 2 : targetNode.y + targetNode.height + 2),
       },
     };
   }
@@ -53,12 +65,12 @@ export function getRelationshipEndpoints(
     const goingRight = tCx >= sCx;
     return {
       start: {
-        x: goingRight ? sourceNode.x + sourceNode.width + 2 : sourceNode.x - 2,
-        y: sCy,
+        x: Math.round(goingRight ? sourceNode.x + sourceNode.width + 2 : sourceNode.x - 2),
+        y: Math.round(sCy),
       },
       end: {
-        x: goingRight ? targetNode.x - 2 : targetNode.x + targetNode.width + 2,
-        y: tCy,
+        x: Math.round(goingRight ? targetNode.x - 2 : targetNode.x + targetNode.width + 2),
+        y: Math.round(tCy),
       },
     };
   }
@@ -68,12 +80,12 @@ export function getRelationshipEndpoints(
     const goingRight = tCx >= sCx;
     return {
       start: {
-        x: sCx,
-        y: goingDown ? sourceNode.y + sourceNode.height + 2 : sourceNode.y - 2,
+        x: Math.round(sCx),
+        y: Math.round(goingDown ? sourceNode.y + sourceNode.height + 2 : sourceNode.y - 2),
       },
       end: {
-        x: goingRight ? targetNode.x - 2 : targetNode.x + targetNode.width + 2,
-        y: tCy,
+        x: Math.round(goingRight ? targetNode.x - 2 : targetNode.x + targetNode.width + 2),
+        y: Math.round(tCy),
       },
     };
   }
@@ -83,48 +95,14 @@ export function getRelationshipEndpoints(
     const goingRight = tCx >= sCx;
     return {
       start: {
-        x: goingRight ? sourceNode.x + sourceNode.width + 2 : sourceNode.x - 2,
-        y: sCy,
+        x: Math.round(goingRight ? sourceNode.x + sourceNode.width + 2 : sourceNode.x - 2),
+        y: Math.round(sCy),
       },
       end: {
-        x: tCx,
-        y: goingDown ? targetNode.y - 2 : targetNode.y + targetNode.height + 2,
+        x: Math.round(tCx),
+        y: Math.round(goingDown ? targetNode.y - 2 : targetNode.y + targetNode.height + 2),
       },
     };
-  }
-
-  if (
-    style === 'auto_routing' ||
-    style === 'orthogonal_square' ||
-    style === 'orthogonal_rounded'
-  ) {
-    const dx = tCx - sCx;
-    const dy = tCy - sCy;
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      const goingRight = dx >= 0;
-      return {
-        start: {
-          x: goingRight ? sourceNode.x + sourceNode.width + 2 : sourceNode.x - 2,
-          y: sCy,
-        },
-        end: {
-          x: goingRight ? targetNode.x - 2 : targetNode.x + targetNode.width + 2,
-          y: tCy,
-        },
-      };
-    } else {
-      const goingDown = dy >= 0;
-      return {
-        start: {
-          x: sCx,
-          y: goingDown ? sourceNode.y + sourceNode.height + 2 : sourceNode.y - 2,
-        },
-        end: {
-          x: tCx,
-          y: goingDown ? targetNode.y - 2 : targetNode.y + targetNode.height + 2,
-        },
-      };
-    }
   }
 
   if (style === 'custom' && rel.waypoints && rel.waypoints.length > 0) {
@@ -140,7 +118,7 @@ export function getRelationshipEndpoints(
 }
 
 /**
- * Computes the full ordered polyline path for any of the 10 UML Line Styles
+ * Computes the full ordered polyline path for any of the UML Line Styles
  */
 export function computeRelationshipPathPoints(
   rel: UmlRelationship,
@@ -167,22 +145,34 @@ export function computeRelationshipPathPoints(
     }
 
     case 'bezier': {
-      const dx = end.x - start.x;
-      const dy = end.y - start.y;
-      let cp1: Point;
-      let cp2: Point;
-      if (Math.abs(dx) >= Math.abs(dy)) {
-        cp1 = { x: start.x + dx * 0.5, y: start.y };
-        cp2 = { x: start.x + dx * 0.5, y: end.y };
-      } else {
-        cp1 = { x: start.x, y: start.y + dy * 0.5 };
-        cp2 = { x: end.x, y: start.y + dy * 0.5 };
+      const orthoPts = computeAdaptiveOrthogonalPath(sourceNode, targetNode);
+      const pStart = orthoPts[0];
+      const pEnd = orthoPts[orthoPts.length - 1];
+      if (orthoPts.length === 2) {
+        return [pStart, pEnd];
       }
-      return sampleCubicBezier(start, cp1, cp2, end, 28);
+      if (orthoPts.length === 3) {
+        const corner = orthoPts[1];
+        const cp1: Point = {
+          x: pStart.x + (corner.x - pStart.x) * 0.65,
+          y: pStart.y + (corner.y - pStart.y) * 0.65,
+        };
+        const cp2: Point = {
+          x: pEnd.x + (corner.x - pEnd.x) * 0.65,
+          y: pEnd.y + (corner.y - pEnd.y) * 0.65,
+        };
+        return sampleCubicBezier(pStart, cp1, cp2, pEnd, 28);
+      }
+      const c1 = orthoPts[1];
+      const c2 = orthoPts[orthoPts.length - 2];
+      return sampleCubicBezier(pStart, c1, c2, pEnd, 28);
     }
 
     case 'tree_vertical': {
-      const midY = (start.y + end.y) / 2;
+      if (Math.abs(start.x - end.x) < 2) {
+        return [start, { x: start.x, y: end.y }];
+      }
+      const midY = Math.round((start.y + end.y) / 2);
       return [
         start,
         { x: start.x, y: midY },
@@ -192,7 +182,10 @@ export function computeRelationshipPathPoints(
     }
 
     case 'tree_horizontal': {
-      const midX = (start.x + end.x) / 2;
+      if (Math.abs(start.y - end.y) < 2) {
+        return [start, { x: end.x, y: start.y }];
+      }
+      const midX = Math.round((start.x + end.x) / 2);
       return [
         start,
         { x: midX, y: start.y },
@@ -202,6 +195,9 @@ export function computeRelationshipPathPoints(
     }
 
     case 'lateral_vertical': {
+      if (Math.abs(start.x - end.x) < 2 || Math.abs(start.y - end.y) < 2) {
+        return [start, end];
+      }
       return [
         start,
         { x: start.x, y: end.y },
@@ -210,6 +206,9 @@ export function computeRelationshipPathPoints(
     }
 
     case 'lateral_horizontal': {
+      if (Math.abs(start.x - end.x) < 2 || Math.abs(start.y - end.y) < 2) {
+        return [start, end];
+      }
       return [
         start,
         { x: end.x, y: start.y },
@@ -219,11 +218,11 @@ export function computeRelationshipPathPoints(
 
     case 'auto_routing':
     case 'orthogonal_square': {
-      return computeOrthogonalCorners(start, end);
+      return computeAdaptiveOrthogonalPath(sourceNode, targetNode);
     }
 
     case 'orthogonal_rounded': {
-      const sharpCorners = computeOrthogonalCorners(start, end);
+      const sharpCorners = computeAdaptiveOrthogonalPath(sourceNode, targetNode);
       return roundPolylineCorners(sharpCorners, 14);
     }
 
@@ -273,14 +272,152 @@ function distToSegment(p: Point, v: Point, w: Point): number {
   return Math.hypot(p.x - projX, p.y - projY);
 }
 
-function computeOrthogonalCorners(start: Point, end: Point): Point[] {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  if (Math.abs(dx) < 2 || Math.abs(dy) < 2) {
-    return [start, end];
+/**
+ * Enterprise Architect Adaptive Orthogonal Router:
+ * - 1 segment (straight horizontal or vertical) when nodes share a horizontal or vertical overlap band.
+ * - 2 segments (single 90-degree L-bend) when nodes are diagonally separated with clear turn space.
+ * - 3 segments (2-corner Z-bend) when nodes are closely offset and require a midpoint step.
+ */
+export function computeAdaptiveOrthogonalPath(
+  sourceNode: UmlNode,
+  targetNode: UmlNode
+): Point[] {
+  const borderGap = 2;
+  const sLeft = sourceNode.x;
+  const sRight = sourceNode.x + sourceNode.width;
+  const sTop = sourceNode.y;
+  const sBottom = sourceNode.y + sourceNode.height;
+  const sCx = (sLeft + sRight) / 2;
+  const sCy = (sTop + sBottom) / 2;
+
+  const tLeft = targetNode.x;
+  const tRight = targetNode.x + targetNode.width;
+  const tTop = targetNode.y;
+  const tBottom = targetNode.y + targetNode.height;
+  const tCx = (tLeft + tRight) / 2;
+  const tCy = (tTop + tBottom) / 2;
+
+  if (sourceNode.id === targetNode.id) {
+    const startX = Math.round(sRight - Math.min(36, sourceNode.width * 0.25));
+    const startY = Math.round(sTop - borderGap);
+    const loopTopY = Math.round(sTop - 32);
+    const loopRightX = Math.round(sRight + 36);
+    const endY = Math.round(sTop + Math.min(36, sourceNode.height * 0.35));
+    const endX = Math.round(sRight + borderGap);
+    return [
+      { x: startX, y: startY },
+      { x: startX, y: loopTopY },
+      { x: loopRightX, y: loopTopY },
+      { x: loopRightX, y: endY },
+      { x: endX, y: endY },
+    ];
   }
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    const midX = (start.x + end.x) / 2;
+
+  const goingRight = tCx >= sCx;
+  const goingDown = tCy >= sCy;
+
+  const horizGap = goingRight ? tLeft - sRight : sLeft - tRight;
+  const vertGap = goingDown ? tTop - sBottom : sTop - tBottom;
+
+  const padY = Math.min(16, sourceNode.height * 0.2, targetNode.height * 0.2);
+  const overlapTop = Math.max(sTop + padY, tTop + padY);
+  const overlapBottom = Math.min(sBottom - padY, tBottom - padY);
+
+  const padX = Math.min(18, sourceNode.width * 0.2, targetNode.width * 0.2);
+  const overlapLeft = Math.max(sLeft + padX, tLeft + padX);
+  const overlapRight = Math.min(sRight - padX, tRight - padX);
+
+  // 1. Horizontal Band Overlap -> 1-segment straight horizontal line (EA style when side-by-side)
+  if (horizGap >= 12 && overlapBottom >= overlapTop) {
+    const sharedY = Math.round(
+      Math.max(overlapTop, Math.min(overlapBottom, (sCy + tCy) / 2))
+    );
+    return [
+      { x: Math.round(goingRight ? sRight + borderGap : sLeft - borderGap), y: sharedY },
+      { x: Math.round(goingRight ? tLeft - borderGap : tRight + borderGap), y: sharedY },
+    ];
+  }
+
+  // 2. Vertical Column Overlap -> 1-segment straight vertical line (EA style when stacked)
+  if (vertGap >= 12 && overlapRight >= overlapLeft) {
+    const sharedX = Math.round(
+      Math.max(overlapLeft, Math.min(overlapRight, (sCx + tCx) / 2))
+    );
+    return [
+      { x: sharedX, y: Math.round(goingDown ? sBottom + borderGap : sTop - borderGap) },
+      { x: sharedX, y: Math.round(goingDown ? tTop - borderGap : tBottom + borderGap) },
+    ];
+  }
+
+  // 3. Diagonal Separation -> 2-segment L-shape (1 corner, EA style: vertical exit from source -> horizontal entry into target)
+  if (horizGap >= 16) {
+    const preferredTargetY = Math.round(
+      tTop + Math.min(36, Math.max(20, targetNode.height * 0.32))
+    );
+    const minClearanceY = 18;
+    const candidateEndY = goingDown
+      ? Math.max(Math.round(sBottom + minClearanceY), preferredTargetY)
+      : Math.min(Math.round(sTop - minClearanceY), preferredTargetY);
+
+    const targetMinY = Math.round(tTop + padY);
+    const targetMaxY = Math.round(tBottom - padY);
+
+    if (candidateEndY >= targetMinY && candidateEndY <= targetMaxY) {
+      const biasRatio = vertGap < 30 ? 0.22 : 0.0;
+      const rawStartX = sCx + (goingRight ? 1 : -1) * sourceNode.width * biasRatio;
+      const startX = Math.round(
+        Math.max(sLeft + padX, Math.min(sRight - padX, rawStartX))
+      );
+      const startY = Math.round(goingDown ? sBottom + borderGap : sTop - borderGap);
+      const endX = Math.round(goingRight ? tLeft - borderGap : tRight + borderGap);
+      const endY = candidateEndY;
+
+      return [
+        { x: startX, y: startY },
+        { x: startX, y: endY },
+        { x: endX, y: endY },
+      ];
+    }
+  }
+
+  // 3b. Diagonal Separation when vertically separated but horizontally close -> horizontal exit -> vertical entry L-shape
+  if (vertGap >= 16 && horizGap >= -sourceNode.width * 0.35) {
+    const minClearanceX = 18;
+    const candidateEndX = goingRight
+      ? Math.max(Math.round(sRight + minClearanceX), Math.round(tCx))
+      : Math.min(Math.round(sLeft - minClearanceX), Math.round(tCx));
+
+    const targetMinX = Math.round(tLeft + padX);
+    const targetMaxX = Math.round(tRight - padX);
+
+    if (candidateEndX >= targetMinX && candidateEndX <= targetMaxX) {
+      const startX = Math.round(goingRight ? sRight + borderGap : sLeft - borderGap);
+      const startY = Math.round(sCy);
+      const endX = candidateEndX;
+      const endY = Math.round(goingDown ? tTop - borderGap : tBottom + borderGap);
+
+      return [
+        { x: startX, y: startY },
+        { x: endX, y: startY },
+        { x: endX, y: endY },
+      ];
+    }
+  }
+
+  // 4. Fallback 3-segment Z-shape with strict perpendicular border exits
+  if (horizGap >= vertGap) {
+    const start: Point = {
+      x: Math.round(goingRight ? sRight + borderGap : sLeft - borderGap),
+      y: Math.round(sCy),
+    };
+    const end: Point = {
+      x: Math.round(goingRight ? tLeft - borderGap : tRight + borderGap),
+      y: Math.round(tCy),
+    };
+    if (Math.abs(start.y - end.y) < 2) {
+      return [start, { x: end.x, y: start.y }];
+    }
+    const midX = Math.round((start.x + end.x) / 2);
     return [
       start,
       { x: midX, y: start.y },
@@ -288,7 +425,18 @@ function computeOrthogonalCorners(start: Point, end: Point): Point[] {
       end,
     ];
   } else {
-    const midY = (start.y + end.y) / 2;
+    const start: Point = {
+      x: Math.round(sCx),
+      y: Math.round(goingDown ? sBottom + borderGap : sTop - borderGap),
+    };
+    const end: Point = {
+      x: Math.round(tCx),
+      y: Math.round(goingDown ? tTop - borderGap : tBottom + borderGap),
+    };
+    if (Math.abs(start.x - end.x) < 2) {
+      return [start, { x: start.x, y: end.y }];
+    }
+    const midY = Math.round((start.y + end.y) / 2);
     return [
       start,
       { x: start.x, y: midY },
@@ -400,18 +548,42 @@ function slicePolylineByProgress(
   let accumMid = 0;
   let midpoint: Point = points[0];
   let midAngle = 0;
-  for (let i = 0; i < segLengths.length; i++) {
-    const segLen = segLengths[i];
-    if (accumMid + segLen >= halfLen || i === segLengths.length - 1) {
-      const localT = segLen > 0 ? (halfLen - accumMid) / segLen : 0;
-      midpoint = {
-        x: points[i].x + (points[i + 1].x - points[i].x) * localT,
-        y: points[i].y + (points[i + 1].y - points[i].y) * localT,
-      };
-      midAngle = Math.atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x);
-      break;
+
+  if (points.length >= 3 && points.length <= 5) {
+    // For orthogonal L-shapes and Z-shapes, place the midpoint on the best segment center (never on a 90° corner)
+    let bestIdx = 0;
+    let bestScore = -1;
+    for (let i = 0; i < segLengths.length; i++) {
+      const pA = points[i];
+      const pB = points[i + 1];
+      const isHoriz = Math.abs(pB.y - pA.y) < Math.abs(pB.x - pA.x);
+      const score = segLengths[i] * (isHoriz ? 1.15 : 1.0);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
     }
-    accumMid += segLen;
+    const pA = points[bestIdx];
+    const pB = points[bestIdx + 1];
+    midpoint = {
+      x: (pA.x + pB.x) * 0.5,
+      y: (pA.y + pB.y) * 0.5,
+    };
+    midAngle = Math.atan2(pB.y - pA.y, pB.x - pA.x);
+  } else {
+    for (let i = 0; i < segLengths.length; i++) {
+      const segLen = segLengths[i];
+      if (accumMid + segLen >= halfLen || i === segLengths.length - 1) {
+        const localT = segLen > 0 ? (halfLen - accumMid) / segLen : 0;
+        midpoint = {
+          x: points[i].x + (points[i + 1].x - points[i].x) * localT,
+          y: points[i].y + (points[i + 1].y - points[i].y) * localT,
+        };
+        midAngle = Math.atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x);
+        break;
+      }
+      accumMid += segLen;
+    }
   }
 
   const targetLen = totalLen * Math.max(0, Math.min(1, progress));
@@ -634,16 +806,16 @@ export function createUmlRelationshipKonvaGroup(
     );
   }
 
-  // Subtle directional pulse overlay traveling from origin to destination along the path
-  if (clampedProgress >= 1) {
+  // Subtle directional pulse overlay when selected
+  if (isSelected && clampedProgress >= 1) {
     const flowOverlay = new Konva.Line({
       name: 'flow-pulse',
       points: fullFlatPoints,
-      stroke: isSelected ? '#10B981' : '#059669',
+      stroke: '#10B981',
       strokeWidth: 2,
       dash: [8, 28],
       dashOffset: -flowPhase,
-      opacity: isSelected ? 0.85 : 0.35,
+      opacity: 0.85,
       lineCap: 'round',
       lineJoin: 'round',
       listening: false,
@@ -670,8 +842,8 @@ export function createUmlRelationshipKonvaGroup(
   const adornmentOpacity = Math.max(0, Math.min(1, (clampedProgress - 0.7) / 0.3));
   if (adornmentOpacity > 0) {
     if (rel.type === 'composition' || rel.type === 'aggregation') {
-      const diamondLen = 15;
-      const diamondHalfW = 6;
+      const diamondLen = 16;
+      const diamondHalfW = 6.5;
       const p1 = currentEnd;
       const p2 = {
         x: currentEnd.x - diamondLen * 0.5 * Math.cos(angle) + diamondHalfW * Math.sin(angle),
@@ -762,23 +934,20 @@ export function createUmlRelationshipKonvaGroup(
   const midFade = Math.max(0, Math.min(1, (clampedProgress - 0.45) / 0.4));
   const midX = midpoint.x;
   const midY = midpoint.y;
-  const normalOffset = {
-    x: -Math.sin(midAngle) * 14,
-    y: Math.cos(midAngle) * 14,
-  };
+  const isVerticalSegment = Math.abs(Math.sin(midAngle)) > 0.7;
 
   if (midFade > 0) {
     if (rel.stereotype) {
       const stereoLabel = new Konva.Text({
-        x: midX - 65,
-        y: midY + 6,
+        x: isVerticalSegment ? midX + 8 : midX - 65,
+        y: isVerticalSegment ? midY - 18 : midY + 6,
         width: 130,
         text: rel.stereotype.startsWith('«') ? rel.stereotype : `«${rel.stereotype}»`,
         fontSize: 12,
         fontFamily: 'Plus Jakarta Sans',
         fontStyle: 'bold italic',
         fill: '#2563EB',
-        align: 'center',
+        align: isVerticalSegment ? 'left' : 'center',
         opacity: midFade,
         listening: false,
       });
@@ -789,15 +958,15 @@ export function createUmlRelationshipKonvaGroup(
       const isGuard = rel.name.trim().startsWith('[');
       const labelWidth = Math.max(130, rel.name.length * 7.8 + 20);
       const nameLabel = new Konva.Text({
-        x: midX + normalOffset.x - labelWidth / 2,
-        y: midY + normalOffset.y - 8,
+        x: isVerticalSegment ? midX + 8 : midX - labelWidth / 2,
+        y: isVerticalSegment ? midY - 7 : midY - 18,
         width: labelWidth,
         text: rel.name,
         fontSize: 11.5,
         fontFamily: 'Plus Jakarta Sans',
         fontStyle: isGuard ? 'normal' : 'bold italic',
         fill: isGuard ? '#57534E' : '#2563EB',
-        align: 'center',
+        align: isVerticalSegment ? 'left' : 'center',
         opacity: midFade,
         listening: false,
       });
@@ -870,14 +1039,17 @@ export function createUmlRelationshipKonvaGroup(
   }
 
   if (rel.sourceMultiplicity && clampedProgress > 0.15) {
-    const srcMultPos = {
-      x: start.x + Math.cos(startAngle) * 26 - Math.sin(startAngle) * 14,
-      y: start.y + Math.sin(startAngle) * 26 - Math.cos(startAngle) * 14,
-    };
+    const isStartVert = Math.abs(Math.sin(startAngle)) > 0.7;
+    const srcMultX = isStartVert
+      ? start.x + 8
+      : start.x + Math.cos(startAngle) * 20 - 12;
+    const srcMultY = isStartVert
+      ? start.y + Math.sin(startAngle) * 14 - 6
+      : start.y - 18;
     group.add(
       new Konva.Text({
-        x: srcMultPos.x - 16,
-        y: srcMultPos.y - 8,
+        x: srcMultX,
+        y: srcMultY,
         text: rel.sourceMultiplicity,
         fontSize: 12,
         fontFamily: 'JetBrains Mono',
@@ -889,14 +1061,17 @@ export function createUmlRelationshipKonvaGroup(
   }
 
   if (rel.targetMultiplicity && adornmentOpacity > 0) {
-    const tgtMultPos = {
-      x: end.x - Math.cos(angle) * 32 - Math.sin(angle) * 14,
-      y: end.y - Math.sin(angle) * 32 - Math.cos(angle) * 14,
-    };
+    const isEndVert = Math.abs(Math.sin(angle)) > 0.7;
+    const tgtMultX = isEndVert
+      ? end.x + 8
+      : end.x - Math.cos(angle) * 28 - 14;
+    const tgtMultY = isEndVert
+      ? end.y - Math.sin(angle) * 22 - 6
+      : end.y - 18;
     group.add(
       new Konva.Text({
-        x: tgtMultPos.x - 16,
-        y: tgtMultPos.y - 8,
+        x: tgtMultX,
+        y: tgtMultY,
         text: rel.targetMultiplicity,
         fontSize: 12,
         fontFamily: 'JetBrains Mono',

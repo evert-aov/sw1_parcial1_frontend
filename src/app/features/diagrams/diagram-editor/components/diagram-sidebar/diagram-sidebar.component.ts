@@ -1,4 +1,13 @@
-import { Component, input, output, signal, computed, effect, inject } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  signal,
+  computed,
+  effect,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
@@ -62,6 +71,7 @@ import { SHARED_DIAGRAM_UI_COMPONENTS } from '../shared-ui';
 @Component({
   selector: 'app-diagram-sidebar',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     FormsModule,

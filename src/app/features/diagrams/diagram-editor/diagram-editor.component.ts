@@ -446,11 +446,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.initCollaborationSubscriptions();
     this.initPersistencePipelines();
-    this.route.queryParams.subscribe((params) => this.handleRouteQueryParams(params));
+    this.collabSubscriptions.push(
+      this.route.queryParams.subscribe((params) => this.handleRouteQueryParams(params)),
+    );
     this.updateConnectionEndpoints();
   }
 
-  /** Suscripciones de colaboración; se liberan en `ngOnDestroy` para evitar fugas. */
+  /** Suscripciones activas del editor; se liberan en `ngOnDestroy` para evitar fugas. */
   private collabSubscriptions: Subscription[] = [];
 
   /** Ventana (ms) tras una sincronización remota durante la cual se bloquean undo/redo (§5-A). */
@@ -533,24 +535,25 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   private initPersistencePipelines(): void {
-    this.persistenceService.setupAutoSave(() => {
-      if (this.hasUnsavedChanges() && !this.isReadOnly() && this.currentDiagramId()) {
-        this.saveToBackend(true);
-      }
-    });
-
-    this.persistenceService.setupNodeDragEnd(() => {
-      this.containmentService.resetDragState();
-      if (!this.isReadOnly() && this.currentDiagramId()) {
-        this.collabCoordinator.sendDiagramSync(
-          this.nodes(),
-          this.connections(),
-          'move_node',
-          this.defaultLineStyle(),
-        );
-        this.persistenceService.triggerAutoSave();
-      }
-    });
+    this.collabSubscriptions.push(
+      this.persistenceService.setupAutoSave(() => {
+        if (this.hasUnsavedChanges() && !this.isReadOnly() && this.currentDiagramId()) {
+          this.saveToBackend(true);
+        }
+      }),
+      this.persistenceService.setupNodeDragEnd(() => {
+        this.containmentService.resetDragState();
+        if (!this.isReadOnly() && this.currentDiagramId()) {
+          this.collabCoordinator.sendDiagramSync(
+            this.nodes(),
+            this.connections(),
+            'move_node',
+            this.defaultLineStyle(),
+          );
+          this.persistenceService.triggerAutoSave();
+        }
+      }),
+    );
   }
 
   private handleRouteQueryParams(params: any): void {
@@ -838,7 +841,13 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     }
   }
 
+  private lastCanvasMouseMoveAt = 0;
+
   onCanvasMouseMove(event: MouseEvent): void {
+    const now = performance.now();
+    if (now - this.lastCanvasMouseMoveAt < 50) return;
+    this.lastCanvasMouseMoveAt = now;
+
     const coords = this.interactionService.handleCanvasMouseMove(
       event,
       this.diagramCanvas?.getExportElement(),

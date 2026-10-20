@@ -53,13 +53,17 @@ Implementado en [`ThemeService`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcia
 - Inyecta la cabecera `Authorization: Bearer <token>` cuando la petición se dirige a la API del backend.
 - Si el backend responde con un error `401 Unauthorized`, elimina el token caducado y redirige al login con notificación.
 
+### 3. `InMemoryBackendInterceptor` (`src/app/core/interceptors/in-memory-backend.interceptor.ts`)
+- Permite el acceso y previsualización autónoma del frontend mediante un usuario y estado en memoria (`demo@uagrm.edu.bo` / `123456`) o en caso de desconexión con el backend (`status === 0`).
+
 ---
 
 ## 5. Servicios de Dominio Core
 
 | Servicio | Archivo | Responsabilidad Principal |
 | :--- | :--- | :--- |
-| **`AuthService`** | `auth.service.ts` | Peticiones de login, registro, logout y actualización de perfil. |
+| **`AuthService`** | `auth.service.ts` | Peticiones de login, registro, logout, acceso en memoria y actualización de perfil. |
+| **`InMemoryBackendService`** | `in-memory-backend.service.ts` | Estado reactivo en memoria (usuarios, proyectos, diagramas y codegen) para modo previsualización. |
 | **`ProjectService`** | `project.service.ts` | CRUD de proyectos, invitación de miembros y cambio de roles. |
 | **`DiagramService`** | `diagram.service.ts` | Peticiones REST de diagramas, carga de AST y versiones históricas. |
 | **`CollaborationService`** | `collaboration.service.ts` | Conexión cliente WebSocket mediante `socket.io-client`. |

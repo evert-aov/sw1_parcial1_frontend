@@ -174,94 +174,163 @@ export class DiagramConnectionLayoutService {
 
     const updatedNodes = anchorMoved ? nodes.map((n) => ({ ...n })) : nodes;
 
-    // 2. Actualizar extremos de conectores
-    const updatedConnections = connections
-      .filter((conn) => {
-        const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
-        return nodeMap.has(baseSourceId) && nodeMap.has(baseTargetId);
-      })
-      .map((conn) => {
-        if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
-          const sourceNode = nodeMap.get(conn.sourceNodeId);
-          const targetNode = nodeMap.get(conn.targetNodeId);
-          if (sourceNode && targetNode) {
-            if (sourceNode.isAnchor) {
-              const optimal = this.getOptimalConnectorId(sourceNode, targetNode, getNodeWidth, getNodeHeight);
-              return {
+    // 2. Actualizar extremos de conectores solo si efectivamente cambian
+    let connectionsChanged = false;
+    const mappedConnections: UmlConnection[] = [];
+
+    for (const conn of connections) {
+      const baseSourceIdForFilter =
+        conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
+      const baseTargetIdForFilter =
+        conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
+      if (!nodeMap.has(baseSourceIdForFilter) || !nodeMap.has(baseTargetIdForFilter)) {
+        connectionsChanged = true;
+        continue;
+      }
+
+      let nextConn = conn;
+
+      if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
+        const sourceNode = nodeMap.get(conn.sourceNodeId);
+        const targetNode = nodeMap.get(conn.targetNodeId);
+        if (sourceNode && targetNode) {
+          if (sourceNode.isAnchor) {
+            const optimal = this.getOptimalConnectorId(
+              sourceNode,
+              targetNode,
+              getNodeWidth,
+              getNodeHeight,
+            );
+            if (conn.sourceId !== sourceNode.id || conn.targetId !== optimal.targetId) {
+              nextConn = {
                 ...conn,
                 sourceId: sourceNode.id,
                 targetId: optimal.targetId,
               };
-            } else if (targetNode.isAnchor) {
-              const optimal = this.getOptimalConnectorId(sourceNode, targetNode, getNodeWidth, getNodeHeight);
-              return {
+              connectionsChanged = true;
+            }
+            mappedConnections.push(nextConn);
+            continue;
+          } else if (targetNode.isAnchor) {
+            const optimal = this.getOptimalConnectorId(
+              sourceNode,
+              targetNode,
+              getNodeWidth,
+              getNodeHeight,
+            );
+            if (conn.sourceId !== optimal.sourceId || conn.targetId !== targetNode.id) {
+              nextConn = {
                 ...conn,
                 sourceId: optimal.sourceId,
                 targetId: targetNode.id,
               };
+              connectionsChanged = true;
             }
+            mappedConnections.push(nextConn);
+            continue;
           }
         }
+      }
 
-        const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-        const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-        const sourceNode = nodeMap.get(baseSourceId);
-        const targetNode = nodeMap.get(baseTargetId);
+      const baseSourceId =
+        conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const baseTargetId =
+        conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const sourceNode = nodeMap.get(baseSourceId);
+      const targetNode = nodeMap.get(baseTargetId);
 
+      if (
+        conn.sourceId.includes('_slot_') ||
+        conn.targetId.includes('_slot_') ||
+        isSequenceConnectionLogic(conn, activeDiagramType)
+      ) {
+        const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
+        const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
+        const slotNum = sMatch ? sMatch[1] : tMatch ? tMatch[1] : '0';
+        const nextSourceId = `${baseSourceId}_slot_${slotNum}`;
+        const nextTargetId = `${baseTargetId}_slot_${slotNum}`;
         if (
-          conn.sourceId.includes('_slot_') ||
-          conn.targetId.includes('_slot_') ||
-          isSequenceConnectionLogic(conn, activeDiagramType)
+          conn.sourceNodeId !== baseSourceId ||
+          conn.targetNodeId !== baseTargetId ||
+          conn.sourceId !== nextSourceId ||
+          conn.targetId !== nextTargetId
         ) {
-          const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
-          const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
-          const slotNum = sMatch ? sMatch[1] : (tMatch ? tMatch[1] : '0');
-          return {
+          nextConn = {
             ...conn,
             sourceNodeId: baseSourceId,
             targetNodeId: baseTargetId,
-            sourceId: `${baseSourceId}_slot_${slotNum}`,
-            targetId: `${baseTargetId}_slot_${slotNum}`,
+            sourceId: nextSourceId,
+            targetId: nextTargetId,
           };
+          connectionsChanged = true;
         }
+        mappedConnections.push(nextConn);
+        continue;
+      }
 
-        if (sourceNode && targetNode && !sourceNode.isAnchor && !targetNode.isAnchor) {
-          if (baseSourceId === baseTargetId) {
-            const validConnectors = [
-              `${baseSourceId}_top`,
-              `${baseSourceId}_right`,
-              `${baseSourceId}_bottom`,
-              `${baseSourceId}_left`,
-            ];
-            const curSource = conn.sourceId;
-            const curTarget = conn.targetId;
-            const hasDistinct =
-              validConnectors.includes(curSource) &&
-              validConnectors.includes(curTarget) &&
-              curSource !== curTarget;
+      if (sourceNode && targetNode && !sourceNode.isAnchor && !targetNode.isAnchor) {
+        if (baseSourceId === baseTargetId) {
+          const validConnectors = [
+            `${baseSourceId}_top`,
+            `${baseSourceId}_right`,
+            `${baseSourceId}_bottom`,
+            `${baseSourceId}_left`,
+          ];
+          const curSource = conn.sourceId;
+          const curTarget = conn.targetId;
+          const hasDistinct =
+            validConnectors.includes(curSource) &&
+            validConnectors.includes(curTarget) &&
+            curSource !== curTarget;
+          const nextSourceId = hasDistinct ? curSource : `${baseSourceId}_top`;
+          const nextTargetId = hasDistinct ? curTarget : `${baseTargetId}_right`;
 
-            return {
+          if (
+            conn.sourceNodeId !== baseSourceId ||
+            conn.targetNodeId !== baseTargetId ||
+            conn.sourceId !== nextSourceId ||
+            conn.targetId !== nextTargetId
+          ) {
+            nextConn = {
               ...conn,
               sourceNodeId: baseSourceId,
               targetNodeId: baseTargetId,
-              sourceId: hasDistinct ? curSource : `${baseSourceId}_top`,
-              targetId: hasDistinct ? curTarget : `${baseTargetId}_right`,
+              sourceId: nextSourceId,
+              targetId: nextTargetId,
             };
+            connectionsChanged = true;
           }
+          mappedConnections.push(nextConn);
+          continue;
+        }
 
-          const optimal = this.getOptimalConnectorId(sourceNode, targetNode, getNodeWidth, getNodeHeight);
-          return {
+        const optimal = this.getOptimalConnectorId(
+          sourceNode,
+          targetNode,
+          getNodeWidth,
+          getNodeHeight,
+        );
+        if (
+          conn.sourceNodeId !== baseSourceId ||
+          conn.targetNodeId !== baseTargetId ||
+          conn.sourceId !== optimal.sourceId ||
+          conn.targetId !== optimal.targetId
+        ) {
+          nextConn = {
             ...conn,
             sourceNodeId: baseSourceId,
             targetNodeId: baseTargetId,
             sourceId: optimal.sourceId,
             targetId: optimal.targetId,
           };
+          connectionsChanged = true;
         }
-        return conn;
-      });
+      }
 
+      mappedConnections.push(nextConn);
+    }
+
+    const updatedConnections = connectionsChanged ? mappedConnections : connections;
     return { updatedNodes, updatedConnections, anchorMoved };
   }
 

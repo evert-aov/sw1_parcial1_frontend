@@ -70,6 +70,10 @@ export const en = {
       submitting: 'Authenticating...',
       noAccount: "Don't have an account yet?",
       createAccount: 'Create an account',
+      inMemoryTitle: 'Preview Mode (In-Memory User)',
+      inMemoryDesc: 'Access the system without a backend connection using a pre-loaded in-memory user and demo projects.',
+      inMemoryBtn: 'Quick Access with In-Memory User',
+      inMemoryCredentials: 'Credentials: demo@uagrm.edu.bo / 123456',
     },
     register: {
       title: 'Create Account',
@@ -246,6 +250,11 @@ export const en = {
       show: 'Show Grid',
       hide: 'Hide Grid',
       title: 'Grid',
+    },
+    layout: {
+      button: 'Layout',
+      tooltip: 'Automatically organize nodes and connectors (Force-Directed Algorithm)',
+      appliedToast: 'Automatic Force-Directed Layout applied to canvas.',
     },
     pointer: 'Select / Move',
     pointerDesc: 'Move classes freely',

@@ -76,10 +76,11 @@ Originalmente, el componente principal del editor acumulaba miles de líneas de 
 
 ### 6. `DiagramAlignmentService`
 
-- Algoritmos matemáticos de distribución espacial de nodos seleccionados:
+- Algoritmos matemáticos de distribución espacial y auto-organización de nodos:
   - Alinear a la izquierda, centro horizontal o derecha.
   - Alinear a la parte superior, medio vertical o inferior.
   - Distribuir uniformemente el espaciado horizontal y vertical.
+  - **Force-Directed Graph Layout (`applyForceDirectedLayout`)**: Algoritmo de grafos dirigido por fuerzas (repulsión elíptica tipo Fruchterman-Reingold consciente de dimensiones de cajas + atracción elástica de Hooke sobre conectores + sesgo jerárquico para herencia/realización + resolución determinista de colisiones AABB y ajuste a cuadrícula de 20px).
 
 ### 7. `DiagramModalService`
 

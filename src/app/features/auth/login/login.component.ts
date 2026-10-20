@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { DEFAULT_IN_MEMORY_USER } from '../../../core/services/in-memory-seed.data';
 import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
 import { ThemeToggleComponent } from '../../../core/components/theme-toggle/theme-toggle.component';
 
@@ -12,6 +13,7 @@ import { ThemeToggleComponent } from '../../../core/components/theme-toggle/them
   imports: [CommonModule, ReactiveFormsModule, RouterLink, TranslatePipe, LanguageSelectorComponent, ThemeToggleComponent],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
@@ -21,8 +23,8 @@ export class LoginComponent {
   readonly showPassword = signal<boolean>(false);
 
   readonly loginForm: FormGroup = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    email: [DEFAULT_IN_MEMORY_USER.email, [Validators.required, Validators.email]],
+    password: ['123456', [Validators.required, Validators.minLength(6)]],
   });
 
   togglePassword(): void {
@@ -40,5 +42,10 @@ export class LoginComponent {
         this.router.navigate(['/projects']);
       },
     });
+  }
+
+  onQuickInMemoryLogin(): void {
+    this.authService.loginWithInMemoryUser();
+    this.router.navigate(['/projects']);
   }
 }

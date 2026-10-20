@@ -78,6 +78,7 @@ export class DiagramContextMenuComponent {
   @Output() deselectAll = new EventEmitter<void>();
   @Output() resetView = new EventEmitter<void>();
   @Output() fitView = new EventEmitter<void>();
+  @Output() autoLayout = new EventEmitter<void>();
 
   onClose(): void {
     this.close.emit();
@@ -156,6 +157,11 @@ export class DiagramContextMenuComponent {
 
   onFitView(): void {
     this.fitView.emit();
+    this.close.emit();
+  }
+
+  onAutoLayout(): void {
+    this.autoLayout.emit();
     this.close.emit();
   }
 }

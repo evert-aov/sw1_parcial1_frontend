@@ -22,6 +22,15 @@ export class DiagramPersistenceService {
   readonly nodeDragEnd$ = new Subject<void>();
 
   private successTimer: any = null;
+  private draftTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingDraft: {
+    diagramId: string;
+    data: {
+      nodes: UmlClassNode[];
+      connections: UmlConnection[];
+      defaultLineStyle: UmlLineStyle;
+    };
+  } | null = null;
 
   // Normalizador sin estado: se instancia directamente para que `new DiagramPersistenceService()` siga siendo válido fuera de DI.
   private readonly astNormalizer = new DiagramAstNormalizerService();
@@ -35,6 +44,20 @@ export class DiagramPersistenceService {
     },
   ): void {
     if (!diagramId) return;
+    this.pendingDraft = { diagramId, data };
+    if (this.draftTimer !== null) {
+      clearTimeout(this.draftTimer);
+    }
+    this.draftTimer = setTimeout(() => {
+      this.draftTimer = null;
+      this.flushPendingLocalDraft();
+    }, 400);
+  }
+
+  private flushPendingLocalDraft(): void {
+    if (!this.pendingDraft) return;
+    const { diagramId, data } = this.pendingDraft;
+    this.pendingDraft = null;
     try {
       const draft: UmlDiagramDraft = {
         diagramId,
@@ -49,6 +72,13 @@ export class DiagramPersistenceService {
 
   clearLocalDraft(diagramId: string): void {
     if (!diagramId) return;
+    if (this.pendingDraft?.diagramId === diagramId) {
+      this.pendingDraft = null;
+      if (this.draftTimer !== null) {
+        clearTimeout(this.draftTimer);
+        this.draftTimer = null;
+      }
+    }
     try {
       localStorage.removeItem(`uml_draft_${diagramId}`);
     } catch (_) {}
@@ -56,6 +86,9 @@ export class DiagramPersistenceService {
 
   getLocalDraft(diagramId: string): UmlDiagramDraft | null {
     if (!diagramId) return null;
+    if (this.pendingDraft?.diagramId === diagramId) {
+      this.flushPendingLocalDraft();
+    }
     try {
       const raw = localStorage.getItem(`uml_draft_${diagramId}`);
       if (raw) {

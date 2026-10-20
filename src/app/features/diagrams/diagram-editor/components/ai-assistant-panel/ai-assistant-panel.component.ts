@@ -8,6 +8,8 @@ import {
   ViewChild,
   OnInit,
   OnDestroy,
+  effect,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -60,6 +62,7 @@ import { TranslatePipe } from '../../../../../core/i18n';
 @Component({
   selector: 'app-ai-assistant-panel',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe],
   providers: [
     provideIcons({
@@ -147,9 +150,22 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
   private recordingTimer: any = null;
   private recordedMimeType = 'audio/webm';
   private webcamMediaStream: MediaStream | null = null;
+  private modelsLoadedOnce = false;
+
+  constructor() {
+    effect(() => {
+      if (this.isOpen() && !this.modelsLoadedOnce) {
+        this.modelsLoadedOnce = true;
+        this.loadAvailableModels();
+      }
+    });
+  }
 
   ngOnInit(): void {
-    this.loadAvailableModels();
+    if (this.isOpen() && !this.modelsLoadedOnce) {
+      this.modelsLoadedOnce = true;
+      this.loadAvailableModels();
+    }
   }
 
   loadAvailableModels(): void {

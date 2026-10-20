@@ -358,24 +358,28 @@ export class CanvasStageEventsService {
       ctx.callbacks.onLivePreview(pendingSrcId, canvasPos.x, canvasPos.y);
     } else if (!ctx.isDraggingNode() && !this.isMarqueeSelecting) {
       const isOverNode = e.target?.getLayer() === ctx.nodeLayer;
-      if (!isOverNode && !ctx.selectedRelationType()) {
-        const nearConn = ctx.relationshipManager.findClosestRelationshipAtCanvasPoint({
-          canvasX,
-          canvasY,
-          nodes: ctx.nodes(),
-          connections: ctx.connections(),
-          nodeGroupsMap: ctx.nodeGroupsMap,
-          activeDiagramType: ctx.activeDiagramType(),
-          sequenceActivationService: ctx.sequenceActivationService,
-          maxDistancePx: 28,
-        });
-        ctx.relationshipManager.setHoveredRelationship(
-          nearConn?.id ?? null,
-          new Set(ctx.selectedConnIds()),
-          ctx.relLayer,
-        );
-        if (ctx.stage.container()) {
-          ctx.stage.container().style.cursor = nearConn ? 'pointer' : 'default';
+      if (!isOverNode && !ctx.selectedRelationType() && ctx.connections().length > 0) {
+        const now = performance.now();
+        if (now - this.lastHoverCheckTime >= 40) {
+          this.lastHoverCheckTime = now;
+          const nearConn = ctx.relationshipManager.findClosestRelationshipAtCanvasPoint({
+            canvasX,
+            canvasY,
+            nodes: ctx.nodes(),
+            connections: ctx.connections(),
+            nodeGroupsMap: ctx.nodeGroupsMap,
+            activeDiagramType: ctx.activeDiagramType(),
+            sequenceActivationService: ctx.sequenceActivationService,
+            maxDistancePx: 28,
+          });
+          ctx.relationshipManager.setHoveredRelationship(
+            nearConn?.id ?? null,
+            new Set(ctx.selectedConnIds()),
+            ctx.relLayer,
+          );
+          if (ctx.stage.container()) {
+            ctx.stage.container().style.cursor = nearConn ? 'pointer' : 'default';
+          }
         }
       } else {
         ctx.relationshipManager.setHoveredRelationship(
@@ -388,9 +392,9 @@ export class CanvasStageEventsService {
         }
       }
     }
-
-    ctx.callbacks.onCanvasMouseMove(e.evt);
   }
+
+  private lastHoverCheckTime = 0;
 
   /**
    * Libera observadores de ventana y destruye el rectángulo Marquee.

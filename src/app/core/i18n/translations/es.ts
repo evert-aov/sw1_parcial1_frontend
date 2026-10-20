@@ -70,6 +70,10 @@ export const es = {
       submitting: 'Autenticando...',
       noAccount: '¿No tienes una cuenta aún?',
       createAccount: 'Crear cuenta',
+      inMemoryTitle: 'Modo Previsualización (Usuario en Memoria)',
+      inMemoryDesc: 'Accede sin conexión al backend con un usuario y proyectos de demostración pre-cargados en memoria.',
+      inMemoryBtn: 'Acceso Rápido con Usuario en Memoria',
+      inMemoryCredentials: 'Credenciales: demo@uagrm.edu.bo / 123456',
     },
     register: {
       title: 'Crear Cuenta',
@@ -248,6 +252,11 @@ export const es = {
       show: 'Mostrar Cuadrícula',
       hide: 'Ocultar Cuadrícula',
       title: 'Cuadrícula',
+    },
+    layout: {
+      button: 'Layout',
+      tooltip: 'Organizar automáticamente nodos y conectores (Algoritmo Force-Directed)',
+      appliedToast: 'Diseño automático (Force-Directed Layout) aplicado al lienzo.',
     },
     pointer: 'Seleccionar / Mover',
     pointerDesc: 'Mueve clases libremente',

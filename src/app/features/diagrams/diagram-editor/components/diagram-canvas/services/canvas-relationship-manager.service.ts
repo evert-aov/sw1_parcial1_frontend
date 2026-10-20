@@ -110,6 +110,8 @@ export class CanvasRelationshipManagerService {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;
     }
+    this.relAnimStates.clear();
+    this.relProgressMap.clear();
     this.lastFrameTime = 0;
   }
 

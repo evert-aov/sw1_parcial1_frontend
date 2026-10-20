@@ -89,6 +89,22 @@ export class CollaborationService {
   }
 
   connect(): void {
+    const token = this.authService.token();
+    if (token && token.startsWith('in-memory-token-')) {
+      this.isConnected.set(true);
+      const user = this.getCurrentUser();
+      const userId = user?.id || 'usr-in-memory-001';
+      const userName = user?.fullName || 'Ing. Demo Arquitecto (Memoria)';
+      const assignedColor = this.generateUserColor(userName + userId);
+      this.activeUserId = userId;
+      this.myColor.set(assignedColor);
+      this.activeRoomCode.set('MEM-PREVIEW');
+      this.collaborators.set([
+        { userId, userName, color: assignedColor, isConnected: true },
+      ]);
+      return;
+    }
+
     if (this.socket) {
       if (!this.socket.connected) {
         this.socket.connect();
@@ -100,17 +116,21 @@ export class CollaborationService {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
     });
 
+    let hasConnectedOnce = false;
     this.socket.on('connect', () => {
       this.isConnected.set(true);
       const diagramId = this.currentDiagramId();
       if (diagramId) {
         this.emitJoinRoom(diagramId);
       }
-      this.onConnect$.next();
+      if (hasConnectedOnce) {
+        this.onConnect$.next();
+      }
+      hasConnectedOnce = true;
     });
 
     this.socket.on('disconnect', () => {

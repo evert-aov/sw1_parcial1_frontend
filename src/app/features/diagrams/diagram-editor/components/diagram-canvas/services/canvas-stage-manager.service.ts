@@ -128,27 +128,21 @@ export class CanvasStageManagerService {
     if (!container) return null;
 
     const scale = Math.max(0.2, initialZoom / 100);
-    const rawTargetW = Math.max(
-      parentContainer?.clientWidth || 0,
-      container.clientWidth || 0,
-      scaledBoardWidth,
-      2200,
+    const rawTargetW = Math.min(
+      4096,
+      Math.max(parentContainer?.clientWidth || 0, scaledBoardWidth, 2200),
     );
-    const rawTargetH = Math.max(
-      parentContainer?.clientHeight || 0,
-      container.clientHeight || 0,
-      scaledBoardHeight,
-      1400,
+    const rawTargetH = Math.min(
+      4096,
+      Math.max(parentContainer?.clientHeight || 0, scaledBoardHeight, 1400),
     );
 
     // Cuantización de dimensiones a bloques de 512px (Bucket Sizing para optimizar RAM)
     const width = Math.ceil(rawTargetW / 512) * 512;
     const height = Math.ceil(rawTargetH / 512) * 512;
 
-    Konva.pixelRatio = Math.min(
-      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
-      1.5,
-    );
+    // Forzar pixelRatio = 1 evita multiplicar x2.25 o x4 el consumo de RAM de las 5 capas en pantallas HiDPI
+    Konva.pixelRatio = 1;
     Konva.dragDistance = 3;
 
     ngZone.runOutsideAngular(() => {
@@ -162,15 +156,17 @@ export class CanvasStageManagerService {
       this.stage.scale({ x: scale, y: scale });
       this.stage.position({ x: 0, y: 0 });
 
-      // Capa de fondo estática: sin hit-testing. Los clics sobre el vacío llegan con target = Stage.
+      // Capa de fondo estática: sin hit-testing ni hitCanvas en memoria.
       this.bgLayer = new Konva.Layer({ listening: false });
+      this.bgLayer.hitGraphEnabled(false);
+
       this.frameLayer = new Konva.Layer({ listening: true });
       this.relLayer = new Konva.Layer();
       this.nodeLayer = new Konva.Layer();
       this.uiLayer = new Konva.Layer();
 
-      const effectiveW = Math.max(boardWidth, Math.ceil(width / 0.25));
-      const effectiveH = Math.max(boardHeight, Math.ceil(height / 0.25));
+      const effectiveW = Math.max(boardWidth, Math.ceil(width / scale));
+      const effectiveH = Math.max(boardHeight, Math.ceil(height / scale));
 
       this.bgRect = new Konva.Rect({
         x: 0,
@@ -194,14 +190,17 @@ export class CanvasStageManagerService {
 
       this.drawGrid(showGrid, boardWidth, boardHeight);
 
-      if (onResize) {
+      if (onResize && parentContainer) {
+        let resizeRafId: number | null = null;
         this.resizeObserver = new ResizeObserver(() => {
-          onResize();
+          if (resizeRafId !== null) return;
+          resizeRafId = requestAnimationFrame(() => {
+            resizeRafId = null;
+            onResize();
+          });
         });
-        this.resizeObserver.observe(container);
-        if (parentContainer) {
-          this.resizeObserver.observe(parentContainer);
-        }
+        // Observar únicamente parentContainer (viewport externo) para evitar bucle infinito con el stage interno
+        this.resizeObserver.observe(parentContainer);
       }
     });
 
@@ -227,7 +226,6 @@ export class CanvasStageManagerService {
     if (!this.stage) return { dimensionsChanged: false, scaleChanged: false };
 
     const {
-      container,
       parentContainer,
       zoomLevel,
       boardWidth,
@@ -237,15 +235,13 @@ export class CanvasStageManagerService {
       showGrid,
     } = params;
     const scale = Math.max(0.2, zoomLevel / 100);
-    const rawTargetW = Math.max(
-      parentContainer?.clientWidth || 0,
-      container?.clientWidth || 0,
-      scaledBoardWidth,
+    const rawTargetW = Math.min(
+      4096,
+      Math.max(parentContainer?.clientWidth || 0, scaledBoardWidth),
     );
-    const rawTargetH = Math.max(
-      parentContainer?.clientHeight || 0,
-      container?.clientHeight || 0,
-      scaledBoardHeight,
+    const rawTargetH = Math.min(
+      4096,
+      Math.max(parentContainer?.clientHeight || 0, scaledBoardHeight),
     );
 
     const targetW = Math.ceil(rawTargetW / 512) * 512;
@@ -267,11 +263,8 @@ export class CanvasStageManagerService {
         this.stage.position({ x: 0, y: 0 });
       }
 
-      if (dimensionsChanged) {
-        this.drawGrid(showGrid, boardWidth, boardHeight);
-      }
-
       if (dimensionsChanged || scaleChanged) {
+        this.drawGrid(showGrid, boardWidth, boardHeight);
         this.stage.batchDraw();
       }
     }
@@ -280,7 +273,8 @@ export class CanvasStageManagerService {
   }
 
   /**
-   * Dibuja o limpia las líneas guía de cuadrícula (Grid) sobre la capa de fondo.
+   * Dibuja o limpia las líneas guía de cuadrícula (Grid) sobre la capa de fondo
+   * utilizando un único Konva.Shape vectorizado en lugar de cientos de nodos Konva.Line.
    *
    * @param showGrid Indica si las líneas de la cuadrícula deben ser visibles.
    * @param boardWidth Ancho nominal de la pizarra.
@@ -292,9 +286,10 @@ export class CanvasStageManagerService {
 
     const targetW = this.stage.width();
     const targetH = this.stage.height();
+    const scale = Math.max(0.25, this.stage.scaleX() || 1);
 
-    const effectiveW = Math.max(boardWidth, Math.ceil(targetW / 0.25));
-    const effectiveH = Math.max(boardHeight, Math.ceil(targetH / 0.25));
+    const effectiveW = Math.min(8000, Math.max(boardWidth, Math.ceil(targetW / scale)));
+    const effectiveH = Math.min(6000, Math.max(boardHeight, Math.ceil(targetH / scale)));
 
     if (this.bgRect) {
       this.bgRect.position({ x: 0, y: 0 });
@@ -304,31 +299,43 @@ export class CanvasStageManagerService {
 
     if (showGrid) {
       const step = 28;
-      for (let x = 0; x <= effectiveW; x += step) {
-        const isMajor = x % (step * 4) === 0;
-        this.gridGroup.add(
-          new Konva.Line({
-            points: [x, 0, x, effectiveH],
-            stroke: isMajor ? 'rgba(120, 113, 108, 0.15)' : 'rgba(120, 113, 108, 0.05)',
-            strokeWidth: 1,
-            listening: false,
-            perfectDrawEnabled: false,
-          }),
-        );
-      }
+      const majorStep = step * 4;
+      const gridShape = new Konva.Shape({
+        listening: false,
+        perfectDrawEnabled: false,
+        sceneFunc: (ctx) => {
+          // 1. Líneas secundarias en un solo path nativo
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(120, 113, 108, 0.05)';
+          ctx.lineWidth = 1;
+          for (let x = 0; x <= effectiveW; x += step) {
+            if (x % majorStep === 0) continue;
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, effectiveH);
+          }
+          for (let y = 0; y <= effectiveH; y += step) {
+            if (y % majorStep === 0) continue;
+            ctx.moveTo(0, y);
+            ctx.lineTo(effectiveW, y);
+          }
+          ctx.stroke();
 
-      for (let y = 0; y <= effectiveH; y += step) {
-        const isMajor = y % (step * 4) === 0;
-        this.gridGroup.add(
-          new Konva.Line({
-            points: [0, y, effectiveW, y],
-            stroke: isMajor ? 'rgba(120, 113, 108, 0.15)' : 'rgba(120, 113, 108, 0.05)',
-            strokeWidth: 1,
-            listening: false,
-            perfectDrawEnabled: false,
-          }),
-        );
-      }
+          // 2. Líneas principales en un solo path nativo
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(120, 113, 108, 0.15)';
+          ctx.lineWidth = 1;
+          for (let x = 0; x <= effectiveW; x += majorStep) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, effectiveH);
+          }
+          for (let y = 0; y <= effectiveH; y += majorStep) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(effectiveW, y);
+          }
+          ctx.stroke();
+        },
+      });
+      this.gridGroup.add(gridShape);
     }
 
     this.bgLayer.batchDraw();

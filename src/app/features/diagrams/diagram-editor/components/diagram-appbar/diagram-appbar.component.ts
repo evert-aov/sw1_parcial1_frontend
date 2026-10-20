@@ -1,4 +1,16 @@
-import { Component, inject, signal, computed, input, output, ElementRef, ViewChild, AfterViewInit, effect } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  input,
+  output,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  effect,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
@@ -53,6 +65,7 @@ export type RibbonTab = 'publish' | 'design' | 'develop' | 'collaborate' | 'star
 @Component({
   selector: 'app-diagram-appbar',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, RouterLink, NgIconComponent, TranslatePipe, LanguageSelectorComponent, ThemeToggleComponent],
   providers: [
     provideIcons({

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DiagramToolbarService } from './diagram-toolbar.service';
+import { DiagramAlignmentService } from './diagram-alignment.service';
 import { UmlClassNode } from '../../../../core/models/diagram.model';
 
 describe('DiagramToolbarService', () => {
@@ -13,6 +14,10 @@ describe('DiagramToolbarService', () => {
       alignNodes: vi.fn().mockReturnValue([{ id: 'n1', position: { x: 10, y: 10 } }]),
       distributeNodes: vi.fn().mockReturnValue([{ id: 'n1', position: { x: 20, y: 20 } }]),
       snapToGrid: vi.fn().mockReturnValue([{ id: 'n1', position: { x: 40, y: 40 } }]),
+      applyForceDirectedLayout: vi.fn().mockReturnValue([
+        { id: 'n1', position: { x: 100, y: 80 } },
+        { id: 'n2', position: { x: 420, y: 80 } },
+      ]),
     };
     mockSelectionService = {
       selectAllClasses: vi.fn(),
@@ -170,6 +175,37 @@ describe('DiagramToolbarService', () => {
         onApplyTransformation: onApply,
       });
       expect(onApply).toHaveBeenCalledWith([{ id: 'n1', position: { x: 40, y: 40 } }], 'snap_grid');
+    });
+
+    it('ejecuta autoLayoutNodes y garantiza separación sin solapamientos con DiagramAlignmentService real', () => {
+      const realAlignment = new DiagramAlignmentService();
+      const stackedNodes: UmlClassNode[] = [
+        { id: 'n1', name: 'Usuario', position: { x: 200, y: 200 }, attributes: [], methods: [] } as any,
+        { id: 'n2', name: 'Pedido', position: { x: 200, y: 200 }, attributes: [], methods: [] } as any,
+        { id: 'n3', name: 'Producto', position: { x: 200, y: 200 }, attributes: [], methods: [] } as any,
+      ];
+      const conns: any[] = [
+        { id: 'c1', sourceId: 'n1_right', targetId: 'n2_left', sourceNodeId: 'n1', targetNodeId: 'n2', type: 'association' },
+        { id: 'c2', sourceId: 'n2_right', targetId: 'n3_left', sourceNodeId: 'n2', targetNodeId: 'n3', type: 'composition' },
+      ];
+      const laidOut = realAlignment.applyForceDirectedLayout(
+        stackedNodes,
+        conns,
+        () => 220,
+        () => 140,
+      );
+      expect(laidOut.length).toBe(3);
+
+      // Verificar que ningún par de nodos se solape tras el algoritmo Force-Directed
+      for (let i = 0; i < laidOut.length; i++) {
+        for (let j = i + 1; j < laidOut.length; j++) {
+          const a = laidOut[i];
+          const b = laidOut[j];
+          const overlapX = a.position.x < b.position.x + 220 && a.position.x + 220 > b.position.x;
+          const overlapY = a.position.y < b.position.y + 140 && a.position.y + 140 > b.position.y;
+          expect(overlapX && overlapY).toBe(false);
+        }
+      }
     });
   });
 

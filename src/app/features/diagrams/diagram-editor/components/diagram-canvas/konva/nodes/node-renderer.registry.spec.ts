@@ -101,3 +101,47 @@ describe('node-classification.util', () => {
     expect(getNodeZWeight({ ...base, id: 'a', nodeType: 'component' })).toBe(100);
   });
 });
+
+describe('computeAdaptiveOrthogonalPath (Enterprise Architect Adaptive Routing)', () => {
+  it('genera una línea recta horizontal de 1 segmento cuando los nodos se solapan verticalmente (EA Image 3)', async () => {
+    const { computeAdaptiveOrthogonalPath } = await import('./uml-relationship.renderer');
+    const pedido: UmlNode = { id: 'pedido', type: 'class', name: 'Pedido', x: 80, y: 100, width: 200, height: 140 };
+    const producto: UmlNode = { id: 'producto', type: 'class', name: 'Producto', x: 420, y: 110, width: 200, height: 130 };
+
+    const pts = computeAdaptiveOrthogonalPath(pedido, producto);
+    expect(pts.length).toBe(2);
+    expect(pts[0].y).toBe(pts[1].y);
+    expect(pts[0].x).toBeGreaterThan(pedido.x + pedido.width);
+    expect(pts[1].x).toBeLessThan(producto.x);
+  });
+
+  it('genera un codo en L de 2 segmentos (salida inferior -> entrada izquierda) cuando el destino está abajo a la derecha (EA Image 2)', async () => {
+    const { computeAdaptiveOrthogonalPath } = await import('./uml-relationship.renderer');
+    const pedido: UmlNode = { id: 'pedido', type: 'class', name: 'Pedido', x: 60, y: 50, width: 220, height: 150 };
+    const producto: UmlNode = { id: 'producto', type: 'class', name: 'Producto', x: 400, y: 240, width: 220, height: 150 };
+
+    const pts = computeAdaptiveOrthogonalPath(pedido, producto);
+    expect(pts.length).toBe(3);
+    // Segmento 1 vertical hacia abajo desde el borde inferior de Pedido
+    expect(pts[0].x).toBe(pts[1].x);
+    expect(pts[1].y).toBeGreaterThan(pts[0].y);
+    // Segmento 2 horizontal hacia la derecha entrando al borde izquierdo de Producto
+    expect(pts[1].y).toBe(pts[2].y);
+    expect(pts[2].x).toBeGreaterThan(pts[1].x);
+  });
+
+  it('genera un codo en L de 2 segmentos (salida superior -> entrada izquierda) cuando el destino está arriba a la derecha (EA Image 4)', async () => {
+    const { computeAdaptiveOrthogonalPath } = await import('./uml-relationship.renderer');
+    const pedido: UmlNode = { id: 'pedido', type: 'class', name: 'Pedido', x: 60, y: 240, width: 220, height: 150 };
+    const producto: UmlNode = { id: 'producto', type: 'class', name: 'Producto', x: 380, y: 50, width: 220, height: 150 };
+
+    const pts = computeAdaptiveOrthogonalPath(pedido, producto);
+    expect(pts.length).toBe(3);
+    // Segmento 1 vertical hacia arriba desde el borde superior de Pedido
+    expect(pts[0].x).toBe(pts[1].x);
+    expect(pts[1].y).toBeLessThan(pts[0].y);
+    // Segmento 2 horizontal hacia la derecha entrando al borde izquierdo de Producto
+    expect(pts[1].y).toBe(pts[2].y);
+    expect(pts[2].x).toBeGreaterThan(pts[1].x);
+  });
+});

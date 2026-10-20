@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError, map } from 'rxjs';
 import { User } from '../models/user.model';
 import { LoginRequest, RegisterRequest, AuthResponse, ApiResponse } from '../models/auth.model';
+import { DEFAULT_IN_MEMORY_USER, IN_MEMORY_TOKEN_PREFIX } from './in-memory-seed.data';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -89,6 +90,12 @@ export class AuthService {
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
       }),
     );
+  }
+
+  loginWithInMemoryUser(): void {
+    this.errorMessage.set(null);
+    const token = `${IN_MEMORY_TOKEN_PREFIX}${Date.now()}`;
+    this.setSession(token, DEFAULT_IN_MEMORY_USER);
   }
 
   logout(): void {

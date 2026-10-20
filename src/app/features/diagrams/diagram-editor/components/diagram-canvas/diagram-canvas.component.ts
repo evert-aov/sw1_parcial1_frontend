@@ -288,7 +288,7 @@ export class DiagramCanvasComponent implements OnDestroy {
       this.guideLinesGroup = uiElements.guideLinesGroup;
     }
 
-    this.renderFullDiagram(true);
+    this.renderFullDiagram(false);
     this.stageEventsCleanup = this.nodeInteraction.bindStageEvents(buildStageEventsContext(this));
   }
 
@@ -360,18 +360,23 @@ export class DiagramCanvasComponent implements OnDestroy {
       })
       .join('|');
     const connSig = this.connections()
-      .map((c) => `${c.id}:${c.sourceId}:${c.targetId}:${c.type}:${c.name ?? ''}`)
+      .map(
+        (c) =>
+          `${c.id}:${c.sourceId}:${c.targetId}:${c.type}:${c.lineStyle ?? ''}:${c.name ?? ''}:${c.sourceMultiplicity ?? ''}:${c.targetMultiplicity ?? ''}`,
+      )
       .join('|');
-    return `${this.activeDiagramType()}#${nodeSig}#${connSig}`;
+    return `${this.activeDiagramType()}#${this.defaultLineStyle()}#${nodeSig}#${connSig}`;
   }
 
   /**
    * Reconstruye y renderiza todo el diagrama en las capas correspondientes de Konva.
    *
-   * @param animateEntrance Indica si se debe ejecutar la animación progresiva de relaciones.
+   * @param _animateEntrance Parámetro mantenido por compatibilidad; el renderizado es directo para evitar picos de RAM/CPU.
    */
-  renderFullDiagram(animateEntrance = false): void {
+  renderFullDiagram(_animateEntrance = false): void {
     if (!this.nodeLayer || !this.frameLayer || !this.relLayer) return;
+
+    this.relationshipManager.cancelAnimation();
 
     this.nodeInteraction.renderFullDiagram({
       frameLayer: this.frameLayer,
@@ -389,16 +394,7 @@ export class DiagramCanvasComponent implements OnDestroy {
       nodeInteractionContext: buildNodeInteractionContext(this),
     });
 
-    if (animateEntrance) {
-      this.relationshipManager.triggerAllRelationshipsDrawAnimation(this.connections(), true);
-      this.relationshipManager.startRelationshipAnimationLoop(() => {
-        if (this.relLayer && !this.isDraggingNode) {
-          this.renderRelationshipsOnly();
-        }
-      });
-    } else {
-      this.renderRelationshipsOnly();
-    }
+    this.renderRelationshipsOnly();
     this.lastRenderedSignature = this.computeStructureSignature();
   }
 
