@@ -219,12 +219,15 @@ export class DiagramTabManagerService {
     const { diagramId, projectId, projectName } = params;
     if (projectId) {
       context.setCurrentProjectId(projectId);
-      context.loadDiagramsByProject(projectId).subscribe((diagrams: any[]) => {
-        if (!diagramId && diagrams?.length > 0) {
-          context.setCurrentDiagramId(diagrams[0].id);
-          context.setCurrentDiagramName(diagrams[0].name);
-          context.loadDiagram(diagrams[0].id);
-        }
+      context.loadDiagramsByProject(projectId).subscribe({
+        next: (diagrams: any[]) => {
+          if (!diagramId && diagrams?.length > 0) {
+            context.setCurrentDiagramId(diagrams[0].id);
+            context.setCurrentDiagramName(diagrams[0].name);
+            context.loadDiagram(diagrams[0].id);
+          }
+        },
+        error: () => {},
       });
       context.getProject(projectId).subscribe({
         next: (project: any) => {

@@ -249,12 +249,13 @@ export function recalculateSequenceNumbers(
     if (isConnSeq) {
       const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
       const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+      const hasExplicitSlot = Boolean(sMatch || tMatch);
       const slot = sMatch
         ? parseInt(sMatch[1], 10)
         : tMatch
         ? parseInt(tMatch[1], 10)
         : c.messages?.[0]?.orderIndex ?? idx;
-      seqMetas.push({ conn: c, slot, index: idx });
+      seqMetas.push({ conn: c, slot, index: idx, hasExplicitSlot } as SeqConnMeta & { hasExplicitSlot: boolean });
     }
   });
 
@@ -271,7 +272,7 @@ export function recalculateSequenceNumbers(
   const updatedConnMap = new Map<string, UmlConnection>();
 
   let globalOrderIndex = 0;
-  for (const meta of seqMetas) {
+  for (const meta of seqMetas as Array<SeqConnMeta & { hasExplicitSlot?: boolean }>) {
     const c = meta.conn;
     const baseSourceId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
     const sourceNode = nodeMap.get(baseSourceId);
@@ -296,6 +297,9 @@ export function recalculateSequenceNumbers(
       ? XmiClientParser.getGroupColor(seqNum)
       : SEQUENCE_PALETTE[(currentGroup - 1) % SEQUENCE_PALETTE.length];
 
+    const slotY = meta.hasExplicitSlot ? 200 + meta.slot * 35 : undefined;
+    const connMsgType = (['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync') as UmlMessage['type'];
+
     let updatedMessages: UmlMessage[];
     if (c.messages && c.messages.length > 0) {
       updatedMessages = c.messages.map((m: UmlMessage, mIdx: number) => {
@@ -304,9 +308,10 @@ export function recalculateSequenceNumbers(
             ...m,
             sequenceNumber: seqNum,
             direction: m.direction ?? 'forward',
-            type: m.type ?? (['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync'),
+            type: (m.type ?? connMsgType) as UmlMessage['type'],
             isReturn: m.isReturn ?? c.type === 'reply',
             orderIndex: globalOrderIndex++,
+            positionY: slotY ?? m.positionY,
             color,
           };
         }
@@ -323,7 +328,8 @@ export function recalculateSequenceNumbers(
           isReturn: c.type === 'reply',
           direction: 'forward',
           orderIndex: globalOrderIndex++,
-          type: ['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : 'sync',
+          positionY: slotY,
+          type: connMsgType,
           color,
         },
       ];

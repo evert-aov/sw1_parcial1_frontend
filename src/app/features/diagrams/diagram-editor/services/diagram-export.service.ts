@@ -12,6 +12,10 @@ import {
   UmlMessage,
 } from '../../../../core/models/diagram.model';
 import { DiagramCanvasComponent } from '../components/diagram-canvas/diagram-canvas.component';
+import {
+  EXPLICIT_SIZE_NODE_TYPES,
+  UmlNodeNormalizerUtil,
+} from '../utils/uml-node-normalizer.util';
 
 export interface UmlDiagramExportJson {
   version: string;
@@ -207,48 +211,26 @@ export class DiagramExportService {
           ? '.'
           : (cleanName || fallbackName);
 
-        const resolvedNodeType =
-          n.nodeType && n.nodeType !== 'class'
-            ? n.nodeType
-            : n.id.startsWith('actor_')
-            ? 'actor'
-            : n.id.startsWith('use_case_')
-            ? 'use_case'
-            : n.id.startsWith('boundary_box_')
-            ? 'boundary_box'
-            : n.id.startsWith('package_')
-            ? 'package'
-            : n.id.startsWith('boundary_')
-            ? 'boundary'
-            : n.id.startsWith('control_')
-            ? 'control'
-            : n.id.startsWith('entity_')
-            ? 'entity'
-            : n.id.startsWith('component_')
-            ? 'component'
-            : n.id.startsWith('device_')
-            ? 'device'
-            : n.id.startsWith('exec_env_') || n.id.startsWith('exec_')
-            ? 'executionEnvironment'
-            : n.id.startsWith('lifeline_')
-            ? 'lifeline'
-            : isSequence
-            ? 'lifeline'
-            : activeDiagramType === DiagramType.PACKAGE
-            ? 'package'
-            : n.nodeType || 'class';
+        const resolvedNodeType = UmlNodeNormalizerUtil.inferNodeType(n, {
+          isSequence,
+          diagramType: activeDiagramType,
+        });
+        const nodeColor = UmlNodeNormalizerUtil.resolveNodeColor(
+          n.color,
+          resolvedNodeType,
+          n.stereotype,
+          getDefaultColor
+        );
 
-        let nodeColor = n.color;
-        if (!nodeColor || ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') && ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(resolvedNodeType))) {
-          nodeColor = getDefaultColor(resolvedNodeType, n.stereotype);
-        }
-
-        const isExplicitSize = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(resolvedNodeType);
-        const savedHeight = resolvedNodeType === 'lifeline'
-          ? 60
-          : (isExplicitSize
-              ? (n.customHeight || n.height || getNodeHeight(n))
-              : (n.customHeight || (n.isCustomSize ? n.height : null) || null));
+        const isExplicitSize = (EXPLICIT_SIZE_NODE_TYPES as readonly string[]).includes(
+          resolvedNodeType
+        );
+        const savedHeight =
+          resolvedNodeType === 'lifeline'
+            ? 60
+            : isExplicitSize
+              ? n.customHeight || n.height || getNodeHeight(n)
+              : n.customHeight || (n.isCustomSize ? n.height : null) || null;
 
         return {
           id: n.id,
@@ -290,6 +272,7 @@ export class DiagramExportService {
       connections: connections.map((c) => {
         const baseSourceId = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
         const baseTargetId = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+        const fallbackMsgType = ['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : undefined;
         return {
           id: c.id,
           sourceNodeId: baseSourceId,
@@ -303,7 +286,10 @@ export class DiagramExportService {
           targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
           assocAnchorNodeId: c.assocAnchorNodeId || null,
           messages: (c.messages || []).map((m, mIdx) => {
-            const norm = normalizeUmlMessage(m, `${mIdx + 1}`);
+            const norm = normalizeUmlMessage(
+              fallbackMsgType && !m.type ? { ...m, type: fallbackMsgType } : m,
+              `${mIdx + 1}`,
+            );
             return {
               id: norm.id,
               sequenceNumber: norm.sequenceNumber,

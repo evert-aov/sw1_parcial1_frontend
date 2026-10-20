@@ -300,4 +300,148 @@ export class DiagramSequenceActivationService {
       };
     });
   }
+
+  /**
+   * Ordena las líneas de vida y actores de izquierda a derecha según su coordenada X.
+   *
+   * @param nodes Lista de nodos del diagrama.
+   * @returns Nueva lista con los participantes de secuencia alineados horizontalmente.
+   */
+  sortLifelinesLeftToRight(nodes: UmlClassNode[]): UmlClassNode[] {
+    const seqNodes = nodes.filter(
+      (n) => (n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor,
+    );
+    if (seqNodes.length <= 1) return nodes;
+
+    const sortedSeq = [...seqNodes].sort((a, b) => (a.position?.x || 0) - (b.position?.x || 0));
+    let nextMinX = Math.max(60, sortedSeq[0]?.position?.x || 80);
+    const updatedMap = new Map<string, UmlClassNode>();
+
+    for (const sn of sortedSeq) {
+      const currentX = sn.position?.x || nextMinX;
+      const finalX = Math.max(nextMinX, currentX);
+      const width = sn.width || (sn.nodeType === 'actor' ? 65 : 160);
+      updatedMap.set(sn.id, {
+        ...sn,
+        position: { x: finalX, y: 50 },
+      });
+      nextMinX = finalX + width + 40;
+    }
+
+    return nodes.map((n) => updatedMap.get(n.id) || n);
+  }
+
+  /**
+   * Recalcula las barras de activación (`activations`) almacenadas en cada nodo de secuencia
+   * a partir de los slots de los mensajes entrantes y salientes.
+   *
+   * @param nodes Lista de nodos del diagrama.
+   * @param connections Lista de conexiones del diagrama.
+   * @param activeDiagramType Tipo de diagrama activo.
+   * @returns Objeto indicando si hubo cambios y la lista actualizada de nodos.
+   */
+  recalculateSequenceActivationBars(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    activeDiagramType: DiagramType,
+  ): { changed: boolean; updatedNodes: UmlClassNode[] } {
+    if (activeDiagramType !== DiagramType.SEQUENCE) {
+      return { changed: false, updatedNodes: nodes };
+    }
+
+    const seqConns = connections.filter((c) => isSequenceConnectionLogic(c, activeDiagramType));
+    if (seqConns.length === 0) {
+      return { changed: false, updatedNodes: nodes };
+    }
+
+    const nodeSlotsMap = new Map<string, number[]>();
+    for (const c of seqConns) {
+      const sNodeId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const tNodeId = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+      const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+      const slot = sMatch ? parseInt(sMatch[1], 10) : tMatch ? parseInt(tMatch[1], 10) : 0;
+
+      if (sNodeId) {
+        if (!nodeSlotsMap.has(sNodeId)) nodeSlotsMap.set(sNodeId, []);
+        nodeSlotsMap.get(sNodeId)!.push(slot);
+      }
+      if (tNodeId) {
+        if (!nodeSlotsMap.has(tNodeId)) nodeSlotsMap.set(tNodeId, []);
+        nodeSlotsMap.get(tNodeId)!.push(slot);
+      }
+    }
+
+    let changed = false;
+    const updatedNodes = nodes.map((n) => {
+      if ((n.nodeType !== 'lifeline' && n.nodeType !== 'actor') || n.isAnchor) {
+        return n;
+      }
+      const slots = nodeSlotsMap.get(n.id);
+      if (!slots || slots.length === 0) {
+        if (n.activations && n.activations.length > 0) {
+          changed = true;
+          return { ...n, activations: [] };
+        }
+        return n;
+      }
+
+      const headerHeight = n.nodeType === 'actor' ? 95 : 60;
+      const minSlot = Math.min(...slots);
+      const maxSlot = Math.max(...slots);
+      const startY = Math.max(0, 160 + minSlot * 50 - headerHeight - 4);
+      const endY = 160 + maxSlot * 50 - headerHeight;
+      const height = Math.max(22, endY - startY + 22);
+
+      const nextActivations = [
+        {
+          id: `act_${n.id}_${minSlot}_${maxSlot}`,
+          startY,
+          height,
+        },
+      ];
+
+      const prevAct = n.activations?.[0];
+      if (!prevAct || n.activations?.length !== 1 || prevAct.startY !== startY || prevAct.height !== height) {
+        changed = true;
+        return { ...n, activations: nextActivations };
+      }
+      return n;
+    });
+
+    return { changed, updatedNodes };
+  }
+
+  /**
+   * Sincroniza la posición vertical (`y = 50`) y las barras de activación de los nodos de secuencia.
+   *
+   * @param nodes Lista de nodos del diagrama.
+   * @param connections Lista de conexiones del diagrama.
+   * @param activeDiagramType Tipo de diagrama activo.
+   * @returns Objeto indicando si hubo modificaciones y los nodos sincronizados.
+   */
+  syncTimelineForSequenceNodes(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    activeDiagramType: DiagramType,
+  ): { changed: boolean; updatedNodes: UmlClassNode[] } {
+    if (activeDiagramType !== DiagramType.SEQUENCE) {
+      return { changed: false, updatedNodes: nodes };
+    }
+
+    let posChanged = false;
+    const alignedNodes = nodes.map((n) => {
+      if ((n.nodeType === 'lifeline' || n.nodeType === 'actor') && !n.isAnchor && n.position.y !== 50) {
+        posChanged = true;
+        return { ...n, position: { x: n.position.x, y: 50 } };
+      }
+      return n;
+    });
+
+    const actResult = this.recalculateSequenceActivationBars(alignedNodes, connections, activeDiagramType);
+    return {
+      changed: posChanged || actResult.changed,
+      updatedNodes: actResult.updatedNodes,
+    };
+  }
 }

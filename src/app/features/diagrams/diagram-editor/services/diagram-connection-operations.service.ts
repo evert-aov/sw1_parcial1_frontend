@@ -13,9 +13,9 @@ import {
   createAssociationClassBetween as createAssociationClassBetweenLogic,
   generateNextSequenceMessage as generateNextSequenceMessageLogic,
   isSequenceConnection as isSequenceConnectionLogic,
-  getSequenceMessageColor,
 } from '../components/diagram-canvas/nodes';
 import { DiagramConnectionLayoutService } from './diagram-connection-layout.service';
+import { ConnectionCascadeUtil } from '../utils/connection-cascade.util';
 
 export interface CreateConnectionParams {
   fOutputId: string;
@@ -43,6 +43,11 @@ export interface CreateConnectionResult {
   errorMessage?: string;
 }
 
+/**
+ * Servicio de operaciones de dominio sobre conexiones UML:
+ * creación por arrastre o doble clic, reasignación de puertos, edición,
+ * inversión direccional y borrado en cascada.
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -75,7 +80,10 @@ export class DiagramConnectionOperationsService {
   }
 
   /**
-   * Procesa la creación de una conexión entre dos puertos/slots
+   * Procesa la creación de una conexión entre dos puertos o slots temporales.
+   *
+   * @param params Parámetros de entrada del evento de conexión.
+   * @returns Resultado con la nueva conexión, clase de asociación o mensaje de error.
    */
   processCreateConnection(params: CreateConnectionParams): CreateConnectionResult {
     const {
@@ -93,12 +101,8 @@ export class DiagramConnectionOperationsService {
     const relType = selectedRelationType || 'association';
     const isSeqRel = isSequenceConnectionLogic(relType, activeDiagramType);
 
-    if (isSeqRel) {
-      const sHasSlot = fOutputId.includes('_slot_');
-      const tHasSlot = fInputId.includes('_slot_');
-      if (!sHasSlot || !tHasSlot) {
-        return {};
-      }
+    if (isSeqRel && (!fOutputId.includes('_slot_') || !fInputId.includes('_slot_'))) {
+      return {};
     }
 
     const baseSourceId = fOutputId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
@@ -116,13 +120,10 @@ export class DiagramConnectionOperationsService {
 
     if (relType === 'association_class' && sourceNode && targetNode) {
       if (baseSourceId === baseTargetId) {
-        return {
-          errorMessage: 'Las clases de asociación conectan dos tablas distintas.',
-        };
+        return { errorMessage: 'Las clases de asociación conectan dos tablas distintas.' };
       }
-      const assocResult = this.createAssociationClassBetween(sourceNode, targetNode, nodes, connections);
       return {
-        createdAssociationClass: assocResult,
+        createdAssociationClass: this.createAssociationClassBetween(sourceNode, targetNode, nodes, connections),
       };
     }
 
@@ -137,45 +138,28 @@ export class DiagramConnectionOperationsService {
         } else {
           const sMatch = sourceId.match(/_slot_(\d+)$/);
           const tMatch = targetId.match(/_slot_(\d+)$/);
-          let slotNum: string;
-          if (sMatch) {
-            slotNum = sMatch[1];
-          } else if (tMatch) {
-            slotNum = tMatch[1];
-          } else {
-            slotNum = this.layoutService.findNextAvailableSlot(connections);
-          }
-
-          const targetSlotNum = parseInt(slotNum, 10);
+          const slotNum = sMatch
+            ? sMatch[1]
+            : tMatch
+            ? tMatch[1]
+            : this.layoutService.findNextAvailableSlot(connections);
           const isSlotOccupied = this.layoutService.isSequenceSlotOccupied(
             connections,
-            targetSlotNum,
+            parseInt(slotNum, 10),
             activeDiagramType,
           );
-
           if (isSlotOccupied) {
             return {
               errorMessage:
                 '⚠️ No se permite colocar dos mensajes en la misma posición temporal (fila colineal). Cada mensaje debe ubicarse en una posición distinta.',
             };
           }
-
           sourceId = `${baseSourceId}_slot_${slotNum}`;
           targetId = `${baseTargetId}_slot_${slotNum}`;
         }
       } else if (baseSourceId === baseTargetId) {
-        const validConnectors = [
-          `${baseSourceId}_top`,
-          `${baseSourceId}_right`,
-          `${baseSourceId}_bottom`,
-          `${baseSourceId}_left`,
-        ];
-        const isDistinctConnectors =
-          validConnectors.includes(sourceId) &&
-          validConnectors.includes(targetId) &&
-          sourceId !== targetId;
-
-        if (!isDistinctConnectors) {
+        const valid = [`${baseSourceId}_top`, `${baseSourceId}_right`, `${baseSourceId}_bottom`, `${baseSourceId}_left`];
+        if (!(valid.includes(sourceId) && valid.includes(targetId) && sourceId !== targetId)) {
           sourceId = `${baseSourceId}_top`;
           targetId = `${baseTargetId}_right`;
         }
@@ -186,33 +170,32 @@ export class DiagramConnectionOperationsService {
       }
     }
 
-    let messages: UmlMessage[] | undefined = undefined;
-    if (isSeqRel && sourceNode && targetNode) {
-      const isReturn = relType === 'reply';
-      messages = generateNextSequenceMessage
-        ? generateNextSequenceMessage(sourceNode, targetNode, isReturn)
-        : this.generateNextSequenceMessage(sourceNode, targetNode, isReturn);
-    }
-
-    const newConnection = this.layoutService.buildNewConnection({
-      sourceNode: sourceNode || ({ id: baseSourceId } as any),
-      targetNode: targetNode || ({ id: baseTargetId } as any),
-      relType,
-      sourceId,
-      targetId,
-      defaultLineStyle,
-      activeDiagramType,
-      messages,
-    });
+    const messages =
+      isSeqRel && sourceNode && targetNode
+        ? (generateNextSequenceMessage || this.generateNextSequenceMessage.bind(this))(
+            sourceNode,
+            targetNode,
+            relType === 'reply',
+          )
+        : undefined;
 
     return {
-      newConnection,
+      newConnection: this.layoutService.buildNewConnection({
+        sourceNode: sourceNode || ({ id: baseSourceId } as UmlClassNode),
+        targetNode: targetNode || ({ id: baseTargetId } as UmlClassNode),
+        relType,
+        sourceId,
+        targetId,
+        defaultLineStyle,
+        activeDiagramType,
+        messages,
+      }),
       isSeqRel,
     };
   }
 
   /**
-   * Crea una clase de asociación intermedia conectada a la línea entre source y target
+   * Crea una clase de asociación intermedia conectada a la línea entre `sourceNode` y `targetNode`.
    */
   createAssociationClassBetween(
     sourceNode: UmlClassNode,
@@ -224,178 +207,77 @@ export class DiagramConnectionOperationsService {
   }
 
   /**
-   * Reasigna el origen o destino de una conexión existente
+   * Reasigna el puerto de origen o destino de una conexión existente.
    */
   processReassignConnection(
     list: UmlConnection[],
     event: { connectionId: string; nextSourceId?: string; nextTargetId?: string },
     activeDiagramType: DiagramType,
   ): { updatedList: UmlConnection[]; isOccupied?: boolean } {
-    const isSeq = activeDiagramType === DiagramType.SEQUENCE;
     let isOccupied = false;
 
-    const reassigned = list.map((c) => {
-      if (c.id === event.connectionId) {
-        let sId = event.nextSourceId || c.sourceId;
-        let tId = event.nextTargetId || c.targetId;
-        if (isSequenceConnectionLogic(c, activeDiagramType)) {
-          const sMatch = event.nextSourceId ? event.nextSourceId.match(/_slot_(\d+)$/) : null;
-          const tMatch = event.nextTargetId ? event.nextTargetId.match(/_slot_(\d+)$/) : null;
-          const slotNum = sMatch ? sMatch[1] : (tMatch ? tMatch[1] : null);
-          if (slotNum !== null) {
-            const targetSlotNum = parseInt(slotNum, 10);
-            const slotOccupied = this.layoutService.isSequenceSlotOccupied(
-              list,
-              targetSlotNum,
-              activeDiagramType,
-              event.connectionId,
-            );
-            if (slotOccupied) {
-              isOccupied = true;
-              return c;
-            }
-            const baseSrc = sId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-            const baseTgt = tId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-            sId = `${baseSrc}_slot_${slotNum}`;
-            tId = `${baseTgt}_slot_${slotNum}`;
+    const updatedList = list.map((c) => {
+      if (c.id !== event.connectionId) return c;
+      let sId = event.nextSourceId || c.sourceId;
+      let tId = event.nextTargetId || c.targetId;
+      if (isSequenceConnectionLogic(c, activeDiagramType)) {
+        const sMatch = event.nextSourceId?.match(/_slot_(\d+)$/);
+        const tMatch = event.nextTargetId?.match(/_slot_(\d+)$/);
+        const slotNum = sMatch ? sMatch[1] : tMatch ? tMatch[1] : null;
+        if (slotNum !== null) {
+          if (this.layoutService.isSequenceSlotOccupied(list, parseInt(slotNum, 10), activeDiagramType, event.connectionId)) {
+            isOccupied = true;
+            return c;
           }
+          const baseSrc = sId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+          const baseTgt = tId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+          sId = `${baseSrc}_slot_${slotNum}`;
+          tId = `${baseTgt}_slot_${slotNum}`;
         }
-        return {
-          ...c,
-          sourceId: sId,
-          targetId: tId,
-        };
       }
-      return c;
+      return { ...c, sourceId: sId, targetId: tId };
     });
 
-    return { updatedList: reassigned, isOccupied };
+    return { updatedList, isOccupied };
   }
 
-  /**
-   * Invierte la dirección de una conexión
-   */
+  /** Invierte la dirección de una conexión delegando en `ConnectionCascadeUtil`. */
   reverseConnection(conn: UmlConnection): UmlConnection {
-    const currentS = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const currentT = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const sSideMatch = conn.sourceId?.match(/_(top|bottom|left|right|slot_\d+)$/);
-    const tSideMatch = conn.targetId?.match(/_(top|bottom|left|right|slot_\d+)$/);
-    const sSide = sSideMatch ? sSideMatch[1] : 'right';
-    const tSide = tSideMatch ? tSideMatch[1] : 'left';
-
-    conn.sourceNodeId = currentT;
-    conn.targetNodeId = currentS;
-    conn.from = currentT;
-    conn.to = currentS;
-    conn.sourceId = `${currentT}_${tSide}`;
-    conn.targetId = `${currentS}_${sSide}`;
-
-    const tempMult = conn.sourceMultiplicity;
-    conn.sourceMultiplicity = conn.targetMultiplicity;
-    conn.targetMultiplicity = tempMult;
-
-    return conn;
+    return ConnectionCascadeUtil.reverseConnection(conn);
   }
 
-  /**
-   * Calcula los nodos y conexiones que deben eliminarse en cascada al borrar una conexión
-   */
+  /** Calcula los nodos y conexiones que deben eliminarse en cascada al borrar una conexión. */
   computeCascadeDelete(
     connId: string,
     nodes: UmlClassNode[],
     connections: UmlConnection[],
   ): { connsToDelete: Set<string>; nodesToDelete: Set<string> } {
-    const connsToDelete = new Set<string>([connId]);
-    const nodesToDelete = new Set<string>();
-
-    const conn = connections.find((c) => c.id === connId);
-    if (conn) {
-      if (conn.assocAnchorNodeId) {
-        nodesToDelete.add(conn.assocAnchorNodeId);
-      }
-      nodes.forEach((n) => {
-        if (n.assocMainConnId === conn.id) {
-          nodesToDelete.add(n.id);
-        }
-      });
-
-      if (conn.type === 'association_class') {
-        const sourceBase = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const targetBase = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
-        const sourceNode = nodes.find((n) => n.id === sourceBase);
-        const targetNode = nodes.find((n) => n.id === targetBase);
-        if (sourceNode?.isAnchor) nodesToDelete.add(sourceNode.id);
-        if (targetNode?.isAnchor) nodesToDelete.add(targetNode.id);
-        if (sourceNode && !sourceNode.isAnchor) nodesToDelete.add(sourceNode.id);
-        if (targetNode && !targetNode.isAnchor) nodesToDelete.add(targetNode.id);
-      }
-    }
-
-    // Propagar relaciones association_class en cascada
-    connections.forEach((c) => {
-      if (c.type === 'association_class') {
-        const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
-        if (nodesToDelete.has(sourceBase)) nodesToDelete.add(targetBase);
-        if (nodesToDelete.has(targetBase)) nodesToDelete.add(sourceBase);
-      }
-    });
-
-    // Si cualquier nodo ancla o tabla intermedia está marcado, marcar la conexión principal
-    connections.forEach((c) => {
-      if (c.assocAnchorNodeId && nodesToDelete.has(c.assocAnchorNodeId)) {
-        connsToDelete.add(c.id);
-      }
-    });
-    nodes.forEach((n) => {
-      if (n.assocMainConnId && nodesToDelete.has(n.id)) {
-        connsToDelete.add(n.assocMainConnId);
-      }
-    });
-
-    connections.forEach((c) => {
-      const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
-      const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
-      if (nodesToDelete.has(sourceBase) || nodesToDelete.has(targetBase)) {
-        connsToDelete.add(c.id);
-      }
-    });
-
-    return { connsToDelete, nodesToDelete };
+    return ConnectionCascadeUtil.computeCascadeDelete(connId, nodes, connections);
   }
 
-  /**
-   * Ejecuta la eliminación en cascada de una conexión y retorna las listas resultantes
-   */
+  /** Ejecuta la eliminación en cascada de una conexión y retorna las listas resultantes. */
   executeCascadeDeleteConnection(
     connId: string,
     nodes: UmlClassNode[],
     connections: UmlConnection[],
     recalculateSequenceNumbers: (conns: UmlConnection[]) => UmlConnection[],
-  ): {
-    remainingNodes: UmlClassNode[];
-    remainingConnections: UmlConnection[];
-  } {
+  ): { remainingNodes: UmlClassNode[]; remainingConnections: UmlConnection[] } {
     const { connsToDelete, nodesToDelete } = this.computeCascadeDelete(connId, nodes, connections);
     const remainingNodes = nodesToDelete.size > 0 ? nodes.filter((n) => !nodesToDelete.has(n.id)) : nodes;
-    const remainingConnections = recalculateSequenceNumbers(connections.filter((c) => !connsToDelete.has(c.id)));
+    const remainingConnections = recalculateSequenceNumbers(
+      connections.filter((c) => !connsToDelete.has(c.id)),
+    );
     return { remainingNodes, remainingConnections };
   }
 
-  /**
-   * Guarda y procesa la conexión editada
-   */
+  /** Guarda y procesa la conexión editada. */
   saveEditedConnection(
     connections: UmlConnection[],
     savedConn: UmlConnection,
     activeDiagramType: DiagramType,
     normalizeUmlMessage?: (m: any, defaultSeq?: string) => UmlMessage,
   ): { updatedConnections: UmlConnection[]; isSeq: boolean } {
-    const { isSeq, prepared } = this.prepareSavedEditedConnection(
-      savedConn,
-      activeDiagramType,
-      normalizeUmlMessage,
-    );
+    const { isSeq, prepared } = this.prepareSavedEditedConnection(savedConn, activeDiagramType, normalizeUmlMessage);
     const updatedConnections = connections.map((c) =>
       c.id === prepared.id
         ? { ...prepared, messages: prepared.messages ? [...prepared.messages] : undefined }
@@ -404,117 +286,51 @@ export class DiagramConnectionOperationsService {
     return { updatedConnections, isSeq };
   }
 
-  /**
-   * Prepara la conexión editada antes de persistir
-   */
+  /** Prepara la conexión editada antes de persistir. */
   prepareSavedEditedConnection(
     edited: UmlConnection,
     activeDiagramType: DiagramType,
     normalizeUmlMessage?: (m: any, defaultSeq?: string) => UmlMessage,
   ): { isSeq: boolean; prepared: UmlConnection } {
-    const isSeq = isSequenceConnectionLogic(edited, activeDiagramType);
-
-    if (isSeq || edited.type === 'generalization' || edited.type === 'realization') {
-      edited.sourceMultiplicity = '';
-      edited.targetMultiplicity = '';
-    }
-
-    if (isSeq && edited.messages && edited.messages.length > 0) {
-      if (normalizeUmlMessage) {
-        const norm = normalizeUmlMessage(edited.messages[0], edited.messages[0].sequenceNumber || '1');
-        norm.orderIndex = 0;
-        edited.messages = [norm];
-      }
-      const m = edited.messages[0];
-      m.color = getSequenceMessageColor(m.sequenceNumber);
-    }
-
-    return { isSeq, prepared: edited };
+    return ConnectionCascadeUtil.prepareSavedEditedConnection(edited, activeDiagramType, normalizeUmlMessage);
   }
 
-  /**
-   * Determina si una conexión toca al nodo actualmente seleccionado
-   */
+  /** Determina si una conexión toca al nodo actualmente seleccionado. */
   isConnectionSelected(connId: string, connections: UmlConnection[], selectedNodeId: string | null): boolean {
-    if (!selectedNodeId) return false;
-    const conn = connections.find((c) => c.id === connId);
-    if (!conn) return false;
-    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
-    return s === selectedNodeId || t === selectedNodeId;
+    return ConnectionCascadeUtil.isConnectionSelected(connId, connections, selectedNodeId);
   }
 
-  /**
-   * Determina si una conexión debe verse atenuada respecto a la selección
-   */
+  /** Determina si una conexión debe verse atenuada respecto a la selección. */
   isConnectionDimmed(
     connId: string,
     connections: UmlConnection[],
     selectedNodeId: string | null,
     hasMultipleSelected: boolean,
   ): boolean {
-    if (hasMultipleSelected) return false;
-    if (!selectedNodeId) return false;
-    const conn = connections.find((c) => c.id === connId);
-    if (!conn) return false;
-    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
-    return s !== selectedNodeId && t !== selectedNodeId;
+    return ConnectionCascadeUtil.isConnectionDimmed(connId, connections, selectedNodeId, hasMultipleSelected);
   }
 
-  /**
-   * Determina si el diamante UML debe dibujarse en el inicio de la relación
-   */
+  /** Determina si el diamante UML debe dibujarse en el inicio de la relación. */
   isDiamondAtStart(conn: UmlConnection): boolean {
-    const sMult = (conn.sourceMultiplicity || '').trim();
-    const tMult = (conn.targetMultiplicity || '').trim();
-    const isTargetOne = tMult === '1' || tMult === '0..1';
-    const isSourceMany = sMult.includes('*') || sMult.toLowerCase().includes('n');
-
-    if (isTargetOne && isSourceMany) {
-      return false;
-    }
-    return true;
+    return ConnectionCascadeUtil.isDiamondAtStart(conn);
   }
 
-  /**
-   * Invierte la dirección de una conexión en edición
-   */
+  /** Invierte la dirección de una conexión en edición. */
   swapConnectionDirection(c: UmlConnection): void {
-    const tempSourceNodeId = c.sourceNodeId;
-    const tempSourceId = c.sourceId;
-    const tempSourceMult = c.sourceMultiplicity;
-
-    c.sourceNodeId = c.targetNodeId;
-    c.sourceId = c.targetId;
-    c.sourceMultiplicity = c.targetMultiplicity;
-
-    c.targetNodeId = tempSourceNodeId;
-    c.targetId = tempSourceId;
-    c.targetMultiplicity = tempSourceMult;
+    ConnectionCascadeUtil.swapConnectionDirection(c);
   }
 
-  /**
-   * Determina si un nodo es vecino inmediato del nodo seleccionado
-   */
+  /** Determina si un nodo es vecino inmediato del nodo seleccionado. */
   isNeighborNode(
     nodeId: string,
     connections: UmlConnection[],
     selectedNodeId: string | null,
     hasMultipleSelected: boolean,
   ): boolean {
-    if (hasMultipleSelected) return false;
-    if (!selectedNodeId || nodeId === selectedNodeId) return false;
-    return connections.some((c) => {
-      const s = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-      const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
-      return (s === selectedNodeId && t === nodeId) || (t === selectedNodeId && s === nodeId);
-    });
+    return ConnectionCascadeUtil.isNeighborNode(nodeId, connections, selectedNodeId, hasMultipleSelected);
   }
 
-  /**
-   * Procesa la creación de conexiones al hacer clic de nodo a nodo (modo dos clics)
-   */
+  /** Procesa la creación de conexiones al hacer clic de nodo a nodo (modo dos clics). */
   processTableClickConnection(params: {
     currentSource: string;
     targetNodeId: string;
@@ -541,18 +357,15 @@ export class DiagramConnectionOperationsService {
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
     const sourceNode = nodeMap.get(currentSource);
     const targetNode = nodeMap.get(targetNodeId);
-
     if (!sourceNode || !targetNode) return {};
 
     if (activeRel === 'association_class') {
-      if (currentSource === targetNodeId) {
-        return { error: 'Las clases de asociación conectan dos tablas distintas.' };
-      }
-      return { isAssocClass: true };
+      return currentSource === targetNodeId
+        ? { error: 'Las clases de asociación conectan dos tablas distintas.' }
+        : { isAssocClass: true };
     }
 
     const isSeqRel = isSequenceConnectionLogic(activeRel, activeDiagramType);
-
     let sourceId: string;
     let targetId: string;
     if (currentSource === targetNodeId) {
@@ -568,39 +381,39 @@ export class DiagramConnectionOperationsService {
       targetId = optimal.targetId;
     }
 
-    let messages: UmlMessage[] | undefined = undefined;
-    if (isSeqRel) {
-      const isReturn = activeRel === 'reply';
-      messages = generateNextSequenceMessage
-        ? generateNextSequenceMessage(sourceNode, targetNode, isReturn)
-        : this.generateNextSequenceMessage(sourceNode, targetNode, isReturn);
-    }
+    const messages = isSeqRel
+      ? (generateNextSequenceMessage || this.generateNextSequenceMessage.bind(this))(
+          sourceNode,
+          targetNode,
+          activeRel === 'reply',
+        )
+      : undefined;
 
-    const newConn = this.layoutService.buildNewConnection({
-      sourceNode,
-      targetNode,
-      relType: activeRel,
-      sourceId,
-      targetId,
-      defaultLineStyle,
-      activeDiagramType,
-      messages,
-    });
-
-    return { newConn, isSeqRel };
+    return {
+      newConn: this.layoutService.buildNewConnection({
+        sourceNode,
+        targetNode,
+        relType: activeRel,
+        sourceId,
+        targetId,
+        defaultLineStyle,
+        activeDiagramType,
+        messages,
+      }),
+      isSeqRel,
+    };
   }
 
+  /** Genera un mensaje de secuencia autoincremetal por defecto. */
   generateNextSequenceMessage(
     sourceNode?: UmlClassNode,
     targetNode?: UmlClassNode,
-    isReturn: boolean = false,
+    isReturn = false,
   ): UmlMessage[] {
     return generateNextSequenceMessageLogic(sourceNode, targetNode, isReturn);
   }
 
-  /**
-   * Maneja el ciclo completo del evento onTableClick
-   */
+  /** Maneja el ciclo completo del evento `onTableClick`. */
   handleTableClick(
     nodeId: string,
     event: MouseEvent,
@@ -655,13 +468,9 @@ export class DiagramConnectionOperationsService {
       const sourceNode = nodeMap.get(options.currentSource);
       const targetNode = nodeMap.get(nodeId);
       if (sourceNode && targetNode) {
-        const assocResult = this.createAssociationClassBetween(
-          sourceNode,
-          targetNode,
-          options.nodes,
-          options.connections,
+        options.onApplyAssociationClass(
+          this.createAssociationClassBetween(sourceNode, targetNode, options.nodes, options.connections),
         );
-        options.onApplyAssociationClass(assocResult);
       }
       return;
     }
@@ -671,9 +480,7 @@ export class DiagramConnectionOperationsService {
     }
   }
 
-  /**
-   * Maneja el ciclo completo del evento onConnectionCreated
-   */
+  /** Maneja el ciclo completo del evento `onConnectionCreated`. */
   handleConnectionCreated(
     event: FCreateConnectionEvent,
     options: {
@@ -707,20 +514,16 @@ export class DiagramConnectionOperationsService {
       this.toastService?.warning(result.errorMessage);
       return;
     }
-
     if (result.createdAssociationClass) {
       options.onApplyAssocClass(result.createdAssociationClass);
       return;
     }
-
     if (result.newConnection) {
       options.onApplyNewConnection(result.newConnection, !!result.isSeqRel);
     }
   }
 
-  /**
-   * Maneja el evento onConnectionReassigned
-   */
+  /** Maneja el evento `onConnectionReassigned`. */
   handleConnectionReassigned(
     event: FReassignConnectionEvent,
     options: {
@@ -737,15 +540,15 @@ export class DiagramConnectionOperationsService {
       options.activeDiagramType,
     );
     if (isOccupied) {
-      this.toastService?.warning('⚠️ No se pueden colocar dos mensajes en la misma posición temporal (fila colineal).');
+      this.toastService?.warning(
+        '⚠️ No se pueden colocar dos mensajes en la misma posición temporal (fila colineal).',
+      );
       return;
     }
     options.onApplyReassigned(updatedList);
   }
 
-  /**
-   * Maneja el evento onSequenceMessageMove
-   */
+  /** Maneja el evento `onSequenceMessageMove`. */
   handleSequenceMessageMove(
     event: { connectionId: string; targetSlot: number },
     options: {

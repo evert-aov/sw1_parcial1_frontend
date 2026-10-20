@@ -1,214 +1,351 @@
 import {
+  ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  OnDestroy,
+  ViewChild,
   inject,
-  signal,
   input,
   output,
-  ElementRef,
-  ViewChild,
-  OnInit,
-  OnDestroy,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
-  heroSparkles,
-  heroChevronRight,
-  heroXMark,
-  heroMicrophone,
-  heroStop,
-  heroClipboard,
   heroCamera,
-  heroPhoto,
+  heroChevronRight,
+  heroClipboard,
+  heroMicrophone,
   heroPaperAirplane,
-  heroClipboardDocumentCheck,
-  heroChatBubbleLeftRight,
-  heroCpuChip,
-  heroArrowPath,
-  heroChevronDown,
-  heroChevronUp,
+  heroPhoto,
+  heroSparkles,
+  heroStop,
 } from '@ng-icons/heroicons/outline';
+import { AiAssistantService, AiResponse } from '../../../../../core/services/ai-assistant.service';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { AiAssistantService, AiResponse, AiModelOption } from '../../../../../core/services/ai-assistant.service';
 import { ToastService } from '../../../../../core/services/toast.service';
-import {
-  UmlClassNode,
-  UmlConnection,
-} from '../../../../../core/models/diagram.model';
-
-export interface AiChatMessage {
-  id: string;
-  sender: 'user' | 'assistant';
-  text: string;
-  imagePreview?: string;
-  audioInfo?: {
-    duration?: number;
-    mimeType?: string;
-  };
-  changesSummary?: string;
-  providerUsed?: 'vertex';
-  modelUsed?: string;
-  timestamp: Date;
-  status?: 'success' | 'clarification' | 'error' | 'pending';
-}
-
 import { TranslatePipe } from '../../../../../core/i18n';
+import { DiagramType, UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
+import {
+  AiChatMessageItem,
+  captureFrameFromVideo,
+  readAudioBlobAsBase64,
+  readImageFileAsBase64,
+} from './ai-assistant-media.util';
 
+/**
+ * Panel lateral de Copilot IA Multimodal (Texto, Visión y Audio con Google Gemini)
+ * para generación y edición asistida de diagramas UML.
+ */
 @Component({
   selector: 'app-ai-assistant-panel',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, NgIconComponent, TranslatePipe],
   providers: [
     provideIcons({
       heroSparkles,
       heroChevronRight,
-      heroXMark,
       heroMicrophone,
       heroStop,
       heroClipboard,
       heroCamera,
       heroPhoto,
       heroPaperAirplane,
-      heroClipboardDocumentCheck,
-      heroChatBubbleLeftRight,
-      heroCpuChip,
-      heroArrowPath,
-      heroChevronDown,
-      heroChevronUp,
     }),
   ],
   templateUrl: './ai-assistant-panel.component.html',
 })
-export class AiAssistantPanelComponent implements OnInit, OnDestroy {
+export class AiAssistantPanelComponent implements OnDestroy {
   readonly authService = inject(AuthService);
-  private readonly aiService = inject(AiAssistantService);
-  private readonly toastService = inject(ToastService);
+  private readonly aiAssistantService = inject(AiAssistantService);
+  private readonly toastService = inject(ToastService, { optional: true });
 
-  @ViewChild('chatScrollContainer') chatScrollContainerRef?: ElementRef<HTMLDivElement>;
-  @ViewChild('imageInput') imageInputRef?: ElementRef<HTMLInputElement>;
-  @ViewChild('webcamVideo') webcamVideoRef?: ElementRef<HTMLVideoElement>;
-
-  // Inputs
   readonly isOpen = input<boolean>(false);
   readonly diagramId = input<string | null>(null);
-  readonly roomCode = input<string | null>(null);
+  readonly roomCode = input<string | null | undefined>(undefined);
   readonly currentNodes = input<UmlClassNode[]>([]);
   readonly currentConnections = input<UmlConnection[]>([]);
-  readonly diagramType = input<string | null>(null);
+  readonly diagramType = input<DiagramType>(DiagramType.CLASS);
 
-  // Outputs
   readonly closePanel = output<void>();
-  readonly applyMutation = output<{
-    nodes: UmlClassNode[];
-    connections: UmlConnection[];
-    summary: string;
-    rawResponse?: any;
-  }>();
+  readonly applyMutation = output<{ nodes: UmlClassNode[]; connections: UmlConnection[] }>();
 
-  // Modelos de IA disponibles y seleccionados por el usuario
-  readonly availableModels = signal<AiModelOption[]>([]);
-  readonly selectedModelId = signal<string>('gemini-2.5-flash');
-  readonly selectedProvider = signal<'vertex'>('vertex');
-  readonly isOllamaAvailable = signal<boolean>(false);
-  readonly isLoadingModels = signal<boolean>(false);
-  readonly isModelDropdownOpen = signal<boolean>(false);
+  @ViewChild('imageInput') imageInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('chatScrollContainer') chatScrollContainerRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('webcamVideo') webcamVideoRef?: ElementRef<HTMLVideoElement>;
 
-  // Estados reactivos internos
-  readonly isAiProcessing = signal<boolean>(false);
   readonly aiPrompt = signal<string>('');
+  readonly isAiProcessing = signal<boolean>(false);
+
   readonly attachedImageBase64 = signal<string | null>(null);
+  readonly attachedImageRawBase64 = signal<string | null>(null);
+  readonly attachedImageMimeType = signal<string>('image/png');
   readonly attachedImageName = signal<string | null>(null);
-  readonly isRecordingAudio = signal<boolean>(false);
-  readonly isVoiceListening = this.isRecordingAudio; // Alias para compatibilidad
-  readonly recordingSeconds = signal<number>(0);
+
   readonly attachedAudioBase64 = signal<string | null>(null);
   readonly attachedAudioMimeType = signal<string>('audio/webm');
   readonly attachedAudioDuration = signal<number>(0);
+
+  readonly isRecordingAudio = signal<boolean>(false);
+  readonly recordingSeconds = signal<number>(0);
   readonly showWebcamModal = signal<boolean>(false);
 
-  // Historial conversacional
-  readonly aiChatMessages = signal<AiChatMessage[]>([
+  readonly aiChatMessages = signal<AiChatMessageItem[]>([
     {
-      id: 'welcome',
-      sender: 'assistant',
-      text: '¡Hola! Soy tu Copilot de Modelado UML impulsado por Google Gemini.\n\nPídeme crear tablas, agregar atributos, conectar entidades, dictar comandos por voz con Gemini Multimodal, o adjuntar un boceto para digitalizarlo automáticamente.',
+      id: 'welcome-msg',
+      sender: 'ai',
+      text: '¡Hola! Soy tu Copilot UML impulsado por Google Gemini. Puedes pedirme crear o modificar clases, relaciones, subir o pegar una foto de tu diagrama, o grabar un comando de voz.',
       timestamp: new Date(),
+      status: 'success',
     },
   ]);
 
   private mediaRecorder: MediaRecorder | null = null;
-  private audioStream: MediaStream | null = null;
   private audioChunks: Blob[] = [];
-  private recordingTimer: any = null;
-  private recordedMimeType = 'audio/webm';
-  private webcamMediaStream: MediaStream | null = null;
+  private recordingTimer: ReturnType<typeof setInterval> | null = null;
+  private webcamStream: MediaStream | null = null;
 
-  ngOnInit(): void {
-    this.loadAvailableModels();
+  /**
+   * Limpia streams de audio o cámara activos al destruir el componente.
+   */
+  ngOnDestroy(): void {
+    this.cancelAudioRecording();
+    this.stopWebcamStream();
   }
 
-  loadAvailableModels(): void {
-    this.isLoadingModels.set(true);
-    this.aiService.getAvailableModels().subscribe({
-      next: (res) => {
-        this.isLoadingModels.set(false);
-        const data = (res as any)?.data || res;
-        const models: AiModelOption[] = data?.models || [];
-        this.availableModels.set(models);
-        this.selectedModelId.set(data?.defaultModel || 'gemini-2.5-flash');
-        this.selectedProvider.set('vertex');
-      },
-      error: () => {
-        this.isLoadingModels.set(false);
-        this.availableModels.set([
-          {
-            id: 'gemini-2.5-flash',
-            name: 'Google Gemini 2.5 Flash',
-            provider: 'vertex',
-            isLocal: false,
-            description: 'Google Vertex AI (Nativo: Texto, Visión y Audio)',
-          },
-        ]);
-        this.selectedModelId.set('gemini-2.5-flash');
-        this.selectedProvider.set('vertex');
-      },
-    });
+  /**
+   * Asigna una sugerencia rápida al campo de texto del prompt.
+   *
+   * @param suggestion Texto sugerido.
+   */
+  setAiSuggestion(suggestion: string): void {
+    this.aiPrompt.set(suggestion);
   }
 
-  toggleModelDropdown(): void {
-    this.isModelDropdownOpen.update((v) => !v);
+  /**
+   * Abre el selector nativo de archivos de imagen.
+   */
+  triggerImageInput(): void {
+    this.imageInputRef?.nativeElement?.click();
   }
 
-  closeModelDropdown(): void {
-    this.isModelDropdownOpen.set(false);
+  /**
+   * Procesa el archivo de imagen seleccionado desde el input de archivos.
+   *
+   * @param event Evento de cambio del input file.
+   */
+  async onImageSelected(event: Event): Promise<void> {
+    const inputEl = event.target as HTMLInputElement;
+    const file = inputEl.files?.[0];
+    if (!file) return;
+    await this.attachImageBlob(file, file.name);
+    inputEl.value = '';
   }
 
-  selectModel(model: AiModelOption): void {
-    this.selectedModelId.set(model.id);
-    this.selectedProvider.set(model.provider);
-    localStorage.setItem('uml_preferred_ai_model', model.id);
-    this.closeModelDropdown();
-  }
-
-  onModelChange(event: Event): void {
-    const target = event.target as HTMLSelectElement;
-    const modelId = target.value;
-    const model = this.availableModels().find((m) => m.id === modelId);
-    if (model) {
-      this.selectModel(model);
+  /**
+   * Intercepta el pegado (`Ctrl+V`) para extraer capturas de imagen desde el portapapeles.
+   *
+   * @param event Evento de portapapeles.
+   */
+  async onPasteImage(event: ClipboardEvent): Promise<void> {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        event.preventDefault();
+        const blob = item.getAsFile();
+        if (blob) {
+          await this.attachImageBlob(blob, `portapapeles-${Date.now()}.png`);
+        }
+        return;
+      }
     }
   }
 
-  getSelectedModel(): AiModelOption | undefined {
-    return this.availableModels().find((m) => m.id === this.selectedModelId());
+  /**
+   * Procesa imágenes soltadas mediante Drag & Drop sobre la caja de texto.
+   *
+   * @param event Evento DragEvent.
+   */
+  async onDropImage(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    const file = event.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      await this.attachImageBlob(file, file.name);
+    }
   }
 
-  ngOnDestroy(): void {
-    this.cancelAudioRecording();
-    this.stopWebcam();
+  /**
+   * Lee el portapapeles del navegador mediante botón directo para adjuntar imágenes o texto.
+   */
+  async pasteFromClipboard(): Promise<void> {
+    try {
+      if (navigator.clipboard?.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imgType = item.types.find((t) => t.startsWith('image/'));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            await this.attachImageBlob(blob, `portapapeles-${Date.now()}.png`);
+            return;
+          }
+        }
+      }
+      if (navigator.clipboard?.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          this.aiPrompt.update((prev) => (prev ? `${prev} ${text}` : text));
+        }
+      }
+    } catch {
+      this.toastService?.warning('Usa Ctrl+V directamente en la caja de texto para pegar tu captura.');
+    }
   }
 
+  /**
+   * Elimina la imagen adjunta actual.
+   */
+  removeAttachedImage(): void {
+    this.attachedImageBase64.set(null);
+    this.attachedImageRawBase64.set(null);
+    this.attachedImageName.set(null);
+  }
+
+  /**
+   * Elimina el audio adjunto actual.
+   */
+  removeAttachedAudio(): void {
+    this.attachedAudioBase64.set(null);
+    this.attachedAudioDuration.set(0);
+  }
+
+  /**
+   * Alterna el estado de grabación de voz con el micrófono del usuario.
+   */
+  async toggleAudioRecording(): Promise<void> {
+    if (this.isRecordingAudio()) {
+      this.stopAudioRecording(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioChunks = [];
+      this.mediaRecorder = new MediaRecorder(stream);
+
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) this.audioChunks.push(e.data);
+      };
+
+      this.mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (this.audioChunks.length === 0) return;
+        const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
+        const blob = new Blob(this.audioChunks, { type: mimeType });
+        try {
+          const base64 = await readAudioBlobAsBase64(blob);
+          this.attachedAudioBase64.set(base64);
+          this.attachedAudioMimeType.set(mimeType);
+          this.attachedAudioDuration.set(Math.max(1, this.recordingSeconds()));
+        } catch {
+          this.toastService?.error('No se pudo procesar el audio grabado.');
+        }
+      };
+
+      this.mediaRecorder.start();
+      this.isRecordingAudio.set(true);
+      this.recordingSeconds.set(0);
+      this.recordingTimer = setInterval(() => {
+        this.recordingSeconds.update((s) => s + 1);
+      }, 1000);
+    } catch {
+      this.toastService?.error('No se pudo acceder al micrófono. Verifica los permisos del navegador.');
+    }
+  }
+
+  /**
+   * Detiene la grabación de audio activa conservando el clip capturado.
+   *
+   * @param _autoSend reservado para compatibilidad con el template.
+   */
+  stopAudioRecording(_autoSend = false): void {
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer);
+      this.recordingTimer = null;
+    }
+    if (this.mediaRecorder && this.isRecordingAudio()) {
+      this.mediaRecorder.stop();
+      this.isRecordingAudio.set(false);
+    }
+  }
+
+  /**
+   * Cancela la grabación de audio descartando los fragmentos grabados.
+   */
+  cancelAudioRecording(): void {
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer);
+      this.recordingTimer = null;
+    }
+    if (this.mediaRecorder && this.isRecordingAudio()) {
+      this.audioChunks = [];
+      this.mediaRecorder.stop();
+      this.isRecordingAudio.set(false);
+    }
+  }
+
+  /**
+   * Abre el modal de cámara web e inicializa el stream de video.
+   */
+  async openWebcamModal(): Promise<void> {
+    this.showWebcamModal.set(true);
+    try {
+      this.webcamStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      setTimeout(() => {
+        if (this.webcamVideoRef?.nativeElement && this.webcamStream) {
+          this.webcamVideoRef.nativeElement.srcObject = this.webcamStream;
+        }
+      }, 50);
+    } catch {
+      this.toastService?.error('No se pudo acceder a la cámara web.');
+      this.showWebcamModal.set(false);
+    }
+  }
+
+  /**
+   * Cierra el modal de cámara web y libera los tracks de video.
+   */
+  closeWebcamModal(): void {
+    this.stopWebcamStream();
+    this.showWebcamModal.set(false);
+  }
+
+  /**
+   * Captura el fotograma actual de la cámara web y lo adjunta al prompt.
+   */
+  captureWebcamPhoto(): void {
+    const videoEl = this.webcamVideoRef?.nativeElement;
+    if (!videoEl) return;
+    const captured = captureFrameFromVideo(videoEl);
+    if (captured) {
+      this.attachedImageBase64.set(captured.dataUrl);
+      this.attachedImageRawBase64.set(captured.rawBase64);
+      this.attachedImageMimeType.set(captured.mimeType);
+      this.attachedImageName.set(captured.fileName);
+    }
+    this.closeWebcamModal();
+  }
+
+  /**
+   * Maneja la tecla Enter para enviar el prompt sin salto de línea.
+   *
+   * @param event Evento de teclado.
+   */
   onAiInputKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -216,436 +353,158 @@ export class AiAssistantPanelComponent implements OnInit, OnDestroy {
     }
   }
 
-  setAiSuggestion(text: string): void {
-    this.aiPrompt.set(text);
-  }
-
-  // -------------------------------------------------------------
-  // PROMPT / ENVÍO DE MENSAJES (TEXTO / VISIÓN / AUDIO MULTIMODAL)
-  // -------------------------------------------------------------
+  /**
+   * Envía la instrucción (texto, imagen o audio) al servicio de IA y emite la mutación resultante.
+   */
   applyAiPrompt(): void {
+    if (this.isAiProcessing()) return;
+
     const promptText = this.aiPrompt().trim();
-    const imageBase64 = this.attachedImageBase64();
-    const audioBase64 = this.attachedAudioBase64();
-    const audioMimeType = this.attachedAudioMimeType();
-    const audioDuration = this.attachedAudioDuration();
+    const imgRaw = this.attachedImageRawBase64();
+    const imgPreview = this.attachedImageBase64();
+    const imgMime = this.attachedImageMimeType();
+    const audioRaw = this.attachedAudioBase64();
+    const audioMime = this.attachedAudioMimeType();
+    const audioDur = this.attachedAudioDuration();
 
-    if ((!promptText && !imageBase64 && !audioBase64) || this.isAiProcessing()) {
-      return;
-    }
+    if (!promptText && !imgRaw && !audioRaw) return;
 
-    let userMessageText = promptText;
-    if (audioBase64 && !promptText) {
-      userMessageText = `🎙️ [Comando de Voz] (${audioDuration ? audioDuration + 's' : 'audio'})`;
-    } else if (audioBase64 && promptText) {
-      userMessageText = `🎙️ [Comando de Voz (${audioDuration ? audioDuration + 's' : 'audio'})]: ${promptText}`;
-    } else if (!promptText && imageBase64) {
-      userMessageText = 'Digitalizar diagrama desde imagen adjunta';
-    }
+    const userMsg: AiChatMessageItem = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      text:
+        promptText ||
+        (imgRaw ? 'Digitalizar diagrama de la imagen adjunta' : 'Comando por voz enviado'),
+      timestamp: new Date(),
+      imagePreview: imgPreview || undefined,
+      audioInfo: audioRaw ? { duration: audioDur, mimeType: audioMime } : undefined,
+    };
 
-    this.aiChatMessages.update((msgs) => [
-      ...msgs,
-      {
-        id: 'msg-' + Date.now(),
-        sender: 'user',
-        text: userMessageText,
-        timestamp: new Date(),
-        imagePreview: imageBase64 || undefined,
-        audioInfo: audioBase64 ? { duration: audioDuration, mimeType: audioMimeType } : undefined,
-      },
-    ]);
+    const sessionHistory = this.aiChatMessages()
+      .slice(-10)
+      .map((m) => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }));
 
+    this.aiChatMessages.update((list) => [...list, userMsg]);
+    this.aiPrompt.set('');
+    this.removeAttachedImage();
+    this.removeAttachedAudio();
     this.isAiProcessing.set(true);
     this.scrollToBottom();
 
-    const dId = this.diagramId() || 'temp_diagram';
-    const rCode = this.roomCode() || undefined;
-    const provider = this.selectedProvider();
-    const model = this.selectedModelId();
-    const dType = this.diagramType() || undefined;
+    const diagId = this.diagramId() || 'local-diagram';
+    const room = this.roomCode() || undefined;
+    const nodes = this.currentNodes().filter((n) => !n.isAnchor);
+    const conns = this.currentConnections();
+    const options = { diagramType: this.diagramType() };
 
-    if (audioBase64) {
-      this.aiService
-        .sendAudioPrompt(
-          audioBase64,
-          audioMimeType,
+    const req$ = audioRaw
+      ? this.aiAssistantService.sendAudioPrompt(
+          audioRaw,
+          audioMime,
           promptText || undefined,
-          dId,
-          rCode,
-          this.currentNodes(),
-          this.currentConnections(),
-          [],
-          { provider: 'vertex', model: 'gemini-2.5-flash', diagramType: dType },
+          diagId,
+          room,
+          nodes,
+          conns,
+          sessionHistory,
+          options,
         )
-        .subscribe({
-          next: (res) => this.handleAiResponse(res, '🎙️ Comando de Voz (Gemini Multimodal)'),
-          error: (err) => this.handleAiError(err),
-        });
-    } else if (imageBase64) {
-      this.aiService
-        .sendVisionPrompt(
-          imageBase64,
-          'image/jpeg',
-          promptText || 'Analiza este boceto/diagrama y digitalízalo como entidades UML completas.',
-          dId,
-          rCode,
-          this.currentNodes(),
-          this.currentConnections(),
-          [],
-          { provider: 'vertex', model: 'gemini-2.5-flash', diagramType: dType },
-        )
-        .subscribe({
-          next: (res) => this.handleAiResponse(res, '📸 Reconocimiento de Boceto / Imagen'),
-          error: (err) => this.handleAiError(err),
-        });
-    } else {
-      this.aiService
-        .sendTextPrompt(
-          promptText,
-          dId,
-          rCode,
-          this.currentNodes(),
-          this.currentConnections(),
-          [],
-          { provider, model, diagramType: dType },
-        )
-        .subscribe({
-          next: (res) => this.handleAiResponse(res, '✨ Copilot IA (Prompt)'),
-          error: (err) => this.handleAiError(err),
-        });
-    }
+      : imgRaw
+        ? this.aiAssistantService.sendVisionPrompt(
+            imgRaw,
+            imgMime,
+            promptText || undefined,
+            diagId,
+            room,
+            nodes,
+            conns,
+            sessionHistory,
+            options,
+          )
+        : this.aiAssistantService.sendTextPrompt(
+            promptText,
+            diagId,
+            room,
+            nodes,
+            conns,
+            sessionHistory,
+            options,
+          );
 
-    this.aiPrompt.set('');
-    this.attachedImageBase64.set(null);
-    this.attachedImageName.set(null);
-    this.attachedAudioBase64.set(null);
-    this.attachedAudioDuration.set(0);
-  }
+    req$.subscribe({
+      next: (res: AiResponse) => {
+        this.isAiProcessing.set(false);
+        const isClarification = res.action === 'clarification' || res.action === 'CLARIFICATION';
+        const aiMsg: AiChatMessageItem = {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: res.message || 'Diagrama actualizado correctamente.',
+          timestamp: new Date(),
+          status: isClarification ? 'clarification' : 'success',
+          changesSummary: res.changesSummary,
+          modelUsed: res.modelUsed,
+        };
+        this.aiChatMessages.update((list) => [...list, aiMsg]);
 
-  private handleAiResponse(res: AiResponse, sourceTag: string): void {
-    this.isAiProcessing.set(false);
-
-    const summary = res.changesSummary || res.message || 'Diagrama actualizado por Copilot IA.';
-    const isClarification = res.action === 'clarification' || res.action === 'clarification_required';
-    const isError = !res.success && !isClarification;
-
-    let status: 'success' | 'clarification' | 'error' = 'success';
-    if (isClarification) status = 'clarification';
-    else if (isError) status = 'error';
-
-    this.aiChatMessages.update((msgs) => [
-      ...msgs,
-      {
-        id: 'msg-res-' + Date.now(),
-        sender: 'assistant',
-        text: res.message || (isClarification ? 'Por favor aclara la solicitud.' : '¡Diagrama modelado con éxito!'),
-        changesSummary: summary,
-        status,
-        providerUsed: res.providerUsed,
-        modelUsed: res.modelUsed,
-        timestamp: new Date(),
-      },
-    ]);
-
-    if (res.success && res.nodes && res.nodes.length > 0) {
-      this.applyMutation.emit({
-        nodes: res.nodes,
-        connections: res.connections || [],
-        summary,
-        rawResponse: res,
-      });
-    }
-
-    this.scrollToBottom();
-  }
-
-  private handleAiError(err: any): void {
-    this.isAiProcessing.set(false);
-    const msg = err.error?.message || err.message || 'Error de conexión con el Asistente IA.';
-
-    this.aiChatMessages.update((msgs) => [
-      ...msgs,
-      {
-        id: 'msg-err-' + Date.now(),
-        sender: 'assistant',
-        text: '❌ Ocurrió un error al procesar tu solicitud: ' + msg,
-        status: 'error',
-        timestamp: new Date(),
-      },
-    ]);
-
-    this.scrollToBottom();
-  }
-
-  // -------------------------------------------------------------
-  // GRABACIÓN DE AUDIO MULTIMODAL DIRECTO (GEMINI 2.5 FLASH)
-  // -------------------------------------------------------------
-  toggleAudioRecording(): void {
-    if (this.isRecordingAudio()) {
-      this.stopAudioRecording();
-    } else {
-      this.startAudioRecording();
-    }
-  }
-
-  // Alias para mantener compatibilidad con plantillas existentes
-  toggleVoiceRecognition(): void {
-    this.toggleAudioRecording();
-  }
-
-  async startAudioRecording(): Promise<void> {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        this.toastService.warning('Tu navegador no soporta captura de audio desde el micrófono (MediaDevices API).');
-        return;
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.audioStream = stream;
-      this.audioChunks = [];
-
-      let mimeType = 'audio/webm';
-      if (typeof MediaRecorder !== 'undefined') {
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-          mimeType = 'audio/webm';
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-          mimeType = 'audio/ogg';
+        if (!isClarification && (res.nodes || res.connections)) {
+          this.applyMutation.emit({
+            nodes: res.nodes || [],
+            connections: res.connections || [],
+          });
         }
-      }
-
-      this.recordedMimeType = mimeType;
-      this.mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-      this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
-        if (event.data && event.data.size > 0) {
-          this.audioChunks.push(event.data);
-        }
-      };
-
-      this.mediaRecorder.start(250);
-      this.isRecordingAudio.set(true);
-      this.recordingSeconds.set(0);
-
-      if (this.recordingTimer) {
-        clearInterval(this.recordingTimer);
-      }
-      this.recordingTimer = setInterval(() => {
-        this.recordingSeconds.update((s) => s + 1);
-      }, 1000);
-    } catch (err: any) {
-      console.error('Error al acceder al micrófono:', err);
-      this.toastService.error('No se pudo acceder al micrófono: ' + (err.message || 'Permiso denegado'));
-      this.isRecordingAudio.set(false);
-    }
-  }
-
-  stopAudioRecording(autoSend = false): void {
-    if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
-      this.isRecordingAudio.set(false);
-      return;
-    }
-
-    if (this.recordingTimer) {
-      clearInterval(this.recordingTimer);
-      this.recordingTimer = null;
-    }
-
-    const duration = this.recordingSeconds();
-
-    this.mediaRecorder.onstop = async () => {
-      this.cleanupAudioStream();
-      const audioBlob = new Blob(this.audioChunks, { type: this.recordedMimeType });
-      const base64 = await this.blobToBase64(audioBlob);
-      const cleanMime = (this.recordedMimeType || 'audio/webm').split(';')[0].trim();
-      this.attachedAudioBase64.set(base64);
-      this.attachedAudioMimeType.set(cleanMime);
-      this.attachedAudioDuration.set(duration);
-      this.isRecordingAudio.set(false);
-
-      if (autoSend) {
-        this.applyAiPrompt();
-      }
-    };
-
-    this.mediaRecorder.stop();
-  }
-
-  cancelAudioRecording(): void {
-    if (this.recordingTimer) {
-      clearInterval(this.recordingTimer);
-      this.recordingTimer = null;
-    }
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.onstop = null;
-      this.mediaRecorder.stop();
-    }
-    this.cleanupAudioStream();
-    this.audioChunks = [];
-    this.isRecordingAudio.set(false);
-    this.recordingSeconds.set(0);
-  }
-
-  removeAttachedAudio(): void {
-    this.attachedAudioBase64.set(null);
-    this.attachedAudioDuration.set(0);
-  }
-
-  private cleanupAudioStream(): void {
-    if (this.audioStream) {
-      this.audioStream.getTracks().forEach((track) => track.stop());
-      this.audioStream = null;
-    }
-  }
-
-  private blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        resolve(reader.result as string);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+        this.scrollToBottom();
+      },
+      error: (err) => {
+        this.isAiProcessing.set(false);
+        const errMsg =
+          err?.error?.message || err?.message || 'Error al procesar la solicitud con el motor IA.';
+        this.aiChatMessages.update((list) => [
+          ...list,
+          {
+            id: `ai-err-${Date.now()}`,
+            sender: 'ai',
+            text: errMsg,
+            timestamp: new Date(),
+            status: 'error',
+          },
+        ]);
+        this.scrollToBottom();
+      },
     });
   }
 
-  // -------------------------------------------------------------
-  // IMÁGENES / VISION (PEGAR, ARRASTRAR, ARCHIVO)
-  // -------------------------------------------------------------
-  triggerImageInput(): void {
-    this.imageInputRef?.nativeElement?.click();
-  }
-
-  onImageSelected(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (file) {
-      this.processImageFile(file);
-    }
-    target.value = '';
-  }
-
-  onPasteImage(event: ClipboardEvent): void {
-    const items = event.clipboardData?.items;
-    if (!items) return;
-
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const blob = items[i].getAsFile();
-        if (blob) {
-          event.preventDefault();
-          this.processImageFile(blob);
-          break;
-        }
-      }
+  /**
+   * Convierte y adjunta un archivo de imagen al estado reactivo del panel.
+   */
+  private async attachImageBlob(file: File | Blob, fallbackName: string): Promise<void> {
+    try {
+      const res = await readImageFileAsBase64(file, fallbackName);
+      this.attachedImageBase64.set(res.dataUrl);
+      this.attachedImageRawBase64.set(res.rawBase64);
+      this.attachedImageMimeType.set(res.mimeType);
+      this.attachedImageName.set(res.fileName);
+    } catch {
+      this.toastService?.error('Error al cargar la imagen seleccionada.');
     }
   }
 
-  pasteFromClipboard(): void {
-    if (navigator.clipboard && navigator.clipboard.read) {
-      navigator.clipboard
-        .read()
-        .then((items) => {
-          for (const item of items) {
-            const imageType = item.types.find((t) => t.startsWith('image/'));
-            if (imageType) {
-              item.getType(imageType).then((blob) => {
-                this.processImageFile(blob);
-              });
-              return;
-            }
-          }
-          this.toastService.warning('No se encontró ninguna imagen en el portapapeles. Copia una captura con Ctrl+C o tecla Impr Pant primero.');
-        })
-        .catch(() => {
-          this.toastService.info('Usa el atajo de teclado Ctrl+V dentro del cuadro de texto para pegar la imagen.');
-        });
-    } else {
-      this.toastService.info('Usa el atajo Ctrl+V dentro del cuadro de texto.');
+  /**
+   * Detiene todos los tracks de video de la cámara web si están activos.
+   */
+  private stopWebcamStream(): void {
+    if (this.webcamStream) {
+      this.webcamStream.getTracks().forEach((t) => t.stop());
+      this.webcamStream = null;
     }
   }
 
-  onDropImage(event: DragEvent): void {
-    event.preventDefault();
-    const files = event.dataTransfer?.files;
-    if (files && files.length > 0 && files[0].type.startsWith('image/')) {
-      this.processImageFile(files[0]);
-    }
-  }
-
-  removeAttachedImage(): void {
-    this.attachedImageBase64.set(null);
-    this.attachedImageName.set(null);
-  }
-
-  private processImageFile(file: File | Blob): void {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      this.attachedImageBase64.set(base64);
-      this.attachedImageName.set((file as File).name || 'captura_pizarra.png');
-    };
-    reader.readAsDataURL(file);
-  }
-
-  // -------------------------------------------------------------
-  // CÁMARA WEB
-  // -------------------------------------------------------------
-  openWebcamModal(): void {
-    this.showWebcamModal.set(true);
-    setTimeout(() => {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices
-          .getUserMedia({ video: { facingMode: 'environment' } })
-          .then((stream) => {
-            this.webcamMediaStream = stream;
-            if (this.webcamVideoRef?.nativeElement) {
-              this.webcamVideoRef.nativeElement.srcObject = stream;
-            }
-          })
-          .catch((err) => {
-            this.toastService.error('No se pudo acceder a la cámara: ' + err.message);
-            this.closeWebcamModal();
-          });
-      }
-    }, 100);
-  }
-
-  closeWebcamModal(): void {
-    this.stopWebcam();
-    this.showWebcamModal.set(false);
-  }
-
-  private stopWebcam(): void {
-    if (this.webcamMediaStream) {
-      this.webcamMediaStream.getTracks().forEach((track) => track.stop());
-      this.webcamMediaStream = null;
-    }
-  }
-
-  captureWebcamPhoto(): void {
-    if (!this.webcamVideoRef?.nativeElement) return;
-    const video = this.webcamVideoRef.nativeElement;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      this.attachedImageBase64.set(dataUrl);
-      this.attachedImageName.set(`foto_camara_${Date.now()}.jpg`);
-    }
-    this.closeWebcamModal();
-  }
-
+  /**
+   * Desplaza automáticamente el contenedor de mensajes al final de la conversación.
+   */
   private scrollToBottom(): void {
     setTimeout(() => {
-      if (this.chatScrollContainerRef?.nativeElement) {
-        const el = this.chatScrollContainerRef.nativeElement;
+      const el = this.chatScrollContainerRef?.nativeElement;
+      if (el) {
         el.scrollTop = el.scrollHeight;
       }
     }, 50);

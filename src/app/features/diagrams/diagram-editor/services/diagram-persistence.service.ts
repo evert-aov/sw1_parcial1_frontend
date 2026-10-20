@@ -4,9 +4,12 @@ import {
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
-  UmlNodeType,
   UmlRelationshipType,
 } from '../../../../core/models/diagram.model';
+import {
+  EXPLICIT_SIZE_NODE_TYPES,
+  UmlNodeNormalizerUtil,
+} from '../utils/uml-node-normalizer.util';
 
 export interface UmlDiagramDraft {
   diagramId: string;
@@ -16,6 +19,11 @@ export interface UmlDiagramDraft {
   timestamp: number;
 }
 
+/**
+ * Servicio de persistencia del editor de diagramas:
+ * gestiona borradores locales en `localStorage`, pipelines de auto-guardado con debounce,
+ * sincronización de salida (`keepalive`) y mapeo de AST del servidor.
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -26,8 +34,9 @@ export class DiagramPersistenceService {
   readonly autoSave$ = new Subject<void>();
   readonly nodeDragEnd$ = new Subject<void>();
 
-  private successTimer: any = null;
+  private successTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Persiste el borrador del diagrama activo en `localStorage`. */
   saveLocalDraft(
     diagramId: string,
     data: {
@@ -49,6 +58,7 @@ export class DiagramPersistenceService {
     } catch (_) {}
   }
 
+  /** Elimina el borrador local almacenado para el diagrama indicado. */
   clearLocalDraft(diagramId: string): void {
     if (!diagramId) return;
     try {
@@ -56,6 +66,7 @@ export class DiagramPersistenceService {
     } catch (_) {}
   }
 
+  /** Obtiene el borrador local de un diagrama si existe. */
   getLocalDraft(diagramId: string): UmlDiagramDraft | null {
     if (!diagramId) return null;
     try {
@@ -67,16 +78,18 @@ export class DiagramPersistenceService {
     return null;
   }
 
+  /** Ejecuta un guardado de emergencia con `keepalive` al cerrar o abandonar la pestaña. */
   flushExitSave(options: {
     diagramId: string | null;
     isReadOnly: boolean;
     hasUnsavedChanges: boolean;
     token?: string | null;
     apiUrl: string;
-    payload: any;
+    payload: unknown;
     onSendDiagramSync?: () => void;
   }): void {
-    const { diagramId, isReadOnly, hasUnsavedChanges, token, apiUrl, payload, onSendDiagramSync } = options;
+    const { diagramId, isReadOnly, hasUnsavedChanges, token, apiUrl, payload, onSendDiagramSync } =
+      options;
     if (!diagramId || isReadOnly || !hasUnsavedChanges) return;
 
     onSendDiagramSync?.();
@@ -95,6 +108,7 @@ export class DiagramPersistenceService {
     } catch (_) {}
   }
 
+  /** Marca el diagrama con cambios pendientes, actualiza el borrador local y dispara el debounce de auto-guardado. */
   markAsUnsaved(
     isReadOnly: boolean,
     diagramId: string | null,
@@ -112,6 +126,7 @@ export class DiagramPersistenceService {
     this.autoSave$.next();
   }
 
+  /** Marca el diagrama como sincronizado y limpia su borrador local. */
   markAsSaved(diagramId?: string | null): void {
     this.hasUnsavedChanges.set(false);
     if (diagramId) {
@@ -119,6 +134,7 @@ export class DiagramPersistenceService {
     }
   }
 
+  /** Muestra temporalmente el indicador visual de guardado exitoso. */
   notifySaveSuccess(durationMs = 2500): void {
     if (this.successTimer) {
       clearTimeout(this.successTimer);
@@ -130,9 +146,7 @@ export class DiagramPersistenceService {
     }, durationMs);
   }
 
-  /**
-   * Ejecuta el guardado del AST en backend con sincronización y notificaciones
-   */
+  /** Ejecuta el guardado del AST en backend con sincronización y notificaciones. */
   executeSaveToBackend(
     diagramService: { saveAst: (id: string, payload: any) => any },
     diagramId: string,
@@ -146,15 +160,13 @@ export class DiagramPersistenceService {
         this.notifySaveSuccess(2500);
         if (!silent) onSaveSuccessSync?.();
       },
-      error: (err: any) => {
+      error: (err: unknown) => {
         console.warn('Auto-save no pudo completarse en servidor (borrador local protegido):', err);
       },
     });
   }
 
-  /**
-   * Ejecuta la carga y resolución de un diagrama desde el backend con manejo de borradores locales
-   */
+  /** Ejecuta la carga y resolución de un diagrama desde el backend con manejo de borradores locales. */
   executeLoadDiagram(
     diagramService: { loadDiagram: (id: string) => any },
     diagramId: string,
@@ -162,36 +174,43 @@ export class DiagramPersistenceService {
       getDefaultColor: (nodeType?: string, stereotype?: string | null) => string;
       normalizeDataType: (type: string) => string;
       normalizeReturnType: (type: string) => string;
-      recalculateSequenceNumbers: (conns: UmlConnection[], preserveOrder?: boolean) => UmlConnection[];
-      onLoaded: (diagram: any, resolved: {
-        nodes: UmlClassNode[];
-        connections: UmlConnection[];
-        defaultLineStyle?: UmlLineStyle;
-        fromDraft: boolean;
-      }) => void;
+      recalculateSequenceNumbers: (
+        conns: UmlConnection[],
+        preserveOrder?: boolean,
+      ) => UmlConnection[];
+      onLoaded: (
+        diagram: any,
+        resolved: {
+          nodes: UmlClassNode[];
+          connections: UmlConnection[];
+          defaultLineStyle?: UmlLineStyle;
+          fromDraft: boolean;
+        },
+      ) => void;
     },
   ): Subscription {
-    return diagramService.loadDiagram(diagramId).subscribe((diagram: any) => {
-      const resolved = this.resolveDiagramData(diagram, {
-        getDefaultColor: options.getDefaultColor,
-        normalizeDataType: options.normalizeDataType,
-        normalizeReturnType: options.normalizeReturnType,
-      });
+    return diagramService.loadDiagram(diagramId).subscribe({
+      next: (diagram: any) => {
+        const resolved = this.resolveDiagramData(diagram, {
+          getDefaultColor: options.getDefaultColor,
+          normalizeDataType: options.normalizeDataType,
+          normalizeReturnType: options.normalizeReturnType,
+        });
 
-      const processedConnections = options.recalculateSequenceNumbers(resolved.connections, true);
+        const processedConnections = options.recalculateSequenceNumbers(resolved.connections, true);
 
-      options.onLoaded(diagram, {
-        nodes: resolved.nodes,
-        connections: processedConnections,
-        defaultLineStyle: resolved.defaultLineStyle,
-        fromDraft: resolved.fromDraft,
-      });
+        options.onLoaded(diagram, {
+          nodes: resolved.nodes,
+          connections: processedConnections,
+          defaultLineStyle: resolved.defaultLineStyle,
+          fromDraft: resolved.fromDraft,
+        });
+      },
+      error: () => {},
     });
   }
 
-  /**
-   * Sincroniza la información del proyecto y sus diagramas si aún no están en memoria
-   */
+  /** Sincroniza la información del proyecto y sus diagramas si aún no están en memoria. */
   syncProjectInfo(
     projectId: string | undefined | null,
     context: {
@@ -212,32 +231,44 @@ export class DiagramPersistenceService {
       });
     }
     if (context.projectDiagramsCount === 0) {
-      context.fetchProjectDiagrams(projectId).subscribe();
+      context.fetchProjectDiagrams(projectId).subscribe({
+        error: () => {},
+      });
     }
   }
 
+  /** Suscribe una acción al flujo de auto-guardado con debounce. */
   setupAutoSave(onAutoSave: () => void, debounceMs = 1000): Subscription {
     return this.autoSave$.pipe(debounceTime(debounceMs)).subscribe(onAutoSave);
   }
 
+  /** Suscribe una acción al fin de arrastre de nodos con debounce. */
   setupNodeDragEnd(onDragEnd: () => void, debounceMs = 600): Subscription {
     return this.nodeDragEnd$.pipe(debounceTime(debounceMs)).subscribe(onDragEnd);
   }
 
+  /** Dispara manualmente un evento de auto-guardado. */
   triggerAutoSave(): void {
     this.autoSave$.next();
   }
 
+  /** Dispara el evento de finalización de arrastre de un nodo. */
   triggerNodeDragEnd(): void {
     this.nodeDragEnd$.next();
   }
 
+  /** Restaura el borrador local si su marca de tiempo es más reciente que la del servidor. */
   restoreDraftIfNewer(
     diagramId: string,
     serverUpdatedAt?: string,
     isSequence?: boolean,
     getDefaultColor?: (nodeType?: string, stereotype?: string | null) => string,
-  ): { restored: boolean; nodes?: UmlClassNode[]; connections?: UmlConnection[]; defaultLineStyle?: UmlLineStyle } {
+  ): {
+    restored: boolean;
+    nodes?: UmlClassNode[];
+    connections?: UmlConnection[];
+    defaultLineStyle?: UmlLineStyle;
+  } {
     const localDraftRaw = localStorage.getItem(`uml_draft_${diagramId}`);
     if (!localDraftRaw) return { restored: false };
 
@@ -246,57 +277,31 @@ export class DiagramPersistenceService {
       const serverUpdated = serverUpdatedAt ? new Date(serverUpdatedAt).getTime() : 0;
       if (draft.timestamp && draft.timestamp > serverUpdated && draft.nodes?.length > 0) {
         const sanitizedDraftNodes: UmlClassNode[] = (draft.nodes || []).map((n: any) => {
-          let nodeType: UmlNodeType | string = n.nodeType || 'class';
-          if (nodeType === 'class') {
-            if (n.id?.startsWith('actor_')) nodeType = 'actor';
-            else if (n.id?.startsWith('use_case_')) nodeType = 'use_case';
-            else if (n.id?.startsWith('boundary_box_')) nodeType = 'boundary_box';
-            else if (n.id?.startsWith('package_')) nodeType = 'package';
-            else if (n.id?.startsWith('boundary_')) nodeType = 'boundary';
-            else if (n.id?.startsWith('control_')) nodeType = 'control';
-            else if (n.id?.startsWith('entity_')) nodeType = 'entity';
-            else if (n.id?.startsWith('component_')) nodeType = 'component';
-            else if (n.id?.startsWith('device_')) nodeType = 'device';
-            else if (n.id?.startsWith('exec_env_') || n.id?.startsWith('exec_')) nodeType = 'executionEnvironment';
-            else if (n.id?.startsWith('lifeline_') || isSequence) nodeType = 'lifeline';
-          }
+          const nodeType = UmlNodeNormalizerUtil.inferNodeType(n, { isSequence });
           let name = n.name || '';
           if (nodeType === 'boundary_box' && (name === 'ClassName' || !name.trim())) {
             name = '.';
           }
-          let nodeColor = n.color;
-          if (
-            (!nodeColor ||
-              ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') &&
-                ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) &&
-            getDefaultColor
-          ) {
-            nodeColor = getDefaultColor(nodeType, n.stereotype);
-          }
-          const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
-          const defaultH =
-            nodeType === 'lifeline'
-              ? 60
-              : nodeType === 'component'
-              ? 70
-              : nodeType === 'device' || nodeType === 'node'
-              ? 140
-              : nodeType === 'executionEnvironment'
-              ? 160
-              : nodeType === 'boundary_box'
-              ? 200
-              : nodeType === 'package'
-              ? 120
-              : undefined;
-          const draftH = nodeType === 'lifeline' ? 60 : (n.height || n.customHeight || defaultH);
+          const nodeColor = UmlNodeNormalizerUtil.resolveNodeColor(
+            n.color,
+            nodeType,
+            n.stereotype,
+            getDefaultColor,
+          );
+          const isExplicitSizeNode = (EXPLICIT_SIZE_NODE_TYPES as readonly string[]).includes(nodeType);
+          const { defaultHeight } = UmlNodeNormalizerUtil.getDefaultDimensions(nodeType);
+          const draftH = nodeType === 'lifeline' ? 60 : n.height || n.customHeight || defaultHeight;
           return {
             ...n,
             nodeType,
             name,
             height: draftH,
             customHeight: n.customHeight || (isExplicitSizeNode ? draftH : undefined),
-            customWidth: n.customWidth || (isExplicitSizeNode ? (n.width || 220) : undefined),
-            isCustomSize: n.isCustomSize !== undefined ? n.isCustomSize : (isExplicitSizeNode || (!!draftH && nodeType === 'class')),
+            customWidth: n.customWidth || (isExplicitSizeNode ? n.width || 220 : undefined),
+            isCustomSize:
+              n.isCustomSize !== undefined
+                ? n.isCustomSize
+                : isExplicitSizeNode || (!!draftH && nodeType === 'class'),
             color: nodeColor,
             stereotype: n.stereotype || null,
           };
@@ -360,6 +365,7 @@ export class DiagramPersistenceService {
     };
   }
 
+  /** Mapea el AST de un diagrama proveniente del backend al modelo local de nodos y conexiones. */
   mapServerDiagramToLocal(
     diagram: any,
     getDefaultColor?: (nodeType?: string, stereotype?: string | null) => string,
@@ -369,101 +375,38 @@ export class DiagramPersistenceService {
     const isSequence = diagram.type === 'sequence';
 
     const mappedNodes: UmlClassNode[] = (diagram.nodes || []).map((n: any) => {
-      let nodeType: UmlNodeType | string = (n.nodeType as any) || (diagram.type === 'package' ? 'package' : (isSequence ? 'lifeline' : 'class'));
-      if (nodeType === 'class') {
-        if (n.id.startsWith('actor_')) {
-          nodeType = 'actor';
-        } else if (n.id.startsWith('use_case_')) {
-          nodeType = 'use_case';
-        } else if (n.id.startsWith('boundary_box_')) {
-          nodeType = 'boundary_box';
-        } else if (n.id.startsWith('package_')) {
-          nodeType = 'package';
-        } else if (n.id.startsWith('boundary_')) {
-          nodeType = 'boundary';
-        } else if (n.id.startsWith('control_')) {
-          nodeType = 'control';
-        } else if (n.id.startsWith('entity_')) {
-          nodeType = 'entity';
-        } else if (n.id.startsWith('component_')) {
-          nodeType = 'component';
-        } else if (n.id.startsWith('device_')) {
-          nodeType = 'device';
-        } else if (n.id.startsWith('exec_env_') || n.id.startsWith('exec_')) {
-          nodeType = 'executionEnvironment';
-        } else if (n.id.startsWith('lifeline_')) {
-          nodeType = 'lifeline';
-        } else if (isSequence) {
-          nodeType = 'lifeline';
-        }
-      }
+      const nodeType = UmlNodeNormalizerUtil.inferNodeType(n, {
+        isSequence,
+        diagramType: diagram.type,
+      });
       const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
       const isLifeline = nodeType === 'lifeline';
-      const isExplicitSizeNode = ['component', 'device', 'node', 'executionEnvironment', 'boundary_box', 'package'].includes(nodeType);
+      const isExplicitSizeNode = (EXPLICIT_SIZE_NODE_TYPES as readonly string[]).includes(nodeType);
       const hasExplicitDbHeight = !!(n.height && n.height > 0);
-      const hasCustomFlag = !!n.isCustomSize || (!!n.customHeight && n.customHeight > 0) || (!!n.customWidth && n.customWidth > 0);
-      const isManuallyResized = hasCustomFlag || isExplicitSizeNode || (hasExplicitDbHeight && (nodeType === 'class' || isBce || nodeType === 'actor' || nodeType === 'use_case'));
+      const hasCustomFlag =
+        !!n.isCustomSize ||
+        (!!n.customHeight && n.customHeight > 0) ||
+        (!!n.customWidth && n.customWidth > 0);
+      const isManuallyResized =
+        hasCustomFlag ||
+        isExplicitSizeNode ||
+        (hasExplicitDbHeight &&
+          (nodeType === 'class' || isBce || nodeType === 'actor' || nodeType === 'use_case'));
 
       let nodeName = n.name || '';
       if (nodeType === 'boundary_box' && (nodeName === 'ClassName' || !nodeName.trim())) {
         nodeName = '.';
       }
 
-      let nodeColor = n.color;
-      if (
-        (!nodeColor ||
-          ((nodeColor === '#FFFDDD' || nodeColor === '#FDFAF3') &&
-            ['device', 'executionEnvironment', 'component', 'node', 'boundary_box', 'boundary', 'control', 'entity', 'lifeline', 'actor', 'use_case', 'package'].includes(nodeType))) &&
-        getDefaultColor
-      ) {
-        nodeColor = getDefaultColor(nodeType, n.stereotype);
-      }
-
-      const defaultWidth =
-        nodeType === 'actor'
-          ? 65
-          : nodeType === 'use_case'
-          ? 140
-          : nodeType === 'boundary_box'
-          ? 280
-          : nodeType === 'package'
-          ? 200
-          : nodeType === 'component'
-          ? 190
-          : nodeType === 'device'
-          ? 230
-          : nodeType === 'executionEnvironment'
-          ? 240
-          : nodeType === 'node'
-          ? 230
-          : isBce
-          ? 90
-          : isLifeline
-          ? 140
-          : 220;
+      const nodeColor = UmlNodeNormalizerUtil.resolveNodeColor(
+        n.color,
+        nodeType,
+        n.stereotype,
+        getDefaultColor,
+      );
+      const { defaultWidth, defaultHeight } = UmlNodeNormalizerUtil.getDefaultDimensions(nodeType);
       const resolvedWidth = n.width || defaultWidth;
-
-      const defaultHeight =
-        isLifeline
-          ? 60
-          : isBce
-          ? 95
-          : nodeType === 'actor'
-          ? 95
-          : nodeType === 'boundary_box'
-          ? 200
-          : nodeType === 'component'
-          ? 70
-          : nodeType === 'device'
-          ? 140
-          : nodeType === 'executionEnvironment'
-          ? 160
-          : nodeType === 'node'
-          ? 140
-          : nodeType === 'package'
-          ? 120
-          : undefined;
-      const resolvedHeight = isLifeline ? 60 : (n.height || defaultHeight);
+      const resolvedHeight = isLifeline ? 60 : n.height || defaultHeight;
 
       return {
         id: n.id,
@@ -471,8 +414,8 @@ export class DiagramPersistenceService {
         position: { x: n.positionX, y: n.positionY },
         width: resolvedWidth,
         height: resolvedHeight,
-        customWidth: isManuallyResized ? (n.customWidth || resolvedWidth) : undefined,
-        customHeight: isManuallyResized ? (n.customHeight || resolvedHeight) : undefined,
+        customWidth: isManuallyResized ? n.customWidth || resolvedWidth : undefined,
+        customHeight: isManuallyResized ? n.customHeight || resolvedHeight : undefined,
         isCustomSize: isManuallyResized,
         color: nodeColor,
         isAnchor: n.isAnchor,
@@ -507,8 +450,8 @@ export class DiagramPersistenceService {
       type: c.type as UmlRelationshipType,
       lineStyle: (c.lineStyle as UmlLineStyle) || 'segment',
       name: c.name || undefined,
-      sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
-      targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),
+      sourceMultiplicity: isSequence ? '' : c.sourceMultiplicity || '',
+      targetMultiplicity: isSequence ? '' : c.targetMultiplicity || '',
       assocAnchorNodeId: c.assocAnchorNodeId || undefined,
       messages: c.messages || [],
     }));

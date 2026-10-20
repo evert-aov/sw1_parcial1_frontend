@@ -143,7 +143,7 @@ export class ProjectListComponent implements OnInit {
   readonly editCustomErrorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.projectService.loadProjects().subscribe();
+    this.projectService.loadProjects().subscribe({ error: () => {} });
   }
 
   // --- CREAR PROYECTO ---
@@ -267,10 +267,12 @@ export class ProjectListComponent implements OnInit {
     this.projectService.addMember(project.id, this.addMemberForm.value).subscribe({
       next: () => {
         this.addMemberForm.reset({ email: '', role: 'EDITOR' });
-        this.projectService.getProject(project.id).subscribe((p) => {
-          this.selectedProjectForMembers.set(p);
+        this.projectService.getProject(project.id).subscribe({
+          next: (p) => this.selectedProjectForMembers.set(p),
+          error: () => {},
         });
       },
+      error: () => {},
     });
   }
 
@@ -287,10 +289,12 @@ export class ProjectListComponent implements OnInit {
     if (confirmed) {
       this.projectService.removeMember(project.id, userId).subscribe({
         next: () => {
-          this.projectService.getProject(project.id).subscribe((p) => {
-            this.selectedProjectForMembers.set(p);
+          this.projectService.getProject(project.id).subscribe({
+            next: (p) => this.selectedProjectForMembers.set(p),
+            error: () => {},
           });
         },
+        error: () => {},
       });
     }
   }
@@ -301,10 +305,12 @@ export class ProjectListComponent implements OnInit {
 
     this.projectService.updateMemberRole(project.id, userId, { role: newRole }).subscribe({
       next: () => {
-        this.projectService.getProject(project.id).subscribe((p) => {
-          this.selectedProjectForMembers.set(p);
+        this.projectService.getProject(project.id).subscribe({
+          next: (p) => this.selectedProjectForMembers.set(p),
+          error: () => {},
         });
       },
+      error: () => {},
     });
   }
 
@@ -318,7 +324,7 @@ export class ProjectListComponent implements OnInit {
     });
 
     if (confirmed) {
-      this.projectService.deleteProject(project.id).subscribe();
+      this.projectService.deleteProject(project.id).subscribe({ error: () => {} });
     }
   }
 

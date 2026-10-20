@@ -1,302 +1,222 @@
 import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
-  signal,
-  ViewChild,
-  OnInit,
+  ElementRef,
   OnDestroy,
-  HostListener,
-  inject,
+  OnInit,
+  ViewChild,
   computed,
+  inject,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
+  FCanvasComponent,
   FCreateConnectionEvent,
-  FReassignConnectionEvent,
   FMoveNodesEvent,
+  FReassignConnectionEvent,
   FSelectionChangeEvent,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { DIAGRAM_EDITOR_ICONS } from './diagram-editor.icons';
-
-import { AuthService } from '../../../core/services/auth.service';
-import { DiagramService } from '../../../core/services/diagram.service';
-import { ProjectService } from '../../../core/services/project.service';
-import { Project } from '../../../core/models/project.model';
-import { CollaborationService, NodeLock } from '../../../core/services/collaboration.service';
-import { AiAssistantService } from '../../../core/services/ai-assistant.service';
-import { XmiService } from '../../../core/services/xmi.service';
-import { BmpExportService } from '../../../core/services/bmp-export.service';
-import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
-import { ToastService } from '../../../core/services/toast.service';
+import { environment } from '../../../../environments/environment';
 import {
   DiagramType,
-  UmlStereotype,
-  UmlRelationshipType,
-  UmlLineStyle,
+  SaveDiagramAstRequest,
   UmlClassNode,
   UmlConnection,
+  UmlLineStyle,
   UmlMessage,
-  SaveDiagramAstRequest,
-  UML_RELATION_TYPES,
-  UML_LINE_STYLES,
+  UmlRelationshipType,
 } from '../../../core/models/diagram.model';
-
-import { environment } from '../../../../environments/environment';
-import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
-import { DiagramSidebarComponent } from './components/diagram-sidebar/diagram-sidebar.component';
-import { DiagramCanvasComponent, DiagramCanvasViewState } from './components/diagram-canvas/diagram-canvas.component';
-import { DiagramStatusbarComponent } from './components/diagram-statusbar/diagram-statusbar.component';
+import { Project, ProjectRole } from '../../../core/models/project.model';
+import { AuthService } from '../../../core/services/auth.service';
+import { CollaborationService, NodeLock } from '../../../core/services/collaboration.service';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
+import { DiagramService } from '../../../core/services/diagram.service';
+import { ProjectService } from '../../../core/services/project.service';
+import { ThemeService } from '../../../core/services/theme.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { XmiService } from '../../../core/services/xmi.service';
+import { TranslatePipe, TranslationService } from '../../../core/i18n';
 import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
-import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
-import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
-import { EditNodeModalComponent } from './components/edit-node-modal/edit-node-modal.component';
-import { EditConnectionModalComponent } from './components/edit-connection-modal/edit-connection-modal.component';
-import { JsonModalComponent } from './components/json-modal/json-modal.component';
 import { CreateDiagramModalComponent } from './components/create-diagram-modal/create-diagram-modal.component';
-import { DiagramTabsComponent, DiagramTab } from './components/diagram-tabs/diagram-tabs.component';
-import { DiagramContextMenuComponent, DiagramContextMenuState } from './components/diagram-context-menu/diagram-context-menu.component';
-import { DiagramHistoryService, DiagramHistorySnapshot } from './services/diagram-history.service';
+import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
+import { DiagramCanvasComponent } from './components/diagram-canvas/diagram-canvas.component';
+import { DiagramContextMenuComponent } from './components/diagram-context-menu/diagram-context-menu.component';
+import { DiagramSidebarComponent } from './components/diagram-sidebar/diagram-sidebar.component';
+import { DiagramStatusbarComponent } from './components/diagram-statusbar/diagram-statusbar.component';
+import { DiagramTabsComponent } from './components/diagram-tabs/diagram-tabs.component';
+import { EditConnectionModalComponent } from './components/edit-connection-modal/edit-connection-modal.component';
+import { EditNodeModalComponent } from './components/edit-node-modal/edit-node-modal.component';
+import { JsonModalComponent } from './components/json-modal/json-modal.component';
+import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
+import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
+import { DiagramAiSyncService } from './services/diagram-ai-sync.service';
+import { AlignmentDirection, DiagramAlignmentService, DistributionDirection } from './services/diagram-alignment.service';
+import { DiagramAssemblyConnectionService } from './services/diagram-assembly-connection.service';
+import { DiagramCanvasInteractionService } from './services/diagram-canvas-interaction.service';
 import { DiagramClipboardService } from './services/diagram-clipboard.service';
-import { DiagramAlignmentService } from './services/diagram-alignment.service';
-import { DiagramNodeFactoryService } from './services/diagram-node-factory.service';
-import { DiagramNodeOperationsService, DropNodePayload } from './services/diagram-node-operations.service';
-import { DiagramExportService } from './services/diagram-export.service';
-import { DiagramImportService, DiagramImportResult } from './services/diagram-import.service';
+import { DiagramCollaborationCoordinatorService } from './services/diagram-collaboration-coordinator.service';
 import { DiagramConnectionLayoutService } from './services/diagram-connection-layout.service';
 import { DiagramConnectionOperationsService } from './services/diagram-connection-operations.service';
-import { DiagramSelectionService } from './services/diagram-selection.service';
-import { DiagramTabManagerService } from './services/diagram-tab-manager.service';
-import { DiagramAiSyncService, PREDEFINED_DATA_TYPES, PREDEFINED_RETURN_TYPES } from './services/diagram-ai-sync.service';
-import { DiagramHotkeysService } from './services/diagram-hotkeys.service';
-import { DiagramViewportService } from './services/diagram-viewport.service';
-import { DiagramModalService } from './services/diagram-modal.service';
-import { DiagramPersistenceService } from './services/diagram-persistence.service';
 import { DiagramContainmentService } from './services/diagram-containment.service';
-import { DiagramCanvasInteractionService } from './services/diagram-canvas-interaction.service';
-import { DiagramCollaborationCoordinatorService } from './services/diagram-collaboration-coordinator.service';
 import { DiagramContextMenuService } from './services/diagram-context-menu.service';
+import { DiagramEditorContextUtil } from './services/diagram-editor-context.util';
+import { DiagramExportService } from './services/diagram-export.service';
+import { DiagramHistoryService } from './services/diagram-history.service';
+import { DiagramHotkeysService } from './services/diagram-hotkeys.service';
+import { DiagramImportResult, DiagramImportService } from './services/diagram-import.service';
+import { DiagramModalService } from './services/diagram-modal.service';
+import { DiagramNodeFactoryService } from './services/diagram-node-factory.service';
+import { DiagramNodeOperationsService } from './services/diagram-node-operations.service';
+import { DiagramNodeResizeService } from './services/diagram-node-resize.service';
+import { DiagramPersistenceService } from './services/diagram-persistence.service';
+import { DiagramSelectionService } from './services/diagram-selection.service';
+import { DiagramSequenceActivationService } from './services/diagram-sequence-activation.service';
+import { DiagramTabManagerService } from './services/diagram-tab-manager.service';
 import { DiagramToolbarService } from './services/diagram-toolbar.service';
+import { DiagramViewportService } from './services/diagram-viewport.service';
 import {
-  recalculateSequenceNumbers as recalculateSequenceNumbersLogic,
-  generateNextSequenceMessage as generateNextSequenceMessageLogic,
-} from './components/diagram-canvas/nodes';
-import { TranslatePipe, TranslationService } from '../../../core/i18n';
-import {
-  getDefaultColorForNodeType,
-  getDynamicNodeWidth,
-  getNodeWidth,
-  getNodeHeight,
-  computeBoardWidth,
-  computeBoardHeight,
+  getDefaultColorForNodeType as getDefaultColorForNodeTypeUtil,
+  getNodeHeight as getNodeHeightUtil,
+  getNodeWidth as getNodeWidthUtil,
 } from './utils/node-metrics.util';
 import { resolveUserRoleInProject } from './utils/project-role.util';
+import { UmlNodeNormalizerUtil } from './utils/uml-node-normalizer.util';
 
+/** Estructura de proyecto exportable/importable en formato JSON. */
 export interface UmlDiagramProject {
   version: string;
   name: string;
-  createdDate: string;
-  defaultLineStyle: UmlLineStyle;
+  defaultLineStyle?: UmlLineStyle;
   nodes: UmlClassNode[];
   connections: UmlConnection[];
 }
 
-export type { DiagramHistorySnapshot, DiagramTab, DiagramContextMenuState };
-
+/**
+ * Componente principal del Editor de Diagramas UML.
+ * Orquesta los servicios especializados de lienzo, persistencia, historial,
+ * colaboración en tiempo real y sincronización con el asistente de IA.
+ */
 @Component({
-  standalone: true,
   selector: 'app-diagram-editor',
+  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
     NgIconComponent,
+    TranslatePipe,
     DiagramAppbarComponent,
+    DiagramTabsComponent,
     DiagramSidebarComponent,
     DiagramCanvasComponent,
     DiagramStatusbarComponent,
     AiAssistantPanelComponent,
-    UserProfileModalComponent,
-    SpringBootModalComponent,
+    DiagramContextMenuComponent,
     EditNodeModalComponent,
     EditConnectionModalComponent,
     JsonModalComponent,
+    SpringBootModalComponent,
     CreateDiagramModalComponent,
-    DiagramTabsComponent,
-    DiagramContextMenuComponent,
-    TranslatePipe,
+    UserProfileModalComponent,
   ],
   providers: [provideIcons(DIAGRAM_EDITOR_ICONS)],
   templateUrl: './diagram-editor.component.html',
   styleUrl: './diagram-editor.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(window:keydown)': 'onKeyDown($event)',
+    '(window:mousedown)': 'onWindowMouseDown()',
+    '(window:mouseup)': 'onWindowMouseUp()',
+    '(window:beforeunload)': 'onBeforeUnload()',
+  },
 })
 export class DiagramEditorComponent implements OnInit, OnDestroy {
-  readonly authService = inject(AuthService);
+  readonly route = inject(ActivatedRoute);
+  readonly router = inject(Router);
+  readonly cdr = inject(ChangeDetectorRef);
   readonly diagramService = inject(DiagramService);
   readonly projectService = inject(ProjectService);
-  readonly collaborationService = inject(CollaborationService);
-  readonly aiAssistantService = inject(AiAssistantService);
-  readonly xmiService = inject(XmiService);
-  readonly bmpExportService = inject(BmpExportService);
+  readonly authService = inject(AuthService);
+  readonly themeService = inject(ThemeService);
   readonly translationService = inject(TranslationService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly confirmDialogService = inject(ConfirmDialogService);
-  readonly toastService = inject(ToastService);
-  readonly diagramHistoryService = inject(DiagramHistoryService);
-  readonly diagramClipboardService = inject(DiagramClipboardService);
-  readonly diagramNodeFactoryService = inject(DiagramNodeFactoryService, { optional: true }) ?? new DiagramNodeFactoryService();
-  readonly diagramNodeOperationsService = inject(DiagramNodeOperationsService, { optional: true }) ?? new DiagramNodeOperationsService();
-  readonly diagramExportService = inject(DiagramExportService, { optional: true }) ?? new DiagramExportService();
-  readonly diagramAlignmentService = inject(DiagramAlignmentService, { optional: true }) ?? new DiagramAlignmentService();
-  readonly diagramConnectionLayoutService = inject(DiagramConnectionLayoutService, { optional: true }) ?? new DiagramConnectionLayoutService();
-  readonly diagramConnectionOperationsService = inject(DiagramConnectionOperationsService, { optional: true }) ?? new DiagramConnectionOperationsService();
-  readonly diagramSelectionService = inject(DiagramSelectionService, { optional: true }) ?? new DiagramSelectionService();
-  readonly diagramTabManagerService = inject(DiagramTabManagerService, { optional: true }) ?? new DiagramTabManagerService();
-  readonly diagramAiSyncService = inject(DiagramAiSyncService, { optional: true }) ?? new DiagramAiSyncService();
-  readonly diagramImportService = inject(DiagramImportService, { optional: true }) ?? new DiagramImportService();
-  readonly diagramHotkeysService = inject(DiagramHotkeysService, { optional: true }) ?? new DiagramHotkeysService();
-  readonly diagramViewportService = inject(DiagramViewportService, { optional: true }) ?? new DiagramViewportService();
-  readonly diagramModalService = inject(DiagramModalService, { optional: true }) ?? new DiagramModalService();
-  readonly diagramPersistenceService = inject(DiagramPersistenceService, { optional: true }) ?? new DiagramPersistenceService();
-  readonly diagramContainmentService = inject(DiagramContainmentService, { optional: true }) ?? new DiagramContainmentService();
-  readonly diagramCanvasInteractionService = inject(DiagramCanvasInteractionService, { optional: true }) ?? new DiagramCanvasInteractionService(this.containmentService);
-  readonly diagramCollaborationCoordinatorService = inject(DiagramCollaborationCoordinatorService, { optional: true }) ?? new DiagramCollaborationCoordinatorService();
-  readonly diagramContextMenuService = inject(DiagramContextMenuService, { optional: true }) ?? new DiagramContextMenuService(this.selectionService);
-  readonly diagramToolbarService = inject(DiagramToolbarService, { optional: true }) ?? new DiagramToolbarService(
-    this.alignmentService,
-    this.selectionService,
-    this.nodeOps,
-  );
+  readonly collaborationService = inject(CollaborationService);
+  readonly confirmDialog = inject(ConfirmDialogService);
+  readonly xmiService = inject(XmiService, { optional: true });
+  readonly toastService = inject(ToastService, { optional: true });
 
-  private get nodeFactory(): DiagramNodeFactoryService { return this.diagramNodeFactoryService || new DiagramNodeFactoryService(); }
-  private get nodeOps(): DiagramNodeOperationsService { return this.diagramNodeOperationsService || new DiagramNodeOperationsService(this.nodeFactory); }
-  private get exportService(): DiagramExportService { return this.diagramExportService || new DiagramExportService(); }
-  private get importService(): DiagramImportService { return this.diagramImportService || new DiagramImportService(); }
-  private get alignmentService(): DiagramAlignmentService { return this.diagramAlignmentService || new DiagramAlignmentService(); }
-  private get connectionLayoutService(): DiagramConnectionLayoutService { return this.diagramConnectionLayoutService || new DiagramConnectionLayoutService(); }
-  private get connectionOps(): DiagramConnectionOperationsService { return this.diagramConnectionOperationsService || new DiagramConnectionOperationsService(this.connectionLayoutService); }
-  private get selectionService(): DiagramSelectionService { return this.diagramSelectionService || new DiagramSelectionService(); }
-  private get tabManager(): DiagramTabManagerService { return this.diagramTabManagerService || new DiagramTabManagerService(); }
-  private get aiSyncService(): DiagramAiSyncService { return this.diagramAiSyncService || new DiagramAiSyncService(); }
-  private get hotkeysService(): DiagramHotkeysService { return this.diagramHotkeysService || new DiagramHotkeysService(); }
-  private get viewportService(): DiagramViewportService { return this.diagramViewportService || new DiagramViewportService(); }
-  private get modalService(): DiagramModalService { return this.diagramModalService || new DiagramModalService(); }
-  private get persistenceService(): DiagramPersistenceService { return this.diagramPersistenceService || new DiagramPersistenceService(); }
-  private get containmentService(): DiagramContainmentService { return this.diagramContainmentService || new DiagramContainmentService(); }
-  private get interactionService(): DiagramCanvasInteractionService { return this.diagramCanvasInteractionService || new DiagramCanvasInteractionService(this.containmentService); }
-  private get collabCoordinator(): DiagramCollaborationCoordinatorService { return this.diagramCollaborationCoordinatorService || new DiagramCollaborationCoordinatorService(); }
-  private get contextMenuService(): DiagramContextMenuService { return this.diagramContextMenuService || new DiagramContextMenuService(this.selectionService); }
-  private get toolbarService(): DiagramToolbarService {
-    return this.diagramToolbarService || new DiagramToolbarService(
-      this.alignmentService,
-      this.selectionService,
-      this.nodeOps,
-    );
+  readonly viewportService = inject(DiagramViewportService);
+  readonly historyService = inject(DiagramHistoryService);
+  readonly selectionService = inject(DiagramSelectionService);
+  readonly clipboardService = inject(DiagramClipboardService);
+  readonly alignmentService = inject(DiagramAlignmentService);
+  readonly modalService = inject(DiagramModalService);
+  readonly contextMenuService = inject(DiagramContextMenuService);
+  readonly hotkeysService = inject(DiagramHotkeysService);
+  readonly nodeFactory = inject(DiagramNodeFactoryService);
+  readonly nodeResizeService = inject(DiagramNodeResizeService);
+  readonly containmentService = inject(DiagramContainmentService);
+  readonly assemblyConnectionService = inject(DiagramAssemblyConnectionService);
+  readonly sequenceActivationService = inject(DiagramSequenceActivationService);
+  readonly connectionLayoutService = inject(DiagramConnectionLayoutService);
+  readonly aiSyncService = inject(DiagramAiSyncService);
+  readonly persistenceService = inject(DiagramPersistenceService);
+  readonly exportService = inject(DiagramExportService);
+  readonly importService = inject(DiagramImportService);
+  readonly tabManager = inject(DiagramTabManagerService);
+  readonly collabCoordinator = inject(DiagramCollaborationCoordinatorService);
+  readonly nodeOps = inject(DiagramNodeOperationsService);
+  readonly connectionOps = inject(DiagramConnectionOperationsService);
+  readonly canvasInteraction = inject(DiagramCanvasInteractionService);
+  readonly toolbarService = inject(DiagramToolbarService);
+
+  @ViewChild(DiagramCanvasComponent) diagramCanvas?: DiagramCanvasComponent;
+
+  /** Obtiene la referencia al lienzo FCanvasComponent subyacente. */
+  get fCanvas(): FCanvasComponent | undefined {
+    return this.diagramCanvas?.canvas;
   }
 
-  // Lista reactiva de diagramas del proyecto para el Explorador por tipo
-  readonly projectDiagrams = this.diagramService.projectDiagrams;
+  /** Obtiene la referencia al elemento nativo de exportación del lienzo. */
+  get canvasExportArea(): ElementRef<HTMLElement> | undefined {
+    return this.diagramCanvas?.boardElementRef;
+  }
 
-  // Indica si hay 2 o más usuarios editando concurrentemente en la sala
-  readonly hasMultipleActiveUsers = computed(() => {
-    return this.collabCoordinator.isMultiUserEditing();
-  });
-
-  @ViewChild('diagramCanvas') diagramCanvas?: DiagramCanvasComponent;
-  @ViewChild(DiagramSidebarComponent) diagramSidebar?: DiagramSidebarComponent;
-
-  // Contexto del diagrama y proyecto
-  currentDiagramId = signal<string | null>(null);
-  currentProjectId = signal<string | null>(null);
-  currentProject = signal<Project | null>(null);
+  readonly DiagramType = DiagramType;
+  readonly currentProjectId = signal<string | null>(null);
+  readonly currentProject = signal<Project | null>(null);
+  readonly currentDiagramId = signal<string | null>(null);
   readonly currentDiagramName = this.tabManager.currentDiagramName;
-  readonly saveSuccessMessage = this.persistenceService.saveSuccessMessage;
-  readonly hasUnsavedChanges = this.persistenceService.hasUnsavedChanges;
-  readonly zoomLevel = this.viewportService.zoomLevel;
-
-  // Notificaciones flotantes unificadas con ToastService
-  readonly quickToast = signal<string | null>(null);
-
-  showQuickToast(msg: string): void {
-    if (this.toastService?.info) {
-      this.toastService.info(msg);
-    }
-  }
-
-  /**
-   * Ejecuta una mutación atómica de estado en el diagrama:
-   * 1. Registra snapshot en el historial Undo/Redo (si aplica).
-   * 2. Actualiza los signals inmutables `nodes` y/o `connections`.
-   * 3. Marca el diagrama con cambios sin guardar (`hasUnsavedChanges`).
-   * 4. Recalcula automáticamente puertos geométricos y anclas de conexión.
-   * 5. Emite evento de sincronización en tiempo real vía WebSocket.
-   * 6. Opcionalmente solicita redibujado de la capa de conexiones del canvas.
-   */
-  private commitDiagramMutation(options: {
-    nodes?: UmlClassNode[];
-    connections?: UmlConnection[];
-    action: string;
-    recordHistory?: boolean;
-    redrawCanvas?: boolean;
-  }): void {
-    if (options.recordHistory !== false) {
-      this.pushSnapshot();
-    }
-    if (options.nodes) {
-      this.nodes.set(options.nodes);
-    }
-    if (options.connections) {
-      this.connections.set(options.connections);
-    }
-    this.markAsUnsaved();
-    this.updateConnectionEndpoints();
-    this.collabCoordinator.sendDiagramSync(
-      this.nodes(),
-      this.connections(),
-      options.action,
-      this.defaultLineStyle(),
-    );
-    if (options.redrawCanvas) {
-      this.diagramCanvas?.redraw();
-    }
-  }
-
-  // Menú contextual flotante (clic derecho)
-  readonly contextMenu = this.contextMenuService.contextMenu;
-
-  hasClipboardContent(): boolean {
-    return this.diagramClipboardService.hasClipboardContent();
-  }
-
-  // Tipos de Diagrama & Paneles (Arquitectura Extensible para Casos de Uso, Secuencia, etc.)
   readonly activeDiagramType = signal<DiagramType>(DiagramType.CLASS);
-
-  // Pestañas abiertas en el lienzo (Multi-diagram tabs)
-  readonly openTabs = this.tabManager.openTabs;
-
-  // Marcar cambios pendientes y actualizar borrador local
-  markAsUnsaved(): void {
-    this.persistenceService.markAsUnsaved(
-      this.isReadOnly(),
-      this.currentDiagramId(),
-      {
-        nodes: this.nodes(),
-        connections: this.connections(),
-        defaultLineStyle: this.defaultLineStyle(),
-      },
-    );
-  }
-
-  private clearLocalDraft(diagramId: string): void { this.persistenceService.clearLocalDraft(diagramId); }
-
-  // Rol del usuario actual en el proyecto
-  currentUserRole = signal<string>('EDITOR');
+  readonly currentUserRole = signal<ProjectRole>('OWNER');
   readonly isReadOnly = computed(() => this.currentUserRole() === 'VIEWER');
 
-  // Modo Seleccionar / Mover o Crear Relación
-  selectedRelationType = signal<UmlRelationshipType | null>(null);
-  selectedSourceNodeId = signal<string | null>(null);
+  readonly nodes = signal<UmlClassNode[]>([]);
+  readonly connections = signal<UmlConnection[]>([]);
+  readonly defaultLineStyle = signal<UmlLineStyle>('segment');
+  readonly selectedRelationType = signal<UmlRelationshipType | null>(null);
+  readonly selectedSourceNodeId = signal<string | null>(null);
+  readonly tempCursorPos = signal<{ x: number; y: number } | null>(null);
+
+  readonly isSidebarOpen = signal<boolean>(true);
+  readonly isLeftSidebarCollapsed = signal<boolean>(false);
+  readonly isLeftToolbarCollapsed = signal<boolean>(false);
+  readonly isAiPanelOpen = signal<boolean>(false);
+  readonly toastMessage = signal<string>('');
+  readonly isExportingXmi = signal<boolean>(false);
+  readonly isImportingXmi = signal<boolean>(false);
+
+  readonly zoomLevel = this.viewportService.zoomLevel;
+  readonly openTabs = this.tabManager.openTabs;
+  readonly projectDiagrams = this.diagramService.projectDiagrams;
+  readonly hasUnsavedChanges = this.persistenceService.hasUnsavedChanges;
+  readonly saveSuccessMessage = this.persistenceService.saveSuccessMessage;
+
   readonly selectedNodeId = this.selectionService.selectedNodeId;
   readonly selectedNodeIds = this.selectionService.selectedNodeIds;
   readonly selectedNodeIdsList = this.selectionService.selectedNodeIdsList;
@@ -304,264 +224,57 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly selectedConnIds = this.selectionService.selectedConnIds;
   readonly selectedConnIdsList = this.selectionService.selectedConnIdsList;
 
-  getDefaultColorForNodeType(nodeType?: string | null, stereotype?: string | null): string {
-    return getDefaultColorForNodeType(nodeType, stereotype);
-  }
-
-  readonly selectedNodeColor = computed(() => {
-    return this.toolbarService.computeSelectedNodeColor(
+  readonly hasMultipleActiveUsers = computed(() => this.collabCoordinator.isMultiUserEditing());
+  readonly canUndo = computed(() => this.historyService.canUndo() && !this.isReadOnly());
+  readonly canRedo = computed(() => this.historyService.canRedo() && !this.isReadOnly());
+  readonly selectedNodeColor = computed(() =>
+    this.toolbarService.computeSelectedNodeColor(
       this.selectedNodeId(),
       this.nodes(),
-      (type, st) => this.getDefaultColorForNodeType(type, st),
-    );
-  });
-  defaultLineStyle = signal<UmlLineStyle>('segment');
-  mouseCanvasPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
-  get smartGuidesEnabled() { return this.toolbarService.smartGuidesEnabled; }
+      (t, s) => this.getDefaultColorForNodeType(t, s),
+    ),
+  );
+  readonly smartGuidesEnabled = this.toolbarService.smartGuidesEnabled;
 
-  private isApplyingHistory = false;
-  get hasMovedDuringPointerDown(): boolean { return this.interactionService.hasMovedDuringPointerDown; }
-  set hasMovedDuringPointerDown(val: boolean) { this.interactionService.hasMovedDuringPointerDown = val; }
-
-  historyUndoCount = computed(() => this.diagramHistoryService.undoCount());
-  historyRedoCount = computed(() => this.diagramHistoryService.redoCount());
-  readonly canUndo = computed(() => this.diagramHistoryService.canUndo() && !this.isReadOnly());
-  readonly canRedo = computed(() => this.diagramHistoryService.canRedo() && !this.isReadOnly());
-
-  // Paneles laterales (Toolbox / Sidebar y Copilot IA) - Abierto por defecto con Explorador
-  readonly isSidebarOpen = signal<boolean>(true);
-  readonly isToolboxOpen = this.isSidebarOpen;
-  isAiPanelOpen = signal<boolean>(false);
-  readonly isExportDropdownOpen = this.modalService.isExportDropdownOpen;
-
-  // Opciones de multiplicidad estándar
-  readonly multiplicityOptions: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];
-
-  // Tipos de datos y retornos predefinidos
-  readonly predefinedTypes = PREDEFINED_DATA_TYPES;
-  readonly predefinedReturnTypes = PREDEFINED_RETURN_TYPES;
-
-  // Lista de relaciones (reutilizadas en modal de conexión)
-  readonly relationTypes = UML_RELATION_TYPES;
-
-  // Estilos de línea Enterprise Architect
-  readonly lineStyles = UML_LINE_STYLES;
-
-  // Modales de edición delegados a DiagramModalService
   readonly isEditNodeModalOpen = this.modalService.isEditNodeModalOpen;
-  readonly isEditConnModalOpen = this.modalService.isEditConnModalOpen;
   readonly editingNode = this.modalService.editingNode;
+  readonly isEditConnModalOpen = this.modalService.isEditConnModalOpen;
   readonly editingConnection = this.modalService.editingConnection;
-  readonly isAnyModalOpen = this.modalService.isAnyModalOpen;
-
-  // Modal JSON
   readonly showJsonModal = this.modalService.showJsonModal;
   readonly jsonContent = this.modalService.jsonContent;
   readonly jsonModalMode = this.modalService.jsonModalMode;
-
-  // Modal Perfil
-  readonly isProfileModalOpen = this.modalService.isProfileModalOpen;
-
-  // Modal Spring Boot
-  readonly showSpringBootModal = this.modalService.showSpringBootModal;
-
-  // Modal Crear Diagrama por Tipo
   readonly isCreateDiagramModalOpen = this.modalService.isCreateDiagramModalOpen;
+  readonly lockedDiagramType = this.modalService.lockedDiagramType;
   readonly createDiagramLockedType = this.modalService.lockedDiagramType;
+  readonly showSpringBootModal = this.modalService.showSpringBootModal;
+  readonly isProfileModalOpen = this.modalService.isProfileModalOpen;
+  readonly isExportDropdownOpen = this.modalService.isExportDropdownOpen;
+  readonly isAnyModalOpen = this.modalService.isAnyModalOpen;
+  readonly contextMenu = this.contextMenuService.contextMenu;
 
-  nodes = signal<UmlClassNode[]>([]);
-  connections = signal<UmlConnection[]>([]);
+  /** Callback enlazado para comprobar si un nodo está bloqueado por otro usuario. */
+  readonly isNodeLockedFn = (nodeId: string): boolean => this.isNodeLockedByOther(nodeId);
 
-  // Dimensiones dinámicas del tablero Enterprise Architect (mínimo 2200x1400, expande con nodos)
-  readonly boardWidth = computed(() => computeBoardWidth(this.nodes()));
-  readonly boardHeight = computed(() => computeBoardHeight(this.nodes()));
+  /** Callback enlazado para obtener la información del bloqueo activo de un nodo. */
+  readonly getNodeLockFn = (nodeId: string): NodeLock | undefined =>
+    this.collabCoordinator?.getNodeLock(nodeId);
 
+  private subscriptions: Subscription[] = [];
+
+  /** Inicializa suscripciones reactivas de ruta, auto-guardado y colaboración en tiempo real. */
   ngOnInit(): void {
-    this.initCollaborationSubscriptions();
-    this.initPersistencePipelines();
-    this.route.queryParams.subscribe((params) => this.handleRouteQueryParams(params));
-    this.updateConnectionEndpoints();
+    this.subscriptions.push(...DiagramEditorContextUtil.setupEditorSubscriptions(this));
   }
 
-  private initCollaborationSubscriptions(): void {
-    this.collabCoordinator.setupSubscriptions({
-      onRemoteNodeDrag: (data) => {
-        this.nodes.update((list) =>
-          list.map((n) => (n.id === data.nodeId ? { ...n, position: data.position } : n)),
-        );
-        this.updateConnectionEndpoints();
-      },
-      onRemoteDiagramSync: (data) => this.applyRemoteDiagramSync(data),
-      onNodeLockRejected: (data) => this.handleNodeLockRejected(data),
-      onServerSave: (data) => {
-        if (data.diagramId === this.currentDiagramId()) {
-          this.diagramService.isSaving.set(false);
-          this.diagramService.lastSavedAt.set(new Date(data.savedAt));
-          if (!this.hasUnsavedChanges()) this.persistenceService.notifySaveSuccess(2000);
-        }
-      },
-      onReconnected: () => this.handleReconnection(),
-    });
-  }
-
-  private applyRemoteDiagramSync(data: { action: string; nodes?: UmlClassNode[]; connections?: UmlConnection[] }): void {
-    if (data.action === 'ai_mutation' && data.nodes) {
-      this.applyAiMutationWithAnimation(data.nodes, data.connections || []);
-    } else if (data.nodes) {
-      const { cleanNodes, cleanConns } = this.processAiMutation(data.nodes, data.connections || []);
-      this.nodes.set(cleanNodes);
-      this.connections.set(cleanConns);
-      this.updateConnectionEndpoints();
-      requestAnimationFrame(() => {
-        this.updateConnectionEndpoints();
-        this.diagramCanvas?.redraw();
-      });
-    }
-  }
-
-  private handleNodeLockRejected(data: { nodeId: string; lockedBy: { userId: string; userName: string } }): void {
-    if (this.editingNode()?.id === data.nodeId) {
-      this.isEditNodeModalOpen.set(false);
-      this.editingNode.set(null);
-      this.toastService.warning(`🔒 La tabla está siendo editada por ${data.lockedBy.userName}. Por favor espera.`);
-    }
-  }
-
-  private handleReconnection(): void {
-    const diagramId = this.currentDiagramId();
-    if (!diagramId) return;
-    if (this.hasUnsavedChanges()) {
-      this.collabCoordinator.sendDiagramSync(
-        this.nodes(),
-        this.connections(),
-        'reconnect_sync',
-        this.defaultLineStyle(),
-      );
-      this.saveToBackend(true);
-    } else {
-      this.loadDiagramFromBackend(diagramId);
-    }
-  }
-
-  private initPersistencePipelines(): void {
-    this.persistenceService.setupAutoSave(() => {
-      if (this.hasUnsavedChanges() && !this.isReadOnly() && this.currentDiagramId()) {
-        this.saveToBackend(true);
-      }
-    });
-
-    this.persistenceService.setupNodeDragEnd(() => {
-      this.containmentService.resetDragState();
-      if (!this.isReadOnly() && this.currentDiagramId()) {
-        this.collabCoordinator.sendDiagramSync(
-          this.nodes(),
-          this.connections(),
-          'move_node',
-          this.defaultLineStyle(),
-        );
-        this.persistenceService.triggerAutoSave();
-      }
-    });
-  }
-
-  private handleRouteQueryParams(params: any): void {
-    this.tabManager.handleRouteQueryParams(params, {
-      userId: this.authService.currentUser()?.id,
-      setCurrentProjectId: (id) => this.currentProjectId.set(id),
-      setCurrentDiagramId: (id) => this.currentDiagramId.set(id),
-      setCurrentDiagramName: (name) => this.currentDiagramName.set(name),
-      setCurrentProject: (proj) => this.currentProject.set(proj),
-      setCurrentUserRole: (role) => this.currentUserRole.set(role),
-      loadDiagramsByProject: (pId) => this.diagramService.loadDiagramsByProject(pId),
-      getProject: (pId) => this.projectService.getProject(pId),
-      loadDiagram: (dId) => this.loadDiagramFromBackend(dId),
-      resolveUserRole: (proj, uId) => resolveUserRoleInProject(proj, uId),
-    });
-  }
-
+  /** Libera suscripciones, guarda estado pendiente y desconecta sesión colaborativa al destruir. */
   ngOnDestroy(): void {
-    if (this.editingNode()) {
-      this.collabCoordinator.releaseNodeLock(this.editingNode()!.id);
-    }
-    this.collabCoordinator.leaveRoom();
+    this.onBeforeUnload();
+    this.subscriptions.forEach((s) => s.unsubscribe());
+    this.collaborationService.disconnect();
   }
 
-  loadDiagramFromBackend(diagramId: string): void {
-    this.persistenceService.executeLoadDiagram(this.diagramService, diagramId, {
-      getDefaultColor: (nt, st) => this.getDefaultColorForNodeType(nt, st),
-      normalizeDataType: (t) => this.aiSyncService.normalizeDataType(t),
-      normalizeReturnType: (t) => this.aiSyncService.normalizeReturnType(t),
-      recalculateSequenceNumbers: (conns, p) => this.recalculateSequenceNumbers(conns, p),
-      onLoaded: (diagram, resolved) => {
-        this.currentDiagramName.set(diagram.name);
-        if (diagram.type) {
-          this.activeDiagramType.set(diagram.type as DiagramType);
-          this.collabCoordinator.setCurrentDiagramType(diagram.type);
-        }
-        if (diagram.defaultLineStyle) {
-          this.defaultLineStyle.set(diagram.defaultLineStyle as UmlLineStyle);
-        }
-
-        this.nodes.set(resolved.nodes);
-        this.connections.set(resolved.connections);
-        if (resolved.defaultLineStyle) {
-          this.defaultLineStyle.set(resolved.defaultLineStyle);
-        }
-
-        if (resolved.fromDraft) {
-          this.markAsUnsaved();
-          this.updateConnectionEndpoints();
-          return;
-        }
-
-        this.selectionService.clearSelection();
-        this.selectedSourceNodeId.set(null);
-        this.diagramHistoryService.clear();
-
-        const diagType = (diagram.type as DiagramType) || DiagramType.CLASS;
-        this.tabManager.addTab({ id: diagram.id, name: diagram.name, type: diagType });
-        this.tabManager.updateTabName(diagram.id, diagram.name);
-        this.collabCoordinator.switchRoom(this.collabCoordinator.getCurrentDiagramId(), diagramId);
-
-        this.syncProjectInfo(diagram.projectId);
-
-        this.hasUnsavedChanges.set(false);
-        this.viewportService.restoreCanvasViewState(this.diagramCanvas, diagramId, () => this.updateConnectionEndpoints());
-      },
-    });
-  }
-
-  private syncProjectInfo(projectId?: string | null): void {
-    this.persistenceService.syncProjectInfo(projectId, {
-      hasCurrentProject: !!this.currentProject(),
-      projectDiagramsCount: this.diagramService.projectDiagrams().length,
-      setCurrentProjectId: (id) => this.currentProjectId.set(id),
-      fetchProject: (id) => this.projectService.getProject(id),
-      fetchProjectDiagrams: (id) => this.diagramService.loadDiagramsByProject(id),
-      onProjectLoaded: (proj) => this.currentProject.set(proj),
-    });
-  }
-
-  isNodeLockedByOther(nodeId: string): boolean { return this.collabCoordinator.isNodeLockedByOther(nodeId, this.authService.currentUser()?.id); }
-
-  @HostListener('window:pagehide')
-  onPageHide(): void {
-    this.flushExitSave();
-    this.collabCoordinator.leaveRoom();
-  }
-
-  @HostListener('window:beforeunload', ['$event'])
-  onBeforeUnload(event: BeforeUnloadEvent): void {
-    if (this.hasUnsavedChanges()) {
-      this.flushExitSave();
-      event.preventDefault();
-      event.returnValue = '';
-    } else {
-      this.collabCoordinator.leaveRoom();
-    }
-  }
-
-  private flushExitSave(): void {
+  /** Persiste cambios pendientes mediante `keepalive` antes de cerrar la pestaña del navegador. */
+  onBeforeUnload(): void {
     this.persistenceService.flushExitSave({
       diagramId: this.currentDiagramId(),
       isReadOnly: this.isReadOnly(),
@@ -569,363 +282,589 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
       token: this.authService.token(),
       apiUrl: environment.apiUrl,
       payload: this.buildSaveAstPayload(),
-      onSendDiagramSync: () =>
-        this.collabCoordinator.sendDiagramSync(
-          this.nodes(),
-          this.connections(),
-          'exit_save',
-          this.defaultLineStyle(),
-        ),
+      onSendDiagramSync: () => this.sendDiagramSync(this.nodes(), this.connections(), 'exit_save'),
     });
   }
 
-  @HostListener('window:mousedown') onWindowMouseDown(): void { this.interactionService.handleWindowMouseDown(); }
-  @HostListener('window:mouseup') onWindowMouseUp(): void { this.interactionService.handleWindowMouseUp(); }
-
-  @HostListener('window:keydown', ['$event'])
-  handleKeyDown(event: KeyboardEvent): void {
-    this.hotkeysService.handleKeyDown(event, {
-      isReadOnly: () => this.isReadOnly(),
-      isModalOpen: () => this.isAnyModalOpen(),
-      undo: () => this.undo(),
-      redo: () => this.redo(),
-      save: () => this.saveToBackend(),
-      toggleToolbox: () => this.isToolboxOpen.set(!this.isToolboxOpen()),
-      toggleAi: () => this.isAiPanelOpen.set(!this.isAiPanelOpen()),
-      copy: () => this.copySelectedNodes(),
-      cut: () => this.cutSelectedNodes(),
-      paste: () => this.pasteNodes(),
-      duplicate: () => this.duplicateSelected(),
-      selectAll: () => this.selectAllClasses(),
-      deleteSelected: () => this.deleteSelected(),
-      escape: () => this.handleEscapeKey(),
-      hasContextMenu: () => !!this.contextMenu(),
-      closeContextMenu: () => this.closeContextMenu(),
-      getRenameTargetNodeId: () => this.getRenameTargetNodeId(),
-      startRenameNode: (targetNodeId: string) => this.diagramCanvas?.startRenameNode(targetNodeId),
-    });
+  /** Resuelve el rol del usuario autenticado dentro del proyecto cargado. */
+  resolveUserRole(project: Project | null, userId?: string | null): ProjectRole {
+    return resolveUserRoleInProject(project, userId);
   }
 
-  private handleEscapeKey(): void {
+  /** Procesa atajos globales de teclado delegando en `DiagramHotkeysService`. */
+  onKeyDown(event: KeyboardEvent): void {
+    this.hotkeysService.handleKeyDown(event, DiagramEditorContextUtil.buildHotkeysActions(this));
+  }
+
+  /** Registra el inicio de clic global de puntero para control de arrastre. */
+  onWindowMouseDown(): void { this.canvasInteraction.handleWindowMouseDown(); }
+
+  /** Finaliza estados de arrastre al soltar el botón del ratón. */
+  onWindowMouseUp(): void { this.canvasInteraction.handleWindowMouseUp(); }
+
+  /** Navega de regreso a la vista de proyectos o dashboard. */
+  goBack(): void {
+    const pid = this.currentProjectId();
+    this.router.navigate(pid ? ['/projects', pid] : ['/dashboard']);
+  }
+
+  /** Cierra la sesión activa del usuario. */
+  onLogout(): void { this.authService.logout(); }
+
+  /** Alterna el colapso de la barra lateral izquierda de diagramas. */
+  toggleLeftSidebar(): void { this.isLeftSidebarCollapsed.update((v) => !v); }
+
+  /** Alterna el colapso de la caja de herramientas de elementos UML. */
+  toggleLeftToolbar(): void { this.isLeftToolbarCollapsed.update((v) => !v); }
+
+  /** Alterna la visibilidad del panel lateral del asistente IA. */
+  toggleAiPanel(): void { this.isAiPanelOpen.update((v) => !v); }
+
+  /** Alterna las guías inteligentes de alineación magnética en el lienzo. */
+  toggleSmartGuides(): void { this.toolbarService.toggleSmartGuides(); }
+
+  /** Alterna la apertura del menú desplegable de exportación. */
+  toggleExportDropdown(event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.modalService.isExportDropdownOpen.update((v) => !v);
+  }
+
+  /** Cierra el menú desplegable de exportación. */
+  closeExportDropdown(): void { this.modalService.isExportDropdownOpen.set(false); }
+
+  /** Obtiene la etiqueta traducida del tipo de diagrama activo. */
+  getActiveDiagramTypeLabel(): string {
+    return DiagramEditorContextUtil.getDiagramTypeInfo(this.activeDiagramType()).label;
+  }
+
+  /** Obtiene el icono representativo del tipo de diagrama activo. */
+  getActiveDiagramTypeIcon(): string {
+    return DiagramEditorContextUtil.getDiagramTypeInfo(this.activeDiagramType()).icon;
+  }
+
+  /** Obtiene el color distintivo del tipo de diagrama activo. */
+  getActiveDiagramTypeColor(): string { return '#6366f1'; }
+
+  /** Indica si hay múltiples colaboradores editando simultáneamente. */
+  isMultiUserEditing(): boolean { return this.collabCoordinator.isMultiUserEditing(); }
+
+  /** Acerca la vista del lienzo. */
+  zoomIn(): void { this.viewportService.zoomIn(this.diagramCanvas); }
+
+  /** Aleja la vista del lienzo. */
+  zoomOut(): void { this.viewportService.zoomOut(this.diagramCanvas); }
+
+  /** Ajusta y centra el contenido del diagrama en el área visible. */
+  fitView(): void { this.viewportService.fitView(this.diagramCanvas); }
+
+  /** Restablece la escala y posición del lienzo a los valores iniciales. */
+  resetView(): void { this.viewportService.resetView(this.diagramCanvas); }
+
+  /** Sincroniza los puntos finales de conexión cuando el lienzo termina de cargarse. */
+  onFlowLoaded(): void { this.updateConnectionEndpoints(); }
+
+  /** Actualiza el nivel de zoom cuando el lienzo emite un cambio. */
+  onZoomChanged(zoom: number): void { this.viewportService.onZoomChanged(zoom, this.currentDiagramId()); }
+
+  /** Registra el desplazamiento de scroll del viewport para el diagrama actual. */
+  onViewportScroll(event: Event): void { this.viewportService.onViewportScroll(event, this.currentDiagramId()); }
+
+  /** Convierte coordenadas de cliente (ventana) a coordenadas internas del lienzo. */
+  clientToCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } {
+    const el = this.diagramCanvas?.getExportElement();
+    const transform = this.fCanvas?.transform;
+    if (!el) return { x: clientX, y: clientY };
+    const rect = el.getBoundingClientRect();
+    const scale = transform?.scale || 1;
+    const pos = transform?.position || { x: 0, y: 0 };
+    const scaledPos = transform?.scaledPosition || { x: 0, y: 0 };
+    return {
+      x: Math.round((clientX - rect.left - pos.x - scaledPos.x) / scale),
+      y: Math.round((clientY - rect.top - pos.y - scaledPos.y) / scale),
+    };
+  }
+
+  /** Guarda una instantánea del estado actual en la pila de historial Undo/Redo. */
+  pushSnapshot(): void {
+    if (this.historyService) {
+      this.historyService.pushSnapshot(
+        this.historyService.cloneSnapshot(this.nodes(), this.connections(), this.defaultLineStyle()),
+      );
+    }
+  }
+
+  /** Deshace la última acción realizada sobre el diagrama. */
+  undo(): void {
+    if (this.isReadOnly()) return;
+    const prev = this.historyService.undo(
+      this.historyService.cloneSnapshot(this.nodes(), this.connections(), this.defaultLineStyle()),
+    );
+    if (!prev) return;
+    this.nodes.set(prev.nodes);
+    this.connections.set(prev.connections);
+    this.defaultLineStyle.set(prev.defaultLineStyle);
     this.selectionService.clearSelection();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'undo');
+  }
+
+  /** Rehace la última acción deshecha sobre el diagrama. */
+  redo(): void {
+    if (this.isReadOnly()) return;
+    const next = this.historyService.redo(
+      this.historyService.cloneSnapshot(this.nodes(), this.connections(), this.defaultLineStyle()),
+    );
+    if (!next) return;
+    this.nodes.set(next.nodes);
+    this.connections.set(next.connections);
+    this.defaultLineStyle.set(next.defaultLineStyle);
+    this.selectionService.clearSelection();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'redo');
+  }
+
+  /** Cierra el menú contextual flotante del lienzo. */
+  closeContextMenu(): void { this.contextMenuService.closeContextMenu(); }
+
+  /** Abre el menú contextual sobre un nodo específico del lienzo. */
+  onNodeContextMenu(
+    nodeOrEvent: UmlClassNode | { node: UmlClassNode; event: MouseEvent },
+    maybeEvent?: MouseEvent,
+  ): void {
+    const node = 'event' in nodeOrEvent ? nodeOrEvent.node : nodeOrEvent;
+    const event = 'event' in nodeOrEvent ? nodeOrEvent.event : maybeEvent!;
+    this.contextMenuService.onNodeContextMenu({
+      node,
+      event,
+      selectOnCanvas: (nIds, cIds) => this.diagramCanvas?.select(nIds, cIds),
+      clientToCanvas: (x, y) => this.clientToCanvasCoordinates(x, y),
+    });
+  }
+
+  /** Abre el menú contextual sobre una conexión específica del lienzo. */
+  onConnectionContextMenu(
+    connOrEvent: UmlConnection | { conn: UmlConnection; event: MouseEvent },
+    maybeEvent?: MouseEvent,
+  ): void {
+    const conn = 'event' in connOrEvent ? connOrEvent.conn : connOrEvent;
+    const event = 'event' in connOrEvent ? connOrEvent.event : maybeEvent!;
+    this.contextMenuService.onConnectionContextMenu({
+      conn,
+      event,
+      selectOnCanvas: (nIds, cIds) => this.diagramCanvas?.select(nIds, cIds),
+      clientToCanvas: (x, y) => this.clientToCanvasCoordinates(x, y),
+    });
+  }
+
+  /** Abre el menú contextual sobre el fondo vacío del lienzo. */
+  onCanvasContextMenu(
+    eventOrPayload: MouseEvent | { event: MouseEvent; canvasPos: { x: number; y: number } },
+  ): void {
+    const event = 'canvasPos' in eventOrPayload ? eventOrPayload.event : eventOrPayload;
+    const canvasPos =
+      'canvasPos' in eventOrPayload
+        ? eventOrPayload.canvasPos
+        : this.clientToCanvasCoordinates(event.clientX, event.clientY);
+    this.contextMenuService.onCanvasContextMenu({ event, canvasPos });
+  }
+
+  /** Invierte la dirección de una conexión desde el menú contextual. */
+  reverseConnection(conn: UmlConnection): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    const reversed = this.connectionOps.reverseConnection(conn);
+    const nextConns = this.recalculateSequenceNumbers(
+      this.connections().map((c) => (c.id === conn.id ? reversed : c)),
+    );
+    this.connections.set(nextConns);
+    this.updateConnectionEndpoints();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'reverse_connection');
+    this.closeContextMenu();
+  }
+
+  /** Cambia el estilo de enrutamiento de línea de una conexión. */
+  changeConnectionLineStyle(conn: UmlConnection, style: UmlLineStyle): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    this.connections.set(this.connections().map((c) => (c.id === conn.id ? { ...c, lineStyle: style } : c)));
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'change_line_style');
+    this.closeContextMenu();
+  }
+
+  /** Alias de cambio de estilo de línea de una conexión para eventos del menú contextual. */
+  setConnectionLineStyle(conn: UmlConnection, style: UmlLineStyle): void {
+    this.changeConnectionLineStyle(conn, style);
+  }
+
+  /** Cambia el color de fondo de los nodos seleccionados desde la barra de herramientas. */
+  onSetSelectedNodeColor(color: string | null): void {
+    this.toolbarService.applySelectedNodeColor(color || '', {
+      isReadOnly: this.isReadOnly(),
+      selectedNodeIds: this.selectedNodeIdsList(),
+      nodes: this.nodes(),
+      connections: this.connections(),
+      defaultLineStyle: this.defaultLineStyle(),
+      pushSnapshot: () => this.pushSnapshot(),
+      setNodes: (n) => this.nodes.set(n),
+      markAsUnsaved: () => this.markAsUnsaved(),
+      sendDiagramSync: (n, c, act) => this.sendDiagramSync(n, c, act),
+    });
+    this.closeContextMenu();
+  }
+
+  /** Cambia el color de fondo de un nodo específico desde el menú contextual. */
+  changeNodeColor(node: UmlClassNode, color: string): void {
+    this.toolbarService.applySelectedNodeColor(color, {
+      isReadOnly: this.isReadOnly(),
+      selectedNodeIds: this.selectedNodeIds().has(node.id) ? this.selectedNodeIdsList() : [node.id],
+      nodes: this.nodes(),
+      connections: this.connections(),
+      defaultLineStyle: this.defaultLineStyle(),
+      pushSnapshot: () => this.pushSnapshot(),
+      setNodes: (n) => this.nodes.set(n),
+      markAsUnsaved: () => this.markAsUnsaved(),
+      sendDiagramSync: (n, c, act) => this.sendDiagramSync(n, c, act),
+    });
+    this.closeContextMenu();
+  }
+
+  /** Indica si existen elementos copiados en el portapapeles interno. */
+  hasClipboard(): boolean { return this.clipboardService.hasClipboardContent(); }
+
+  /** Alias de comprobación de contenido en el portapapeles interno. */
+  hasClipboardContent(): boolean { return this.clipboardService.hasClipboardContent(); }
+
+  /** Copia los nodos seleccionados al portapapeles interno del editor. */
+  copySelectedNodes(): void {
+    const res = this.clipboardService.copyNodes(
+      this.nodes(),
+      this.connections(),
+      this.selectedNodeIds(),
+      this.selectedNodeId(),
+      this.activeDiagramType(),
+    );
+    if (res && res.copiedNodesCount > 0) {
+      this.triggerQuickToast(this.clipboardService.formatCopyToast(res));
+    }
+  }
+
+  /** Corta los nodos seleccionados copiándolos al portapapeles y eliminándolos del lienzo. */
+  cutSelectedNodes(): void {
+    if (this.isReadOnly()) return;
+    this.copySelectedNodes();
+    this.deleteSelectedNodes();
+  }
+
+  /** Copia un nodo específico desde el menú contextual. */
+  copyNodeFromMenu(node: UmlClassNode): void {
+    this.selectionService.selectSingleNode(node.id);
+    this.copySelectedNodes();
+    this.closeContextMenu();
+  }
+
+  /** Pega los nodos del portapapeles en el lienzo. */
+  pasteClipboardNodes(targetPos?: { x: number; y: number }): void {
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const res = this.clipboardService.executePaste({
+      isReadOnly: this.isReadOnly(),
+      activeDiagramType: this.activeDiagramType(),
+      nodes: this.nodes(),
+      targetPos,
+      scrollOffset: { scrollLeft: scrollEl?.scrollLeft || 0, scrollTop: scrollEl?.scrollTop || 0 },
+      onIncompatible: (diagType) => this.modalService.showIncompatibleElementModal(diagType, this.confirmDialog),
+    });
+    if (!res || !res.newNodes.length) return;
+    this.pushSnapshot();
+    this.nodes.set([...this.nodes(), ...res.newNodes]);
+    this.connections.set(
+      this.recalculateSequenceNumbers([...this.connections(), ...res.newConnections]),
+    );
+    this.selectionService.setNodeSelection(res.newPastedIds);
+    this.updateConnectionEndpoints();
+    this.closeContextMenu();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'paste_nodes');
+  }
+
+  /** Alias de pegado de nodos para eventos del menú contextual. */
+  pasteNodes(targetPos?: { x: number; y: number }): void {
+    this.pasteClipboardNodes(targetPos);
+  }
+
+  /** Duplica inmediatamente los nodos seleccionados desplazados ligeramente. */
+  duplicateSelectedNodes(): void {
+    if (this.isReadOnly()) return;
+    this.copySelectedNodes();
+    this.pasteClipboardNodes();
+  }
+
+  /** Alias de duplicación de nodos seleccionados. */
+  duplicateSelected(): void {
+    this.duplicateSelectedNodes();
+  }
+
+  /** Duplica un nodo desde el menú contextual. */
+  duplicateNodeFromMenu(node: UmlClassNode): void {
+    this.selectionService.selectSingleNode(node.id);
+    this.duplicateSelectedNodes();
+  }
+
+  /** Copia un nodo desde el explorador del proyecto al diagrama activo. */
+  handleCopyNodeFromExplorer(event: {
+    node: UmlClassNode;
+    sourceDiagramId: string;
+    sourceDiagramType?: DiagramType;
+  }): void {
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const cloned = this.clipboardService.executeCopyFromExplorer({
+      isReadOnly: this.isReadOnly(),
+      node: event.node,
+      sourceDiagramId: event.sourceDiagramId,
+      currentDiagramId: this.currentDiagramId(),
+      activeDiagramType: this.activeDiagramType(),
+      nodes: this.nodes(),
+      scrollOffset: { scrollLeft: scrollEl?.scrollLeft || 0, scrollTop: scrollEl?.scrollTop || 0 },
+      getDefaultColor: (t, s) => this.getDefaultColorForNodeType(t, s),
+      onIncompatible: (diagType: DiagramType) =>
+        this.modalService.showIncompatibleElementModal(diagType, this.confirmDialog),
+    });
+    if (!cloned) return;
+    this.pushSnapshot();
+    this.nodes.set([...this.nodes(), cloned]);
+    this.selectionService.selectSingleNode(cloned.id);
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'copy_from_explorer');
+  }
+
+  /** Selecciona y enfoca un nodo desde el explorador del proyecto. */
+  handleSelectNodeFromExplorer(nodeId: string): void {
+    this.selectionService.selectSingleNode(nodeId);
+    this.diagramCanvas?.select([nodeId], []);
+  }
+
+  /** Selecciona todas las clases y elementos del diagrama actual. */
+  selectAllClasses(): void {
+    this.selectionService.selectAllClasses(this.nodes(), this.selectedRelationType(), (ids: string[]) =>
+      this.diagramCanvas?.select(ids, []),
+    );
+    this.closeContextMenu();
+  }
+
+  /** Limpia la selección actual de nodos y conexiones. */
+  clearSelection(): void {
+    this.selectionService?.clearSelection();
+    this.diagramCanvas?.clearSelection();
+  }
+
+  /** Deselecciona todos los elementos y cierra el menú contextual. */
+  deselectAll(): void {
+    this.clearSelection();
+    this.closeContextMenu();
+  }
+
+  /** Alinea los nodos seleccionados en la dirección indicada. */
+  alignSelectedNodes(direction: AlignmentDirection): void {
+    this.toolbarService.alignNodes(direction, DiagramEditorContextUtil.buildToolbarContext(this));
+  }
+
+  /** Alias de alineación de nodos para eventos del Appbar. */
+  alignNodes(direction: AlignmentDirection): void {
+    this.alignSelectedNodes(direction);
+  }
+
+  /** Distribuye equitativamente tres o más nodos seleccionados. */
+  distributeSelectedNodes(direction: DistributionDirection): void {
+    this.toolbarService.distributeNodes(direction, DiagramEditorContextUtil.buildToolbarContext(this));
+  }
+
+  /** Alias de distribución de nodos para eventos del Appbar. */
+  distributeNodes(direction: DistributionDirection): void {
+    this.distributeSelectedNodes(direction);
+  }
+
+  /** Ajusta las coordenadas de los nodos seleccionados a la cuadrícula del lienzo. */
+  snapSelectedToGrid(): void {
+    this.toolbarService.snapSelectedToGrid(DiagramEditorContextUtil.buildToolbarContext(this));
+  }
+
+  /** Selecciona y carga un diagrama específico en el área de trabajo. */
+  selectDiagram(diagramId: string): void {
+    this.tabManager.executeSelectDiagram(diagramId, {
+      currentDiagramId: this.currentDiagramId(),
+      isReadOnly: this.isReadOnly(),
+      hasUnsavedChanges: this.hasUnsavedChanges(),
+      saveToBackend: () => this.saveToBackend(true),
+      setCurrentDiagramId: (id: string) => this.currentDiagramId.set(id),
+      navigateToDiagram: (id: string) => {
+        this.router.navigate([], { relativeTo: this.route, queryParams: { diagramId: id }, queryParamsHandling: 'merge' });
+      },
+      loadDiagram: (id: string) => this.loadDiagram(id),
+    });
+  }
+
+  /** Alias de selección de diagrama para eventos del Sidebar y Tabs. */
+  onSelectDiagram(diagramId: string): void {
+    this.selectDiagram(diagramId);
+  }
+
+  /** Cierra una pestaña abierta en la barra superior de pestañas. */
+  closeTab(tabId: string, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    const res = this.tabManager.closeTab(tabId, this.currentDiagramId());
+    if (res?.nextTabId) this.selectDiagram(res.nextTabId);
+  }
+
+  /** Guarda el nuevo nombre del diagrama activo desde la barra superior. */
+  saveCurrentDiagramRename(newName: string): void {
+    const id = this.currentDiagramId();
+    if (!id || this.isReadOnly()) return;
+    this.tabManager.renameDiagram({ diagramId: id, name: newName }, id);
+  }
+
+  /** Renombra un diagrama desde su pestaña o barra lateral. */
+  onRenameDiagram(event: { diagramId: string; name: string }): void {
+    if (this.isReadOnly()) return;
+    this.tabManager.renameDiagram(event, this.currentDiagramId());
+  }
+
+  /** Alias de renombrado desde pestaña. */
+  onTabRenameDiagram(event: { diagramId: string; name: string }): void {
+    this.onRenameDiagram(event);
+  }
+
+  /** Alias de renombrado desde barra lateral. */
+  onSidebarRenameDiagram(event: { diagramId: string; name: string }): void {
+    this.onRenameDiagram(event);
+  }
+
+  /** Cambia el tipo de diagrama activo cuando se selecciona en la barra lateral. */
+  onDiagramTypeChange(type: DiagramType): void {
+    this.activeDiagramType.set(type);
     this.setPointerMode();
-    this.modalService.closeAllModals((nodeId) => this.collabCoordinator.releaseNodeLock(nodeId));
   }
 
-  private getRenameTargetNodeId(): string | null {
-    const isExplorerHovered =
-      this.isSidebarOpen() &&
-      this.diagramSidebar?.activeTab() === 'explorer' &&
-      !!this.diagramSidebar?.hoveredDiagramId();
-    if (isExplorerHovered) return null;
-    return this.diagramCanvas?.hoveredNodeId() || this.selectedNodeId();
+  /** Abre el modal de creación de un nuevo diagrama. */
+  openCreateDiagramModal(lockedType: DiagramType | null = null): void {
+    if (this.isReadOnly()) return;
+    this.modalService.openCreateDiagramModal(lockedType);
   }
 
+  /** Cierra el modal de creación de diagrama. */
+  closeCreateDiagramModal(): void { this.modalService.closeCreateDiagramModal(); }
+
+  /** Crea un nuevo diagrama en el proyecto actual a partir de los datos del modal. */
+  handleCreateDiagram(data: { name: string; type: DiagramType }): void {
+    this.tabManager.handleCreateDiagram(
+      this.currentProjectId(),
+      data,
+      (createdId) => this.selectDiagram(createdId),
+      () => {
+        if (this.hasUnsavedChanges() && !this.isReadOnly()) this.saveToBackend(true);
+      },
+    );
+  }
+
+  /** Solicita confirmación y elimina un diagrama desde la barra lateral. */
+  deleteDiagramFromSidebar(diagramId: string): void {
+    if (this.isReadOnly()) return;
+    this.tabManager.deleteDiagram(
+      diagramId,
+      this.currentDiagramId(),
+      this.projectDiagrams(),
+      (nextId) => {
+        if (nextId) {
+          this.selectDiagram(nextId);
+        } else {
+          this.currentDiagramId.set(null);
+          this.nodes.set([]);
+          this.connections.set([]);
+        }
+      },
+    );
+  }
+
+  /** Alias de eliminación de diagrama desde la barra lateral. */
+  onDeleteDiagram(diagramId: string): void {
+    this.deleteDiagramFromSidebar(diagramId);
+  }
+
+  /** Carga un diagrama desde el servidor o restaura su borrador local si es más reciente. */
+  loadDiagram(diagramId: string): void {
+    DiagramEditorContextUtil.executeLoadDiagram(this, diagramId);
+  }
+
+  /** Marca el diagrama actual con cambios pendientes y programa el auto-guardado. */
+  markAsUnsaved(): void {
+    this.persistenceService?.markAsUnsaved(this.isReadOnly(), this.currentDiagramId(), {
+      nodes: this.nodes(),
+      connections: this.connections(),
+      defaultLineStyle: this.defaultLineStyle(),
+    });
+  }
+
+  /** Construye el payload canónico AST para guardar el diagrama en el backend. */
   buildSaveAstPayload(): SaveDiagramAstRequest {
-    return this.exportService.buildSaveAstPayload(
+    const exp = (this as any).diagramExportService || this.exportService || new DiagramExportService();
+    return exp.buildSaveAstPayload(
       this.activeDiagramType(),
       this.defaultLineStyle(),
       this.nodes(),
       this.connections(),
       (n: UmlClassNode) => this.getNodeWidth(n),
       (n: UmlClassNode) => this.getNodeHeight(n),
-      (nodeType?: string | null, stereotype?: string | null) => this.getDefaultColorForNodeType(nodeType, stereotype),
-      (m: any, defaultSeq?: string) => this.normalizeUmlMessage(m, defaultSeq),
-      (conns: UmlConnection[], preserveOrder?: boolean) => this.recalculateSequenceNumbers(conns, preserveOrder),
+      (t?: string | null, s?: string | null) => this.getDefaultColorForNodeType(t, s),
+      (m: any, seq?: string) => this.normalizeUmlMessage(m, seq),
+      (c: UmlConnection[], p?: boolean) => this.recalculateSequenceNumbers(c, p),
     );
   }
 
+  /** Guarda el árbol sintáctico (AST) del diagrama actual en el backend. */
   saveToBackend(silent = false): void {
-    if (this.isReadOnly()) return;
-    const diagramId = this.currentDiagramId();
-    if (!diagramId) {
-      if (!silent) this.openExportModal();
-      return;
-    }
-    this.persistenceService.executeSaveToBackend(
-      this.diagramService,
-      diagramId,
-      this.buildSaveAstPayload(),
-      silent,
-      () => this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), 'save', this.defaultLineStyle()),
-    );
+    const id = this.currentDiagramId();
+    if (!id || this.isReadOnly()) return;
+    const payload = this.buildSaveAstPayload();
+    this.persistenceService.executeSaveToBackend(this.diagramService, id, payload, silent, () => {
+      this.sendDiagramSync(this.nodes(), this.connections(), 'save');
+    });
   }
 
-  selectRelationType(type: UmlRelationshipType): void {
-    if (this.isReadOnly()) return;
-    this.selectedRelationType.set(this.selectedRelationType() === type ? null : type);
-    this.selectedSourceNodeId.set(null);
-  }
+  /** Ejecuta un guardado manual inmediato del diagrama activo. */
+  saveDiagramManual(): void { this.saveToBackend(false); }
 
-  setPointerMode(): void {
-    this.selectedRelationType.set(null);
-    this.selectedSourceNodeId.set(null);
-  }
-
-  setDefaultLineStyle(style: UmlLineStyle): void {
-    if (this.defaultLineStyle() !== style) {
-      this.pushSnapshot();
-      this.defaultLineStyle.set(style);
-      this.markAsUnsaved();
+  /** Envía el estado sincronizado del diagrama a la sala colaborativa. */
+  sendDiagramSync(nodes: UmlClassNode[], connections: UmlConnection[], action: string): void {
+    const collab = (this as any).collaborationService || this.collabCoordinator;
+    if (collab?.sendDiagramSync) {
+      collab.sendDiagramSync(nodes, connections, action, this.defaultLineStyle());
     }
   }
 
-  onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
-    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-    const { shouldRedraw } = this.interactionService.handleNodePositionChange({
-      node,
-      newPosition,
-      nodes: this.nodes(),
-      selectedNodeIds: this.selectedNodeIds(),
-      selectedNodeId: this.selectedNodeId(),
-      activeDiagramType: this.activeDiagramType(),
-      getNodeWidth: (n) => this.getNodeWidth(n),
-      getNodeHeight: (n) => this.getNodeHeight(n),
-      onStartDrag: () => this.pushSnapshot(),
-      onSelectNode: (id) => this.selectionService.setNodeSelection([id]),
-      sendNodeDrag: (id, pos) => this.collabCoordinator.sendNodeDrag(id, pos),
-    });
-    if (shouldRedraw) this.diagramCanvas?.redraw();
-    this.markAsUnsaved();
-    this.updateConnectionEndpoints();
-    this.persistenceService.triggerNodeDragEnd();
+  /** Normaliza un tipo de dato de atributo al catálogo predefinido. */
+  normalizeDataType(type: string): string {
+    const sync = (this as any).diagramAiSyncService || this.aiSyncService || new DiagramAiSyncService();
+    return sync.normalizeDataType(type);
   }
 
-  onNodeLabelOffsetChange(node: UmlClassNode, offset: { x: number; y: number }): void {
-    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
-    this.commitDiagramMutation({
-      nodes: this.nodeOps.updateNodeLabelOffset(this.nodes(), node.id, offset),
-      action: 'move_node',
-    });
+  /** Normaliza un tipo de retorno de método al catálogo predefinido. */
+  normalizeReturnType(type: string): string {
+    const sync = (this as any).diagramAiSyncService || this.aiSyncService || new DiagramAiSyncService();
+    return sync.normalizeReturnType(type);
   }
 
-  onMoveNodes(event: FMoveNodesEvent): void {
-    if (this.isReadOnly()) return;
-    const { anyMoved } = this.interactionService.handleMoveNodes({
-      event,
-      nodes: this.nodes(),
-      activeDiagramType: this.activeDiagramType(),
-      getNodeWidth: (n) => this.getNodeWidth(n),
-      getNodeHeight: (n) => this.getNodeHeight(n),
-      onStartDrag: () => this.pushSnapshot(),
-      sendNodeDrag: (id, pos) => this.collabCoordinator.sendNodeDrag(id, pos),
-    });
-    if (anyMoved) {
-      this.nodes.set([...this.nodes()]);
-      this.markAsUnsaved();
-      this.updateConnectionEndpoints();
-      this.diagramCanvas?.redraw();
-      this.persistenceService.triggerNodeDragEnd();
-    }
+  /** Normaliza un mensaje de secuencia o comunicación delegando en `UmlNodeNormalizerUtil`. */
+  normalizeUmlMessage(m: any, defaultSeq = '1'): UmlMessage {
+    return UmlNodeNormalizerUtil.normalizeUmlMessage(m, defaultSeq);
   }
 
-  onCanvasMouseMove(event: MouseEvent): void {
-    const coords = this.interactionService.handleCanvasMouseMove(
-      event,
-      this.diagramCanvas?.getExportElement(),
-      this.diagramCanvas?.canvas?.transform,
-      (x, y) => this.collabCoordinator.sendCursorPosition(x, y),
-    );
-    if (coords) this.mouseCanvasPos.set(coords);
-  }
-
-  getDynamicNodeWidth(node: UmlClassNode): number { return getDynamicNodeWidth(node); }
-  getNodeWidth(node: UmlClassNode): number { return getNodeWidth(node); }
-  getNodeHeight(node: UmlClassNode): number { return getNodeHeight(node); }
-
-  onNodeSizeChanged(event: { node: UmlClassNode; width: number; height?: number; position: { x: number; y: number } }): void {
-    if (this.isReadOnly() || this.isNodeLockedByOther(event.node.id)) return;
-    this.commitDiagramMutation({
-      nodes: this.nodeOps.updateNodeSize(this.nodes(), event),
-      action: 'update',
-      redrawCanvas: true,
-    });
-  }
-
-  toggleSmartGuides(): void {
-    this.toolbarService.toggleSmartGuides();
-  }
-
-  private applyNodesTransformation(modified: UmlClassNode[], action: string): void {
-    this.toolbarService.applyNodesTransformation(modified, action, {
-      pushSnapshot: () => this.pushSnapshot(),
-      nodes: this.nodes(),
-      connections: this.connections(),
-      defaultLineStyle: this.defaultLineStyle(),
-      markAsUnsaved: () => this.markAsUnsaved(),
-      updateConnectionEndpoints: () => this.updateConnectionEndpoints(),
-      redrawCanvas: () => this.diagramCanvas?.redraw(),
-      sendNodeDrag: (id, pos) => this.collabCoordinator.sendNodeDrag(id, pos),
-      sendDiagramSync: (nodes, conns, act, style) => this.collabCoordinator.sendDiagramSync(nodes, conns, act, style),
-    });
-  }
-
-  alignNodes(direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'): void {
-    this.toolbarService.alignNodes(direction, {
-      isReadOnly: this.isReadOnly(),
-      selectedNodeIds: this.selectedNodeIds(),
-      nodes: this.nodes(),
-      getNodeWidth: (n) => this.getNodeWidth(n),
-      getNodeHeight: (n) => this.getNodeHeight(n),
-      onApplyTransformation: (mod, act) => this.applyNodesTransformation(mod, act),
-    });
-  }
-
-  distributeNodes(direction: 'horizontal' | 'vertical'): void {
-    this.toolbarService.distributeNodes(direction, {
-      isReadOnly: this.isReadOnly(),
-      selectedNodeIds: this.selectedNodeIds(),
-      nodes: this.nodes(),
-      getNodeWidth: (n) => this.getNodeWidth(n),
-      getNodeHeight: (n) => this.getNodeHeight(n),
-      onApplyTransformation: (mod, act) => this.applyNodesTransformation(mod, act),
-    });
-  }
-
-  snapSelectedToGrid(gridSize = 20): void {
-    this.toolbarService.snapSelectedToGrid(
-      {
-        isReadOnly: this.isReadOnly(),
-        selectedNodeIds: this.selectedNodeIds(),
-        nodes: this.nodes(),
-        getNodeWidth: (n) => this.getNodeWidth(n),
-        getNodeHeight: (n) => this.getNodeHeight(n),
-        onApplyTransformation: (mod, act) => this.applyNodesTransformation(mod, act),
-      },
-      gridSize,
-    );
-  }
-
-  getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
-    return this.connectionLayoutService.getOptimalConnectorId(sourceNode, targetNode, (n) => this.getNodeWidth(n), (n) => this.getNodeHeight(n));
-  }
-
-  getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
-    return this.connectionLayoutService.getConnectorPoint(node, side, (n) => this.getNodeHeight(n));
-  }
-
-  updateConnectionEndpoints(): void {
-    const result = this.connectionLayoutService.recalculateConnectionEndpoints(
-      this.nodes(),
-      this.connections(),
-      this.activeDiagramType(),
-      this.defaultLineStyle(),
-      (n) => this.getNodeWidth(n),
-      (n) => this.getNodeHeight(n),
-    );
-    if (result.anchorMoved) this.nodes.set(result.updatedNodes);
-    this.connections.set(result.updatedConnections);
-  }
-
-  onCanvasMouseDown(event: MouseEvent): void {
-    this.interactionService.handleCanvasMouseDown(event, () => this.closeContextMenu());
-  }
-
-  onCanvasBackgroundClick(event?: MouseEvent): void {
-    this.interactionService.handleCanvasBackgroundClick(event, () => this.deselectAll());
-  }
-
-  deselectAll(): void {
-    this.selectedSourceNodeId.set(null);
-    this.selectionService.clearSelection();
-    this.diagramCanvas?.clearSelection();
-    this.closeContextMenu();
-  }
-
-  onSelectionChange(event: FSelectionChangeEvent): void {
-    this.selectionService.onSelectionChange(event, this.nodes(), this.connections(), this.selectedRelationType());
-  }
-
-  selectAllClasses(): void {
-    this.selectionService.selectAllClasses(this.nodes(), this.selectedRelationType(), (allIds) => this.diagramCanvas?.select(allIds, []));
-  }
-
-  deleteSelected(): void {
-    if (this.isReadOnly()) return;
-    const nodeIds = this.selectedNodeIdsList();
-    const connIds = this.selectedConnIdsList();
-    if (nodeIds.length === 0 && connIds.length === 0) return;
-
-    this.pushSnapshot();
-    for (const id of nodeIds) this.removeClass(id, undefined, false);
-    for (const id of connIds) this.removeConnection(id);
-    this.deselectAll();
-  }
-
-  onConnectionSelect(connId: string, event: MouseEvent): void {
-    if (this.contextMenu()) this.closeContextMenu();
-    this.selectionService.onConnectionSelect(connId, event, this.selectedRelationType(), (n, c) => this.diagramCanvas?.select(n, c));
-  }
-
-  onNodeSelect(nodeId: string, event: MouseEvent): void {
-    if (this.contextMenu()) this.closeContextMenu();
-    this.selectionService.onNodeSelect(
-      nodeId,
-      event,
-      this.selectedRelationType(),
-      this.hasMovedDuringPointerDown,
-      (n, c) => this.diagramCanvas?.select(n, c),
-      () => this.diagramCanvas?.clearSelection(),
-    );
-  }
-
-  private cloneSnapshot(): DiagramHistorySnapshot {
-    return this.diagramHistoryService.cloneSnapshot(this.nodes(), this.connections(), this.defaultLineStyle());
-  }
-
-  pushSnapshot(): void {
-    if (!this.isApplyingHistory) this.diagramHistoryService.pushSnapshot(this.cloneSnapshot());
-  }
-
-  private applyHistorySnapshot(snapshot: DiagramHistorySnapshot, action: 'undo' | 'redo'): void {
-    this.isApplyingHistory = true;
-    this.nodes.set(snapshot.nodes);
-    this.connections.set(snapshot.connections);
-    this.defaultLineStyle.set(snapshot.defaultLineStyle);
-    this.selectionService.clearSelection();
-    this.markAsUnsaved();
-    this.updateConnectionEndpoints();
-    requestAnimationFrame(() => {
-      this.updateConnectionEndpoints();
-      this.diagramCanvas?.reset();
-      this.isApplyingHistory = false;
-    });
-    this.collabCoordinator.sendDiagramSync(
-      this.nodes(),
-      this.connections(),
-      action,
-      this.defaultLineStyle(),
-    );
-    this.persistenceService.triggerAutoSave();
-  }
-
-  undo(): void {
-    if (this.isReadOnly() || !this.diagramHistoryService.canUndo()) return;
-    const prev = this.diagramHistoryService.undo(this.cloneSnapshot());
-    if (prev) this.applyHistorySnapshot(prev, 'undo');
-  }
-
-  redo(): void {
-    if (this.isReadOnly() || !this.diagramHistoryService.canRedo()) return;
-    const next = this.diagramHistoryService.redo(this.cloneSnapshot());
-    if (next) this.applyHistorySnapshot(next, 'redo');
-  }
-
-
-
-  private generateNextSequenceMessage(
-    sourceNode?: UmlClassNode,
-    targetNode?: UmlClassNode,
-    isReturn: boolean = false,
-  ): UmlMessage[] {
-    return generateNextSequenceMessageLogic(sourceNode, targetNode, isReturn);
-  }
-
-  private recalculateSequenceNumbers(
-    connectionsList: UmlConnection[],
-    preserveSequenceNumbers = false,
-  ): UmlConnection[] {
-    return recalculateSequenceNumbersLogic(
+  /** Recalcula la numeración jerárquica de mensajes en diagramas de secuencia. */
+  recalculateSequenceNumbers(connectionsList: UmlConnection[], preserveSequenceNumbers = false): UmlConnection[] {
+    const layout =
+      (this as any).diagramConnectionLayoutService ||
+      this.connectionLayoutService ||
+      new DiagramConnectionLayoutService();
+    return layout.recalculateSequenceNumbers(
       connectionsList,
       this.nodes(),
       this.activeDiagramType(),
@@ -933,461 +872,584 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
   }
 
-  onTableClick(nodeId: string, event: MouseEvent): void {
-    this.connectionOps.handleTableClick(nodeId, event, {
-      isReadOnly: this.isReadOnly(),
-      isLocked: this.isNodeLockedByOther(nodeId),
-      activeRel: this.selectedRelationType(),
-      currentSource: this.selectedSourceNodeId(),
-      setSourceNodeId: (id) => this.selectedSourceNodeId.set(id),
-      onMouseMove: (e) => this.onCanvasMouseMove(e),
-      activeDiagramType: this.activeDiagramType(),
-      nodes: this.nodes(),
-      connections: this.connections(),
-      defaultLineStyle: this.defaultLineStyle(),
-      getOptimalConnectorId: (s, t) => this.getOptimalConnectorId(s, t),
-      generateNextSequenceMessage: (s, t, isRet) => this.generateNextSequenceMessage(s, t, isRet),
-      onApplyNewConnection: (newConn, isSeqRel) => this.applyNewConnection(newConn, isSeqRel),
-      onApplyAssociationClass: (assocResult) => this.applyCreatedAssociationClass(assocResult),
-    });
+  /** Devuelve el color predeterminado asociado a un tipo de nodo y estereotipo. */
+  getDefaultColorForNodeType(nodeType?: string | null, stereotype?: string | null): string {
+    return getDefaultColorForNodeTypeUtil(nodeType, stereotype);
   }
 
-  private applyNewConnection(newConn: UmlConnection, isSeqRel: boolean): void {
-    const updated = this.recalculateSequenceNumbers([...this.connections(), newConn]);
-    this.commitDiagramMutation({
-      connections: updated,
-      action: 'create_conn',
-    });
-    this.setPointerMode();
-    if (isSeqRel) {
-      const created = this.connections().find((c) => c.id === newConn.id) || newConn;
-      setTimeout(() => this.openEditConnModal(created), 100);
+  /** Calcula el ancho visual estimado de un nodo UML. */
+  getNodeWidth(node: UmlClassNode): number { return getNodeWidthUtil(node); }
+
+  /** Calcula el alto visual estimado de un nodo UML. */
+  getNodeHeight(node: UmlClassNode): number { return getNodeHeightUtil(node); }
+
+  /** Obtiene el nombre legible de un nodo por su ID. */
+  getNodeName(nodeId: string): string {
+    return this.nodes().find((n) => n.id === nodeId)?.name || nodeId;
+  }
+
+  /** Obtiene la etiqueta descriptiva de un tipo de relación UML. */
+  getRelationLabel(relType: UmlRelationshipType): string {
+    return relType || 'association';
+  }
+
+  /** Determina si un tipo de relación pertenece a diagramas de secuencia. */
+  isSequenceConnection(relType: UmlRelationshipType | null): boolean {
+    return DiagramEditorContextUtil.isSequenceRelation(relType, this.activeDiagramType());
+  }
+
+  /** Calcula los conectores óptimos de salida y entrada entre dos nodos. */
+  getOptimalConnectorId(sourceNode: UmlClassNode, targetNode: UmlClassNode): { sourceId: string; targetId: string } {
+    return this.connectionLayoutService.getOptimalConnectorId(
+      sourceNode,
+      targetNode,
+      (n: UmlClassNode) => this.getNodeWidth(n),
+      (n: UmlClassNode) => this.getNodeHeight(n),
+    );
+  }
+
+  /** Obtiene las coordenadas del puerto de conexión en un lado específico del nodo. */
+  getConnectorPoint(node: UmlClassNode, side: string): { x: number; y: number } {
+    return this.connectionLayoutService.getConnectorPoint(node, side, (n: UmlClassNode) => this.getNodeHeight(n));
+  }
+
+  /** Actualiza los conectores de todas las relaciones tras mover o redimensionar nodos. */
+  updateConnectionEndpoints(): void {
+    const res = this.connectionLayoutService.recalculateConnectionEndpoints(
+      this.nodes(),
+      this.connections(),
+      this.activeDiagramType(),
+      this.defaultLineStyle(),
+      (n: UmlClassNode) => this.getNodeWidth(n),
+      (n: UmlClassNode) => this.getNodeHeight(n),
+    );
+    if (res.anchorMoved) this.nodes.set(res.updatedNodes);
+    this.connections.set(res.updatedConnections);
+  }
+
+  /** Verifica si un nodo está bloqueado por otro colaborador remoto en la sala. */
+  isNodeLockedByOther(nodeId: string): boolean {
+    return this.collabCoordinator?.isNodeLockedByOther(nodeId) || false;
+  }
+
+  /** Activa el modo puntero cancelando cualquier herramienta de relación activa. */
+  setPointerMode(): void {
+    this.selectedRelationType.set(null);
+    this.selectedSourceNodeId.set(null);
+    this.tempCursorPos.set(null);
+  }
+
+  /** Selecciona o deselecciona una herramienta de relación UML en la caja de herramientas. */
+  selectRelationTool(type: UmlRelationshipType | null): void {
+    if (this.isReadOnly()) return;
+    if (!type || this.selectedRelationType() === type) {
+      this.setPointerMode();
+    } else {
+      this.selectedRelationType.set(type);
+      this.selectedSourceNodeId.set(null);
+      this.clearSelection();
     }
   }
 
-  private applyCreatedAssociationClass(result: { nodes: UmlClassNode[]; connections: UmlConnection[] }): void {
-    this.commitDiagramMutation({
-      nodes: result.nodes,
-      connections: result.connections,
-      action: 'create_assoc_class',
-    });
-    this.setPointerMode();
-    requestAnimationFrame(() => {
-      this.updateConnectionEndpoints();
-      this.diagramCanvas?.reset();
+  /** Alias de selección de tipo de relación desde la barra lateral. */
+  selectRelationType(type: UmlRelationshipType | null): void {
+    this.selectRelationTool(type);
+  }
+
+  /** Establece el estilo de línea predeterminado para todas las conexiones del diagrama. */
+  setAllConnectionsLineStyle(style: UmlLineStyle): void {
+    if (this.isReadOnly()) return;
+    this.pushSnapshot();
+    this.defaultLineStyle.set(style);
+    const updated = this.connections().map((c) =>
+      DiagramEditorContextUtil.isSequenceRelation(c.type, this.activeDiagramType())
+        ? c
+        : { ...c, lineStyle: style },
+    );
+    this.connections.set(updated);
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'change_default_line_style');
+  }
+
+  /** Alias para cambiar el estilo de línea predeterminado desde la barra lateral. */
+  setDefaultLineStyle(style: UmlLineStyle): void {
+    this.setAllConnectionsLineStyle(style);
+  }
+
+  /** Maneja el cambio de selección múltiple emitido por `@foblex/flow`. */
+  onSelectionChange(event: FSelectionChangeEvent): void {
+    this.selectionService.onSelectionChange(event, this.nodes(), this.connections(), this.selectedRelationType());
+  }
+
+  /** Maneja la selección por clic sobre un nodo del lienzo. */
+  onNodeSelect(nodeId: string, event: MouseEvent): void {
+    if (this.selectedRelationType()) {
+      this.onTableClick(nodeId, event);
+      return;
+    }
+    this.selectionService.onNodeSelect(
+      nodeId,
+      event,
+      this.selectedRelationType(),
+      this.canvasInteraction.hasMovedDuringPointerDown,
+      (ids: string[], cids: string[]) => this.diagramCanvas?.select(ids, cids),
+      () => this.diagramCanvas?.clearSelection(),
+    );
+  }
+
+  /** Maneja la selección por clic sobre una conexión del lienzo. */
+  onConnectionSelect(connId: string, event: MouseEvent): void {
+    this.selectionService.onConnectionSelect(connId, event, this.selectedRelationType(), (ids: string[], cids: string[]) =>
+      this.diagramCanvas?.select(ids, cids),
+    );
+  }
+
+  /** Procesa el clic sobre un nodo cuando hay una herramienta de relación activa. */
+  onTableClick(nodeId: string, event: MouseEvent): void {
+    DiagramEditorContextUtil.executeTableClick(this, nodeId, event);
+  }
+
+  /** Registra la posición inicial de clic en el lienzo para diferenciar clic de arrastre. */
+  onCanvasMouseDown(event: MouseEvent): void {
+    this.canvasInteraction.handleCanvasMouseDown(event, () => this.closeContextMenu());
+  }
+
+  /** Limpia la selección al hacer clic sobre el fondo vacío del lienzo. */
+  onCanvasBackgroundClick(event?: MouseEvent): void {
+    this.canvasInteraction.handleCanvasBackgroundClick(event, () => {
+      this.clearSelection();
+      this.setPointerMode();
+      this.closeContextMenu();
     });
   }
 
-  onFlowLoaded(): void {
-    this.updateConnectionEndpoints();
-    this.diagramCanvas?.redraw();
-    this.syncZoomFromCanvas();
+  /** Actualiza la posición del cursor colaborativo al mover el ratón. */
+  onCanvasMouseMove(event: MouseEvent): void {
+    this.canvasInteraction.handleCanvasMouseMove(
+      event,
+      this.canvasExportArea?.nativeElement,
+      this.fCanvas?.transform,
+      (x, y) => this.collabCoordinator.sendCursorPosition(x, y),
+    );
   }
 
-  onConnectionCreated(event: FCreateConnectionEvent): void {
-    this.connectionOps.handleConnectionCreated(event, {
+  /** Crea y valida un nodo del tipo especificado en el diagrama. */
+  private createNodeOfType(nodeType: string, customPos?: { x: number; y: number }, stereotype?: string | null): void {
+    const ops = (this as any).diagramNodeOpsService || this.nodeOps || new DiagramNodeOperationsService();
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const newNode = ops.createValidatedNode(nodeType, {
       isReadOnly: this.isReadOnly(),
-      selectedRelationType: this.selectedRelationType(),
       activeDiagramType: this.activeDiagramType(),
-      defaultLineStyle: this.defaultLineStyle(),
       nodes: this.nodes(),
-      connections: this.connections(),
-      isNodeLockedByOther: (id) => this.isNodeLockedByOther(id),
-      generateNextSequenceMessage: (src, tgt, isReturn) => this.generateNextSequenceMessage(src, tgt, isReturn),
-      onApplyNewConnection: (newConn, isSeqRel) => this.applyNewConnection(newConn, isSeqRel),
-      onApplyAssocClass: (res) => this.applyCreatedAssociationClass(res),
-    });
-  }
-
-  onConnectionReassigned(event: FReassignConnectionEvent): void {
-    this.connectionOps.handleConnectionReassigned(event, {
-      isReadOnly: this.isReadOnly(),
-      connections: this.connections(),
-      activeDiagramType: this.activeDiagramType(),
-      onApplyReassigned: (updatedList) => {
-        this.commitDiagramMutation({
-          connections: this.recalculateSequenceNumbers(updatedList),
-          action: 'reassign_conn',
-        });
+      position: customPos,
+      stereotype,
+      scrollOffset: { scrollLeft: scrollEl?.scrollLeft || 0, scrollTop: scrollEl?.scrollTop || 0 },
+      onIncompatible: (diagType: DiagramType) => {
+        const modal = this.modalService || new DiagramModalService();
+        modal.showIncompatibleElementModal(diagType, (this as any).confirmDialogService || this.confirmDialog);
       },
     });
+    if (!newNode) return;
+    this.pushSnapshot();
+    this.nodes.set([...this.nodes(), newNode]);
+    this.selectionService?.selectSingleNode(newNode.id);
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
   }
 
+  /** Agrega una clase UML al lienzo. */
+  addClass(customPos?: { x: number; y: number }, stereotype?: string | null): void { this.createNodeOfType('class', customPos, stereotype); }
+  /** Agrega una interfaz UML al lienzo. */
+  addInterface(customPos?: { x: number; y: number }): void { this.createNodeOfType('class', customPos, 'interface'); }
+  /** Agrega un actor UML al lienzo. */
+  addActor(customPos?: { x: number; y: number }): void { this.createNodeOfType('actor', customPos); }
+  /** Agrega un caso de uso UML al lienzo. */
+  addUseCase(customPos?: { x: number; y: number }): void { this.createNodeOfType('use_case', customPos); }
+  /** Agrega una nota de comentario UML al lienzo. */
+  addNote(customPos?: { x: number; y: number }): void { this.createNodeOfType('class', customPos, 'note'); }
+  /** Agrega un paquete UML al lienzo. */
+  addPackage(customPos?: { x: number; y: number }): void { this.createNodeOfType('package', customPos); }
+  /** Agrega un nodo Boundary al lienzo. */
+  addBoundary(customPos?: { x: number; y: number }): void { this.createNodeOfType('boundary', customPos); }
+  /** Agrega un nodo Control al lienzo. */
+  addControl(customPos?: { x: number; y: number }): void { this.createNodeOfType('control', customPos); }
+  /** Agrega un nodo Entity al lienzo. */
+  addEntity(customPos?: { x: number; y: number }): void { this.createNodeOfType('entity', customPos); }
+  /** Agrega un límite de sistema (Boundary Box) al lienzo. */
+  addBoundaryBox(customPos?: { x: number; y: number }): void { this.createNodeOfType('boundary_box', customPos); }
+  /** Agrega una línea de vida al lienzo. */
+  addLifeline(customPos?: { x: number; y: number }): void { this.createNodeOfType('lifeline', customPos); }
+  /** Agrega un componente UML al lienzo. */
+  addComponent(customPos?: { x: number; y: number }): void { this.createNodeOfType('component', customPos); }
+  /** Agrega un nodo físico de despliegue al lienzo. */
+  addNode(customPos?: { x: number; y: number }): void { this.createNodeOfType('node', customPos); }
+  /** Agrega un dispositivo de despliegue al lienzo. */
+  addDevice(customPos?: { x: number; y: number }): void { this.createNodeOfType('device', customPos); }
+  /** Agrega un entorno de ejecución al lienzo. */
+  addExecutionEnvironment(customPos?: { x: number; y: number }): void { this.createNodeOfType('executionEnvironment', customPos); }
+  /** Agrega un artefacto de despliegue al lienzo. */
+  addArtifact(customPos?: { x: number; y: number }): void { this.createNodeOfType('class', customPos, 'artifact'); }
+
+  /** Procesa el soltado de un elemento desde el Toolbox o Explorador en el lienzo. */
+  onNodeDropped(event: { type: string; stereotype?: string | null; position: { x: number; y: number } }): void {
+    this.createNodeOfType(event.type, event.position, event.stereotype);
+  }
+
+  /** Procesa el renombrado en línea de un nodo en el lienzo. */
+  onNodeRename(event: { nodeId: string; newName: string }): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(event.nodeId)) return;
+    const { anyChanged, updatedNodes } = this.nodeOps.renameNode(
+      this.nodes(),
+      event.nodeId,
+      event.newName,
+    );
+    if (!anyChanged) return;
+    this.pushSnapshot();
+    this.nodes.set(updatedNodes);
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'rename_node');
+  }
+
+  /** Procesa el cambio de offset de etiqueta flotante de un nodo. */
+  onNodeLabelOffsetChange(node: UmlClassNode, offset: { x: number; y: number }): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    this.nodes.set(this.nodeOps.updateNodeLabelOffset(this.nodes(), node.id, offset));
+    this.markAsUnsaved();
+  }
+
+  /** Agrega un atributo a un nodo desde el lienzo. */
+  addAttribute(node: UmlClassNode): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    this.pushSnapshot();
+    const attrs = [...(node.attributes || [])];
+    attrs.push({ name: `attr${attrs.length + 1}`, type: 'String', nullable: true, unique: false, length: 255 });
+    this.nodes.set(this.nodes().map((n) => (n.id === node.id ? { ...n, attributes: attrs } : n)));
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'add_attribute');
+  }
+
+  /** Agrega un atributo a un nodo desde el menú contextual. */
+  addAttributeFromMenu(node: UmlClassNode): void {
+    this.addAttribute(node);
+    this.closeContextMenu();
+  }
+
+  /** Agrega un método a un nodo desde el lienzo. */
+  addMethod(node: UmlClassNode): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    this.pushSnapshot();
+    const methods = [...(node.methods || [])];
+    methods.push({ name: `metodo${methods.length + 1}`, parameters: '', returnType: 'void' });
+    this.nodes.set(this.nodes().map((n) => (n.id === node.id ? { ...n, methods } : n)));
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'add_method');
+  }
+
+  /** Agrega un método a un nodo desde el menú contextual. */
+  addMethodFromMenu(node: UmlClassNode): void {
+    this.addMethod(node);
+    this.closeContextMenu();
+  }
+
+  /** Procesa el cambio de posición de un nodo individual en el lienzo. */
+  onNodePositionChange(node: UmlClassNode, newPosition: { x: number; y: number }): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    const { shouldRedraw } = this.canvasInteraction.handleNodePositionChange({
+      node,
+      newPosition,
+      nodes: this.nodes(),
+      selectedNodeIds: this.selectedNodeIds(),
+      selectedNodeId: this.selectedNodeId(),
+      activeDiagramType: this.activeDiagramType(),
+      getNodeWidth: (n: UmlClassNode) => this.getNodeWidth(n),
+      getNodeHeight: (n: UmlClassNode) => this.getNodeHeight(n),
+      onStartDrag: () => this.pushSnapshot(),
+      onSelectNode: (id: string) => this.selectionService.selectSingleNode(id),
+      sendNodeDrag: (id: string, pos: { x: number; y: number }) => this.collabCoordinator.sendNodeDrag(id, pos),
+    });
+    if (shouldRedraw) this.fCanvas?.redraw();
+    this.updateConnectionEndpoints();
+    this.markAsUnsaved();
+    this.persistenceService.triggerNodeDragEnd();
+  }
+
+  /** Procesa el movimiento simultáneo de múltiples nodos seleccionados en el lienzo. */
+  onMoveNodes(event: FMoveNodesEvent): void {
+    if (this.isReadOnly()) return;
+    const { anyMoved } = this.canvasInteraction.handleMoveNodes({
+      event,
+      nodes: this.nodes(),
+      activeDiagramType: this.activeDiagramType(),
+      getNodeWidth: (n: UmlClassNode) => this.getNodeWidth(n),
+      getNodeHeight: (n: UmlClassNode) => this.getNodeHeight(n),
+      onStartDrag: () => this.pushSnapshot(),
+      sendNodeDrag: (id: string, pos: { x: number; y: number }) => this.collabCoordinator.sendNodeDrag(id, pos),
+    });
+    if (!anyMoved) return;
+    this.nodes.set([...this.nodes()]);
+    this.updateConnectionEndpoints();
+    this.markAsUnsaved();
+    this.persistenceService.triggerNodeDragEnd();
+  }
+
+  /** Procesa el redimensionado manual de un nodo en el lienzo. */
+  onNodeSizeChange(data: { node: UmlClassNode; width: number; height: number; position: { x: number; y: number } }): void {
+    if (this.isReadOnly() || this.isNodeLockedByOther(data.node.id)) return;
+    this.pushSnapshot();
+    this.nodes.set(this.nodeOps.updateNodeSize(this.nodes(), data));
+    this.updateConnectionEndpoints();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'resize_node');
+  }
+
+  /** Alias de redimensionado de nodo para el evento del lienzo. */
+  onNodeSizeChanged(data: { node: UmlClassNode; width: number; height: number; position: { x: number; y: number } }): void {
+    this.onNodeSizeChange(data);
+  }
+
+  /** Procesa la creación de una conexión arrastrando entre puertos del lienzo. */
+  onConnectionCreated(event: FCreateConnectionEvent): void {
+    DiagramEditorContextUtil.executeConnectionCreated(this, event);
+  }
+
+  /** Procesa la reubicación vertical de un mensaje en un diagrama de secuencia. */
   onSequenceMessageMove(event: { connectionId: string; targetSlot: number }): void {
     this.connectionOps.handleSequenceMessageMove(event, {
       isReadOnly: this.isReadOnly(),
       connections: this.connections(),
       activeDiagramType: this.activeDiagramType(),
-      onApplyMoved: (moved) => {
-        this.commitDiagramMutation({
-          connections: this.recalculateSequenceNumbers(moved),
-          action: 'move_seq_msg',
-        });
+      onApplyMoved: (updatedList: UmlConnection[]) => {
+        this.pushSnapshot();
+        const recalculated = this.recalculateSequenceNumbers(updatedList, false);
+        this.connections.set(recalculated);
+        this.markAsUnsaved();
+        this.sendDiagramSync(this.nodes(), recalculated, 'move_sequence_message');
       },
     });
   }
 
-  private getScrollOffset(): { scrollLeft: number; scrollTop: number } {
-    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
-    return {
-      scrollLeft: scrollEl?.scrollLeft || 0,
-      scrollTop: scrollEl?.scrollTop || 0,
-    };
-  }
-
-  private commitNewNode(newNode: UmlClassNode, autoRename = true): void {
-    this.commitDiagramMutation({
-      nodes: [...this.nodes(), newNode],
-      action: 'add_node',
-      recordHistory: false,
-    });
-    if (autoRename) {
-      setTimeout(() => this.diagramCanvas?.startRenameNode(newNode.id), 50);
-    }
-  }
-
-  private addValidatedNode(
-    type: string,
-    position?: { x: number; y: number },
-    autoRename = true,
-    stereotype?: UmlStereotype | string | null,
-  ): void {
-    const newNode = this.nodeOps.createValidatedNode(type, {
+  /** Procesa la reasignación de extremo de una conexión en el lienzo. */
+  onConnectionReassigned(event: FReassignConnectionEvent): void {
+    this.connectionOps.handleConnectionReassigned(event, {
       isReadOnly: this.isReadOnly(),
+      connections: this.connections(),
       activeDiagramType: this.activeDiagramType(),
-      nodes: this.nodes(),
-      position,
-      stereotype,
-      scrollOffset: this.getScrollOffset(),
-      onIncompatible: (t) => this.showIncompatibleElementModal(t),
-    });
-    if (!newNode) return;
-    this.pushSnapshot();
-    this.commitNewNode(newNode, autoRename);
-  }
-
-  addClass(pos?: { x: number; y: number }, stereotype?: UmlStereotype | string | null): void { this.addValidatedNode('class', pos, true, stereotype); }
-  addComponent(pos?: { x: number; y: number }): void { this.addValidatedNode('component', pos); }
-  addDevice(pos?: { x: number; y: number }): void { this.addValidatedNode('device', pos); }
-  addExecutionEnvironment(pos?: { x: number; y: number }): void { this.addValidatedNode('executionEnvironment', pos); }
-  addBoundaryBox(pos?: { x: number; y: number }): void { this.addValidatedNode('boundary_box', pos, false); }
-  addActor(pos?: { x: number; y: number }): void { this.addValidatedNode('actor', pos); }
-  addUseCase(pos?: { x: number; y: number }): void { this.addValidatedNode('use_case', pos); }
-  addPackage(pos?: { x: number; y: number }): void { this.addValidatedNode('package', pos); }
-  addBoundary(pos?: { x: number; y: number }): void { this.addValidatedNode('boundary', pos); }
-  addControl(pos?: { x: number; y: number }): void { this.addValidatedNode('control', pos); }
-  addEntity(pos?: { x: number; y: number }): void { this.addValidatedNode('entity', pos); }
-  addLifeline(pos?: { x: number; y: number }): void { this.addValidatedNode('lifeline', pos); }
-
-  copySelectedNodes(): void {
-    const result = this.diagramClipboardService.copyNodes(
-      this.nodes(),
-      this.connections(),
-      this.selectedNodeIds(),
-      this.selectedNodeId(),
-      this.activeDiagramType(),
-    );
-    if (!result) return;
-    this.showQuickToast(this.diagramClipboardService.formatCopyToast(result));
-  }
-
-  pasteNodes(targetPos?: { x: number; y: number }): void {
-    const result = this.diagramClipboardService.executePaste({
-      isReadOnly: this.isReadOnly(),
-      activeDiagramType: this.activeDiagramType(),
-      nodes: this.nodes(),
-      targetPos,
-      scrollOffset: this.getScrollOffset(),
-      onIncompatible: (t) => this.showIncompatibleElementModal(t),
-    });
-    if (!result) return;
-
-    const newConns = result.newConnections.length > 0 ? [...this.connections(), ...result.newConnections] : undefined;
-    this.commitDiagramMutation({
-      nodes: [...this.nodes(), ...result.newNodes],
-      connections: newConns,
-      action: 'add_node',
-    });
-    this.selectedNodeIds.set(new Set(result.newPastedIds));
-    this.selectedNodeId.set(result.newPastedIds[0]);
-    this.diagramCanvas?.select(result.newPastedIds, []);
-    this.closeContextMenu();
-    this.showQuickToast(this.diagramClipboardService.formatPasteToast(result.newNodes, result.newConnections));
-  }
-
-  cutSelectedNodes(): void {
-    if (this.isReadOnly()) return;
-    this.copySelectedNodes();
-    this.deleteSelected();
-    this.closeContextMenu();
-  }
-
-  duplicateSelected(): void {
-    if (this.isReadOnly()) return;
-    this.copySelectedNodes();
-    this.pasteNodes();
-    this.closeContextMenu();
-  }
-
-  closeContextMenu(): void {
-    this.contextMenuService.closeContextMenu();
-  }
-
-  onNodeContextMenu(data: { node: UmlClassNode; event: MouseEvent }): void {
-    if (this.isReadOnly()) return;
-    this.contextMenuService.onNodeContextMenu({
-      ...data,
-      selectOnCanvas: (nodeIds, connIds) => this.diagramCanvas?.select(nodeIds, connIds),
-      clientToCanvas: (x, y) => this.diagramCanvas?.clientToCanvasCoordinates(x, y),
-    });
-  }
-
-  onConnectionContextMenu(data: { conn: UmlConnection; event: MouseEvent }): void {
-    if (this.isReadOnly()) return;
-    this.contextMenuService.onConnectionContextMenu({
-      ...data,
-      selectOnCanvas: (nodeIds, connIds) => this.diagramCanvas?.select(nodeIds, connIds),
-      clientToCanvas: (x, y) => this.diagramCanvas?.clientToCanvasCoordinates(x, y),
-    });
-  }
-
-  onCanvasContextMenu(data: { event: MouseEvent; canvasPos: { x: number; y: number } }): void {
-    if (this.isReadOnly()) return;
-    this.contextMenuService.onCanvasContextMenu(data);
-  }
-
-  private syncUpdatedConnections(toastMsg: string): void {
-    this.commitDiagramMutation({
-      connections: [...this.connections()],
-      action: 'update_connection',
-    });
-    this.closeContextMenu();
-    this.showQuickToast(toastMsg);
-  }
-
-  reverseConnection(conn: UmlConnection): void {
-    if (this.isReadOnly()) return;
-    this.connectionOps.reverseConnection(conn);
-    this.syncUpdatedConnections('Dirección de relación invertida');
-  }
-
-  setConnectionLineStyle(conn: UmlConnection, style: UmlLineStyle): void {
-    if (this.isReadOnly()) return;
-    conn.lineStyle = style;
-    this.syncUpdatedConnections(`Estilo de línea cambiado a ${style}`);
-  }
-
-  private showIncompatibleElementModal(diagType: DiagramType): void {
-    this.modalService.showIncompatibleElementModal(diagType, this.confirmDialogService);
-  }
-
-  handleCopyNodeFromExplorer(event: { node: UmlClassNode; sourceDiagramId?: string; sourceDiagramType?: DiagramType; position?: { x: number; y: number } }): void {
-    const newNode = this.diagramClipboardService.executeCopyFromExplorer({
-      isReadOnly: this.isReadOnly(),
-      node: event.node,
-      sourceDiagramId: event.sourceDiagramId || '',
-      currentDiagramId: this.currentDiagramId(),
-      activeDiagramType: this.activeDiagramType(),
-      nodes: this.nodes(),
-      position: event.position,
-      scrollOffset: this.getScrollOffset(),
-      getDefaultColor: (nt, st) => this.getDefaultColorForNodeType(nt, st),
-      onIncompatible: (t) => this.showIncompatibleElementModal(t),
-    });
-    if (!newNode) return;
-
-    this.commitDiagramMutation({
-      nodes: [...this.nodes(), newNode],
-      action: 'add_node',
-    });
-    this.selectedNodeId.set(newNode.id);
-    this.selectedNodeIds.set(new Set([newNode.id]));
-    const typeLabel = this.nodeOps.getNodeTypeReadableLabel(newNode.nodeType);
-    this.showQuickToast(`${typeLabel} "${newNode.name}" copiado al lienzo`);
-  }
-
-  onNodeDropped(event: { payload: DropNodePayload; position: { x: number; y: number } }): void {
-    this.nodeOps.handleNodeDropped(event, {
-      isReadOnly: this.isReadOnly(),
-      onDropToolbox: (type, pos, st) => this.addValidatedNode(type, pos, type !== 'boundary_box', st),
-      onCopyExplorer: (data) => this.handleCopyNodeFromExplorer(data),
-    });
-  }
-
-  handleSelectNodeFromExplorer(nodeId: string): void {
-    this.nodeOps.handleSelectNodeFromExplorer(
-      nodeId,
-      this.nodes(),
-      this.diagramCanvas,
-      (id) => {
-        this.selectedNodeId.set(id);
-        this.selectedNodeIds.set(new Set([id]));
+      onApplyReassigned: (updatedList: UmlConnection[]) => {
+        this.pushSnapshot();
+        const recalculated = this.recalculateSequenceNumbers(updatedList, false);
+        this.connections.set(recalculated);
+        this.markAsUnsaved();
+        this.sendDiagramSync(this.nodes(), recalculated, 'reassign_connection');
       },
-    );
-  }
-
-  removeClass(nodeId: string, event?: MouseEvent, recordHistory = true): void {
-    if (event) event.stopPropagation();
-    if (this.isReadOnly()) return;
-
-    const result = this.nodeOps.executeCascadeDeleteNode(
-      nodeId,
-      this.nodes(),
-      this.connections(),
-      this.selectedNodeId(),
-      (c) => this.recalculateSequenceNumbers(c),
-    );
-
-    this.commitDiagramMutation({
-      nodes: result.remainingNodes,
-      connections: result.remainingConnections,
-      action: 'remove_node',
-      recordHistory,
     });
-    this.selectedNodeId.set(result.nextSelectedNodeId);
   }
 
+  /** Abre el modal de edición de un nodo y solicita su bloqueo colaborativo. */
   openEditNodeModal(node: UmlClassNode, event?: MouseEvent): void {
     if (event) event.stopPropagation();
-    if (this.isReadOnly() || node.isAnchor) return;
-
+    if (this.isReadOnly()) return;
     if (this.isNodeLockedByOther(node.id)) {
       const lock = this.collabCoordinator.getNodeLock(node.id);
-      this.toastService.warning(`🔒 Esta tabla está bloqueada por ${lock?.userName || 'otro usuario'}.`);
+      this.toastService?.warning(`🔒 "${node.name}" está siendo editado por ${lock?.userName || 'otro usuario'}`);
       return;
     }
-
     this.collabCoordinator.requestNodeLock(node.id);
     this.modalService.openEditNodeModal(node);
   }
 
+  /** Cierra el modal de edición de nodo y libera su bloqueo colaborativo. */
   closeEditNodeModal(): void {
-    this.modalService.closeEditNodeModal((nodeId) => {
-      this.collabCoordinator.releaseNodeLock(nodeId);
-    });
+    this.modalService.closeEditNodeModal((id) => this.collabCoordinator.releaseNodeLock(id));
   }
 
+  /** Guarda los cambios realizados en el modal de edición de nodo. */
+  saveEditedNode(savedNode?: UmlClassNode): void {
+    const target = savedNode || this.editingNode();
+    if (!target || this.isReadOnly()) return;
+    this.pushSnapshot();
+    const updatedNodes = this.nodeOps.saveEditedNode(this.nodes(), target, this.activeDiagramType());
+    this.nodes.set(updatedNodes);
+    this.updateConnectionEndpoints();
+    this.closeEditNodeModal();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'edit_node');
+  }
+
+  /** Alias de guardado de nodo editado para el evento del modal. */
+  onSaveEditedNode(savedNode: UmlClassNode): void {
+    this.saveEditedNode(savedNode);
+  }
+
+  /** Abre el modal de edición de una conexión UML. */
   openEditConnModal(conn: UmlConnection, event?: MouseEvent): void {
     if (event) event.stopPropagation();
-    if (!this.isReadOnly()) this.modalService.openEditConnModal(conn);
+    if (this.isReadOnly()) return;
+    this.modalService.openEditConnModal(conn);
   }
+
+  /** Cierra el modal de edición de conexión. */
   closeEditConnModal(): void { this.modalService.closeEditConnModal(); }
 
-  removeConnection(connId: string, event?: MouseEvent): void {
+  /** Guarda los cambios realizados en el modal de edición de conexión. */
+  saveEditedConnection(savedConn?: UmlConnection): void {
+    const target = savedConn || this.editingConnection();
+    if (!target || this.isReadOnly()) return;
+    this.pushSnapshot();
+    const { updatedConnections } = this.connectionOps.saveEditedConnection(
+      this.connections(),
+      target,
+      this.activeDiagramType(),
+      (m: any, seq?: string) => this.normalizeUmlMessage(m, seq),
+    );
+    const nextConns = this.recalculateSequenceNumbers(updatedConnections);
+    this.connections.set(nextConns);
+    this.modalService.closeEditConnModal();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'edit_connection');
+  }
+
+  /** Alias de guardado de conexión editada para el evento del modal. */
+  onSaveEditedConnection(savedConn: UmlConnection): void {
+    this.saveEditedConnection(savedConn);
+  }
+
+  /** Elimina un nodo del diagrama en cascada junto con sus conexiones asociadas. */
+  deleteNode(nodeId: string, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    if (this.isReadOnly() || this.isNodeLockedByOther(nodeId)) return;
+    this.pushSnapshot();
+    const { remainingNodes, remainingConnections } = this.nodeOps.executeCascadeDeleteNode(
+      nodeId,
+      this.nodes(),
+      this.connections(),
+      this.selectedNodeId(),
+      (c: UmlConnection[]) => this.recalculateSequenceNumbers(c),
+    );
+    this.nodes.set(remainingNodes);
+    this.connections.set(remainingConnections);
+    this.clearSelection();
+    this.closeEditNodeModal();
+    this.closeContextMenu();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'delete_node');
+  }
+
+  /** Alias para eliminar un nodo desde eventos del lienzo. */
+  removeClass(nodeId: string, event?: MouseEvent): void {
+    this.deleteNode(nodeId, event);
+  }
+
+  /** Elimina un nodo desde el menú contextual. */
+  deleteNodeFromMenu(node: UmlClassNode): void {
+    this.deleteNode(node.id);
+    this.closeContextMenu();
+  }
+
+  /** Elimina una conexión específica del diagrama. */
+  deleteConnection(connId: string, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
-
-    const result = this.connectionOps.executeCascadeDeleteConnection(
+    this.pushSnapshot();
+    const { remainingNodes, remainingConnections } = this.connectionOps.executeCascadeDeleteConnection(
       connId,
       this.nodes(),
       this.connections(),
-      (c) => this.recalculateSequenceNumbers(c),
+      (c: UmlConnection[]) => this.recalculateSequenceNumbers(c),
     );
-
-    this.commitDiagramMutation({
-      nodes: result.remainingNodes,
-      connections: result.remainingConnections,
-      action: 'delete_conn',
-    });
-    this.closeEditConnModal();
-  }
-
-  onAiMutation(event: { nodes: UmlClassNode[]; connections: UmlConnection[]; summary: string }): void {
-    if (event.nodes && event.nodes.length > 0) {
-      this.applyAiMutationWithAnimation(event.nodes, event.connections || []);
-      this.collabCoordinator.sendDiagramSync(event.nodes, event.connections || [], 'ai_mutation');
-    }
-  }
-
-  private processAiMutation(targetNodes: any[], targetConns: any[]): { cleanNodes: UmlClassNode[]; cleanConns: UmlConnection[] } {
-    return this.aiSyncService.processAiMutation({
-      targetNodes,
-      targetConns,
-      activeDiagramType: this.activeDiagramType(),
-      defaultLineStyle: this.defaultLineStyle(),
-      getDefaultColorForNodeType: (nt, st) => this.getDefaultColorForNodeType(nt, st),
-      getOptimalConnectorId: (s, t) => this.getOptimalConnectorId(s, t),
-      getConnectorPoint: (n, s) => this.getConnectorPoint(n, s),
-      recalculateSequenceNumbers: (c, p) => this.recalculateSequenceNumbers(c, p),
-    });
-  }
-
-  private applyAiMutationWithAnimation(targetNodes: UmlClassNode[], targetConns: UmlConnection[]): void {
-    const { cleanNodes, cleanConns } = this.processAiMutation(targetNodes, targetConns);
-    this.nodes.set(cleanNodes);
-    this.connections.set(cleanConns);
+    this.nodes.set(remainingNodes);
+    this.connections.set(remainingConnections);
+    this.selectionService.clearSelection();
+    this.modalService.closeEditConnModal();
+    this.closeContextMenu();
     this.markAsUnsaved();
-    this.aiSyncService.schedulePostMutationRedraw({
-      updateEndpoints: () => this.updateConnectionEndpoints(),
-      resetCanvas: () => this.diagramCanvas?.reset(),
-      fitView: () => this.fitView(),
-      redrawCanvas: () => this.diagramCanvas?.redraw(),
+    this.sendDiagramSync(this.nodes(), this.connections(), 'delete_connection');
+  }
+
+  /** Alias para eliminar una conexión desde el modal de edición. */
+  removeConnection(connOrId: UmlConnection | string): void {
+    const id = typeof connOrId === 'string' ? connOrId : connOrId.id;
+    this.deleteConnection(id);
+  }
+
+  /** Elimina una conexión desde el menú contextual. */
+  deleteConnectionFromMenu(conn: UmlConnection): void {
+    this.deleteConnection(conn.id);
+  }
+
+  /** Elimina todos los nodos o conexiones actualmente seleccionados. */
+  deleteSelectedNodes(): void {
+    if (this.isReadOnly()) return;
+    const nodeIds = this.selectedNodeIdsList();
+    const connIds = this.selectedConnIdsList();
+    if (nodeIds.length === 0 && connIds.length === 0) return;
+    this.pushSnapshot();
+    let curNodes = this.nodes();
+    let curConns = this.connections();
+    for (const nid of nodeIds) {
+      if (!this.isNodeLockedByOther(nid)) {
+        const res = this.nodeOps.executeCascadeDeleteNode(nid, curNodes, curConns, null, (c) => c);
+        curNodes = res.remainingNodes;
+        curConns = res.remainingConnections;
+      }
+    }
+    for (const cid of connIds) {
+      const res = this.connectionOps.executeCascadeDeleteConnection(cid, curNodes, curConns, (c) => c);
+      curNodes = res.remainingNodes;
+      curConns = res.remainingConnections;
+    }
+    this.nodes.set(curNodes);
+    this.connections.set(this.recalculateSequenceNumbers(curConns));
+    this.clearSelection();
+    this.closeContextMenu();
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'delete_selected');
+  }
+
+  /** Alias de eliminación de elementos seleccionados. */
+  deleteSelected(): void {
+    this.deleteSelectedNodes();
+  }
+
+  /** Solicita confirmación y limpia todos los elementos del lienzo actual. */
+  async clearAll(): Promise<void> {
+    if (this.isReadOnly() || (this.nodes().length === 0 && this.connections().length === 0)) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'common.confirmModal.clearBoardTitle',
+      message: 'common.confirmModal.clearBoardMessage',
+      type: 'danger',
     });
+    if (!confirmed) return;
+    this.pushSnapshot();
+    this.nodes.set([]);
+    this.connections.set([]);
+    this.clearSelection();
+    this.closeContextMenu();
+    this.markAsUnsaved();
+    this.sendDiagramSync([], [], 'clear_board');
   }
 
-  public normalizeUmlMessage(m: any, defaultSeq = '1'): UmlMessage {
-    return this.aiSyncService.normalizeUmlMessage(m, defaultSeq);
-  }
-
-  private sanitizeClientConnections(conns: any[], validNodes: UmlClassNode[]): UmlConnection[] {
-    return this.aiSyncService.sanitizeClientConnections(
-      conns,
-      validNodes,
-      this.activeDiagramType(),
+  /** Abre el modal con el JSON exportado del diagrama actual. */
+  openExportModal(): void {
+    this.closeExportDropdown();
+    const proj = this.exportService.buildProjectJson(
+      this.currentDiagramName(),
       this.defaultLineStyle(),
-      (combined, preserve) => this.recalculateSequenceNumbers(combined, preserve),
+      this.nodes(),
+      this.connections(),
     );
+    this.modalService.openExportModal(JSON.stringify(proj, null, 2));
   }
 
-  async downloadBmpFile(): Promise<void> {
-    this.showQuickToast('Generando imagen BMP...');
-    try {
-      await this.exportService.exportDiagramImage(
-        this.diagramCanvas,
-        'bmp',
-        this.currentDiagramName(),
-        this.activeDiagramType(),
-        this.nodes(),
-        this.connections(),
-      );
-    } catch {
-      this.showQuickToast('Error al exportar imagen BMP');
-    }
+  /** Abre el modal para pegar e importar un diagrama en formato JSON. */
+  openImportModal(): void {
+    if (this.isReadOnly()) return;
+    this.modalService.openImportModal();
   }
 
-  async downloadPngFile(): Promise<void> {
-    this.showQuickToast('Generando imagen PNG...');
-    try {
-      await this.exportService.exportDiagramImage(
-        this.diagramCanvas,
-        'png',
-        this.currentDiagramName(),
-        this.activeDiagramType(),
-        this.nodes(),
-        this.connections(),
-      );
-    } catch {
-      this.showQuickToast('Error al exportar imagen PNG');
-    }
-  }
+  /** Cierra el modal de visualización/importación JSON. */
+  closeJsonModal(): void { this.modalService.closeJsonModal(); }
 
-  downloadXmiFile(): void {
-    this.exportService.executeDownloadXmi({
-      currentDiagramId: this.currentDiagramId(),
-      currentDiagramName: this.currentDiagramName(),
-      hasUnsavedChanges: this.hasUnsavedChanges(),
-      isReadOnly: this.isReadOnly(),
-      xmiService: this.xmiService,
-      saveAst: (id, payload) => this.diagramService.saveAst(id, payload),
-      buildSaveAstPayload: () => this.buildSaveAstPayload(),
-      onSavedSuccessfully: () => {
-        this.hasUnsavedChanges.set(false);
-        const diagId = this.currentDiagramId();
-        if (diagId) this.clearLocalDraft(diagId);
-      },
-    });
-  }
-
+  /** Descarga el archivo JSON del diagrama actual. */
   downloadJsonFile(): void {
     this.exportService.downloadJsonFile(
       this.currentDiagramName(),
@@ -1397,200 +1459,189 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     );
   }
 
-  openExportModal(): void {
-    const project = this.exportService.buildProjectJson(
-      this.currentDiagramName(),
-      this.defaultLineStyle(),
-      this.nodes(),
-      this.connections(),
-    );
-    this.modalService.openExportModal(JSON.stringify(project, null, 2));
-  }
-
-  openImportModal(): void {
-    this.modalService.openImportModal();
-  }
-
-  private applyImportSuccess(result: DiagramImportResult, action: string): void {
-    this.nodes.set(result.nodes);
-    if (result.format === 'xmi') {
-      if (result.name) this.currentDiagramName.set(result.name);
-      if (result.diagramType) this.activeDiagramType.set(result.diagramType);
-      this.connections.set(this.recalculateSequenceNumbers(result.connections, true));
-    } else {
-      this.connections.set(result.connections);
-      if (result.defaultLineStyle) this.defaultLineStyle.set(result.defaultLineStyle);
-    }
-    this.markAsUnsaved();
-    this.updateConnectionEndpoints();
-    this.collabCoordinator.sendDiagramSync(this.nodes(), this.connections(), action);
-    setTimeout(() => {
-      this.updateConnectionEndpoints();
-      this.fitView();
-    }, 100);
-  }
-
-  async onFileSelected(event: Event): Promise<void> {
-    await this.importService.executeFileImport({
+  /** Procesa la selección de un archivo JSON o XMI desde la barra superior. */
+  onFileSelected(event: Event): void {
+    if (this.isReadOnly()) return;
+    this.importService.executeFileImport({
       event,
       isReadOnly: this.isReadOnly(),
       hasMultipleActiveUsers: this.hasMultipleActiveUsers(),
-      multiUserBlockedMsg: this.translationService.translate('appbar.multiUserImportBlocked'),
-      normalizeDataType: (t) => this.aiSyncService.normalizeDataType(t),
-      normalizeReturnType: (rt) => this.aiSyncService.normalizeReturnType(rt),
-      onSuccess: (result) => this.applyImportSuccess(result, result.format === 'xmi' ? 'import_xmi' : 'import_json'),
+      multiUserBlockedMsg: 'No se puede importar mientras hay múltiples usuarios activos.',
+      normalizeDataType: (t: string) => this.normalizeDataType(t),
+      normalizeReturnType: (t: string) => this.normalizeReturnType(t),
+      onSuccess: (res: DiagramImportResult) => this.applyImportResult(res, false),
     });
   }
 
-  triggerSpringBootGeneration(): void { this.modalService.openSpringBootModal(); }
-  openProfileModal(): void { this.modalService.openProfileModal(); }
-  syncZoomFromCanvas(): void { this.viewportService.syncZoomFromCanvas(this.diagramCanvas); }
-  onZoomChanged(zoom: number): void {
-    if (this.contextMenu()) this.closeContextMenu();
-    this.viewportService.onZoomChanged(zoom, this.currentDiagramId());
+  /** Aplica el contenido JSON importado desde el modal JSON. */
+  onApplyImportedJson(jsonText: string): void {
+    this.importFromJson(jsonText);
   }
 
-  zoomIn(): void { this.viewportService.zoomIn(this.diagramCanvas); }
-  zoomOut(): void { this.viewportService.zoomOut(this.diagramCanvas); }
-  onViewportScroll(event: Event): void {
-    if (this.contextMenu()) this.closeContextMenu();
-    this.viewportService.onViewportScroll(event, this.currentDiagramId());
+  /** Procesa la importación de un JSON pegado en el modal de importación. */
+  importFromJson(jsonText?: string): void {
+    const content = jsonText ?? this.jsonContent();
+    if (!content || this.isReadOnly()) return;
+    try {
+      const parsed = this.importService.parseJsonProject(
+        content,
+        (t) => this.normalizeDataType(t),
+        (t) => this.normalizeReturnType(t),
+      );
+      this.applyImportResult(parsed, true);
+    } catch (e: any) {
+      this.confirmDialog.alert({
+        title: 'Error de importación',
+        message: e?.message || 'El formato JSON no es válido.',
+        type: 'danger',
+      });
+    }
   }
 
-  resetView(): void { this.viewportService.resetView(this.diagramCanvas); }
-  fitView(): void { this.viewportService.fitView(this.diagramCanvas); }
-  onDiagramTypeChange(type: DiagramType): void {
-    this.activeDiagramType.set(type);
-    this.collabCoordinator.setCurrentDiagramType(type);
+  /** Aplica un resultado de importación JSON o XMI sobre el lienzo. */
+  private applyImportResult(res: DiagramImportResult, closeJson: boolean): void {
+    if (res.name) this.currentDiagramName.set(res.name);
+    if (res.diagramType) this.activeDiagramType.set(res.diagramType);
+    if (res.defaultLineStyle) this.defaultLineStyle.set(res.defaultLineStyle);
+    this.onApplyAiDiagramChanges({ nodes: res.nodes, connections: res.connections });
+    if (closeJson) this.closeJsonModal();
   }
 
-  onSaveEditedNode(savedNode: UmlClassNode): void {
-    this.commitDiagramMutation({
-      nodes: this.nodeOps.saveEditedNode(this.nodes(), savedNode, this.activeDiagramType()),
-      action: 'update_class',
-      redrawCanvas: true,
-    });
+  /** Copia el contenido JSON actual al portapapeles del sistema. */
+  copyJsonToClipboard(): void {
+    navigator.clipboard?.writeText(this.jsonContent());
+    this.triggerQuickToast('✅ JSON copiado');
   }
 
-  onSaveEditedConnection(savedConn: UmlConnection): void {
-    const { updatedConnections, isSeq } = this.connectionOps.saveEditedConnection(
-      this.connections(),
-      savedConn,
+  /** Exporta el diagrama actual como imagen PNG. */
+  exportAsImage(): void {
+    this.closeExportDropdown();
+    this.exportService.exportDiagramImage(
+      this.diagramCanvas,
+      'png',
+      this.currentDiagramName(),
       this.activeDiagramType(),
-      (m, seq) => this.normalizeUmlMessage(m, seq),
-    );
-
-    this.commitDiagramMutation({
-      connections: isSeq ? this.recalculateSequenceNumbers(updatedConnections, true) : updatedConnections,
-      action: 'update_connection',
-    });
-    this.closeEditConnModal();
-  }
-
-  onApplyImportedJson(json: string): void {
-    this.importService.executeJsonImport({
-      jsonString: json,
-      isReadOnly: this.isReadOnly(),
-      hasMultipleActiveUsers: this.hasMultipleActiveUsers(),
-      multiUserBlockedMsg: this.translationService.translate('appbar.multiUserImportBlocked'),
-      normalizeDataType: (t) => this.aiSyncService.normalizeDataType(t),
-      normalizeReturnType: (rt) => this.aiSyncService.normalizeReturnType(rt),
-      onSuccess: (result) => {
-        this.applyImportSuccess(result, 'apply_json');
-        this.showJsonModal.set(false);
-      },
-    });
-  }
-
-  onSetSelectedNodeColor(color: string | null): void {
-    this.toolbarService.applySelectedNodeColor(color, {
-      isReadOnly: this.isReadOnly(),
-      selectedNodeIds: this.selectedNodeIdsList(),
-      nodes: this.nodes(),
-      connections: this.connections(),
-      defaultLineStyle: this.defaultLineStyle(),
-      pushSnapshot: () => this.pushSnapshot(),
-      setNodes: (n) => this.nodes.set(n),
-      markAsUnsaved: () => this.markAsUnsaved(),
-      sendDiagramSync: (nodes, conns, act, style) => this.collabCoordinator.sendDiagramSync(nodes, conns, act, style),
-    });
-  }
-
-  // --- MÉTODOS DEL EXPLORADOR DE DIAGRAMAS POR TIPO ---
-
-  openCreateDiagramModal(lockedType: DiagramType | null = null): void { this.modalService.openCreateDiagramModal(lockedType); }
-  closeCreateDiagramModal(): void { this.modalService.closeCreateDiagramModal(); }
-
-  handleCreateDiagram(data: { name: string; type: DiagramType }): void {
-    this.tabManager.handleCreateDiagram(
-      this.currentProjectId(),
-      data,
-      (createdId) => this.onSelectDiagram(createdId),
-      () => {
-        if (this.hasUnsavedChanges() && !this.isReadOnly()) {
-          this.saveToBackend(true);
-        }
-      },
+      this.nodes(),
+      this.connections(),
     );
   }
 
-  onSelectDiagram(diagramId: string): void {
-    this.tabManager.executeSelectDiagram(diagramId, {
+  /** Alias para descargar imagen PNG desde el Appbar. */
+  downloadPngFile(): void {
+    this.exportAsImage();
+  }
+
+  /** Exporta el diagrama actual como mapa de bits BMP. */
+  exportAsBmp(): void {
+    this.closeExportDropdown();
+    this.exportService.exportDiagramImage(
+      this.diagramCanvas,
+      'bmp',
+      this.currentDiagramName(),
+      this.activeDiagramType(),
+      this.nodes(),
+      this.connections(),
+    );
+  }
+
+  /** Alias para descargar archivo BMP desde el Appbar. */
+  downloadBmpFile(): void {
+    this.exportAsBmp();
+  }
+
+  /** Exporta el diagrama actual como imagen. */
+  exportAsSvg(): void {
+    this.exportAsImage();
+  }
+
+  /** Descarga el diagrama actual en estándar OMG XMI 2.1. */
+  exportXmi(): void {
+    this.closeExportDropdown();
+    if (!this.xmiService) return;
+    this.exportService.executeDownloadXmi({
       currentDiagramId: this.currentDiagramId(),
-      isReadOnly: this.isReadOnly(),
+      currentDiagramName: this.currentDiagramName(),
       hasUnsavedChanges: this.hasUnsavedChanges(),
-      saveCurrentViewState: () => {
-        const outgoingId = this.currentDiagramId();
-        if (outgoingId && this.diagramCanvas) {
-          this.viewportService.saveDiagramViewState(outgoingId, this.diagramCanvas.getViewState());
-        }
+      isReadOnly: this.isReadOnly(),
+      xmiService: this.xmiService,
+      saveAst: (id, payload) => this.diagramService.saveAst(id, payload),
+      buildSaveAstPayload: () => this.buildSaveAstPayload(),
+      onSavedSuccessfully: () => {
+        const id = this.currentDiagramId();
+        if (id) this.persistenceService.markAsSaved(id);
       },
-      saveToBackend: () => this.saveToBackend(true),
-      setCurrentDiagramId: (id) => this.currentDiagramId.set(id),
-      navigateToDiagram: (id) => {
-        this.router.navigate([], {
-          relativeTo: this.route,
-          queryParams: { diagramId: id },
-          queryParamsHandling: 'merge',
-        });
-      },
-      loadDiagram: (id) => this.loadDiagramFromBackend(id),
     });
   }
 
-  closeTab(tabId: string, event: MouseEvent): void {
-    event.stopPropagation();
-    if (this.currentDiagramId() === tabId && this.hasUnsavedChanges() && !this.isReadOnly()) this.saveToBackend(true);
-    const result = this.tabManager.closeTab(tabId, this.currentDiagramId());
-    if (result?.nextTabId) this.onSelectDiagram(result.nextTabId);
+  /** Alias para descargar archivo XMI desde el Appbar. */
+  downloadXmiFile(): void {
+    this.exportXmi();
   }
 
-  onRenameDiagram(event: { diagramId: string; name: string }): void {
-    if (!this.isReadOnly()) this.tabManager.renameDiagram(event, this.currentDiagramId());
+  /** Sanitiza las conexiones entrantes desde el cliente o asistente IA. */
+  sanitizeClientConnections(conns: any[], targetNodes: UmlClassNode[]): UmlConnection[] {
+    const sync = (this as any).diagramAiSyncService || this.aiSyncService || new DiagramAiSyncService();
+    return sync.sanitizeClientConnections(
+      conns,
+      targetNodes,
+      this.activeDiagramType(),
+      this.defaultLineStyle(),
+      (c: UmlConnection[], p?: boolean) => this.recalculateSequenceNumbers(c, p),
+    );
   }
 
-  async onDeleteDiagram(diagramId: string): Promise<void> {
+  /** Aplica mutaciones de nodos y conexiones emitidas por el componente Copilot IA. */
+  onAiMutation(changes: { nodes: any[]; connections: any[] }): void {
+    this.onApplyAiDiagramChanges(changes);
+  }
+
+  /** Aplica mutaciones completas de nodos y conexiones provenientes del asistente IA. */
+  onApplyAiDiagramChanges(changes: { nodes: any[]; connections: any[] }): void {
     if (this.isReadOnly()) return;
-    await this.tabManager.deleteDiagram(diagramId, this.currentDiagramId(), this.projectDiagrams(), (nextId) => {
-      if (nextId) {
-        this.onSelectDiagram(nextId);
-      } else {
-        this.currentDiagramId.set(null);
-        this.nodes.set([]);
-        this.connections.set([]);
-      }
+    this.pushSnapshot();
+    const { cleanNodes, cleanConns } = this.aiSyncService.processAiMutation({
+      targetNodes: changes.nodes || [],
+      targetConns: changes.connections || [],
+      activeDiagramType: this.activeDiagramType(),
+      defaultLineStyle: this.defaultLineStyle(),
+      getDefaultColorForNodeType: (t?: string | null, s?: string | null) => this.getDefaultColorForNodeType(t, s),
+      getOptimalConnectorId: (s: UmlClassNode, t: UmlClassNode) => this.getOptimalConnectorId(s, t),
+      getConnectorPoint: (n: UmlClassNode, side: string) => this.getConnectorPoint(n, side),
+      recalculateSequenceNumbers: (c: UmlConnection[], p?: boolean) => this.recalculateSequenceNumbers(c, p),
     });
+    this.nodes.set(cleanNodes);
+    this.connections.set(cleanConns);
+    this.aiSyncService.schedulePostMutationRedraw({
+      updateEndpoints: () => this.updateConnectionEndpoints(),
+      resetCanvas: () => this.resetView(),
+      fitView: () => this.fitView(),
+      redrawCanvas: () => this.fCanvas?.redraw(),
+    });
+    this.markAsUnsaved();
+    this.saveToBackend(false);
+    this.sendDiagramSync(this.nodes(), this.connections(), 'ai_mutation');
   }
 
-  onNodeRename(event: { nodeId: string; newName: string }): void {
-    if (this.isReadOnly()) return;
-    const { anyChanged, updatedNodes } = this.nodeOps.renameNode(this.nodes(), event.nodeId, event.newName);
-    if (!anyChanged) return;
+  /** Abre el modal de generación de proyectos Spring Boot. */
+  openSpringBootModal(): void { this.modalService.openSpringBootModal(); }
 
-    this.commitDiagramMutation({
-      nodes: updatedNodes,
-      action: 'edit_node',
-    });
+  /** Cierra el modal de generación de proyectos Spring Boot. */
+  closeSpringBootModal(): void { this.modalService.closeSpringBootModal(); }
+
+  /** Abre el modal de perfil de usuario. */
+  openProfileModal(): void { this.modalService.openProfileModal(); }
+
+  /** Cierra el modal de perfil de usuario. */
+  closeProfileModal(): void { this.modalService.closeProfileModal(); }
+
+  /** Muestra una notificación flotante rápida en el editor. */
+  showQuickToast(msg = '✅ Acción completada'): void {
+    this.toastMessage.set(msg);
+    this.toastService?.info?.(msg);
+  }
+
+  /** Alias para disparar notificación rápida. */
+  triggerQuickToast(msg = '✅ Acción completada'): void {
+    this.showQuickToast(msg);
   }
 }
-
