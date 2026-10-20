@@ -64,13 +64,13 @@ import {
 } from '../uml-svg/connection-marker-svg.component';
 import { UML_CANVAS_NODE_COMPONENTS } from './nodes';
 import { DeploymentColors } from './nodes/uml-deployment-node/uml-deployment-node.component';
-import { DiagramCanvasGeometryService } from './services/diagram-canvas-geometry.service';
-import { DiagramCanvasDragService } from './services/diagram-canvas-drag.service';
-import { DiagramNodeResizeService } from '../../services/diagram-node-resize.service';
 import {
+  DiagramCanvasDragService,
+  DiagramCanvasGeometryService,
+  DiagramNodeResizeService,
   DiagramSequenceActivationService,
   SequenceActivationInterval,
-} from '../../services/diagram-sequence-activation.service';
+} from '../../services';
 import {
   computeBoardHeight,
   computeBoardWidth,

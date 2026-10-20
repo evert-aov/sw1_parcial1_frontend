@@ -3,9 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { DiagramEditorComponent } from './diagram-editor.component';
 import { DiagramCanvasComponent } from './components/diagram-canvas/diagram-canvas.component';
 import { DiagramType, UmlClassNode, UmlConnection } from '../../../core/models/diagram.model';
-import { DiagramNodeFactoryService } from './services/diagram-node-factory.service';
-import { DiagramAiSyncService } from './services/diagram-ai-sync.service';
-import { DiagramConnectionLayoutService } from './services/diagram-connection-layout.service';
+import { DiagramNodeFactoryService, DiagramAiSyncService, DiagramConnectionLayoutService } from './services';
 
 const nodes: UmlClassNode[] = [
   { id: 'actor', name: 'Ingeniero Anfitrión', nodeType: 'actor', position: { x: 50, y: 50 }, width: 65, attributes: [], methods: [] },

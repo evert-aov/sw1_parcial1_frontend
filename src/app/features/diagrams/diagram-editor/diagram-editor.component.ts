@@ -56,31 +56,36 @@ import { EditNodeModalComponent } from './components/edit-node-modal/edit-node-m
 import { JsonModalComponent } from './components/json-modal/json-modal.component';
 import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
-import { DiagramAiSyncService } from './services/diagram-ai-sync.service';
-import { AlignmentDirection, DiagramAlignmentService, DistributionDirection } from './services/diagram-alignment.service';
-import { DiagramAssemblyConnectionService } from './services/diagram-assembly-connection.service';
-import { DiagramCanvasInteractionService } from './services/diagram-canvas-interaction.service';
-import { DiagramClipboardService } from './services/diagram-clipboard.service';
-import { DiagramCollaborationCoordinatorService } from './services/diagram-collaboration-coordinator.service';
-import { DiagramConnectionLayoutService } from './services/diagram-connection-layout.service';
-import { DiagramConnectionOperationsService } from './services/diagram-connection-operations.service';
-import { DiagramContainmentService } from './services/diagram-containment.service';
-import { DiagramContextMenuService } from './services/diagram-context-menu.service';
-import { DiagramEditorContextUtil } from './services/diagram-editor-context.util';
-import { DiagramExportService } from './services/diagram-export.service';
-import { DiagramHistoryService } from './services/diagram-history.service';
-import { DiagramHotkeysService } from './services/diagram-hotkeys.service';
-import { DiagramImportResult, DiagramImportService } from './services/diagram-import.service';
-import { DiagramModalService } from './services/diagram-modal.service';
-import { DiagramNodeFactoryService } from './services/diagram-node-factory.service';
-import { DiagramNodeOperationsService } from './services/diagram-node-operations.service';
-import { DiagramNodeResizeService } from './services/diagram-node-resize.service';
-import { DiagramPersistenceService } from './services/diagram-persistence.service';
-import { DiagramSelectionService } from './services/diagram-selection.service';
-import { DiagramSequenceActivationService } from './services/diagram-sequence-activation.service';
-import { DiagramTabManagerService } from './services/diagram-tab-manager.service';
-import { DiagramToolbarService } from './services/diagram-toolbar.service';
-import { DiagramViewportService } from './services/diagram-viewport.service';
+import {
+  AlignmentDirection,
+  DiagramAiSyncService,
+  DiagramAlignmentService,
+  DiagramAssemblyConnectionService,
+  DiagramCanvasInteractionService,
+  DiagramClipboardService,
+  DiagramCollaborationCoordinatorService,
+  DiagramConnectionLayoutService,
+  DiagramConnectionOperationsService,
+  DiagramContainmentService,
+  DiagramContextMenuService,
+  DiagramEditorContextUtil,
+  DiagramExportService,
+  DiagramHistoryService,
+  DiagramHotkeysService,
+  DiagramImportResult,
+  DiagramImportService,
+  DiagramModalService,
+  DiagramNodeFactoryService,
+  DiagramNodeOperationsService,
+  DiagramNodeResizeService,
+  DiagramPersistenceService,
+  DiagramSelectionService,
+  DiagramSequenceActivationService,
+  DiagramTabManagerService,
+  DiagramToolbarService,
+  DiagramViewportService,
+  DistributionDirection,
+} from './services';
 import {
   getDefaultColorForNodeType as getDefaultColorForNodeTypeUtil,
   getNodeHeight as getNodeHeightUtil,
