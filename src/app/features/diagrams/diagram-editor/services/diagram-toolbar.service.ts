@@ -1,6 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
 import {
-  DiagramType,
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
@@ -25,16 +24,6 @@ export interface ToolbarAlignmentContext {
   isReadOnly: boolean;
   selectedNodeIds: Set<string>;
   nodes: UmlClassNode[];
-  getNodeWidth: (n: UmlClassNode) => number;
-  getNodeHeight: (n: UmlClassNode) => number;
-  onApplyTransformation: (modified: UmlClassNode[], action: string) => void;
-}
-
-export interface ToolbarLayoutContext {
-  isReadOnly: boolean;
-  nodes: UmlClassNode[];
-  connections: UmlConnection[];
-  activeDiagramType?: DiagramType;
   getNodeWidth: (n: UmlClassNode) => number;
   getNodeHeight: (n: UmlClassNode) => number;
   onApplyTransformation: (modified: UmlClassNode[], action: string) => void;
@@ -166,21 +155,6 @@ export class DiagramToolbarService {
     if (context.isReadOnly) return;
     const modified = this.alignmentService.snapToGrid(context.nodes, context.selectedNodeIds, gridSize);
     context.onApplyTransformation(modified, 'snap_grid');
-  }
-
-  autoLayoutNodes(context: ToolbarLayoutContext): UmlClassNode[] {
-    if (context.isReadOnly || context.nodes.length === 0) return [];
-    const modified = this.alignmentService.applyForceDirectedLayout(
-      context.nodes,
-      context.connections,
-      context.getNodeWidth,
-      context.getNodeHeight,
-      context.activeDiagramType,
-    );
-    if (modified.length > 0) {
-      context.onApplyTransformation(modified, 'auto_layout');
-    }
-    return modified;
   }
 
   // --- SELECCIÓN ---

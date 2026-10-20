@@ -251,11 +251,6 @@ export const en = {
       hide: 'Hide Grid',
       title: 'Grid',
     },
-    layout: {
-      button: 'Layout',
-      tooltip: 'Automatically organize nodes and connectors (Force-Directed Algorithm)',
-      appliedToast: 'Automatic Force-Directed Layout applied to canvas.',
-    },
     pointer: 'Select / Move',
     pointerDesc: 'Move classes freely',
     pan: 'Pan Canvas',

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
@@ -32,6 +32,7 @@ export interface DiagramContextMenuState {
 @Component({
   standalone: true,
   selector: 'app-diagram-context-menu',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, NgIconComponent],
   viewProviders: [
     provideIcons({
@@ -78,7 +79,6 @@ export class DiagramContextMenuComponent {
   @Output() deselectAll = new EventEmitter<void>();
   @Output() resetView = new EventEmitter<void>();
   @Output() fitView = new EventEmitter<void>();
-  @Output() autoLayout = new EventEmitter<void>();
 
   onClose(): void {
     this.close.emit();
@@ -157,11 +157,6 @@ export class DiagramContextMenuComponent {
 
   onFitView(): void {
     this.fitView.emit();
-    this.close.emit();
-  }
-
-  onAutoLayout(): void {
-    this.autoLayout.emit();
     this.close.emit();
   }
 }

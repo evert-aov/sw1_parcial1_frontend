@@ -253,11 +253,6 @@ export const es = {
       hide: 'Ocultar Cuadrícula',
       title: 'Cuadrícula',
     },
-    layout: {
-      button: 'Layout',
-      tooltip: 'Organizar automáticamente nodos y conectores (Algoritmo Force-Directed)',
-      appliedToast: 'Diseño automático (Force-Directed Layout) aplicado al lienzo.',
-    },
     pointer: 'Seleccionar / Mover',
     pointerDesc: 'Mueve clases libremente',
     pan: 'Mover Lienzo',
