@@ -1091,8 +1091,26 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   addArtifact(customPos?: { x: number; y: number }): void { this.createNodeOfType('class', customPos, 'artifact'); }
 
   /** Procesa el soltado de un elemento desde el Toolbox o Explorador en el lienzo. */
-  onNodeDropped(event: { type: string; stereotype?: string | null; position: { x: number; y: number } }): void {
-    this.createNodeOfType(event.type, event.position, event.stereotype);
+  onNodeDropped(event: any): void {
+    if (this.isReadOnly() || !event) return;
+    const payload = event.payload;
+    if (payload?.type === 'explorer_node') {
+      const node = payload.nodeData || payload.node;
+      if (node) {
+        this.handleCopyNodeFromExplorer({
+          node,
+          sourceDiagramId: payload.sourceDiagramId,
+          sourceDiagramType: payload.sourceDiagramType,
+        });
+      }
+      return;
+    }
+    const resolvedType =
+      payload?.nodeType ||
+      event.nodeType ||
+      (event.type !== 'toolbox_node' && event.type !== 'explorer_node' ? event.type : 'class');
+    const resolvedStereotype = payload?.stereotype ?? event.stereotype;
+    this.createNodeOfType(resolvedType, event.position, resolvedStereotype);
   }
 
   /** Procesa el renombrado en línea de un nodo en el lienzo. */

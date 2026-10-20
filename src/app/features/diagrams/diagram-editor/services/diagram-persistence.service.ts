@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Subject, Subscription, debounceTime } from 'rxjs';
 import {
+  sanitizeLineStyle,
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
@@ -291,10 +292,18 @@ export class DiagramPersistenceService {
           const isExplicitSizeNode = (EXPLICIT_SIZE_NODE_TYPES as readonly string[]).includes(nodeType);
           const { defaultHeight } = UmlNodeNormalizerUtil.getDefaultDimensions(nodeType);
           const draftH = nodeType === 'lifeline' ? 60 : n.height || n.customHeight || defaultHeight;
+          const rawX = n.position?.x ?? n.positionX;
+          const rawY = n.position?.y ?? n.positionY;
+          const numX = typeof rawX === 'number' ? rawX : parseFloat(rawX);
+          const numY = typeof rawY === 'number' ? rawY : parseFloat(rawY);
+          const posX = Number.isFinite(numX) ? Math.round(numX) : 50;
+          const posY = Number.isFinite(numY) ? Math.round(numY) : 50;
+
           return {
             ...n,
             nodeType,
             name,
+            position: { x: posX, y: posY },
             height: draftH,
             customHeight: n.customHeight || (isExplicitSizeNode ? draftH : undefined),
             customWidth: n.customWidth || (isExplicitSizeNode ? n.width || 220 : undefined),
@@ -304,14 +313,18 @@ export class DiagramPersistenceService {
                 : isExplicitSizeNode || (!!draftH && nodeType === 'class'),
             color: nodeColor,
             stereotype: n.stereotype || null,
+            labelOffset: undefined,
           };
         });
 
         return {
           restored: true,
           nodes: sanitizedDraftNodes,
-          connections: draft.connections || [],
-          defaultLineStyle: draft.defaultLineStyle,
+          connections: (draft.connections || []).map((c: any) => ({
+            ...c,
+            lineStyle: sanitizeLineStyle(c.lineStyle, isSequence ? 'straight' : 'segment'),
+          })),
+          defaultLineStyle: sanitizeLineStyle(draft.defaultLineStyle, isSequence ? 'straight' : 'segment'),
         };
       }
     } catch (_) {}
@@ -408,10 +421,17 @@ export class DiagramPersistenceService {
       const resolvedWidth = n.width || defaultWidth;
       const resolvedHeight = isLifeline ? 60 : n.height || defaultHeight;
 
+      const rawX = n.position?.x ?? n.positionX;
+      const rawY = n.position?.y ?? n.positionY;
+      const numX = typeof rawX === 'number' ? rawX : parseFloat(rawX);
+      const numY = typeof rawY === 'number' ? rawY : parseFloat(rawY);
+      const posX = Number.isFinite(numX) ? Math.round(numX) : 50;
+      const posY = Number.isFinite(numY) ? Math.round(numY) : 50;
+
       return {
         id: n.id,
         name: nodeName,
-        position: { x: n.positionX, y: n.positionY },
+        position: { x: posX, y: posY },
         width: resolvedWidth,
         height: resolvedHeight,
         customWidth: isManuallyResized ? n.customWidth || resolvedWidth : undefined,
@@ -448,7 +468,7 @@ export class DiagramPersistenceService {
       sourceId: c.sourceId,
       targetId: c.targetId,
       type: c.type as UmlRelationshipType,
-      lineStyle: (c.lineStyle as UmlLineStyle) || 'segment',
+      lineStyle: sanitizeLineStyle(c.lineStyle, isSequence ? 'straight' : 'segment'),
       name: c.name || undefined,
       sourceMultiplicity: isSequence ? '' : c.sourceMultiplicity || '',
       targetMultiplicity: isSequence ? '' : c.targetMultiplicity || '',

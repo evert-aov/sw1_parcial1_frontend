@@ -143,6 +143,23 @@ export type UmlRelationshipType =
 
 export type UmlLineStyle = 'segment' | 'straight' | 'bezier' | 'adaptive-curve';
 
+export const VALID_UML_LINE_STYLES: readonly UmlLineStyle[] = [
+  'segment',
+  'straight',
+  'bezier',
+  'adaptive-curve',
+] as const;
+
+export function sanitizeLineStyle(style: unknown, fallback: UmlLineStyle = 'segment'): UmlLineStyle {
+  if (typeof style === 'string' && (VALID_UML_LINE_STYLES as readonly string[]).includes(style)) {
+    return style as UmlLineStyle;
+  }
+  if (style === 'tree_horizontal' || style === 'tree_vertical' || style === 'orthogonal') {
+    return 'segment';
+  }
+  return fallback;
+}
+
 export type UmlMessageType = 'sync' | 'async' | 'reply' | 'create';
 export type UmlMessageDirection = 'forward' | 'reverse';
 

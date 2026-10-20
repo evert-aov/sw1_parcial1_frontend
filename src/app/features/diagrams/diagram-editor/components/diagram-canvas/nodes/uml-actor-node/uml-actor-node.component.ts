@@ -32,11 +32,7 @@ export class UmlActorNodeComponent {
   @Input() activeDiagramType = '';
   @Input() selectedRelationType: string | null = null;
   @Input() renamingNodeId: string | null = null;
-  @Input() isDraggingLabel = false;
-  @Input() draggingLabelNodeId: string | null = null;
   @Input() isReadOnly = false;
-  @Input() labelTransform = '';
-  @Input() hasLabelOffset = false;
   @Input() lifelineLength = 300;
   @Input() activations: Array<{ id: string; top: number; height: number }> = [];
   @Input() sequenceSlots: number[] = [];
@@ -46,11 +42,9 @@ export class UmlActorNodeComponent {
   @Output() nodeClick = new EventEmitter<MouseEvent>();
   @Output() deleteNode = new EventEmitter<MouseEvent>();
   @Output() tableClick = new EventEmitter<MouseEvent>();
-  @Output() labelPointerDown = new EventEmitter<PointerEvent>();
   @Output() labelDblClick = new EventEmitter<MouseEvent>();
   @Output() commitRename = new EventEmitter<string>();
   @Output() cancelRename = new EventEmitter<void>();
-  @Output() resetOffset = new EventEmitter<MouseEvent>();
 
   onContainerClick(event: MouseEvent): void {
     this.nodeClick.emit(event);

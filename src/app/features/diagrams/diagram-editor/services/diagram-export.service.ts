@@ -5,6 +5,7 @@ import { XmiService } from '../../../../core/services/xmi.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import {
   DiagramType,
+  sanitizeLineStyle,
   SaveDiagramAstRequest,
   UmlClassNode,
   UmlConnection,
@@ -232,11 +233,18 @@ export class DiagramExportService {
               ? n.customHeight || n.height || getNodeHeight(n)
               : n.customHeight || (n.isCustomSize ? n.height : null) || null;
 
+        const rawX = n.position?.x ?? (n as any).positionX;
+        const rawY = n.position?.y ?? (n as any).positionY;
+        const numX = typeof rawX === 'number' ? rawX : parseFloat(rawX);
+        const numY = typeof rawY === 'number' ? rawY : parseFloat(rawY);
+        const posX = Number.isFinite(numX) ? Math.round(numX) : 50;
+        const posY = Number.isFinite(numY) ? Math.round(numY) : 50;
+
         return {
           id: n.id,
           name: finalName,
-          positionX: n.position.x,
-          positionY: n.position.y,
+          positionX: posX,
+          positionY: posY,
           width: getNodeWidth(n),
           height: savedHeight,
           color: nodeColor,
@@ -280,7 +288,7 @@ export class DiagramExportService {
           sourceId: c.sourceId,
           targetId: c.targetId,
           type: c.type,
-          lineStyle: c.lineStyle || defaultLineStyle,
+          lineStyle: sanitizeLineStyle(c.lineStyle, defaultLineStyle),
           name: c.name || null,
           sourceMultiplicity: isSequence ? '' : (c.sourceMultiplicity || ''),
           targetMultiplicity: isSequence ? '' : (c.targetMultiplicity || ''),

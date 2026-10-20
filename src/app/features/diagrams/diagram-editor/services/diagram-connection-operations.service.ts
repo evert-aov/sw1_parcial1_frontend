@@ -496,11 +496,13 @@ export class DiagramConnectionOperationsService {
       onApplyAssocClass: (result: { nodes: UmlClassNode[]; connections: UmlConnection[] }) => void;
     },
   ): void {
-    if (options.isReadOnly || !event.fInputId) return;
+    const sourceId = event.sourceId || event.fOutputId;
+    const targetId = event.targetId || event.fInputId;
+    if (options.isReadOnly || !sourceId || !targetId) return;
 
     const result = this.processCreateConnection({
-      fOutputId: event.fOutputId,
-      fInputId: event.fInputId,
+      fOutputId: sourceId,
+      fInputId: targetId,
       selectedRelationType: options.selectedRelationType,
       activeDiagramType: options.activeDiagramType,
       defaultLineStyle: options.defaultLineStyle,

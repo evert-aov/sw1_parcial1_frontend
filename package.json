@@ -9,8 +9,7 @@
   "main": "main.js",
   "scripts": {
     "ng": "ng",
-    "dev": "ng serve --host 0.0.0.0 --port 3000",
-    "start": "ng serve --host 0.0.0.0 --port 3000",
+    "start": "ng serve",
     "build": "ng build",
     "build:electron": "ng build --configuration electron-local --base-href ./",
     "build:electron:local": "ng build --configuration electron-local --base-href ./",

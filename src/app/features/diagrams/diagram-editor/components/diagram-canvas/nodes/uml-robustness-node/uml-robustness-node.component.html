@@ -38,21 +38,15 @@
     }
   </div>
 
-  <!-- ETIQUETA DESACOPLADA / FLOTANTE VINCULADA (UML 2.5+) -->
+  <!-- ETIQUETA VINCULADA (UML 2.5+) -->
   <app-diagram-floating-label
     [node]="node"
     [renamingNodeId]="renamingNodeId"
-    [isDraggingLabel]="isDraggingLabel"
-    [draggingLabelNodeId]="draggingLabelNodeId"
     [isReadOnly]="isReadOnly"
     [isLocked]="isLocked"
-    [transform]="labelTransform"
-    [hasOffset]="hasLabelOffset"
     [accentColor]="accentColor"
-    (labelPointerDown)="labelPointerDown.emit($event)"
     (labelDblClick)="labelDblClick.emit($event)"
     (commitRename)="commitRename.emit($event)"
     (cancelRename)="cancelRename.emit()"
-    (resetOffset)="resetOffset.emit($event)"
   />
 </div>

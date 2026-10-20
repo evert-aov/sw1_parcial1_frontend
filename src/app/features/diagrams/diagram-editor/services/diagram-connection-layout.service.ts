@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import {
   DiagramType,
+  sanitizeLineStyle,
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
@@ -43,8 +44,15 @@ export class DiagramConnectionLayoutService {
     const tWidth = targetNode.isAnchor ? 0 : (getNodeWidth ? getNodeWidth(targetNode) : (targetNode.width || 220));
     const tHeight = targetNode.isAnchor ? 0 : (getNodeHeight ? getNodeHeight(targetNode) : (targetNode.height || 60));
 
-    const sCenter = { x: sourceNode.position.x + sWidth / 2, y: sourceNode.position.y + sHeight / 2 };
-    const tCenter = { x: targetNode.position.x + tWidth / 2, y: targetNode.position.y + tHeight / 2 };
+    const sPos = sourceNode.position || { x: 50, y: 50 };
+    const tPos = targetNode.position || { x: 200, y: 200 };
+    const sX = Number.isFinite(sPos.x) ? sPos.x : 50;
+    const sY = Number.isFinite(sPos.y) ? sPos.y : 50;
+    const tX = Number.isFinite(tPos.x) ? tPos.x : 200;
+    const tY = Number.isFinite(tPos.y) ? tPos.y : 200;
+
+    const sCenter = { x: sX + sWidth / 2, y: sY + sHeight / 2 };
+    const tCenter = { x: tX + tWidth / 2, y: tY + tHeight / 2 };
 
     const dx = tCenter.x - sCenter.x;
     const dy = tCenter.y - sCenter.y;
@@ -94,17 +102,21 @@ export class DiagramConnectionLayoutService {
         ? 38 + Math.max(0, node.labelOffset?.y || 0)
         : 0;
 
+    const pos = node.position || { x: 50, y: 50 };
+    const posX = Number.isFinite(pos.x) ? pos.x : 50;
+    const posY = Number.isFinite(pos.y) ? pos.y : 50;
+
     switch (side) {
       case 'left':
-        return { x: node.position.x, y: node.position.y + h / 2 };
+        return { x: posX, y: posY + h / 2 };
       case 'right':
-        return { x: node.position.x + w, y: node.position.y + h / 2 };
+        return { x: posX + w, y: posY + h / 2 };
       case 'top':
-        return { x: node.position.x + w / 2, y: node.position.y };
+        return { x: posX + w / 2, y: posY };
       case 'bottom':
-        return { x: node.position.x + w / 2, y: node.position.y + h + bottomExtra };
+        return { x: posX + w / 2, y: posY + h + bottomExtra };
       default:
-        return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
+        return { x: posX + w / 2, y: posY + h / 2 };
     }
   }
 
@@ -162,10 +174,12 @@ export class DiagramConnectionLayoutService {
           const tSide = optimal.targetId.split('_').pop() || 'left';
           const p1 = this.getConnectorPoint(sourceNode, sSide, getNodeHeight);
           const p2 = this.getConnectorPoint(targetNode, tSide, getNodeHeight);
-          const newX = Math.round((p1.x + p2.x) / 2);
-          const newY = Math.round((p1.y + p2.y) / 2);
-          if (!anchorNode.position || anchorNode.position.x !== newX || anchorNode.position.y !== newY) {
-            anchorNode.position = { x: newX, y: newY };
+          const midX = Math.round((p1.x + p2.x) / 2);
+          const midY = Math.round((p1.y + p2.y) / 2);
+          const safeX = Number.isFinite(midX) ? midX : 100;
+          const safeY = Number.isFinite(midY) ? midY : 100;
+          if (!anchorNode.position || anchorNode.position.x !== safeX || anchorNode.position.y !== safeY) {
+            anchorNode.position = { x: safeX, y: safeY };
             anchorMoved = true;
           }
         }
@@ -177,11 +191,17 @@ export class DiagramConnectionLayoutService {
     // 2. Actualizar extremos de conectores
     const updatedConnections = connections
       .filter((conn) => {
-        const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
+        const baseSourceId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+        const baseTargetId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
         return nodeMap.has(baseSourceId) && nodeMap.has(baseTargetId);
       })
       .map((conn) => {
+        const isSeqRel = isSequenceConnectionLogic(conn, activeDiagramType);
+        const safeLineStyle = sanitizeLineStyle(
+          conn.lineStyle,
+          isSeqRel ? 'straight' : defaultLineStyle,
+        );
+
         if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
           const sourceNode = nodeMap.get(conn.sourceNodeId);
           const targetNode = nodeMap.get(conn.targetNodeId);
@@ -190,6 +210,7 @@ export class DiagramConnectionLayoutService {
               const optimal = this.getOptimalConnectorId(sourceNode, targetNode, getNodeWidth, getNodeHeight);
               return {
                 ...conn,
+                lineStyle: safeLineStyle,
                 sourceId: sourceNode.id,
                 targetId: optimal.targetId,
               };
@@ -197,6 +218,7 @@ export class DiagramConnectionLayoutService {
               const optimal = this.getOptimalConnectorId(sourceNode, targetNode, getNodeWidth, getNodeHeight);
               return {
                 ...conn,
+                lineStyle: safeLineStyle,
                 sourceId: optimal.sourceId,
                 targetId: targetNode.id,
               };
@@ -212,13 +234,14 @@ export class DiagramConnectionLayoutService {
         if (
           conn.sourceId.includes('_slot_') ||
           conn.targetId.includes('_slot_') ||
-          isSequenceConnectionLogic(conn, activeDiagramType)
+          isSeqRel
         ) {
           const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
           const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
           const slotNum = sMatch ? sMatch[1] : (tMatch ? tMatch[1] : '0');
           return {
             ...conn,
+            lineStyle: safeLineStyle,
             sourceNodeId: baseSourceId,
             targetNodeId: baseTargetId,
             sourceId: `${baseSourceId}_slot_${slotNum}`,
@@ -243,6 +266,7 @@ export class DiagramConnectionLayoutService {
 
             return {
               ...conn,
+              lineStyle: safeLineStyle,
               sourceNodeId: baseSourceId,
               targetNodeId: baseTargetId,
               sourceId: hasDistinct ? curSource : `${baseSourceId}_top`,
@@ -253,13 +277,17 @@ export class DiagramConnectionLayoutService {
           const optimal = this.getOptimalConnectorId(sourceNode, targetNode, getNodeWidth, getNodeHeight);
           return {
             ...conn,
+            lineStyle: safeLineStyle,
             sourceNodeId: baseSourceId,
             targetNodeId: baseTargetId,
             sourceId: optimal.sourceId,
             targetId: optimal.targetId,
           };
         }
-        return conn;
+        return {
+          ...conn,
+          lineStyle: safeLineStyle,
+        };
       });
 
     return { updatedNodes, updatedConnections, anchorMoved };

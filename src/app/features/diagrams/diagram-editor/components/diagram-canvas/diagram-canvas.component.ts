@@ -12,6 +12,10 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
+  CalculateAdaptiveCurveData,
+  CalculateBezierCurveData,
+  CalculateSegmentLineData,
+  CalculateStraightLineData,
   EFCanvasLayer,
   EFConnectionBehavior,
   EFConnectionConnectableSide,
@@ -26,6 +30,9 @@ import {
   FSelectionChangeEvent,
   FTriggerEvent,
   FZoomDirective,
+  F_CONNECTION_BUILDERS,
+  isOnFlowBackground,
+  primaryButtonEventTrigger,
 } from '@foblex/flow';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
@@ -42,6 +49,7 @@ import {
 } from '@ng-icons/heroicons/outline';
 import {
   DiagramType,
+  sanitizeLineStyle,
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
@@ -100,6 +108,16 @@ export interface DiagramCanvasViewState {
   providers: [
     DiagramCanvasGeometryService,
     DiagramCanvasDragService,
+    {
+      provide: F_CONNECTION_BUILDERS,
+      useValue: {
+        'tree_horizontal': new CalculateSegmentLineData(),
+        'tree_vertical': new CalculateSegmentLineData(),
+        'orthogonal': new CalculateSegmentLineData(),
+        'curved': new CalculateBezierCurveData(),
+        'smooth': new CalculateAdaptiveCurveData(),
+      },
+    },
     provideIcons({
       heroLockClosed,
       heroPencilSquare,
@@ -116,6 +134,7 @@ export interface DiagramCanvasViewState {
   host: {
     '(window:keydown)': 'onWindowKeyDown($event)',
     '(window:keyup)': 'onWindowKeyUp($event)',
+    '(window:mouseup)': 'onWindowMouseUp($event)',
   },
   templateUrl: './diagram-canvas.component.html',
   styleUrl: './diagram-canvas.component.css',
@@ -192,7 +211,7 @@ export class DiagramCanvasComponent {
   readonly draggingSeqMessageTargetSlot = signal<number>(0);
   readonly isSpacePressed = signal<boolean>(false);
 
-  readonly canvasLayers: EFCanvasLayer[] = [EFCanvasLayer.GROUPS, EFCanvasLayer.CONNECTIONS, EFCanvasLayer.NODES];
+  readonly canvasLayers: EFCanvasLayer[] = [EFCanvasLayer.GROUPS, EFCanvasLayer.NODES, EFCanvasLayer.CONNECTIONS];
 
   readonly sequenceSlots = Array.from({ length: 25 }, (_, i) => i);
   readonly isSequenceSlotOccupiedFn = (slot: number): boolean =>
@@ -207,17 +226,19 @@ export class DiagramCanvasComponent {
     this.translationService.translate(this.geometryService.getEmptyStateMessageKey(this.activeDiagramType())),
   );
 
-  readonly canvasMoveTrigger: FEventTrigger = (event: FTriggerEvent) => {
-    const mouse = event as MouseEvent;
-    return mouse.button === 1 || this.isSpacePressed();
-  };
+  readonly isPanning = signal<boolean>(false);
+  private panStart = { x: 0, y: 0, scrollLeft: 0, scrollTop: 0 };
+
+  readonly canvasMoveTrigger: FEventTrigger = () => false;
   readonly multiSelectTrigger: FEventTrigger = (event: FTriggerEvent) =>
     event.ctrlKey || event.metaKey || event.shiftKey;
   readonly canvasWheelTrigger: FEventTrigger = () => false;
   readonly dblClickZoomTrigger: FEventTrigger = () => false;
   readonly selectionAreaTrigger: FEventTrigger = (event: FTriggerEvent) => {
-    const mouse = event as MouseEvent;
-    return mouse.button === 0 && !this.isSpacePressed() && this.selectedRelationType() === null;
+    if (this.selectedRelationType() !== null || this.isReadOnly() || this.isSpacePressed() || this.isPanning()) {
+      return false;
+    }
+    return primaryButtonEventTrigger(event) && isOnFlowBackground(event);
   };
 
   // --- DELEGACIÓN GEOMÉTRICA Y VISUAL ---
@@ -233,9 +254,42 @@ export class DiagramCanvasComponent {
   isDiamondAtStart(conn: UmlConnection): boolean { return this.geometryService.isDiamondAtStart(conn); }
   isSequenceConnection(conn: UmlConnection): boolean { return this.geometryService.isSequenceConnection(conn, this.activeDiagramType()); }
   isRecursiveConn(conn: UmlConnection): boolean { return this.geometryService.isRecursiveConn(conn); }
+  isFloatingConn(conn: UmlConnection): boolean { return this.geometryService.isFloatingConn(conn); }
   isReplyConnection(conn: UmlConnection): boolean { return this.sequenceActivationService.isReplyConnection(conn); }
   getConnSide(connectorId: string | undefined, defaultSide: 'top' | 'right' | 'bottom' | 'left' = 'right'): 'top' | 'right' | 'bottom' | 'left' {
     return this.geometryService.getConnSide(connectorId, defaultSide);
+  }
+
+  getConnectionType(conn: UmlConnection): 'segment' | 'straight' | 'bezier' | 'adaptive-curve' {
+    if (this.isSequenceConnection(conn) && !this.isRecursiveConn(conn)) {
+      return 'straight';
+    }
+    return sanitizeLineStyle(conn?.lineStyle, this.defaultLineStyle() || 'segment');
+  }
+
+  getConnectionBehavior(conn: UmlConnection): 'floating' | 'fixed' {
+    if (this.isRecursiveConn(conn)) return 'fixed';
+    return this.isFloatingConn(conn) ? 'floating' : 'fixed';
+  }
+
+  getConnectionOutputSide(conn: UmlConnection): 'default' | 'top' | 'right' | 'bottom' | 'left' {
+    if (this.isRecursiveConn(conn)) {
+      return this.getConnSide(conn.sourceId, 'top');
+    }
+    if (this.isFloatingConn(conn)) {
+      return 'default';
+    }
+    return this.getConnSide(conn.sourceId, 'right');
+  }
+
+  getConnectionInputSide(conn: UmlConnection): 'default' | 'top' | 'right' | 'bottom' | 'left' {
+    if (this.isRecursiveConn(conn)) {
+      return this.getConnSide(conn.targetId, 'right');
+    }
+    if (this.isFloatingConn(conn)) {
+      return 'default';
+    }
+    return this.getConnSide(conn.targetId, 'left');
   }
   getAssemblyAngle(conn: UmlConnection): number {
     return this.geometryService.getAssemblyAngle(conn, this.nodes(), this.boardElementRef?.nativeElement);
@@ -303,15 +357,44 @@ export class DiagramCanvasComponent {
   onMoveNodes(event: FMoveNodesEvent): void { this.moveNodes.emit(event); }
   onSelectionChange(event: FSelectionChangeEvent): void { this.selectionChange.emit(event); }
   onViewportScroll(event: Event): void { this.viewportScroll.emit(event); }
-  onCanvasMouseDown(event: MouseEvent): void { this.canvasMouseDown.emit(event); }
-  onCanvasMouseMove(event: MouseEvent): void { this.canvasMouseMove.emit(event); }
+  onCanvasMouseDown(event: MouseEvent): void {
+    if (event.button === 1 || (this.isSpacePressed() && event.button === 0)) {
+      const container = this.flowContainerRef?.nativeElement;
+      if (container) {
+        this.isPanning.set(true);
+        this.panStart = {
+          x: event.clientX,
+          y: event.clientY,
+          scrollLeft: container.scrollLeft,
+          scrollTop: container.scrollTop,
+        };
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+    }
+    this.canvasMouseDown.emit(event);
+  }
+  onCanvasMouseMove(event: MouseEvent): void {
+    if (this.isPanning()) {
+      const container = this.flowContainerRef?.nativeElement;
+      if (container) {
+        const dx = event.clientX - this.panStart.x;
+        const dy = event.clientY - this.panStart.y;
+        container.scrollLeft = this.panStart.scrollLeft - dx;
+        container.scrollTop = this.panStart.scrollTop - dy;
+        return;
+      }
+    }
+    this.canvasMouseMove.emit(event);
+  }
   onCanvasBackgroundClick(event: MouseEvent): void { this.canvasBackgroundClick.emit(event); }
   onFlowPointerDown(_event: PointerEvent): void {}
   onFlowClick(_event: MouseEvent): void {}
   onFlowDblClick(_event: MouseEvent): void {}
 
-  onCanvasChange(event: { scale?: number }): void {
-    if (event?.scale) {
+  onCanvasChange(event?: { scale?: number }): void {
+    if (event?.scale != null) {
       const nextZoom = Math.round(event.scale * 100);
       if (nextZoom !== this.zoomLevel()) {
         this.zoomLevel.set(nextZoom);
@@ -590,5 +673,11 @@ export class DiagramCanvasComponent {
 
   onWindowKeyUp(event: KeyboardEvent): void {
     if (event.code === 'Space') this.isSpacePressed.set(false);
+  }
+
+  onWindowMouseUp(_event?: MouseEvent): void {
+    if (this.isPanning()) {
+      this.isPanning.set(false);
+    }
   }
 }

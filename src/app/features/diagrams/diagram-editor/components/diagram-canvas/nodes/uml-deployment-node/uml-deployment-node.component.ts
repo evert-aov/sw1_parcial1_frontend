@@ -37,8 +37,9 @@ export class UmlDeploymentNodeComponent {
   @Input() renamingNodeId: string | null = null;
   @Input() nodeWidth = 160;
   @Input() nodeHeight = 140;
-  @Input() frontWidth = 135;
-  @Input() frontHeight = 120;
+  @Input() frontWidth = 146;
+  @Input() frontHeight = 126;
+  @Input() depth = 14;
   @Input() colors: DeploymentColors = {
     top: '#EFE2D3',
     right: '#DFCBB7',

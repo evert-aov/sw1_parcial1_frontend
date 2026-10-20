@@ -136,12 +136,16 @@ export class DiagramCanvasDragService {
     boardEl: HTMLElement | undefined,
     scale: number,
   ): { x: number; y: number } {
-    if (!boardEl) return { x: 150, y: 120 };
+    if (!boardEl || !Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+      return { x: 150, y: 120 };
+    }
     const rect = boardEl.getBoundingClientRect();
-    const effectiveScale = scale || 1;
+    const effectiveScale = scale && Number.isFinite(scale) && scale > 0 ? scale : 1;
+    const rawX = Math.round((clientX - rect.left) / effectiveScale);
+    const rawY = Math.round((clientY - rect.top) / effectiveScale);
     return {
-      x: Math.max(20, Math.round((clientX - rect.left) / effectiveScale)),
-      y: Math.max(20, Math.round((clientY - rect.top) / effectiveScale)),
+      x: Math.max(20, Number.isFinite(rawX) ? rawX : 150),
+      y: Math.max(20, Number.isFinite(rawY) ? rawY : 120),
     };
   }
 
@@ -163,16 +167,22 @@ export class DiagramCanvasDragService {
       event.dataTransfer?.getData('application/json') ||
       event.dataTransfer?.getData('text/plain');
     if (!rawJson) return null;
+    const position = this.clientToCanvasPosition(event.clientX, event.clientY, boardEl, scale);
     try {
       const parsed = JSON.parse(rawJson);
-      const position = this.clientToCanvasPosition(event.clientX, event.clientY, boardEl, scale);
+      const nodeType = parsed.nodeType || (parsed.type !== 'toolbox_node' && parsed.type !== 'explorer_node' ? parsed.type : 'class');
       return {
-        type: parsed.source || parsed.type || 'toolbox',
+        type: nodeType,
         payload: parsed,
         position,
       };
     } catch {
-      return null;
+      const textType = rawJson.trim();
+      return {
+        type: textType || 'class',
+        payload: { type: 'toolbox_node', nodeType: textType },
+        position,
+      };
     }
   }
 
@@ -195,11 +205,9 @@ export class DiagramCanvasDragService {
     const clamped = Math.min(200, Math.max(25, Math.round(targetZoom)));
     const scale = clamped / 100;
     setZoom(clamped);
-    if (zoomDirective && typeof (zoomDirective as any).setZoom === 'function') {
-      (zoomDirective as any).setZoom(scale);
-    } else if (canvas) {
+    if (canvas) {
       canvas.setScale(scale);
-      canvas.redrawWithAnimation();
+      canvas.redraw();
     }
     emitZoom(clamped);
   }

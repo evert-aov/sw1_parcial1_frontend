@@ -28,19 +28,13 @@ export class UmlRobustnessNodeComponent {
   @Input() isSelected = false;
   @Input() isLocked = false;
   @Input() renamingNodeId: string | null = null;
-  @Input() isDraggingLabel = false;
-  @Input() draggingLabelNodeId: string | null = null;
   @Input() isReadOnly = false;
-  @Input() labelTransform = '';
-  @Input() hasLabelOffset = false;
 
   @Output() nodeClick = new EventEmitter<MouseEvent>();
   @Output() deleteNode = new EventEmitter<MouseEvent>();
-  @Output() labelPointerDown = new EventEmitter<PointerEvent>();
   @Output() labelDblClick = new EventEmitter<MouseEvent>();
   @Output() commitRename = new EventEmitter<string>();
   @Output() cancelRename = new EventEmitter<void>();
-  @Output() resetOffset = new EventEmitter<MouseEvent>();
 
   get accentColor(): 'cyan' | 'teal' | 'emerald' {
     if (this.node?.nodeType === 'boundary') return 'cyan';

@@ -9,7 +9,10 @@
   (dragover)="onCanvasDragOver($event)"
   (dragleave)="onCanvasDragLeave($event)"
   (drop)="onCanvasDrop($event)"
-  class="flex-1 relative w-full h-full overflow-auto cursor-default bg-white uml-viewport select-none"
+  class="flex-1 relative w-full h-full overflow-auto bg-white uml-viewport select-none"
+  [class.cursor-grab]="isSpacePressed() && !isPanning()"
+  [class.cursor-grabbing]="isPanning()"
+  [class.cursor-default]="!isSpacePressed() && !isPanning()"
   [class.ring-2]="isDragOverCanvas()"
   [class.ring-inset]="isDragOverCanvas()"
   [class.ring-blue-500/70]="isDragOverCanvas()">
@@ -94,6 +97,7 @@
 
       <f-canvas
         fZoom
+        [scale]="zoomLevel() / 100"
         [fLayers]="canvasLayers"
         [fWheelTrigger]="canvasWheelTrigger"
         [fDblClickTrigger]="dblClickZoomTrigger"
@@ -107,10 +111,10 @@
               [attr.data-connection-id]="conn.id"
               [fOutputId]="conn.sourceId"
               [fInputId]="conn.targetId"
-              [fType]="isSequenceConnection(conn) && !isRecursiveConn(conn) ? 'straight' : (conn.lineStyle || defaultLineStyle())"
-              [fBehavior]="isRecursiveConn(conn) ? 'fixed' : 'floating'"
-              [fOutputSide]="isRecursiveConn(conn) ? getConnSide(conn.sourceId, 'top') : 'default'"
-              [fInputSide]="isRecursiveConn(conn) ? getConnSide(conn.targetId, 'right') : 'default'"
+              [fType]="getConnectionType(conn)"
+              [fBehavior]="getConnectionBehavior(conn)"
+              [fOutputSide]="getConnectionOutputSide(conn)"
+              [fInputSide]="getConnectionInputSide(conn)"
               (pointerdown)="onConnectionPointerDown(conn.id, $event)"
               (click)="onConnectionClick(conn.id, $event)"
               (dblclick)="onConnectionDblClick(conn, $event)"
@@ -539,11 +543,7 @@
                     [activeDiagramType]="activeDiagramType()"
                     [selectedRelationType]="selectedRelationType()"
                     [renamingNodeId]="renamingNodeId()"
-                    [isDraggingLabel]="isDraggingLabel()"
-                    [draggingLabelNodeId]="draggingLabelNodeId()"
                     [isReadOnly]="isReadOnly()"
-                    [labelTransform]="getLabelTransform(node)"
-                    [hasLabelOffset]="hasLabelOffset(node)"
                     [lifelineLength]="getLifelineLength(node)"
                     [activations]="getNodeActivations(node)"
                     [sequenceSlots]="sequenceSlots"
@@ -552,11 +552,9 @@
                     (nodeClick)="onNodeClick(node.id, $event)"
                     (deleteNode)="onDeleteNode(node.id, $event)"
                     (tableClick)="onTableClick(node.id, $event)"
-                    (labelPointerDown)="onLabelPointerDown(node, $event)"
                     (labelDblClick)="onLabelDblClick(node, $event)"
                     (commitRename)="commitNodeRename(node.id, $event)"
                     (cancelRename)="cancelNodeRename()"
-                    (resetOffset)="resetLabelOffset(node, $event)"
                   />
                 } @else if (node.nodeType === 'use_case') {
                   <app-uml-use-case-node
@@ -591,18 +589,12 @@
                     [isSelected]="isNodeSelected(node.id)"
                     [isLocked]="isNodeLockedByOther(node.id)"
                     [renamingNodeId]="renamingNodeId()"
-                    [isDraggingLabel]="isDraggingLabel()"
-                    [draggingLabelNodeId]="draggingLabelNodeId()"
                     [isReadOnly]="isReadOnly()"
-                    [labelTransform]="getLabelTransform(node)"
-                    [hasLabelOffset]="hasLabelOffset(node)"
                     (nodeClick)="onNodeClick(node.id, $event)"
                     (deleteNode)="onDeleteNode(node.id, $event)"
-                    (labelPointerDown)="onLabelPointerDown(node, $event)"
                     (labelDblClick)="onLabelDblClick(node, $event)"
                     (commitRename)="commitNodeRename(node.id, $event)"
                     (cancelRename)="cancelNodeRename()"
-                    (resetOffset)="resetLabelOffset(node, $event)"
                   />
                 } @else if (node.nodeType === 'lifeline') {
                   <app-uml-lifeline-node

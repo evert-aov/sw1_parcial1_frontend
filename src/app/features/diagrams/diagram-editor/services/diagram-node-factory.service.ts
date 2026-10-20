@@ -22,11 +22,13 @@ export class DiagramNodeFactoryService {
   ): { x: number; y: number } {
     const sLeft = scroll?.scrollLeft || 0;
     const sTop = scroll?.scrollTop || 0;
-    const posX = position
-      ? Math.max(20, Math.round(position.x - offsetX))
+    const hasValidX = position && typeof position.x === 'number' && Number.isFinite(position.x);
+    const hasValidY = position && typeof position.y === 'number' && Number.isFinite(position.y);
+    const posX = hasValidX
+      ? Math.max(20, Math.round(position!.x - offsetX))
       : Math.max(50, Math.round(sLeft + 120 + Math.random() * 60));
-    const posY = position
-      ? Math.max(20, Math.round(position.y - offsetY))
+    const posY = hasValidY
+      ? Math.max(20, Math.round(position!.y - offsetY))
       : Math.max(50, Math.round(sTop + 80 + Math.random() * 60));
     return { x: posX, y: posY };
   }

@@ -27,6 +27,8 @@ import { ConnectionCascadeUtil } from '../../../utils/connection-cascade.util';
  * Servicio de geometría, estilos visuales y metadatos de presentación para nodos y conexiones en el lienzo UML.
  * Desacopla el cálculo de marcadores SVG, colores de mensajes, agrupación jerárquica de secuencia y z-index.
  */
+export const DEPLOYMENT_NODE_DEPTH = 14;
+
 @Injectable({
   providedIn: 'root',
 })
@@ -78,6 +80,17 @@ export class DiagramCanvasGeometryService {
     const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
     const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
     return !!s && s === t;
+  }
+
+  /**
+   * Determina si la conexión debe usar comportamiento flotante (conecta a la caja general del nodo)
+   * o fijo (conecta a un puerto cardinal específico como _top, _right, etc.).
+   */
+  isFloatingConn(conn: UmlConnection): boolean {
+    if (!conn) return false;
+    const isSourcePort = /_(top|right|bottom|left|slot_\d+)$/.test(conn.sourceId || '');
+    const isTargetPort = /_(top|right|bottom|left|slot_\d+)$/.test(conn.targetId || '');
+    return !isSourcePort && !isTargetPort && !this.isRecursiveConn(conn);
   }
 
   /**
@@ -269,6 +282,14 @@ export class DiagramCanvasGeometryService {
 
   /**
    * Calcula el `z-index` jerárquico de un nodo para que los contenedores queden detrás de sus hijos.
+   * Jerarquía de capas (de más al fondo a más al frente):
+   * 1. Boundary Box (z: 1-2)
+   * 2. Package / Subsystem (z: 3-4)
+   * 3. Dispositivos físicos («device») (z: 5-7)
+   * 4. Entornos de ejecución («executionEnvironment» / «node») (z: 10-12)
+   * 5. Componentes de software («component») (z: 15-18)
+   * 6. Clases, artefactos y otros nodos contenidos (z: 20-25)
+   * 7. Nodos ancla y controles flotantes (z: 45)
    *
    * @param node Nodo UML.
    * @param isSelected Indica si el nodo está seleccionado.
@@ -276,11 +297,43 @@ export class DiagramCanvasGeometryService {
    */
   getNodeZIndex(node: UmlClassNode, isSelected: boolean): number {
     if (node.isAnchor) return 45;
-    if (node.nodeType === 'boundary_box') return isSelected ? 5 : 1;
-    if (node.nodeType === 'package') return isSelected ? 8 : 2;
-    if (isDeploymentNodeLogic(node.nodeType)) return isSelected ? 12 : 4;
-    if (node.nodeType === 'component') return isSelected ? 18 : 8;
-    return isSelected ? 30 : 15;
+
+    // 1. Boundary Box: el más al fondo en diagramas de despliegue, componentes y casos de uso
+    if (node.nodeType === 'boundary_box') {
+      return isSelected ? 2 : 1;
+    }
+
+    // 2. Package / Subsistema contenedor
+    if (node.nodeType === 'package') {
+      return isSelected ? 4 : 3;
+    }
+
+    // 3. Dispositivos físicos («device»): servidores de hardware, nodos físicos de infraestructura
+    const isDevice = node.nodeType === 'device' || node.stereotype === 'device';
+    if (isDevice) {
+      return isSelected ? 7 : 5;
+    }
+
+    // 4. Entornos de ejecución («executionEnvironment» / «node»): servidores de aplicación, Docker, VM, OS
+    const isExecutionEnv =
+      node.nodeType === 'executionEnvironment' ||
+      node.nodeType === 'execution-environment' ||
+      node.nodeType === 'node' ||
+      node.stereotype === 'executionEnvironment' ||
+      node.stereotype === 'execution-environment' ||
+      node.stereotype === 'node';
+    if (isExecutionEnv) {
+      return isSelected ? 12 : 10;
+    }
+
+    // 5. Componentes de software («component»): módulos, subsistemas lógicos, artefactos
+    const isComponent = node.nodeType === 'component' || node.stereotype === 'component';
+    if (isComponent) {
+      return isSelected ? 18 : 15;
+    }
+
+    // 6. Clases, actores, casos de uso, interfaces y otros nodos contenidos
+    return isSelected ? 25 : 20;
   }
 
   /**
@@ -326,7 +379,7 @@ export class DiagramCanvasGeometryService {
    * @returns Ancho frontal en píxeles.
    */
   getDeploymentFrontWidth(node: UmlClassNode): number {
-    return Math.max(100, getNodeWidth(node) - 18);
+    return Math.max(100, getNodeWidth(node) - DEPLOYMENT_NODE_DEPTH);
   }
 
   /**
@@ -336,7 +389,7 @@ export class DiagramCanvasGeometryService {
    * @returns Alto frontal en píxeles.
    */
   getDeploymentFrontHeight(node: UmlClassNode): number {
-    return Math.max(70, this.getDeploymentHeight(node) - 18);
+    return Math.max(70, this.getDeploymentHeight(node) - DEPLOYMENT_NODE_DEPTH);
   }
 
   /**
@@ -390,9 +443,7 @@ export class DiagramCanvasGeometryService {
    * @returns Cadena CSS `translate(...)` o cadena vacía.
    */
   getLabelTransform(node: UmlClassNode): string {
-    const ox = node.labelOffset?.x || 0;
-    const oy = node.labelOffset?.y || 0;
-    return ox !== 0 || oy !== 0 ? `translate(${ox}px, ${oy}px)` : '';
+    return '';
   }
 
   /**
@@ -402,7 +453,7 @@ export class DiagramCanvasGeometryService {
    * @returns `true` si `labelOffset` es distinto de `(0, 0)`.
    */
   hasLabelOffset(node: UmlClassNode): boolean {
-    return !!(node.labelOffset && (node.labelOffset.x !== 0 || node.labelOffset.y !== 0));
+    return false;
   }
 
   /**

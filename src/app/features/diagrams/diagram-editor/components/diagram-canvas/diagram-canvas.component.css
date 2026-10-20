@@ -182,7 +182,6 @@
 ::ng-deep f-flow .f-node.f-node-class.f-selected {
   outline: 2px solid #2563eb !important;
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.4) !important;
-  z-index: 30 !important;
 }
 
 /* Área de Selección Rectangular (Marquee) */

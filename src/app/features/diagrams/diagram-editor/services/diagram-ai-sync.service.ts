@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import {
   DiagramType,
+  sanitizeLineStyle,
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
@@ -395,7 +396,7 @@ export class DiagramAiSyncService {
         sourceId: c.sourceId || `${sourceNodeId}_right`,
         targetId: c.targetId || `${targetNodeId}_left`,
         type: (c.type as UmlRelationshipType) || 'association',
-        lineStyle: (c.lineStyle as UmlLineStyle) || 'straight',
+        lineStyle: sanitizeLineStyle(c.lineStyle, 'straight'),
         name: sortedMessages.length > 0 ? undefined : c.name || undefined,
         sourceMultiplicity: '',
         targetMultiplicity: '',
@@ -434,7 +435,7 @@ export class DiagramAiSyncService {
         sourceId: sourceId || `${sourceNodeId}_right`,
         targetId: targetId || `${targetNodeId}_left`,
         type: (c.type as UmlRelationshipType) || 'association',
-        lineStyle: (c.lineStyle as UmlLineStyle) || defaultLineStyle,
+        lineStyle: sanitizeLineStyle(c.lineStyle, defaultLineStyle),
         name: c.name || undefined,
         sourceMultiplicity: c.sourceMultiplicity || '',
         targetMultiplicity: c.targetMultiplicity || '',

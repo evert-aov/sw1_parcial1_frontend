@@ -12,7 +12,7 @@ export function isActorNode(node?: UmlClassNode | null): boolean {
  */
 export function getActorBottomExtra(node: UmlClassNode): number {
   if (node.nodeType === 'actor') {
-    return 38 + Math.max(0, node.labelOffset?.y || 0);
+    return 38;
   }
   return 0;
 }

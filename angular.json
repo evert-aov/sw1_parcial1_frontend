@@ -90,11 +90,6 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": {
-            "port": 3000,
-            "host": "0.0.0.0",
-            "allowedHosts": true
-          },
           "configurations": {
             "production": {
               "buildTarget": "frontend:build:production"

@@ -378,6 +378,7 @@ export const en = {
         boundaryBoxPlaceholder: 'Name or label (optional)...',
         deleteMessage: 'Delete message',
         resetLabelPosition: 'Reset text position to center',
+        doubleClickToEdit: 'Double click to edit name',
         dragLabelHint: 'Drag to reposition text (Double-click to edit)',
         focusActivation: 'Control focus / Activation',
         classHeaderTooltip: 'Click to highlight relationships / Double click to edit',

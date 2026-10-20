@@ -144,11 +144,14 @@ export class DiagramContainmentService {
       sendNodeDrag,
     } = params;
 
-    let targetPos = params.newPosition;
+    const rawPosX = params.newPosition?.x;
+    const rawPosY = params.newPosition?.y;
+    const curPosX = Number.isFinite(node.position?.x) ? node.position.x : 50;
+    const curPosY = Number.isFinite(node.position?.y) ? node.position.y : 50;
+    const validX = Number.isFinite(rawPosX) ? Math.round(rawPosX) : curPosX;
+    const validY = Number.isFinite(rawPosY) ? Math.round(rawPosY) : curPosY;
     const isSequenceNode = activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
-    if (isSequenceNode) {
-      targetPos = { x: Math.round(targetPos.x), y: 50 };
-    }
+    let targetPos = { x: validX, y: isSequenceNode ? 50 : validY };
 
     if (!this.isDraggingNode) {
       const rootsToTrace = new Set<string>([node.id]);
@@ -181,8 +184,10 @@ export class DiagramContainmentService {
           for (const other of nodes) {
             if (other.id !== node.id && selectedNodeIds.has(other.id) && !other.isAnchor) {
               const otherIsSeq = activeDiagramType === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
-              const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
-              other.position = { x: Math.round(other.position.x + dx), y: otherY };
+              const oPosX = Number.isFinite(other.position?.x) ? other.position.x : 50;
+              const oPosY = Number.isFinite(other.position?.y) ? other.position.y : 50;
+              const otherY = otherIsSeq ? 50 : Math.round(oPosY + dy);
+              other.position = { x: Math.round(oPosX + dx), y: otherY };
               sendNodeDrag(other.id, other.position);
             }
           }
@@ -198,8 +203,10 @@ export class DiagramContainmentService {
               !other.isAnchor
             ) {
               const otherIsSeq = activeDiagramType === DiagramType.SEQUENCE || other.nodeType === 'lifeline';
-              const otherY = otherIsSeq ? 50 : Math.round(other.position.y + dy);
-              other.position = { x: Math.round(other.position.x + dx), y: otherY };
+              const oPosX = Number.isFinite(other.position?.x) ? other.position.x : 50;
+              const oPosY = Number.isFinite(other.position?.y) ? other.position.y : 50;
+              const otherY = otherIsSeq ? 50 : Math.round(oPosY + dy);
+              other.position = { x: Math.round(oPosX + dx), y: otherY };
               sendNodeDrag(other.id, other.position);
             }
           }
@@ -258,10 +265,12 @@ export class DiagramContainmentService {
       const node = nodeMap.get(item.id);
       if (node) {
         const isSequenceNode = activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
-        const targetX = Math.round(item.position.x);
-        const targetY = isSequenceNode ? 50 : Math.round(item.position.y);
-        const dx = targetX - node.position.x;
-        const dy = isSequenceNode ? 0 : targetY - node.position.y;
+        const curX = Number.isFinite(node.position?.x) ? node.position.x : 50;
+        const curY = Number.isFinite(node.position?.y) ? node.position.y : 50;
+        const targetX = Number.isFinite(item.position?.x) ? Math.round(item.position.x) : curX;
+        const targetY = isSequenceNode ? 50 : (Number.isFinite(item.position?.y) ? Math.round(item.position.y) : curY);
+        const dx = targetX - curX;
+        const dy = isSequenceNode ? 0 : targetY - curY;
         if (dx !== 0 || dy !== 0) {
           node.position = { x: targetX, y: targetY };
           this.lastNodeDragPos.set(node.id, { x: targetX, y: targetY });
@@ -274,10 +283,12 @@ export class DiagramContainmentService {
               if (!eventNodeIds.has(descId)) {
                 const descNode = nodeMap.get(descId);
                 if (descNode && !descNode.isAnchor) {
+                  const dCurX = Number.isFinite(descNode.position?.x) ? descNode.position.x : 50;
+                  const dCurY = Number.isFinite(descNode.position?.y) ? descNode.position.y : 50;
                   const dY = (activeDiagramType === DiagramType.SEQUENCE || descNode.nodeType === 'lifeline')
                     ? 50
-                    : Math.round(descNode.position.y + dy);
-                  descNode.position = { x: Math.round(descNode.position.x + dx), y: dY };
+                    : Math.round(dCurY + dy);
+                  descNode.position = { x: Math.round(dCurX + dx), y: dY };
                   sendNodeDrag(descNode.id, descNode.position);
                 }
               }
