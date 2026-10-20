@@ -12,7 +12,7 @@ La guía está estructurada en **7 capítulos modulares**:
 | :--- | :--- | :--- |
 | **00** | [Arquitectura y Configuración](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/00-ARQUITECTURA-Y-CONFIGURACION.md) | Visión global, stack tecnológico, Angular 19 Standalone, Signals, Tailwind CSS v4, entorno Electron y scripts. |
 | **01** | [Core, Servicios e Internacionalización](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/01-CORE-SERVICIOS-E-I18N.md) | Sistema i18n reactivo (`TranslatePipe`), `ThemeService` (Dark/Light), `AuthGuard`, `JwtInterceptor` y clientes HTTP. |
-| **02** | [Arquitectura del Editor de Diagramas](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/02-ARQUITECTURA-DEL-EDITOR-DE-DIAGRAMAS.md) | Desacoplamiento de `DiagramEditorComponent` en 14 servicios de dominio especializados (Bajo Acoplamiento + Alta Cohesión). |
+| **02** | [Arquitectura del Editor de Diagramas](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/02-ARQUITECTURA-DEL-EDITOR-DE-DIAGRAMAS.md) | Desacoplamiento de `DiagramEditorComponent` en 5 paquetes de responsabilidad (`orchestration`, `state-persistence`, `spatial-engine`, `uml-domain`, `collaboration-ai-io`) con más de 22 servicios especializados. |
 | **03** | [Lienzo y Nodos Modulares (@foblex/flow)](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/03-LIENZO-Y-NODOS-MODULARES.md) | Arquitectura del lienzo `DiagramCanvasComponent`, transformaciones espaciales y los 8 nodos standalone especializados. |
 | **04** | [Colaboración en Tiempo Real y WebSockets](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/04-COLABORACION-TIEMPO-REAL-Y-WEBSOCKETS.md) | Coordinación Socket.IO, sincronización de cursores, bloqueo visual de nodos concurrentes y reconexión suave. |
 | **05** | [Suite UI Reutilizable y Componentes Compartidos](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/05-SUITE-UI-REUTILIZABLE-Y-ESTILOS.md) | Suite `shared-ui/` (Zoom, LineRouting, ToolItem, RelationshipButtons), renderizado SVG (`uml-svg/`) y WebGL. |
@@ -37,7 +37,7 @@ npm install
 # Iniciar servidor de desarrollo en http://localhost:4200
 npm start
 
-# Ejecutar pruebas unitarias automatizadas con Vitest (61 tests)
+# Ejecutar pruebas unitarias automatizadas con Vitest (78 tests en 11 suites)
 npm test -- --watch=false
 
 # Compilar para producción (0 errores)

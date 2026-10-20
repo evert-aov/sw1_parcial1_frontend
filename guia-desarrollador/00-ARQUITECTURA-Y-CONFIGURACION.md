@@ -59,7 +59,12 @@ frontend/
 │   │           └── diagram-editor/
 │   │               ├── components/  # Canvas, Appbar, Sidebar, Modales, Shared-UI
 │   │               ├── directives/  # AutofocusInputDirective
-│   │               └── services/    # 14 Servicios de dominio del editor
+│   │               └── services/    # 5 Módulos de dominio especializados (index.ts)
+│   │                   ├── orchestration/       # UI, hotkeys, toolbars, modales
+│   │                   ├── state-persistence/   # Autosave, historial, clipboard
+│   │                   ├── spatial-engine/      # Geometría, drag, colisiones, zoom
+│   │                   ├── uml-domain/          # Nodos, factoría, conexiones, resize
+│   │                   └── collaboration-ai-io/ # WebSockets, IA sync, import/export
 │   ├── environments/            # Variables de entorno (Web, Prod, Electron)
 │   └── styles.css               # Estilos globales y tokens Tailwind CSS
 ├── angular.json                 # Configuración del compilador Angular
@@ -93,5 +98,5 @@ Ubicados en `src/environments/`:
 | :--- | :--- |
 | `npm start` | Inicia el servidor de desarrollo de Angular en `http://localhost:4200`. |
 | `npm run build` | Compila el bundle de producción en `dist/frontend` con tree-shaking agresivo. |
-| `npm test` | Ejecuta la suite de pruebas unitarias automatizadas con **Vitest** (61 pruebas, 100% pasando). |
+| `npm test` | Ejecuta la suite de pruebas unitarias automatizadas con **Vitest** (78 pruebas en 11 suites, 100% pasando). |
 | `npm run electron:serve` | Compila el frontend e inicia la ventana nativa de **Electron**. |

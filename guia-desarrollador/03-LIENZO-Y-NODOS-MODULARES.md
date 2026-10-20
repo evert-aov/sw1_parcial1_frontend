@@ -70,3 +70,31 @@ nodes/
     - Composición: Rombo negro relleno.
     - Agregación: Rombo blanco hueco.
     - Asociación / Dependencia: Flecha abierta o línea discontinua con etiqueta `<<include>>` / `<<extend>>`.
+
+---
+
+## 4. Control de Etiquetas y Alineación Geométrica
+
+### 1. Restricción de Desplazamiento de Etiquetas (Actores y Robustez BCE)
+En nodos visuales que desacoplan el glifo gráfico de su texto descriptivo (como `UmlActorNode` y `UmlRobustnessNode`), la etiqueta puede reubicarse interactivamente. Para prevenir que el label se aleje descontroladamente o quede huérfano:
+- Se implementan límites de contención (*clamping*) respecto al centroide del nodo.
+- El movimiento arrastra simétricamente los puertos y líneas de anclaje para evitar inconsistencias matemáticas de `NaN` en las coordenadas SVG de `@foblex/flow`.
+
+### 2. Compensación Isométrica 3D en Despliegue
+Los nodos de despliegue (`<<device>>`, `<<executionEnvironment>>`) proyectan caras superiores y laterales con perspectiva 3D isométrica:
+- Para evitar desfases espaciales al solapar nodos anidados o conectar interfaces, se compensan las coordenadas de los puertos de anclaje integrando la profundidad visual `depthOffset` en los cálculos de `DiagramCanvasGeometryService`.
+
+---
+
+## 5. Jerarquía de Capas Espaciales (`z-index`)
+
+Para diagramas de **Despliegue** y **Componentes**, donde la anidación visual y los contenedores físicos son frecuentes, los nodos y conexiones se ordenan estrictamente de fondo a frente:
+
+| Nivel de Capa | Elemento UML | `z-index` / Orden | Propósito Visual |
+| :--- | :--- | :--- | :--- |
+| **Fondo Profundo** | `boundary_box` | Fondo (`z: 0` / más bajo) | Cajas de delimitación lógica o límites de sistema. |
+| **Contenedores Físicos** | `<<device>>` | Nivel 1 (`z: 10`) | Servidores físicos, nodos de hardware y racks 3D. |
+| **Entornos de Ejecución** | `<<executionEnvironment>>` | Nivel 2 (`z: 20`) | JVM, Docker, NodeJS, Kubernetes nodes. |
+| **Elementos de Primer Plano** | `<<component>>`, `<<artifact>>`, Clases | Nivel 3 (`z: 30`) | Módulos, binarios y artefactos ejecutables. |
+| **Capa Superior** | Conexiones y Relaciones (`f-connection`) | Nivel 4 (`z: 40` / más alto) | Líneas de comunicación, asociaciones y dependencias siempre visibles. |
+

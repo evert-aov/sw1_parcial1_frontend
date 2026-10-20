@@ -3,7 +3,7 @@
 ## 1. Visión General
 La experiencia colaborativa multiusuario del frontend está gestionada por dos capas complementarias:
 1. **`CollaborationService`** ([`src/app/core/services/collaboration.service.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/services/collaboration.service.ts)): Conexión de transporte de bajo nivel con `Socket.IO`.
-2. **`DiagramCollaborationCoordinatorService`** ([`src/app/features/diagrams/diagram-editor/services/diagram-collaboration-coordinator.service.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/services/diagram-collaboration-coordinator.service.ts)): Orquestación de eventos de dominio, cursores y candados visuales sobre el lienzo.
+2. **`DiagramCollaborationCoordinatorService`** ([`src/app/features/diagrams/diagram-editor/services/collaboration-ai-io/diagram-collaboration-coordinator.service.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/services/collaboration-ai-io/diagram-collaboration-coordinator.service.ts)): Orquestación de eventos de dominio, cursores y candados visuales sobre el lienzo.
 
 ---
 
