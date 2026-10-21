@@ -155,6 +155,7 @@ export function getUmlMarkerConfig(
           'fill-[#2D3748] stroke-[#2D3748]': !customColor
         }"
         stroke-width="1"
+        class="uml-marker-seq-sync"
       />
     } @else if (relationType === 'reply') {
       <!-- Flecha abierta de retorno (Mensaje reply) -->
@@ -168,6 +169,7 @@ export function getUmlMarkerConfig(
         stroke-width="1.4"
         stroke-linecap="round"
         stroke-linejoin="round"
+        class="uml-marker-seq-open"
       />
     } @else if (relationType === 'async' || relationType === 'create') {
       <!-- Flecha abierta de interacción (Mensaje asíncrono / Create) -->
@@ -181,6 +183,7 @@ export function getUmlMarkerConfig(
         stroke-width="1.4"
         stroke-linecap="round"
         stroke-linejoin="round"
+        class="uml-marker-seq-open"
       />
     }
   `

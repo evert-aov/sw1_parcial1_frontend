@@ -54,6 +54,7 @@ export interface CreateConnectionResult {
 export class DiagramConnectionOperationsService {
   private readonly layoutService: DiagramConnectionLayoutService;
   private readonly toastService?: ToastService | null;
+  private lastSourceSetTimestamp = 0;
 
   constructor(layoutService?: DiagramConnectionLayoutService, toastService?: ToastService) {
     if (layoutService) {
@@ -453,10 +454,17 @@ export class DiagramConnectionOperationsService {
     event.preventDefault();
 
     if (options.currentSource === null) {
+      this.lastSourceSetTimestamp = Date.now();
       options.setSourceNodeId(nodeId);
       options.onMouseMove(event);
       return;
     }
+
+    // Prevenir auto-conexión por doble disparo de eventos en el mismo tick de clic
+    if (options.currentSource === nodeId && Date.now() - this.lastSourceSetTimestamp < 350) {
+      return;
+    }
+    this.lastSourceSetTimestamp = 0;
 
     const result = this.processTableClickConnection({
       currentSource: options.currentSource,

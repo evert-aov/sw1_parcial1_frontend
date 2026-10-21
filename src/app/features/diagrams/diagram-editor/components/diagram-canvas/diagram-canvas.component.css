@@ -204,44 +204,204 @@
 ::ng-deep .f-connection {
   stroke: #2D3748;
   stroke-width: 1.5px;
+  cursor: pointer !important;
+}
+
+::ng-deep .f-connection svg,
+::ng-deep .f-connection .f-connection-group,
+::ng-deep .f-connection path[f-connection-path],
+::ng-deep .f-connection path[fConnectionSelection],
+::ng-deep .f-connection .f-connection-selection {
+  cursor: pointer !important;
+}
+
+::ng-deep .f-connection path[fConnectionSelection],
+::ng-deep .f-connection .f-connection-selection {
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease, opacity 0.15s ease;
+}
+
+/* Hit-corridor de selección invisible por defecto (solo se ilumina en hover o al estar seleccionada) */
+::ng-deep .f-connection:not(:hover):not(.uml-connection-hovered):not(.f-selected):not(.f-connection-selected) path[fConnectionSelection],
+::ng-deep .f-connection:not(:hover):not(.uml-connection-hovered):not(.f-selected):not(.f-connection-selected) .f-connection-selection {
+  stroke: transparent !important;
+  fill: none !important;
+}
+
+/* Hover Halo reactivo al aproximar el cursor (estilo Konva, 14px suave) */
+::ng-deep .f-connection:not(.f-dragging):hover path[fConnectionSelection],
+::ng-deep .f-connection:not(.f-dragging):hover .f-connection-selection,
+::ng-deep .f-connection.uml-connection-hovered path[fConnectionSelection],
+::ng-deep .f-connection.uml-connection-hovered .f-connection-selection {
+  stroke: rgba(16, 185, 129, 0.28) !important;
+  stroke-width: 14px !important;
+}
+
+:host-context(.dark) ::ng-deep .f-connection:not(.f-dragging):hover path[fConnectionSelection],
+:host-context(.dark) ::ng-deep .f-connection:not(.f-dragging):hover .f-connection-selection,
+:host-context(.dark) ::ng-deep .f-connection.uml-connection-hovered path[fConnectionSelection],
+:host-context(.dark) ::ng-deep .f-connection.uml-connection-hovered .f-connection-selection,
+.dark ::ng-deep .f-connection:not(.f-dragging):hover path[fConnectionSelection],
+.dark ::ng-deep .f-connection:not(.f-dragging):hover .f-connection-selection,
+.dark ::ng-deep .f-connection.uml-connection-hovered path[fConnectionSelection],
+.dark ::ng-deep .f-connection.uml-connection-hovered .f-connection-selection {
+  stroke: rgba(52, 211, 153, 0.35) !important;
+  stroke-width: 14px !important;
+}
+
+/* =========================================================================
+   ESTADO SELECCIONADO DE CONEXIONES (ESTILO KONVA: ESMERALDA #059669 + HALO)
+   ========================================================================= */
+::ng-deep .f-connection.f-selected path[f-connection-path],
+::ng-deep .f-connection.f-connection-selected path[f-connection-path],
+::ng-deep .f-connection.f-selected .f-connection-path,
+::ng-deep .f-connection.f-connection-selected .f-connection-path {
+  stroke: #059669 !important;
+  stroke-width: 2.5px !important;
+}
+
+/* Aura permanente de selección */
+::ng-deep .f-connection.f-selected path[fConnectionSelection],
+::ng-deep .f-connection.f-connection-selected path[fConnectionSelection],
+::ng-deep .f-connection.f-selected .f-connection-selection,
+::ng-deep .f-connection.f-connection-selected .f-connection-selection {
+  stroke: rgba(16, 185, 129, 0.32) !important;
+  stroke-width: 14px !important;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.5)) !important;
+}
+
+/* Marcadores visuales UML seleccionados en verde esmeralda */
+::ng-deep .f-connection.f-selected svg[fMarker] polygon,
+::ng-deep .f-connection.f-selected svg[fMarker] polyline,
+::ng-deep .f-connection.f-selected svg[fMarker] path,
+::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon,
+::ng-deep .f-connection.f-connection-selected svg[fMarker] polyline,
+::ng-deep .f-connection.f-connection-selected svg[fMarker] path {
+  stroke: #059669 !important;
+}
+
+::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-filled,
+::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-filled,
+::ng-deep .f-connection.f-selected .uml-marker-seq-sync,
+::ng-deep .f-connection.f-connection-selected .uml-marker-seq-sync {
+  fill: #059669 !important;
+  stroke: #059669 !important;
+}
+
+::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-hollow,
+::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-hollow {
+  fill: #FFFFFF !important;
+  stroke: #059669 !important;
+  stroke-width: 1.8px !important;
+}
+
+::ng-deep .f-connection.f-selected svg[fMarker] polyline.uml-marker-open,
+::ng-deep .f-connection.f-connection-selected svg[fMarker] polyline.uml-marker-open,
+::ng-deep .f-connection.f-selected .uml-marker-seq-open,
+::ng-deep .f-connection.f-connection-selected .uml-marker-seq-open {
+  stroke: #059669 !important;
+  stroke-width: 1.8px !important;
+}
+
+/* Conexión incidente cuando se selecciona un nodo (resaltado suave complementario) */
+::ng-deep .f-connection.f-connection-incident:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
+  stroke: #2563EB !important;
+  stroke-width: 2px !important;
+}
+
+::ng-deep .f-connection.f-connection-incident:not(.f-selected):not(.f-connection-selected) path[fConnectionSelection] {
+  stroke: rgba(37, 99, 235, 0.2) !important;
+  stroke-width: 10px !important;
+}
+
+/* Modo oscuro para selección de conexiones */
+:host-context(.dark) ::ng-deep .f-connection.f-selected path[f-connection-path],
+:host-context(.dark) ::ng-deep .f-connection.f-connection-selected path[f-connection-path],
+.dark ::ng-deep .f-connection.f-selected path[f-connection-path],
+.dark ::ng-deep .f-connection.f-connection-selected path[f-connection-path] {
+  stroke: #10B981 !important;
+}
+
+:host-context(.dark) ::ng-deep .f-connection.f-selected path[fConnectionSelection],
+:host-context(.dark) ::ng-deep .f-connection.f-connection-selected path[fConnectionSelection],
+.dark ::ng-deep .f-connection.f-selected path[fConnectionSelection],
+.dark ::ng-deep .f-connection.f-connection-selected path[fConnectionSelection] {
+  stroke: rgba(16, 185, 129, 0.4) !important;
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6)) !important;
+}
+
+:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] polygon,
+:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] polyline,
+:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] path,
+:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon,
+:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] polyline,
+:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] path,
+.dark ::ng-deep .f-connection.f-selected svg[fMarker] polygon,
+.dark ::ng-deep .f-connection.f-selected svg[fMarker] polyline,
+.dark ::ng-deep .f-connection.f-selected svg[fMarker] path,
+.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon,
+.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] polyline,
+.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] path {
+  stroke: #10B981 !important;
+}
+
+:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-filled,
+:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-filled,
+:host-context(.dark) ::ng-deep .f-connection.f-selected .uml-marker-seq-sync,
+:host-context(.dark) ::ng-deep .f-connection.f-connection-selected .uml-marker-seq-sync,
+.dark ::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-filled,
+.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-filled,
+.dark ::ng-deep .f-connection.f-selected .uml-marker-seq-sync,
+.dark ::ng-deep .f-connection.f-connection-selected .uml-marker-seq-sync {
+  fill: #10B981 !important;
+  stroke: #10B981 !important;
+}
+
+:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-hollow,
+:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-hollow,
+.dark ::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-hollow,
+.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-hollow {
+  fill: #1E293B !important;
+  stroke: #10B981 !important;
 }
 
 ::ng-deep .uml-relation-dependency .f-connection-drag-handle,
-::ng-deep .uml-relation-dependency path {
+::ng-deep .uml-relation-dependency:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
   stroke-dasharray: 5, 4 !important;
 }
 
 ::ng-deep .uml-relation-include .f-connection-drag-handle,
-::ng-deep .uml-relation-include path {
+::ng-deep .uml-relation-include:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
   stroke-dasharray: 5, 4 !important;
   stroke: #2D3748 !important;
 }
 
 ::ng-deep .uml-relation-extend .f-connection-drag-handle,
-::ng-deep .uml-relation-extend path {
+::ng-deep .uml-relation-extend:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
   stroke-dasharray: 5, 4 !important;
   stroke: #2D3748 !important;
 }
 
 ::ng-deep .uml-relation-import .f-connection-drag-handle,
-::ng-deep .uml-relation-import path,
+::ng-deep .uml-relation-import:not(.f-selected):not(.f-connection-selected) path[f-connection-path],
 ::ng-deep .uml-relation-access .f-connection-drag-handle,
-::ng-deep .uml-relation-access path,
+::ng-deep .uml-relation-access:not(.f-selected):not(.f-connection-selected) path[f-connection-path],
 ::ng-deep .uml-relation-merge .f-connection-drag-handle,
-::ng-deep .uml-relation-merge path,
+::ng-deep .uml-relation-merge:not(.f-selected):not(.f-connection-selected) path[f-connection-path],
 ::ng-deep .uml-relation-trace .f-connection-drag-handle,
-::ng-deep .uml-relation-trace path {
+::ng-deep .uml-relation-trace:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
   stroke-dasharray: 5, 4 !important;
   stroke: #2D3748 !important;
 }
 
 ::ng-deep .uml-relation-realization .f-connection-drag-handle,
-::ng-deep .uml-relation-realization path {
+::ng-deep .uml-relation-realization:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
   stroke-dasharray: 6, 4 !important;
 }
 
 ::ng-deep .uml-relation-association_class .f-connection-drag-handle,
-::ng-deep .uml-relation-association_class path {
+::ng-deep .uml-relation-association_class:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
   stroke-dasharray: 4, 4 !important;
   stroke: #4B5563 !important;
 }
@@ -269,19 +429,19 @@
 
 :host-context(.dark) .uml-marker-filled,
 .dark .uml-marker-filled {
-  fill: #1A202C;
-  stroke: #1A202C;
+  fill: #94A3B8;
+  stroke: #94A3B8;
 }
 
 :host-context(.dark) .uml-marker-hollow,
 .dark .uml-marker-hollow {
-  fill: #FFFFFF;
-  stroke: #1A202C;
+  fill: #0F172A;
+  stroke: #94A3B8;
 }
 
 :host-context(.dark) .uml-marker-open,
 .dark .uml-marker-open {
-  stroke: #1A202C;
+  stroke: #94A3B8;
 }
 
 /* Etiquetas de Multiplicidad y Nombre */
@@ -640,10 +800,10 @@
 /* =========================================================================
    DIAGRAMAS DE SECUENCIA UML 2.5 (ENTERPRISE ARCHITECT)
    ========================================================================= */
-::ng-deep .uml-relation-sync path[f-connection-path],
-::ng-deep .uml-relation-reply path[f-connection-path],
-::ng-deep .uml-relation-async path[f-connection-path],
-::ng-deep .uml-relation-create path[f-connection-path] {
+::ng-deep .uml-relation-sync:not(.f-selected):not(.f-connection-selected) path[f-connection-path],
+::ng-deep .uml-relation-reply:not(.f-selected):not(.f-connection-selected) path[f-connection-path],
+::ng-deep .uml-relation-async:not(.f-selected):not(.f-connection-selected) path[f-connection-path],
+::ng-deep .uml-relation-create:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
   stroke: var(--seq-conn-color, #2D3748) !important;
 }
 

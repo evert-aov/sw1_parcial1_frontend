@@ -255,8 +255,8 @@ export const es = {
     showToolbox: 'Mostrar Barra de Herramientas UML (Ctrl+B)',
     aiCopilot: 'Copilot IA',
     openAiTooltip: 'Abrir Asistente IA Copilot (Ctrl+I)',
-    step1: 'Paso 1: Haz clic en la clase origen para la relación',
-    step2: 'Paso 2: Ahora haz clic en la clase destino (o arrastra entre puertos)',
+    step1: 'Paso 1: Haz clic o arrastra desde cualquier parte del nodo origen',
+    step2: 'Paso 2: Haz clic o suelta en cualquier parte del nodo destino',
     cancelEsc: 'Cancelar (Esc)',
     lineStylesTitle: 'Estilo de Línea (Routing)',
     relationships: {

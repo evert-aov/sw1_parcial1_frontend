@@ -122,8 +122,10 @@
               (contextmenu)="onConnectionContextMenu(conn, $event)"
               [class]="'uml-relation-' + (conn.type || 'association') + ' uml-line-style-' + (conn.lineStyle || 'orthogonal_square')"
               [class.uml-relation-reply]="isReplyConnection(conn)"
-              [class.f-selected]="isConnectionSelected(conn.id)"
-              [class.f-connection-selected]="isConnectionSelected(conn.id)"
+              [class.f-selected]="isConnectionDirectlySelected(conn.id)"
+              [class.f-connection-selected]="isConnectionDirectlySelected(conn.id)"
+              [class.f-connection-incident]="isConnectionCascadeSelected(conn.id) && !isConnectionDirectlySelected(conn.id)"
+              [class.uml-connection-hovered]="hoveredConnectionId() === conn.id"
               [class.opacity-30]="isConnectionDimmed(conn.id)"
               [style.--seq-conn-color]="isSequenceConnection(conn) ? getSequenceConnColor(conn) : null">
 
@@ -165,7 +167,7 @@
                         d="M 20,7 A 13,13 0 0,0 20,33"
                         fill="none"
                         class="uml-assembly-socket"
-                        [attr.stroke]="isConnectionSelected(conn.id) ? '#2563EB' : '#94a3b8'"
+                        [attr.stroke]="isConnectionDirectlySelected(conn.id) ? '#059669' : isConnectionSelected(conn.id) ? '#2563EB' : '#94a3b8'"
                         [attr.stroke-width]="isConnectionSelected(conn.id) ? 2.5 : 2"
                         stroke-linecap="round" />
 
@@ -176,7 +178,7 @@
                         r="10"
                         class="uml-assembly-circle"
                         fill="#ffffff"
-                        [attr.stroke]="isConnectionSelected(conn.id) ? '#2563EB' : '#94a3b8'"
+                        [attr.stroke]="isConnectionDirectlySelected(conn.id) ? '#059669' : isConnectionSelected(conn.id) ? '#2563EB' : '#94a3b8'"
                         [attr.stroke-width]="isConnectionSelected(conn.id) ? 2.5 : 2" />
                     </svg>
                   </div>
@@ -374,6 +376,35 @@
           }
         </f-connection-for-create>
 
+        <!-- LÍNEA ELÁSTICA DE PREVISUALIZACIÓN EN VIVO (ESTILO KONVA: ORIGEN SELECCIONADO HACIA EL CURSOR) -->
+        @if (selectedSourceNodeId() && livePreviewCoords(); as coords) {
+          <svg class="absolute inset-0 pointer-events-none z-30 w-full h-full overflow-visible">
+            <defs>
+              <marker
+                id="konva-live-preview-arrow"
+                viewBox="0 0 10 10"
+                refX="7"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse">
+                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#059669" />
+              </marker>
+            </defs>
+            <line
+              [attr.x1]="coords.x1"
+              [attr.y1]="coords.y1"
+              [attr.x2]="coords.x2"
+              [attr.y2]="coords.y2"
+              stroke="#059669"
+              stroke-width="2.5"
+              stroke-dasharray="6,4"
+              marker-end="url(#konva-live-preview-arrow)"
+            />
+            <circle [attr.cx]="coords.x1" [attr.cy]="coords.y1" r="5" fill="#059669" />
+          </svg>
+        }
+
         <!-- NODOS DEL DIAGRAMA (CLASES UML 2.5 Y NODOS ANCLA) -->
         <ng-container ngProjectAs="[fNodes]">
           @for (node of nodes(); track node.id) {
@@ -419,9 +450,10 @@
                 'rounded-none': !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
                 'overflow-visible': isNodeSelected(node.id) || (!node.isAnchor && (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' || node.nodeType === 'lifeline' || node.nodeType === 'component' || isDeploymentNode(node) || node.nodeType === 'boundary_box')),
                 'overflow-hidden': !isNodeSelected(node.id) && !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
-                'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)]': !node.isAnchor && isNodeSelected(node.id) && (!node.nodeType || node.nodeType === 'class'),
-                'ring-2 ring-indigo-400': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id) && (!node.nodeType || node.nodeType === 'class'),
-                'ring-2 ring-[#796354] shadow-md': !node.isAnchor && selectedSourceNodeId() === node.id && !isNodeSelected(node.id) && (!node.nodeType || node.nodeType === 'class'),
+                'ring-2 ring-emerald-500 shadow-[0_0_12px_rgba(5,150,105,0.4)]': !node.isAnchor && selectedSourceNodeId() === node.id,
+                'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)]': !node.isAnchor && isNodeSelected(node.id) && selectedSourceNodeId() !== node.id && (!node.nodeType || node.nodeType === 'class'),
+                'ring-2 ring-indigo-400': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id) && selectedSourceNodeId() !== node.id && (!node.nodeType || node.nodeType === 'class'),
+                'hover:ring-2 hover:ring-blue-500 hover:shadow-md': selectedSourceNodeId() !== null && selectedSourceNodeId() !== node.id && !node.isAnchor,
                 'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                 'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
                 'cursor-not-allowed opacity-95': !node.isAnchor && isNodeLockedByOther(node.id)
@@ -454,7 +486,7 @@
                     'pointer-events-none': selectedRelationType() === null || isNodeLockedByOther(node.id)
                   }"
                   class="absolute inset-0 z-40 bg-transparent"
-                  (click)="onTableClick(node.id, $event)">
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)">
                 </div>
 
                 <!-- 12 PUNTOS DE REFERENCIA ADAPTATIVOS PERIMETRALES (ESTILO ENTERPRISE ARCHITECT / KONVA) -->
@@ -465,8 +497,8 @@
                   [fConnectorId]="node.id + '_top_start'"
                   fConnectableSide="top"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectTopStart' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -482,8 +514,8 @@
                   [fConnectorId]="node.id + '_top'"
                   fConnectableSide="top"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectTop' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -499,8 +531,8 @@
                   [fConnectorId]="node.id + '_top_end'"
                   fConnectableSide="top"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectTopEnd' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -517,8 +549,8 @@
                   [fConnectorId]="node.id + '_right_start'"
                   fConnectableSide="right"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectRightStart' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -534,8 +566,8 @@
                   [fConnectorId]="node.id + '_right'"
                   fConnectableSide="right"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectRight' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -551,8 +583,8 @@
                   [fConnectorId]="node.id + '_right_end'"
                   fConnectableSide="right"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectRightEnd' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -569,8 +601,8 @@
                   [fConnectorId]="node.id + '_bottom_start'"
                   fConnectableSide="bottom"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectBottomStart' | translate"
                   [style.bottom.px]="getBottomConnectorOffset(node)"
                   [ngClass]="{
@@ -587,8 +619,8 @@
                   [fConnectorId]="node.id + '_bottom'"
                   fConnectableSide="bottom"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectBottom' | translate"
                   [style.bottom.px]="getBottomConnectorOffset(node)"
                   [ngClass]="{
@@ -605,8 +637,8 @@
                   [fConnectorId]="node.id + '_bottom_end'"
                   fConnectableSide="bottom"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectBottomEnd' | translate"
                   [style.bottom.px]="getBottomConnectorOffset(node)"
                   [ngClass]="{
@@ -624,8 +656,8 @@
                   [fConnectorId]="node.id + '_left_start'"
                   fConnectableSide="left"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectLeftStart' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -641,8 +673,8 @@
                   [fConnectorId]="node.id + '_left'"
                   fConnectableSide="left"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectLeft' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
@@ -658,8 +690,8 @@
                   [fConnectorId]="node.id + '_left_end'"
                   fConnectableSide="left"
                   [fConnectorSelfConnectable]="true"
-                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
-                  (click)="onTableClick(node.id, $event)"
+                  [fConnectorDisabled]="isNodeLockedByOther(node.id)"
+                  (click)="$event.stopPropagation(); onTableClick(node.id, $event)"
                   [title]="'editor.canvas.connectLeftEnd' | translate"
                   [ngClass]="{
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),

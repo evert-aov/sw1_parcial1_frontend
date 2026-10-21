@@ -7,8 +7,9 @@
 
 /* Quitar contenedor/marco y sockets azules por defecto de foblex flow */
 :root {
-  --ff-connection-hit-width: 40px !important;
-  --ff-connection-hover-color: rgba(0, 0, 0, 0.001) !important;
+  --ff-connection-hit-width: 44px !important;
+  --ff-connection-hover-color: rgba(16, 185, 129, 0.25) !important;
+  --ff-connection-selected-color: #059669 !important;
   --ff-connection-drag-handle-stroke: transparent;
   --ff-connection-drag-handle-fill: transparent;
   --ff-node-padding: 0px !important;
@@ -23,8 +24,9 @@
 }
 
 .dark {
-  --ff-connection-hit-width: 40px !important;
-  --ff-connection-hover-color: rgba(255, 255, 255, 0.001) !important;
+  --ff-connection-hit-width: 44px !important;
+  --ff-connection-hover-color: rgba(52, 211, 153, 0.3) !important;
+  --ff-connection-selected-color: #10B981 !important;
   --ff-connection-drag-handle-stroke: transparent;
   --ff-connection-drag-handle-fill: transparent;
   --ff-node-padding: 0px !important;
@@ -402,10 +404,8 @@ f-flow .uml-relation-trace path[f-connection-path] {
 
 /* Línea punteada fina para enlace a tabla intermedia (AssociationClass) */
 f-flow f-connection.uml-relation-association_class path[f-connection-path],
-f-flow f-connection.uml-relation-association_class path,
 f-flow f-connection-for-create.uml-relation-association_class path[f-connection-path],
-f-flow .uml-relation-association_class path[f-connection-path],
-f-flow .uml-relation-association_class path {
+f-flow .uml-relation-association_class path[f-connection-path] {
   stroke-dasharray: 4 4 !important;
 }
 

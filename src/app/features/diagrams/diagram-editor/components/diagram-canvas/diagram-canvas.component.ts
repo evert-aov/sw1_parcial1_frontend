@@ -202,6 +202,7 @@ export class DiagramCanvasComponent {
   readonly zoomLevel = signal<number>(100);
   readonly isDragOverCanvas = signal<boolean>(false);
   readonly hoveredNodeId = signal<string | null>(null);
+  readonly hoveredConnectionId = signal<string | null>(null);
   readonly renamingNodeId = signal<string | null>(null);
   readonly isDraggingLabel = signal<boolean>(false);
   readonly draggingLabelNodeId = signal<string | null>(null);
@@ -225,6 +226,25 @@ export class DiagramCanvasComponent {
   readonly canvasEmptyStateMessage = computed(() =>
     this.translationService.translate(this.geometryService.getEmptyStateMessageKey(this.activeDiagramType())),
   );
+
+  readonly livePointerPos = signal<{ x: number; y: number } | null>(null);
+  readonly livePreviewCoords = computed(() => {
+    const srcId = this.selectedSourceNodeId();
+    const ptr = this.livePointerPos();
+    if (!srcId || !ptr) return null;
+    const srcNode = this.nodes().find((n) => n.id === srcId);
+    if (!srcNode || !srcNode.position) return null;
+    const w = this.getNodeWidth(srcNode) || 160;
+    const h = this.getNodeHeight(srcNode) || 80;
+    const x1 = Math.round(srcNode.position.x + w / 2);
+    const y1 = Math.round(srcNode.position.y + h / 2);
+    return {
+      x1,
+      y1,
+      x2: Math.round(ptr.x),
+      y2: Math.round(ptr.y),
+    };
+  });
 
   readonly isPanning = signal<boolean>(false);
   private panStart = { x: 0, y: 0, scrollLeft: 0, scrollTop: 0 };
@@ -415,10 +435,15 @@ export class DiagramCanvasComponent {
     return !!lock && lock.userId !== this.currentUserId();
   }
   isNodeSelected(nodeId: string): boolean { return this.selectedNodeIds().includes(nodeId); }
-  isConnectionSelected(connId: string): boolean {
-    if (this.selectedConnIds().includes(connId)) return true;
+  isConnectionDirectlySelected(connId: string): boolean {
+    return this.selectedConnIds().includes(connId);
+  }
+  isConnectionCascadeSelected(connId: string): boolean {
     const primaryNode = this.selectedNodeIds().length === 1 ? this.selectedNodeIds()[0] : null;
     return ConnectionCascadeUtil.isConnectionSelected(connId, this.connections(), primaryNode);
+  }
+  isConnectionSelected(connId: string): boolean {
+    return this.isConnectionDirectlySelected(connId) || this.isConnectionCascadeSelected(connId);
   }
   isConnectionDimmed(connId: string): boolean {
     const ids = this.selectedNodeIds();
@@ -427,6 +452,62 @@ export class DiagramCanvasComponent {
   isNeighborNode(nodeId: string): boolean {
     const ids = this.selectedNodeIds();
     return ConnectionCascadeUtil.isNeighborNode(nodeId, this.connections(), ids[0] || null, ids.length > 1);
+  }
+
+  /**
+   * Detecta la conexión más cercana a un punto de la pantalla dentro de un radio de tolerancia magnética.
+   * Utiliza sondeo radial subpíxel sobre los trazados SVG de @foblex/flow emulando la precisión de Konva.
+   */
+  findClosestConnectionAtClientPoint(clientX: number, clientY: number, maxDistancePx: number = 28): string | null {
+    if (typeof document === 'undefined' || typeof document.elementsFromPoint !== 'function') {
+      return null;
+    }
+
+    const testPoint = (x: number, y: number): string | null => {
+      const elements = document.elementsFromPoint(x, y);
+      for (const el of elements) {
+        if (el.closest('[fNode]')) {
+          return null; // Prioridad al nodo si el cursor cae sobre él
+        }
+        const connEl = el.closest('.f-connection');
+        if (connEl) {
+          const connId =
+            connEl.getAttribute('data-connection-id') ||
+            connEl.getAttribute('fConnectionId') ||
+            connEl.id;
+          if (connId) return connId;
+        }
+      }
+      return null;
+    };
+
+    // 1. Sondeo directo en el punto del cursor
+    const directHit = testPoint(clientX, clientY);
+    if (directHit) return directHit;
+
+    // 2. Sondeo radial magnético concéntrico (14px y maxDistancePx en 8 cuadrantes)
+    const probeRadii = [14, maxDistancePx];
+    const angles = [
+      0,
+      Math.PI / 4,
+      Math.PI / 2,
+      (3 * Math.PI) / 4,
+      Math.PI,
+      (5 * Math.PI) / 4,
+      (3 * Math.PI) / 2,
+      (7 * Math.PI) / 4,
+    ];
+
+    for (const r of probeRadii) {
+      for (const theta of angles) {
+        const px = clientX + Math.round(r * Math.cos(theta));
+        const py = clientY + Math.round(r * Math.sin(theta));
+        const hit = testPoint(px, py);
+        if (hit) return hit;
+      }
+    }
+
+    return null;
   }
 
   // --- MANEJADORES DE EVENTOS DE NODOS Y CONEXIONES ---
@@ -456,6 +537,20 @@ export class DiagramCanvasComponent {
     this.canvasMouseDown.emit(event);
   }
   onCanvasMouseMove(event: MouseEvent): void {
+    if (this.selectedSourceNodeId()) {
+      const pos = this.clientToCanvasPosition(event.clientX, event.clientY);
+      this.livePointerPos.set(pos);
+    } else if (this.livePointerPos() !== null) {
+      this.livePointerPos.set(null);
+    }
+    if (!this.selectedRelationType() && !this.isPanning() && !this.isSpacePressed()) {
+      const nearConnId = this.findClosestConnectionAtClientPoint(event.clientX, event.clientY, 22);
+      if (nearConnId !== this.hoveredConnectionId()) {
+        this.hoveredConnectionId.set(nearConnId);
+      }
+    } else if (this.hoveredConnectionId()) {
+      this.hoveredConnectionId.set(null);
+    }
     if (this.isPanning()) {
       const container = this.flowContainerRef?.nativeElement;
       if (container) {
@@ -468,7 +563,16 @@ export class DiagramCanvasComponent {
     }
     this.canvasMouseMove.emit(event);
   }
-  onCanvasBackgroundClick(event: MouseEvent): void { this.canvasBackgroundClick.emit(event); }
+  onCanvasBackgroundClick(event: MouseEvent): void {
+    if (this.selectedRelationType() !== null) return;
+    const nearConnId = this.findClosestConnectionAtClientPoint(event.clientX, event.clientY, 28);
+    if (nearConnId) {
+      event.stopPropagation();
+      this.onConnectionClick(nearConnId, event);
+      return;
+    }
+    this.canvasBackgroundClick.emit(event);
+  }
   onFlowPointerDown(_event: PointerEvent): void {}
   onFlowClick(_event: MouseEvent): void {}
   onFlowDblClick(_event: MouseEvent): void {}
@@ -536,7 +640,20 @@ export class DiagramCanvasComponent {
   }
   onCanvasContextMenu(event: MouseEvent): void {
     const target = event.target as HTMLElement;
-    if (target?.closest('[fNode]') || target?.closest('.f-connection')) return;
+    if (target?.closest('[fNode]')) return;
+
+    const nearConnId = this.findClosestConnectionAtClientPoint(event.clientX, event.clientY, 28);
+    if (nearConnId) {
+      event.preventDefault();
+      event.stopPropagation();
+      const conn = this.connections().find((c) => c.id === nearConnId);
+      if (conn) {
+        this.onConnectionContextMenu(conn, event);
+        return;
+      }
+    }
+
+    if (target?.closest('.f-connection')) return;
     event.preventDefault();
     const canvasPos = this.clientToCanvasPosition(event.clientX, event.clientY);
     this.canvasContextMenu.emit({ event, canvasPos });

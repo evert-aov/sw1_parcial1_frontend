@@ -253,8 +253,8 @@ export const en = {
     showToolbox: 'Show UML Toolbox (Ctrl+B)',
     aiCopilot: 'AI Copilot',
     openAiTooltip: 'Open AI Copilot Assistant (Ctrl+I)',
-    step1: 'Step 1: Click on the source class for relation',
-    step2: 'Step 2: Now click on the target class (or drag between ports)',
+    step1: 'Step 1: Click or drag from any part of the source node',
+    step2: 'Step 2: Click or drop on any part of the target node',
     cancelEsc: 'Cancel (Esc)',
     lineStylesTitle: 'Line Style (Routing)',
     relationships: {

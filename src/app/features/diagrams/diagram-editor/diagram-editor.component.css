@@ -223,10 +223,8 @@
 
 /* Línea punteada fina para enlace a tabla/clase intermedia (AssociationClass como en Enterprise Architect) */
 ::ng-deep f-flow f-connection.uml-relation-association_class path[f-connection-path],
-::ng-deep f-flow f-connection.uml-relation-association_class path,
 ::ng-deep f-flow f-connection-for-create.uml-relation-association_class path[f-connection-path],
-::ng-deep f-flow .uml-relation-association_class path[f-connection-path],
-::ng-deep f-flow .uml-relation-association_class path {
+::ng-deep f-flow .uml-relation-association_class path[f-connection-path] {
   stroke-dasharray: 4 4 !important;
 }
 
