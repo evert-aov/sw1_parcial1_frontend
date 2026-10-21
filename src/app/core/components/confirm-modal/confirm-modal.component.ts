@@ -8,7 +8,7 @@ import {
   heroXMark,
 } from '@ng-icons/heroicons/outline';
 import { ConfirmDialogService, ConfirmDialogType } from '../../services/confirm-dialog.service';
-import { TranslationService } from '../../i18n';
+import { TranslationService } from '../../i18n/index';
 
 @Component({
   selector: 'app-confirm-modal',
@@ -107,6 +107,9 @@ export class ConfirmModalComponent {
     }
   });
 
+  /**
+   * Confirma la acción del diálogo modal notificando al servicio o emitiendo el evento de salida.
+   */
   onConfirm(): void {
     if (this.isOpen() !== null) {
       this.confirm.emit();
@@ -115,6 +118,9 @@ export class ConfirmModalComponent {
     }
   }
 
+  /**
+   * Cancela la acción del diálogo modal y cierra la ventana emergente.
+   */
   onCancel(): void {
     if (this.isOpen() !== null) {
       this.cancel.emit();
@@ -123,6 +129,9 @@ export class ConfirmModalComponent {
     }
   }
 
+  /**
+   * Cierra el diálogo al pulsar la tecla Escape si la ventana se encuentra visible.
+   */
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.isModalOpen()) {

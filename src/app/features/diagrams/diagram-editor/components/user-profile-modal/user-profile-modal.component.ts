@@ -5,7 +5,7 @@ import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { heroUserCircle, heroXMark, heroCheck } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { ToastService } from '../../../../../core/services/toast.service';
-import { TranslatePipe } from '../../../../../core/i18n';
+import { TranslatePipe } from '../../../../../core/i18n/index';
 
 @Component({
   selector: 'app-user-profile-modal',
@@ -50,6 +50,9 @@ export class UserProfileModalComponent {
     });
   }
 
+  /**
+   * Inicializa los campos del formulario con los datos actuales del perfil del usuario autenticado.
+   */
   private initForm(): void {
     this.isDirty.set(false);
     this.editFullName.set(this.authService.currentUser()?.fullName || '');
@@ -58,20 +61,35 @@ export class UserProfileModalComponent {
     this.refreshProfile(false);
   }
 
+  /**
+   * Cierra el modal de perfil de usuario.
+   */
   closeModal(): void {
     this.close.emit();
   }
 
+  /**
+   * Gestiona el cambio en el campo del nombre completo y marca el formulario como modificado.
+   * @param value Nuevo nombre completo.
+   */
   onFullNameChange(value: string): void {
     this.isDirty.set(true);
     this.editFullName.set(value);
   }
 
+  /**
+   * Gestiona el cambio en el campo de contraseña y marca el formulario como modificado.
+   * @param value Nueva contraseña ingresada.
+   */
   onPasswordChange(value: string): void {
     this.isDirty.set(true);
     this.editPassword.set(value);
   }
 
+  /**
+   * Recarga los datos actualizados del perfil desde la API del servidor.
+   * @param force Si es true, sobrescribe los campos incluso si hay modificaciones pendientes.
+   */
   refreshProfile(force: boolean = false): void {
     this.isRefreshing.set(true);
     this.authService.fetchProfile().subscribe({
@@ -91,6 +109,9 @@ export class UserProfileModalComponent {
     });
   }
 
+  /**
+   * Valida y persiste los cambios de nombre y contraseña del usuario en el backend.
+   */
   saveProfile(): void {
     const fullName = this.editFullName().trim();
     if (!fullName) {

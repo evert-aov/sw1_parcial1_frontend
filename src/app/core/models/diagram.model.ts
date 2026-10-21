@@ -166,6 +166,12 @@ export const VALID_UML_LINE_STYLES: readonly UmlLineStyle[] = [
   'lateral_horizontal',
 ] as const;
 
+/**
+ * Sanea y mapea un identificador de estilo de línea al conjunto canónico de estilos soportados por el lienzo.
+ * @param style Estilo de línea de entrada (string, alias o desconocido).
+ * @param fallback Estilo predeterminado si el valor no coincide con ninguno reconocido.
+ * @returns Estilo de línea UML normalizado.
+ */
 export function sanitizeLineStyle(style: unknown, fallback: UmlLineStyle = 'orthogonal_square'): UmlLineStyle {
   if (typeof style === 'string') {
     const s = style.toLowerCase();
@@ -452,6 +458,11 @@ export interface SaveDiagramAstRequest {
   }[];
 }
 
+/**
+ * Convierte un código de color hexadecimal (3 o 6 dígitos, con o sin '#') a su representación numérica RGB { r, g, b }.
+ * @param hex Cadena de color hexadecimal.
+ * @returns Objeto con canales rojo, verde y azul en rango 0-255.
+ */
 export function hexToRgb(hex: string | null | undefined): { r: number; g: number; b: number } {
   let clean = (hex || '#FDFAF3').replace('#', '').trim();
   if (clean.length === 3) {
@@ -468,6 +479,13 @@ export function hexToRgb(hex: string | null | undefined): { r: number; g: number
   };
 }
 
+/**
+ * Convierte componentes numéricas RGB a una cadena de color hexadecimal formateada `#RRGGBB`.
+ * @param r Canal rojo (0-255).
+ * @param g Canal verde (0-255).
+ * @param b Canal azul (0-255).
+ * @returns Representación hexadecimal en mayúsculas.
+ */
 export function rgbToHex(r: number, g: number, b: number): string {
   const clamp = (v: any) => {
     const n = Math.round(Number(v) || 0);
@@ -475,4 +493,13 @@ export function rgbToHex(r: number, g: number, b: number): string {
   };
   const toHex = (v: number) => clamp(v).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+}
+
+/** Estructura de proyecto exportable/importable en formato JSON. */
+export interface UmlDiagramProject {
+  version: string;
+  name: string;
+  defaultLineStyle?: UmlLineStyle;
+  nodes: UmlClassNode[];
+  connections: UmlConnection[];
 }

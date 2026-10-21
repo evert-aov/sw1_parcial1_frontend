@@ -1,64 +1,65 @@
-# 04 - Colaboración en Tiempo Real y WebSockets
+# 04 — Colaboración en tiempo real y WebSockets
 
-## 1. Visión General
-La experiencia colaborativa multiusuario del frontend está gestionada por dos capas complementarias:
-1. **`CollaborationService`** ([`src/app/core/services/collaboration.service.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/services/collaboration.service.ts)): Conexión de transporte de bajo nivel con `Socket.IO`.
-2. **`DiagramCollaborationCoordinatorService`** ([`src/app/features/diagrams/diagram-editor/services/collaboration-ai-io/diagram-collaboration-coordinator.service.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/services/collaboration-ai-io/diagram-collaboration-coordinator.service.ts)): Orquestación de eventos de dominio, cursores y candados visuales sobre el lienzo.
+## Transporte y coordinación
 
----
+[CollaborationService](../src/app/core/services/collaboration.service.ts) mantiene el transporte
+Socket.IO, participantes, cursores y bloqueos. El
+[DiagramCollaborationCoordinatorService](../src/app/features/diagrams/diagram-editor/services/collaboration-ai-io/diagram-collaboration-coordinator.service.ts)
+conecta esos eventos con las acciones del host.
 
-## 2. Ciclo de Conexión y Salas
+La colaboración sigue en la infraestructura del editor. Los renderizadores de nodos reciben
+el estado de bloqueo mediante su contexto; no abren sockets por nodo ni dependen de otro plug-in.
+La semántica necesaria para aplicar datos de documentos se consulta por contratos de dominio.
 
+## Sesión y eventos actuales
+
+El endpoint se toma de `environment.socketUrl`; en desarrollo es
+`http://localhost:4000/collaboration`. `joinRoom(diagramId, customRoomCode?)` guarda el diagrama
+activo, conecta el socket y emite `join_room` con los datos de la sesión. La respuesta actualiza
+`activeRoomCode`, `collaborators` y `activeNodeLocks`.
+
+```mermaid
+sequenceDiagram
+    participant Host as Editor
+    participant Client as CollaborationService
+    participant Server as Backend
+    Host->>Client: joinRoom(diagramId)
+    Client->>Server: join_room
+    Server-->>Client: participantes y bloqueos activos
+    Client-->>Host: Signals y eventos
 ```
-   [Editor Componente]               [Coordinator Service]              [Collaboration Service]             [Backend Gateway]
-            │                                  │                                  │                                 │
-            │ initCollaboration(projectId)    │                                  │                                 │
-            │─────────────────────────────────>│ connect(projectId)              │                                 │
-            │                                  │─────────────────────────────────>│ emit('join_project', ...)       │
-            │                                  │                                  │────────────────────────────────>│
-            │                                  │                                  │                                 │
-            │                                  │                                  │<────────────────────────────────│
-            │                                  │                                  │ on('user_joined')               │
-            │                                  │<─────────────────────────────────│                                 │
-            │                                  │ updateActiveUsersList()          │                                 │
-```
 
-1. Al abrir un diagrama, se une a la sala del proyecto emitiendo `join_project`.
-2. El servicio almacena la lista reactiva de usuarios conectados en el Signal `activeUsers = signal<Collaborator[]>([])`.
-3. Cada usuario recibe un color distintivo aleatorio pero consistente generado a partir de su ID para distinguir sus cursores y candados.
+| Evento | Uso |
+| --- | --- |
+| `room_participants_updated`, `user_joined` | Actualizar participantes de la sesión. |
+| `cursor_move` → `cursor_moved` | Enviar y recibir posiciones de cursores. |
+| `lock_node` → `node_locked` | Solicitar y reflejar un bloqueo. |
+| `node_lock_rejected` | Rechazar una edición por bloqueo de otro usuario. |
+| `unlock_node` → `node_unlocked` | Liberar el bloqueo y actualizar el estado. |
+| `diagram_saved` | Notificar el guardado del servidor. |
 
----
+Estos nombres describen el cliente actual; consultar su implementación al modificar el
+protocolo. No cambiar payloads o nombres unilateralmente sin revisar el backend.
 
-## 3. Punteros y Cursores Remotos
+## Cursores, bloqueos y estado
 
-- Cuando el usuario mueve el ratón sobre el lienzo, el componente calcula la coordenada cartesiana teniendo en cuenta el zoom y paneo actual del canvas:
-  ```typescript
-  const canvasPoint = this.viewportService.screenToCanvas(event.clientX, event.clientY);
-  this.collaborationService.sendCursorPosition(canvasPoint.x, canvasPoint.y);
-  ```
-- El backend retransmite la posición con `cursor_moved`.
-- El frontend renderiza un puntero SVG flotante animado con el nombre y color del colaborador correspondiente sin interferir con los eventos de clic del usuario local (`pointer-events: none`).
+Las posiciones remotas se representan en coordenadas del documento. Usar las conversiones
+del host/viewport para mantener consistencia con el zoom y paneo. El transporte limita la
+frecuencia de envío de cursores y drag; no emitir un guardado completo por cada movimiento.
 
----
+El coordinador consulta `isNodeLockedByOther()` y expone los datos del propietario. El host
+aplica las restricciones de edición y entrega `isLocked`/`isReadOnly` al renderer del plug-in.
+Los indicadores visuales por sí solos no autorizan una mutación; el servidor conserva la
+responsabilidad de validar permisos y concurrencia.
 
-## 4. Candados Visuales y Exclusión Mutua
+## Reconexión y limpieza
 
-- Cuando un colaborador remoto bloquea un nodo (por ejemplo, para renombrar una clase o editar sus métodos):
-  - El evento `node_locked` llega al `DiagramCollaborationCoordinatorService`.
-  - El nodo correspondiente se marca en el mapa de bloqueos: `lockedNodesMap.set(nodeId, { userName, color })`.
-  - En el template del nodo (`uml-class-node`, etc.), se activa un borde con el color del colaborador y un icono de candado con tooltip informativo:
-    ```html
-    @if (isNodeLocked(node.id)) {
-      <div class="absolute -top-3 -right-2 px-1.5 py-0.5 rounded text-[10px] bg-red-500 text-white flex items-center gap-1 shadow">
-        <ng-icon name="heroLockClosed"></ng-icon>
-        <span>{{ getLockOwner(node.id) }}</span>
-      </div>
-    }
-    ```
-  - El usuario local tiene deshabilitado el doble clic y el arrastre de ese nodo mientras permanezca bloqueado.
+El servicio habilita reconexión Socket.IO. En `connect`, si hay un diagrama activo, vuelve a
+emitir `join_room`; en `disconnect` vacía cursores y bloqueos locales. El coordinador entrega
+suscripciones de `setupSubscriptions(actions)` y la acción `onReconnected` al host para
+restablecer el documento según su flujo vigente.
 
----
-
-## 5. Resiliencia y Reconexión Suave
-- Si el servidor WebSocket se reinicia o se pierde la red momentáneamente, `socket.io-client` reintenta automáticamente la conexión con retroceso exponencial (*exponential backoff*).
-- Al reconectarse, el cliente vuelve a emitir `join_project` para restablecer el estado sin que el usuario tenga que recargar la página.
+Cancelar suscripciones y abandonar la sesión al terminar su ciclo de vida. Un cambio de
+renderer o la retirada de una herramienta opcional no debe crear otra sesión colaborativa.
+Al validar cambios, revisar edición concurrente, rechazo de bloqueo, reconexión y cambio
+de pestaña/diagrama; las pruebas unitarias no sustituyen una sesión real con dos clientes.

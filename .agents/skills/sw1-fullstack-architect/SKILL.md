@@ -1,147 +1,124 @@
 ---
 name: sw1-fullstack-architect
 description: >-
-  Estándares de arquitectura de software y mejores prácticas de desarrollo Senior para el proyecto UML Collaborative Studio.
-  Aplica el rol de Arquitecto de Software Senior (Kanon), Dev Senior Backend (NestJS, PostgreSQL, WebSockets, TypeORM) y
-  Dev Senior Frontend (Angular 19 Standalone, Tailwind CSS v4, @foblex/flow, Signals).
-  Usar SIEMPRE que se vaya a diseñar, refactorizar, implementar, depurar o revisar código en el backend o frontend.
+  Diseñar, implementar, depurar o revisar UML Collaborative Studio con Angular 22,
+  arquitectura microkernel, Foblex Flow y Tailwind CSS v4; mantener sus contratos
+  con el backend NestJS, PostgreSQL y Socket.IO cuando la tarea afecte esa integración.
 ---
 
-# 🏛️ Skill: Arquitectura Senior y Buenas Prácticas de Ingeniería (UML Collaborative Studio)
+# Arquitectura de UML Collaborative Studio
 
-Esta skill define el estándar de excelencia profesional, patrones de diseño y lineamientos técnicos obligatorios para cualquier agente de Inteligencia Artificial o desarrollador humano que trabaje en este proyecto colaborativo.
+Aplicar esta skill al trabajar en este proyecto. Su ámbito es el frontend y la integración
+fullstack que requiera la tarea; no autoriza cambios en backend, despliegues ni commits ajenos
+al encargo. Las instrucciones explícitas del usuario prevalecen sobre esta guía.
 
----
+## Referencias y versiones
 
-## 🎯 1. Rol: Arquitecto de Software Senior (Kanon)
+Desde esta carpeta, la raíz del frontend está tres niveles arriba:
 
-Todo cambio en el sistema debe satisfacer estrictamente los principios del **Proceso Unificado de Desarrollo de Software (PUDS)**:
+- [Guía del desarrollador](../../../guia-desarrollador/README.md): entrada y capítulos por área.
+- [Arquitectura microkernel](../../../MICROKERNEL.md): límites, contratos y ciclo de vida.
+- [package.json](../../../package.json): rangos declarados y scripts disponibles.
+  Consultar `node_modules/<paquete>/package.json` para las versiones instaladas y el lockfile
+  si existe; este checkout no contiene uno.
 
-1. **Bajo Acoplamiento + Alta Cohesión**:
-   - Prohibido crear archivos monolíticos ("God Classes" o "God Components").
-   - Ningún controlador, servicio o componente debe superar las ~300 líneas de código sin justificación arquitectónica.
-   - Si un componente o servicio acumula múltiples responsabilidades (ej. renderizar UI + manejar WebSockets + calcular geometría), DEBE modularizarse en servicios de dominio especializados o componentes reutilizables independientes.
+El frontend usa **Angular 22**, standalone, Signals y `provideZonelessChangeDetection()`.
+Foblex Flow tiene versión independiente (actualmente 19); no confundirla con Angular.
+Comprobar los engines del Angular instalado al elegir Node. No conservar cifras históricas
+como requisito fijo de cantidad de pruebas o servicios.
 
-2. **Tipado Estricto (Strict TypeScript)**:
-   - Prohibido el uso de `any` no tipado. Toda entidad, DTO, evento WebSocket y respuesta HTTP debe tener interfaces o tipos explícitos (`UmlLineStyle`, `UmlRelationshipType`, `DiagramAst`, etc.).
+## Decidir dónde implementar
 
-3. **Política de Cero Regresiones (Zero-Regression Rule)**:
-   - Antes de dar por concluida cualquier tarea o realizar un commit:
-     - Backend: `npm test` (Jest) debe pasar al 100% (22 suites, 191 tests).
-     - Frontend: `npm test -- --watch=false` (Vitest) debe pasar al 100% (9 suites, 61 tests) y `npm run build` debe compilar con **0 errores**.
+| Responsabilidad | Ubicación relativa a `src/app/` |
+| --- | --- |
+| Contratos, tokens, registro y outlet | `core/plugins/` |
+| Modelos de documento y DTO compartidos | `core/models/` |
+| Sesión, HTTP base, colaboración, i18n y tema | `core/` |
+| Canvas, viewport, drag, selección, historial, pestañas y orquestación | `features/diagrams/diagram-editor/` |
+| Factoría por registro, geometría compartida, UI y utilidades de autoría | `plugin-sdk/` |
+| Renderizadores y comportamiento de cada familia de nodos | `plugins/uml-*-node/` |
+| Reglas UML, portapapeles, normalización y sincronización de documentos | `plugins/uml-language/` |
+| JSON, XMI, imágenes, BMP, generación de código, IA y guía | Paquete de dominio correspondiente en `plugins/`. |
+| Catálogo de extensiones e integración entre implementaciones | `composition/` |
 
-4. **Commits Convencionales (Conventional Commits)**:
-   - Cada commit debe ser atómico y seguir el estándar:
-     - `feat(scope): ...` para nuevas funcionalidades.
-     - `fix(scope): ...` para corrección de defectos.
-     - `refactor(scope): ...` para modularización y mejoras sin cambio de comportamiento externo.
-     - `docs(scope): ...` para documentación en guías y READMEs.
+## Límites obligatorios
 
-5. **Documentación Viva**:
-   - Todo cambio arquitectónico debe reflejarse en:
-     - [`backend/guia-desarrollador/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/backend/guia-desarrollador/README.md)
-     - [`frontend/guia-desarrollador/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/README.md)
+- El host no importa implementaciones de plug-ins ni añade ramas por tipos concretos de nodo
+  o formato de exportación. Consultar descriptores, geometría y capacidades mediante el registro.
+- Un plug-in consume su propio paquete, Core, SDK y bibliotecas externas. Cero importaciones
+  entre paquetes de plug-ins; tampoco búsquedas de otro plug-in por ID como sustituto del contrato.
+- Core, SDK y plug-ins no importan `features/`. Los contratos no exponen componentes concretos.
+- Las implementaciones se reúnen desde `composition/`. Los specs obedecen los límites;
+  las pruebas que integran varios paquetes se alojan en composición.
+- Usar `UmlDiagramProject` de `core/models/diagram.model.ts` para documentos compartidos.
+  Para captura de lienzo usar `DiagramExportCanvasTarget`; restaurar el viewport incluso ante error.
+- Preservar AST, identificadores y formatos existentes. Eliminar directorios vacíos tras mover archivos.
 
----
+## Extender el microkernel
 
-## ⚙️ 2. Rol: Senior Backend Developer (NestJS + PostgreSQL + WebSockets)
+Para un nodo, leer el [capítulo de nodos](../../../guia-desarrollador/03-LIENZO-Y-NODOS-MODULARES.md).
+Crear un descriptor `NodePlugin` con metadatos, tipos, renderer, geometría, herramientas,
+`create()` e `inputs()`. Registrar desde `composition/node-plugins.ts` o mediante el registro
+en ejecución. No añadir un catálogo paralelo de componentes o botones al host.
 
-### 1. Organización Modular en `src/modules/<modulo>/`
-Cada módulo (`auth`, `projects`, `diagrams`, `code-generator`, `ai-assistant`) debe respetar la estructura:
+Para una herramienta, leer el [capítulo de capacidades](../../../guia-desarrollador/06-EXPORTACION-XMI-CODEGEN-E-IA.md).
+Definir interfaz e `InjectionToken<T>` en Core y publicar la capacidad en `PluginDefinition`.
+Los providers de la definición tienen un `EnvironmentInjector` propio; la resolución es diferida.
+Los componentes públicos se exponen por slots y se renderizan con `PluginOutletDirective`.
+
+Comprobar disponibilidad de capacidades opcionales antes de resolverlas. No exigir IA, XMI
+ni exportadores para guardar el documento. Los hooks `activate`/`deactivate` son síncronos;
+liberar recursos y terminar operaciones que retengan servicios antes de retirar su proveedor.
+El registro dinámico actual usa código local de confianza; no implica carga remota ni sandbox.
+
+## Angular, Foblex y UI
+
+- Componentes nuevos: `standalone: true`, `ChangeDetectionStrategy.OnPush`, `input()` y `output()`.
+  Usar `signal()`/`computed()` para estado; reservar `effect()` para efectos necesarios.
+- En modo zoneless, notificar cambios visibles con Signals o `markForCheck()` cuando proceda.
+  No asumir que un callback de Foblex/RxJS actualizará una propiedad ordinaria en pantalla.
+- Antes de modificar código Foblex, leer `node_modules/@foblex/flow/AI.md`; para estilos,
+  `node_modules/@foblex/flow/STYLING.md`. No inventar APIs de React Flow.
+- Mantener `f-flow` → `f-canvas` → `fNode`/conexiones. El host conserva `fNode` y el outlet
+  conserva el injector del elemento padre. Usar `FFlowModule` y la proyección documentada.
+- Los conectores nuevos usan `fConnectorId` y `fConnectorType` (`source`, `target`, `source-target`).
+  El editor conserva registros propios; no asumir que usa `withFlowState()`.
+- Reutilizar `plugin-sdk/ui/shared-ui/`, SVG y etiquetas flotantes. Los componentes WebGL se eliminaron.
+- Todo texto visible nuevo, incluidos tooltips y notificaciones, usa i18n y claves en
+  `src/app/core/i18n/translations/es.ts` y `en.ts`. Respetar los temas claro/oscuro existentes.
+- Tipar DTO, eventos y contratos; validar datos externos con tipos explícitos o `unknown`.
+  Evitar ampliar usos heredados de `any` al añadir capacidades.
+
+## Integración backend cuando corresponda
+
+Consultar primero los contratos y la documentación del backend de la misma revisión.
+Mantener controladores HTTP delgados, servicios de negocio, DTO validados y persistencia
+transaccional cuando una operación abarque varias escrituras. No extrapolar versiones,
+conteos de tablas, endpoints o reglas de autenticación desde una guía vieja.
+
+La colaboración cliente usa sesiones de diagrama (`join_room`), cursores, bloqueos y reconexión;
+ver el [capítulo de colaboración](../../../guia-desarrollador/04-COLABORACION-TIEMPO-REAL-Y-WEBSOCKETS.md).
+El backend valida permisos y concurrencia; el indicador de bloqueo de un renderer no reemplaza
+esa validación. Mantener compatibilidad XMI y payloads de generación/IA al cambiar contratos.
+Ejecutar la suite backend únicamente cuando se trabaje en ese workspace o en su integración.
+
+## Verificación y entrega
+
+Para cambios de código, ejecutar desde el frontend:
+
+```sh
+npm run test:architecture
+npm run check:architecture
+npm test -- --watch=false
+npm run build
 ```
-modules/<nombre>/
-├── <nombre>.module.ts       # Declaración de providers y exports
-├── controllers/             # Solo endpoints HTTP REST (Delgados / Thin Controllers)
-├── dtos/                    # Clases validadas con class-validator y class-transformer
-├── entities/                # Entidades o modelos de datos
-├── repositories/            # Acceso a datos y consultas SQL
-└── services/                # Lógica pura de negocio y transacciones (Alta Cohesión)
-```
 
-### 2. Base de Datos PostgreSQL (10 Tablas Canónicas)
-- Respetar el esquema oficial [`backend/schema.sql`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/backend/schema.sql).
-- Todas las claves primarias son `UUID v4` (`gen_random_uuid()`).
-- Para operaciones que toquen múltiples tablas (ej. guardar diagrama + crear snapshot de versión), usar transacciones seguras con `withTransaction()`.
+`pretest` incluye pruebas del verificador y análisis de límites; `prebuild` incluye el análisis.
+Se requiere la suite vigente completa y cero errores de compilación. Informar advertencias
+por separado; no aumentar budgets para esconderlas. El análisis AST no demuestra por sí solo
+independencia semántica: revisar acoplamientos por cadenas y lógica específica introducida en el host.
 
-### 3. Seguridad y Ciclo de Peticiones
-- **Seguridad Zero-Trust**: Todas las rutas están protegidas globalmente por `JwtAuthGuard`.
-- Usar `@Public()` únicamente en login, registro y endpoints públicos.
-- Usar `@CurrentUser()` para obtener el usuario autenticado desde el token JWT.
-- Las contraseñas deben cifrarse siempre con `bcrypt` (10 salt rounds).
-- Todas las excepciones de negocio deben usar clases estándar de NestJS (`NotFoundException`, `BadRequestException`, `UnauthorizedException`).
-
-### 4. Colaboración en Tiempo Real (Socket.IO)
-- La sincronización se gestiona en [`CollaborationGateway`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/backend/src/modules/projects/gateways/collaboration.gateway.ts).
-- Las conexiones se aíslan por salas: `project_${projectId}`.
-- Exclusión mutua (*Node Locking*): Antes de editar un nodo, el cliente debe adquirir el candado con `lock_node`. Si otro usuario lo tiene, emitir `lock_rejected`.
-- En desconexión (`handleDisconnect`), liberar inmediatamente todos los bloqueos del usuario.
-
-### 5. Interoperabilidad XMI y Codegen
-- El parser y exportador XMI 2.1 debe mantener compatibilidad estricta con Enterprise Architect (Sparx Systems).
-- Las plantillas de generación de código residen en `templates/` y se compilan mediante `Mustache`.
-
----
-
-## 🎨 3. Rol: Senior Frontend Developer (Angular 19 + Tailwind CSS v4 + @foblex/flow)
-
-### 1. Componentes Standalone y Reactividad Fina
-- **100% Standalone**: `standalone: true`. Prohibido el uso de `NgModule`.
-- **Angular Signals**: Usar `signal()`, `computed()` y `effect()`. Usar `input()` y `output()` en componentes nuevos en lugar de `@Input()` / `@Output()`.
-- **ChangeDetectionStrategy.OnPush**: Obligatorio en todos los componentes para máximo rendimiento de renderizado.
-
-### 2. Arquitectura del Editor de Diagramas (`diagram-editor`)
-- `DiagramEditorComponent` actúa como **coordinador**, NO como implementador monolítico.
-- Delegar a los **14 servicios especializados**:
-  - Persistencia: `DiagramPersistenceService`.
-  - WebSocket y presencia: `DiagramCollaborationCoordinatorService`.
-  - Historial (Undo/Redo): `DiagramHistoryService`.
-  - Portapapeles (Copiar/Pegar): `DiagramClipboardService`.
-  - Atajos de teclado: `DiagramHotkeysService`.
-  - Distribución y alineación: `DiagramAlignmentService`.
-  - Detección espacial de contención: `DiagramContainmentService`.
-  - Navegación de cámara y zoom: `DiagramViewportService`.
-  - Modales: `DiagramModalService`.
-  - Creación de nodos: `DiagramNodeFactoryService`.
-
-### 3. Lienzo y Nodos Modulares (`diagram-canvas`)
-- Cada tipo de nodo UML tiene su componente standalone propio en [`diagram-canvas/nodes/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/components/diagram-canvas/nodes/):
-  - `UmlClassNodeComponent`
-  - `UmlUseCaseNodeComponent`
-  - `UmlActorNodeComponent`
-  - `UmlRobustnessNodeComponent`
-  - `UmlLifelineNodeComponent`
-  - `UmlPackageNodeComponent`
-  - `UmlComponentNodeComponent`
-  - `UmlDeploymentNodeComponent`
-- Si se añade un nuevo tipo de entidad UML, crear un componente nuevo en `nodes/` y registrarlo en `UML_CANVAS_NODE_COMPONENTS`. No ensuciar el HTML de `diagram-canvas`.
-
-### 4. Suite UI Reutilizable (`shared-ui/`)
-- En barras laterales, cajas de herramientas o modales, USAR SIEMPRE la suite [`shared-ui/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/components/shared-ui/):
-  - Zoom: `<app-diagram-zoom-controls [variant]="'grid' | 'flex'">`
-  - Enrutamiento de líneas: `<app-diagram-line-routing-selector>`
-  - Botón de relación UML: `<app-diagram-relationship-button>`
-  - Botón de entidad draggable: `<app-diagram-tool-item-button>`
-  - Cabecera de acordeón: `<app-diagram-tool-section-header>`
-
-### 5. Internacionalización Obligatoria (i18n)
-- Prohibido hardcodear textos visibles en español o inglés en el HTML.
-- Usar siempre `{{ 'clave.traduccion' | translate }}` o `[title]="'clave.traduccion' | translate"`.
-- Toda nueva clave debe registrarse simultáneamente en [`es.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/i18n/translations/es.ts) y [`en.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/i18n/translations/en.ts).
-
-### 6. Estilos y Tema Oscuro (Tailwind CSS v4)
-- Todas las vistas deben admitir modo claro y oscuro con variantes `dark:`.
-- Usar la paleta semántica del proyecto: `slate-900` / `[#14182E]` para fondos oscuros, `border-slate-200` / `dark:border-slate-700`.
-
----
-
-## 🔍 4. Lista de Verificación Pre-Entrega (Checklist)
-
-Antes de considerar cualquier desarrollo finalizado, verificar:
-- [ ] ¿El código cumple con Bajo Acoplamiento y Alta Cohesión?
-- [ ] ¿No hay tipos `any` inseguros?
-- [ ] ¿El backend pasa `npm test` (191 tests aprobados)?
-- [ ] ¿El frontend pasa `npm test -- --watch=false` (61 tests aprobados)?
-- [ ] ¿El frontend compila limpiamente con `npm run build` (0 errores)?
-- [ ] ¿Los nuevos textos tienen traducción en `es.ts` y `en.ts`?
-- [ ] ¿Los cambios de arquitectura quedaron documentados en `guia-desarrollador/`?
-- [ ] ¿El commit sigue el estándar de Conventional Commits?
+Para cambios solo documentales, revisar enlaces, rutas, versiones y comandos contra el código.
+Si otra instrucción aplicable exige tests/build, ejecutarlos también. No declarar pruebas no ejecutadas.
+Actualizar `MICROKERNEL.md` y el capítulo correspondiente cuando cambien límites o contratos.
+No crear commits salvo que se soliciten; si se solicita uno, usar Conventional Commits.

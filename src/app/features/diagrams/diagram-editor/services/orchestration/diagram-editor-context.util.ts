@@ -9,7 +9,6 @@ import {
   UmlClassNode,
   UmlConnection,
 } from '../../../../../core/models/diagram.model';
-import { isSequenceConnection as isSequenceConnectionLogic } from '../../components/diagram-canvas/nodes';
 
 /**
  * Utilidad de ensamblaje de contextos de ejecución y delegación de acciones
@@ -135,7 +134,7 @@ export class DiagramEditorContextUtil {
         },
         onRemoteDiagramSync: (data) => {
           if (data.nodes) {
-            const cleanNodes = editor.aiSyncService.applyAiNodesMutation(
+            const cleanNodes = editor.documentSyncService.normalizeIncomingNodes(
               data.nodes,
               (t, s) => editor.getDefaultColorForNodeType(t, s),
             );
@@ -336,8 +335,8 @@ export class DiagramEditorContextUtil {
   /**
    * Determina si un tipo de relación pertenece a diagramas de secuencia.
    */
-  static isSequenceRelation(rel: string | null, diagType: DiagramType): boolean {
+  static isSequenceRelation(rel: string | null, diagType: DiagramType, predicate: (rel: string, type: DiagramType) => boolean): boolean {
     if (!rel) return false;
-    return isSequenceConnectionLogic(rel as any, diagType);
+    return predicate(rel, diagType);
   }
 }

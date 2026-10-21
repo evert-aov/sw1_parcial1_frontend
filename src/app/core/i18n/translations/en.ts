@@ -1,4 +1,5 @@
 export const en = {
+  plugins: {"unavailableNode": "Plug-in unavailable", "nodes": {"node": "Node", "class": "Class", "actor": "Actor", "use_case": "Use case", "package": "Package", "boundary_box": "Container", "boundary": "Boundary", "control": "Control", "entity": "Entity", "lifeline": "Lifeline", "component": "Component", "device": "Device", "executionEnvironment": "Execution environment", "UI": "UI", "Controller": "Controller", "Entity": "Entity"}, "tools": {"user-guide": "User guide", "bmp-encoder": "BMP", "uml-language": "UML", "document-io": "Documents", "xmi": "XMI", "ai-assistant": "AI assistant", "code-generation": "Code generation", "image-export": "Image export", "uml-relationships": "UML"}},
   common: {
     appTitle: 'UML/ER Studio',
     appSubtitle: 'Enterprise Architect Suite & Spring Boot Generator',

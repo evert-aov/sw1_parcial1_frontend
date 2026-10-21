@@ -1,3 +1,4 @@
+import { provideEditorPlugins } from '../../../../../composition/editor-plugins';
 import { TestBed } from '@angular/core/testing';
 import { DiagramCanvasGeometryService } from './diagram-canvas-geometry.service';
 import { DiagramAssemblyConnectionService } from './diagram-assembly-connection.service';
@@ -8,7 +9,7 @@ describe('DiagramCanvasGeometryService - Z-Index Hierarchy', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [DiagramCanvasGeometryService, DiagramAssemblyConnectionService],
+      providers: [provideEditorPlugins(),DiagramCanvasGeometryService, DiagramAssemblyConnectionService],
     });
     service = TestBed.inject(DiagramCanvasGeometryService);
   });

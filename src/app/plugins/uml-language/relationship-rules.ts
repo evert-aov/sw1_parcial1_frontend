@@ -1,0 +1,10 @@
+import { isBceNodeType, validateRobustnessConnection } from './logic/uml-robustness.logic';
+import { formatPackageRelation, isPackageNode } from './logic/uml-package.logic';
+import { isDeploymentNode, getDeploymentStereotypeLabel } from './logic/uml-deployment.logic';
+import { formatUseCaseRelation, isSystemBoundaryBox, sanitizeBoundaryBoxName } from './logic/uml-use-case.logic';
+import { isActorNode, getActorBottomExtra } from './logic/uml-actor.logic';
+import { getEntityFk, buildAssociationClassElements, createAssociationClassBetween, isClassLikeNode } from './logic/uml-class.logic';
+import { isComponentNode, getComponentDimensions } from './logic/uml-component.logic';
+import { isSequenceRelationshipType, isSequenceConnection, getSequenceMessageColor, generateNextSequenceMessage, findNextAvailableSlot, isSequenceSlotOccupied, computeSequenceMessageMove, recalculateSequenceNumbers } from './logic/uml-lifeline.logic';
+import { RelationshipRules } from '../../core/plugins/contracts/relationship-rules.contract';
+export const relationshipRules: RelationshipRules = { isBceNodeType, validateRobustnessConnection, formatPackageRelation, isPackageNode, isDeploymentNode, getDeploymentStereotypeLabel, formatUseCaseRelation, isSystemBoundaryBox, sanitizeBoundaryBoxName, isActorNode, getActorBottomExtra, getEntityFk, buildAssociationClassElements, createAssociationClassBetween, isClassLikeNode, isComponentNode, getComponentDimensions, isSequenceRelationshipType, isSequenceConnection, getSequenceMessageColor, generateNextSequenceMessage, findNextAvailableSlot, isSequenceSlotOccupied, computeSequenceMessageMove, recalculateSequenceNumbers };

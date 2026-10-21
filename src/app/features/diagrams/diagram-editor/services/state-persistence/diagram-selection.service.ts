@@ -31,6 +31,9 @@ export class DiagramSelectionService {
   lastSelectionChangeTime = 0;
   hasMovedDuringPointerDown = false;
 
+  /**
+   * Limpia toda la selección activa de nodos y conexiones en el lienzo.
+   */
   clearSelection(): void {
     this.selectedNodeId.set(null);
     this.selectedNodeIds.set(new Set());
@@ -38,18 +41,36 @@ export class DiagramSelectionService {
     this.selectedConnIds.set(new Set());
   }
 
+  /**
+   * Verifica si un nodo específico forma parte de la selección activa.
+   * @param nodeId Identificador del nodo a consultar.
+   * @returns Verdadero si está seleccionado.
+   */
   isNodeSelected(nodeId: string): boolean {
     return this.selectedNodeIds().has(nodeId) || this.selectedNodeId() === nodeId;
   }
 
+  /**
+   * Verifica si una conexión específica está seleccionada actualmente.
+   * @param connId Identificador de la conexión.
+   * @returns Verdadero si la conexión está seleccionada.
+   */
   isConnectionSelected(connId: string): boolean {
     return this.selectedConnIds().has(connId) || this.selectedConnId() === connId;
   }
 
+  /**
+   * Determina si hay múltiples nodos seleccionados simultáneamente.
+   * @returns Verdadero si la cantidad de nodos seleccionados es mayor a 1.
+   */
   hasMultipleSelected(): boolean {
     return this.selectedNodeIds().size > 1;
   }
 
+  /**
+   * Selecciona exclusivamente un único nodo, descartando conexiones y otros nodos seleccionados.
+   * @param nodeId Identificador del nodo a seleccionar o null para deseleccionar.
+   */
   selectSingleNode(nodeId: string | null): void {
     this.selectedNodeId.set(nodeId);
     this.selectedNodeIds.set(nodeId ? new Set([nodeId]) : new Set());
@@ -57,6 +78,10 @@ export class DiagramSelectionService {
     this.selectedConnIds.set(new Set());
   }
 
+  /**
+   * Selecciona exclusivamente una única conexión, descartando nodos seleccionados.
+   * @param connId Identificador de la conexión o null.
+   */
   selectSingleConnection(connId: string | null): void {
     this.selectedConnId.set(connId);
     this.selectedConnIds.set(connId ? new Set([connId]) : new Set());
@@ -64,6 +89,11 @@ export class DiagramSelectionService {
     this.selectedNodeIds.set(new Set());
   }
 
+  /**
+   * Establece un conjunto arbitrario de nodos como seleccionados, definiendo un nodo principal.
+   * @param nodeIds Lista de identificadores de nodos.
+   * @param primaryId Identificador del nodo principal en la selección (opcional).
+   */
   setNodeSelection(nodeIds: string[], primaryId?: string): void {
     this.selectedNodeIds.set(new Set(nodeIds));
     this.selectedNodeId.set(primaryId || (nodeIds.length > 0 ? nodeIds[0] : null));
@@ -71,6 +101,13 @@ export class DiagramSelectionService {
     this.selectedConnIds.set(new Set());
   }
 
+  /**
+   * Maneja el evento de cambio de selección nativo emitido por Foblex Flow.
+   * @param event Evento de selección con arreglos de nodeIds y connectionIds.
+   * @param nodes Colección de nodos existentes para filtrar anclas.
+   * @param connections Colección de conexiones existentes.
+   * @param selectedRelationType Tipo de relación en curso o null.
+   */
   onSelectionChange(
     event: FSelectionChangeEvent,
     nodes: UmlClassNode[],
@@ -110,6 +147,12 @@ export class DiagramSelectionService {
     }
   }
 
+  /**
+   * Selecciona todos los nodos UML reales del diagrama excluyendo nodos ancla de asociación.
+   * @param nodes Colección de nodos a seleccionar.
+   * @param selectedRelationType Tipo de relación en curso de dibujo o null.
+   * @param selectOnCanvas Callback para reflejar la selección en el lienzo Foblex.
+   */
   selectAllClasses(
     nodes: UmlClassNode[],
     selectedRelationType: UmlRelationshipType | null,
@@ -124,6 +167,13 @@ export class DiagramSelectionService {
     selectOnCanvas?.(allIds);
   }
 
+  /**
+   * Maneja el clic sobre una conexión UML, soportando selección acumulativa con Shift o Ctrl.
+   * @param connId Identificador de la conexión clickeada.
+   * @param event Evento de ratón del usuario.
+   * @param selectedRelationType Tipo de relación activa o null.
+   * @param selectOnCanvas Callback para actualizar la selección en el lienzo Foblex.
+   */
   onConnectionSelect(
     connId: string,
     event: MouseEvent,
@@ -153,6 +203,15 @@ export class DiagramSelectionService {
     }
   }
 
+  /**
+   * Maneja el clic sobre un nodo UML, soportando selección múltiple y preservación de arrastre en grupo.
+   * @param nodeId Identificador del nodo interactuado.
+   * @param event Evento de ratón.
+   * @param selectedRelationType Tipo de relación en curso o null.
+   * @param hasMovedDuringPointerDown Indicador de si el puntero se desplazó durante mousedown.
+   * @param selectOnCanvas Callback para seleccionar en el lienzo visual Foblex.
+   * @param clearCanvasSelection Callback para vaciar la selección visual Foblex.
+   */
   onNodeSelect(
     nodeId: string,
     event: MouseEvent,

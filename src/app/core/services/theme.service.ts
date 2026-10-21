@@ -19,11 +19,18 @@ export class ThemeService {
     });
   }
 
+  /**
+   * Alterna el tema visual actual entre claro ('light') y oscuro ('dark').
+   */
   toggleTheme(): void {
     const nextTheme: ThemeMode = this.currentTheme() === 'dark' ? 'light' : 'dark';
     this.setTheme(nextTheme);
   }
 
+  /**
+   * Establece un tema específico y lo persiste en el almacenamiento local.
+   * @param theme Modo de tema a aplicar ('light' o 'dark').
+   */
   setTheme(theme: ThemeMode): void {
     this.currentTheme.set(theme);
     try {
@@ -33,6 +40,10 @@ export class ThemeService {
     }
   }
 
+  /**
+   * Aplica los atributos y clases de tema al elemento raíz `<html>` del documento.
+   * @param theme Modo de tema actual.
+   */
   private applyTheme(theme: ThemeMode): void {
     if (typeof document === 'undefined') return;
 
@@ -48,6 +59,10 @@ export class ThemeService {
     }
   }
 
+  /**
+   * Determina el tema inicial a partir del valor persistido en storage o de las preferencias del sistema operativo.
+   * @returns Modo de tema inicial resuelto.
+   */
   private getInitialTheme(): ThemeMode {
     if (typeof window === 'undefined') return 'light';
 

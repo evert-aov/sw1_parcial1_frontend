@@ -1,59 +1,65 @@
-# 📖 Guía Integral del Desarrollador - Frontend (Angular 19 Standalone + Tailwind CSS + WebSockets + Electron)
+# Guía del desarrollador — Angular 22 y arquitectura microkernel
 
-Bienvenido a la **Guía Integral del Desarrollador del Frontend**. Este documento ha sido elaborado por el Arquitecto de Software para brindar una referencia exhaustiva, detallada y práctica sobre la implementación del cliente web y de escritorio.
+El frontend de UML Collaborative Studio usa Angular 22 standalone, Signals, detección
+zoneless, Tailwind CSS v4 y Foblex Flow. El editor se organiza como un **microkernel**:
+el host mantiene la infraestructura del lienzo y los plug-ins aportan nodos, semántica UML
+y herramientas. Puede ejecutarse en navegador o en Electron.
 
----
+La referencia de límites y ciclo de vida es [MICROKERNEL.md](../MICROKERNEL.md).
+Las versiones y comandos se obtienen de [package.json](../package.json), los paquetes instalados y [angular.json](../angular.json).
 
-## 🗺️ Mapa de Contenidos
+## Contenido
 
-La guía está estructurada en **7 capítulos modulares**:
+| Capítulo | Tema |
+| --- | --- |
+| [00 — Arquitectura y configuración](00-ARQUITECTURA-Y-CONFIGURACION.md) | Capas, dependencias, entornos, Angular 22 y comandos. |
+| [01 — Core, servicios e i18n](01-CORE-SERVICIOS-E-I18N.md) | Contratos, registro, modelos compartidos, autenticación y traducciones. |
+| [02 — Editor de diagramas](02-ARQUITECTURA-DEL-EDITOR-DE-DIAGRAMAS.md) | Host, estado, motor espacial y delegación de capacidades. |
+| [03 — Lienzo y nodos](03-LIENZO-Y-NODOS-MODULARES.md) | NodePlugin, renderizado dinámico, geometría y conectores Foblex. |
+| [04 — Colaboración](04-COLABORACION-TIEMPO-REAL-Y-WEBSOCKETS.md) | Sesión de diagrama, cursores, bloqueos y reconexión. |
+| [05 — UI compartida](05-SUITE-UI-REUTILIZABLE-Y-ESTILOS.md) | SDK, controles, SVG, Signals, temas e i18n. |
+| [06 — Herramientas](06-EXPORTACION-XMI-CODEGEN-E-IA.md) | Documentos, XMI, imágenes, BMP, código, IA y guía interactiva. |
 
-| Capítulo | Documento | Descripción Temática |
-| :--- | :--- | :--- |
-| **00** | [Arquitectura y Configuración](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/00-ARQUITECTURA-Y-CONFIGURACION.md) | Visión global, stack tecnológico, Angular 19 Standalone, Signals, Tailwind CSS v4, entorno Electron y scripts. |
-| **01** | [Core, Servicios e Internacionalización](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/01-CORE-SERVICIOS-E-I18N.md) | Sistema i18n reactivo (`TranslatePipe`), `ThemeService` (Dark/Light), `AuthGuard`, `JwtInterceptor` y clientes HTTP. |
-| **02** | [Arquitectura del Editor de Diagramas](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/02-ARQUITECTURA-DEL-EDITOR-DE-DIAGRAMAS.md) | Desacoplamiento de `DiagramEditorComponent` en 5 paquetes de responsabilidad (`orchestration`, `state-persistence`, `spatial-engine`, `uml-domain`, `collaboration-ai-io`) con más de 22 servicios especializados. |
-| **03** | [Lienzo y Nodos Modulares (@foblex/flow)](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/03-LIENZO-Y-NODOS-MODULARES.md) | Arquitectura del lienzo `DiagramCanvasComponent`, transformaciones espaciales y los 8 nodos standalone especializados. |
-| **04** | [Colaboración en Tiempo Real y WebSockets](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/04-COLABORACION-TIEMPO-REAL-Y-WEBSOCKETS.md) | Coordinación Socket.IO, sincronización de cursores, bloqueo visual de nodos concurrentes y reconexión suave. |
-| **05** | [Suite UI Reutilizable y Componentes Compartidos](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/05-SUITE-UI-REUTILIZABLE-Y-ESTILOS.md) | Suite `shared-ui/` (Zoom, LineRouting, ToolItem, RelationshipButtons), renderizado SVG (`uml-svg/`) y WebGL. |
-| **06** | [Exportación, Interoperabilidad XMI, Codegen e IA](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/06-EXPORTACION-XMI-CODEGEN-E-IA.md) | Exportación a imagen de alta definición (BMP/PNG), importación XMI 2.1, generación de código y asistente IA con cámara. |
+## Inicio rápido
 
----
+Desde la raíz del frontend:
 
-## ⚡ Guía de Inicio Rápido (Onboarding)
-
-### 1. Prerrequisitos
-* **Node.js**: `v20.x` o superior.
-* **NPM**: `v10.x` o superior.
-* **Backend**: Debe estar en ejecución en `http://localhost:3000`.
-
-### 2. Instalación y Ejecución Web
-```bash
-cd frontend
-
-# Instalar dependencias
+```sh
 npm install
-
-# Iniciar servidor de desarrollo en http://localhost:4200
 npm start
+```
 
-# Ejecutar pruebas unitarias automatizadas con Vitest (78 tests en 11 suites)
+El servidor web usa `http://localhost:4200`. En desarrollo, la API usa
+`http://localhost:4000/api` y Socket.IO `http://localhost:4000/collaboration`.
+La configuración está en [src/environments/](../src/environments/).
+
+Usar una versión de Node admitida por el Angular instalado. En la revisión actual,
+Angular CLI 22.1.6 declara `^22.22.3 || ^24.15.0 || >=26.0.0`; no basta con cualquier Node 22.
+`packageManager` declara npm 11.19.0. Volver a comprobar estos datos al cambiar dependencias.
+
+Para escritorio, `npm run electron:start` compila y abre Electron con el backend local.
+Para desarrollo con recarga, ejecutar `npm start` y, en otra terminal, `npm run electron:dev`.
+Los comandos de empaquetado por plataforma están en el [README principal](../README.md).
+
+## Verificación
+
+```sh
+npm run test:architecture
+npm run check:architecture
 npm test -- --watch=false
-
-# Compilar para producción (0 errores)
 npm run build
 ```
 
-### 3. Ejecución en Modo Escritorio (Electron)
-```bash
-# Iniciar frontend empaquetado como aplicación de escritorio nativa
-npm run electron:serve
-```
+`pretest` ejecuta las pruebas del verificador y el análisis de límites antes de Vitest.
+`prebuild` ejecuta el análisis antes de compilar. No usar un número histórico de tests como
+criterio de éxito: debe pasar la suite completa vigente y la compilación no debe tener errores.
+Reportar por separado las advertencias; existe una de presupuesto CSS del lienzo.
 
----
+## Reglas de contribución
 
-## 📐 Principios de Diseño que Rigen este Frontend
-1. **Componentes Standalone Puros**: No se utilizan `NgModule`. Todos los componentes declaran explícitamente sus dependencias en `imports: [...]`.
-2. **Reactividad Fina con Angular Signals**: Estado reactivo mediante `signal()`, `computed()` y `effect()`, minimizando ciclos de detección de cambios pesados (`ChangeDetectionStrategy.OnPush`).
-3. **Bajo Acoplamiento en Nodos**: Cada nodo UML (`uml-class-node`, `uml-use-case-node`, etc.) tiene su propio template y lógica aislada sin contaminar el lienzo general.
-4. **Accesibilidad e Internacionalización por Defecto**: Todas las etiquetas visuales se canalizan mediante `TranslatePipe`.
+- Componentes standalone con OnPush; estado con Signals y nuevos inputs/outputs funcionales.
+- Nuevos tipos de nodo en `src/app/plugins/`, registrados desde `src/app/composition/`.
+- Ninguna importación entre paquetes de plug-ins; compartir contratos o utilidades del SDK.
+- Core, SDK y plug-ins no importan `features/`; los contratos no exponen componentes concretos.
+- Textos visibles nuevos en ambos diccionarios, `es.ts` y `en.ts`.
+- Mantener el AST y los identificadores persistidos. Eliminar directorios vacíos tras mover archivos.

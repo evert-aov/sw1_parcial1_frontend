@@ -29,6 +29,11 @@ import { ToastService } from '../../services/toast.service';
 export class ToastNotificationComponent {
   protected readonly toastService = inject(ToastService);
 
+  /**
+   * Resuelve el nombre del icono Heroicon correspondiente al tipo de notificación toast.
+   * @param type Tipo de notificación ('success', 'error', 'warning', 'info').
+   * @returns Nombre del icono representativo.
+   */
   getIcon(type: string): string {
     switch (type) {
       case 'success': return 'heroCheckCircle';
@@ -38,6 +43,11 @@ export class ToastNotificationComponent {
     }
   }
 
+  /**
+   * Obtiene las clases CSS de Tailwind según el tipo de notificación para colorear fondo, borde y texto.
+   * @param type Tipo de notificación toast.
+   * @returns Cadena con clases utilitarias de Tailwind.
+   */
   getTypeClasses(type: string): string {
     switch (type) {
       case 'success':

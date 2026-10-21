@@ -1,106 +1,72 @@
-# 05 - Suite UI Reutilizable y Componentes Compartidos
+# 05 — SDK, UI reutilizable y estilos
 
-## 1. Visión General
-Para evitar la duplicación de código en los paneles del editor (`diagram-sidebar` y `diagram-toolbox`), se implementó la suite **`shared-ui/`** en [`frontend/src/app/features/diagrams/diagram-editor/components/shared-ui/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/components/shared-ui/).
+## Ubicación y límites
 
-La suite exporta de manera unificada la constante `SHARED_DIAGRAM_UI_COMPONENTS` en `shared-ui/index.ts`, simplificando la importación en cualquier componente Angular.
+Los controles compartidos viven en
+[plugin-sdk/ui/shared-ui/](../src/app/plugin-sdk/ui/shared-ui/). Su barrel exporta
+`SHARED_DIAGRAM_UI_COMPONENTS`; también se pueden importar componentes individualmente.
+Host y plug-ins consumen el SDK. El SDK no importa implementaciones de plug-ins ni `features/`.
 
----
+La UI específica de una capacidad permanece en su paquete: los editores UML están en
+`plugins/uml-language/`, el panel IA en `plugins/ai-assistant/` y el modal de código en
+`plugins/code-generation/`. El host los monta con `PluginOutletDirective`.
 
-## 2. Componentes de la Suite `shared-ui/`
+## Controles disponibles
 
-### 1. `DiagramZoomControlsComponent` (`<app-diagram-zoom-controls>`)
-- **Propósito**: Controles de navegación y escala de la cámara en el lienzo.
-- **Entradas (`Inputs`)**:
-  - `variant`: `'grid'` (diseño en cuadrícula de 4 columnas para barra lateral) o `'flex'` (diseño en fila horizontal para barra flotante).
-- **Salidas (`Outputs`)**:
-  - `(zoomIn)`: Aumenta la escala.
-  - `(zoomOut)`: Disminuye la escala.
-  - `(resetView)`: Restaura la escala a 1:1 (100%).
-  - `(fitView)`: Ajusta la cámara para enfocar todos los nodos en pantalla.
-- **Ejemplo de Uso**:
-  ```html
-  <app-diagram-zoom-controls
-    variant="grid"
-    (zoomIn)="onZoomIn()"
-    (zoomOut)="onZoomOut()"
-    (resetView)="onResetView()"
-    (fitView)="onFitView()"
-  />
-  ```
+| Componente | Entradas principales | Salidas |
+| --- | --- | --- |
+| `DiagramZoomControlsComponent` | `variant`: `grid` o `flex` | `zoomIn`, `zoomOut`, `resetView`, `fitView` |
+| `DiagramLineRoutingSelectorComponent` | `selectedStyle: UmlLineStyle` | `styleChange` |
+| `DiagramRelationshipButtonComponent` | `relationship` o `relationshipId`, `label`, `description`, `isSelected`, `themeColor` | `selectRelation`, `select` |
+| `DiagramToolItemButtonComponent` | `label`, `description`, `disabled`, `draggable`, `dragType`, `themeColor` | `itemClick`, `itemDragStart` |
+| `DiagramToolSectionHeaderComponent` | `title`, `isOpen`, `icon`, `actionText`, `actionTitle` | `toggle`, `actionClick` |
 
-### 2. `DiagramLineRoutingSelectorComponent` (`<app-diagram-line-routing-selector>`)
-- **Propósito**: Selector desplegable con estilos de enrutamiento de líneas.
-- **Entradas (`Inputs`)**:
-  - `selectedStyle`: `UmlLineStyle` (`'segment'`, `'straight'`, `'bezier'`, `'adaptive-curve'`).
-- **Salidas (`Outputs`)**:
-  - `(styleChange)`: Emite el nuevo estilo tipado estrictamente como `UmlLineStyle`.
-- **Ejemplo de Uso**:
-  ```html
-  <app-diagram-line-routing-selector
-    [selectedStyle]="defaultLineStyle()"
-    (styleChange)="onSetLineStyle($event)"
-  />
-  ```
+Ejemplo de integración de los controles del viewport:
 
-### 3. `DiagramRelationshipButtonComponent` (`<app-diagram-relationship-button>`)
-- **Propósito**: Botón estilizado para seleccionar el tipo de conexión activa con previsualización SVG reactiva.
-- **Entradas (`Inputs`)**:
-  - `relationship`: Objeto `UmlRelationTypeItem` (opcional).
-  - `relationshipId`, `label`, `description`: Valores directos (opcional).
-  - `isSelected`: Booleano para activar el resalte visual.
-  - `themeColor`: `'blue'` (por defecto), `'amber'`, `'cyan'`, `'rose'`.
-- **Salidas (`Outputs`)**:
-  - `(select)`: Emite el ID de la relación seleccionada (`UmlRelationshipType`).
-- **Ejemplo de Uso**:
-  ```html
-  @for (rel of currentRelations(); track rel.id) {
-    <app-diagram-relationship-button
-      themeColor="amber"
-      [relationship]="rel"
-      [isSelected]="selectedRelationType() === rel.id"
-      (select)="onSelectRelation($event)"
-    />
-  }
-  ```
+```html
+<app-diagram-zoom-controls
+  variant="grid"
+  (zoomIn)="onZoomIn()"
+  (zoomOut)="onZoomOut()"
+  (resetView)="onResetView()"
+  (fitView)="onFitView()"
+/>
+```
 
-### 4. `DiagramToolItemButtonComponent` (`<app-diagram-tool-item-button>`)
-- **Propósito**: Tarjeta reutilizable para entidades UML con soporte completo de Drag-and-Drop y click directo.
-- **Entradas (`Inputs`)**:
-  - `label`: Nombre de la herramienta (ej. "Caso de Uso").
-  - `description`: Descripción breve o tooltip.
-  - `themeColor`: Esquema cromático (`sky`, `blue`, `amber`, `emerald`, `indigo`, etc.).
-  - `isReadOnly`: Deshabilita el botón si el usuario no tiene permisos de edición.
-- **Proyección de Contenido**: Proyecta el icono o ilustración SVG mediante `<ng-content select="[icon]">`.
-- **Ejemplo de Uso**:
-  ```html
-  <app-diagram-tool-item-button
-    themeColor="sky"
-    [label]="'editor.toolbox.useCase' | translate"
-    [description]="'editor.toolbox.useCaseDesc' | translate"
-    [isReadOnly]="isReadOnly()"
-    (buttonClick)="onAddElement('use_case')"
-    (dragStart)="onToolboxDragStart('use_case', $event)"
-  >
-    <app-use-case-svg icon width="24" height="15" />
-  </app-diagram-tool-item-button>
-  ```
+Los manejadores pertenecen al consumidor y delegan al viewport. Para la paleta de nodos,
+obtener herramientas, etiquetas e iconos del descriptor `NodePlugin.tools`; no mantener un
+catálogo paralelo de botones para cada tipo en el host.
 
-### 5. `DiagramToolSectionHeaderComponent` (`<app-diagram-tool-section-header>`)
-- **Propósito**: Cabecera desplegable para secciones colapsables (acordeón).
-- **Entradas (`Inputs`)**:
-  - `title`: Título de la sección.
-  - `isOpen`: Estado booleano de apertura.
-  - `actionText` / `actionTitle`: Texto de acción rápida (ej. "Deseleccionar").
-- **Salidas (`Outputs`)**:
-  - `(toggle)`: Alterna la visibilidad.
-  - `(actionClick)`: Ejecuta la acción rápida sin colapsar la sección.
+`UmlLineStyle` y `sanitizeLineStyle()` están en
+[diagram.model.ts](../src/app/core/models/diagram.model.ts). El valor por defecto del selector
+es `orthogonal_square`. Algunos valores antiguos como `segment` y `adaptive-curve` se
+normalizan por compatibilidad; usar los valores canónicos al crear datos nuevos.
 
----
+## Primitivas gráficas
 
-## 3. Renderizado Gráfico Vectorial y Acelerado
+- [uml-svg/](../src/app/plugin-sdk/ui/uml-svg/): iconos y figuras vectoriales reutilizables.
+- [diagram-floating-label/](../src/app/plugin-sdk/ui/diagram-floating-label/): etiquetas desplazables.
+- [autofocus-input.directive.ts](../src/app/plugin-sdk/ui/autofocus-input.directive.ts): foco de edición.
+- [text-metrics.ts](../src/app/plugin-sdk/text-metrics.ts): medición compartida de texto.
 
-1. **`uml-svg/`**:
-   - Colección de componentes SVG puros (`<app-actor-svg>`, `<app-relationship-svg>`, `<app-use-case-svg>`, `<app-component-svg>`, etc.) que garantizan nitidez perfecta en cualquier factor de escala y resolución de pantalla.
-2. **`uml-webgl/`**:
-   - Renderers acelerados por hardware en WebGL para diagramas densos con cientos de nodos concurrentes.
+Los renderizadores concretos y sus reglas de tamaño pertenecen a `plugins/uml-*-node/`.
+Los componentes WebGL fueron eliminados; no restaurar importaciones ni catálogos de esa implementación.
+
+## Angular 22, estilos e idioma
+
+Los componentes nuevos deben declarar `standalone: true`, OnPush y APIs `input()`/`output()`.
+La suite compartida conserva algunos `@Input()`/`@Output()` existentes; esta documentación
+no implica que todos hayan sido migrados a inputs funcionales.
+
+El proyecto usa `provideZonelessChangeDetection()`. Derivar estado con `computed()`, modificar
+Signals con `set()`/`update()` y mantener coherencia de cambios desde callbacks de Foblex.
+Evitar suscripciones permanentes o efectos que reescriban su propia dependencia.
+
+Los estilos globales y Tailwind v4 están en [src/styles.css](../src/styles.css). Reutilizar
+las variantes claro/oscuro y la paleta existente. Para estilos internos de Foblex, consultar
+[STYLING.md](../node_modules/@foblex/flow/STYLING.md): el encapsulamiento del componente puede
+impedir que sus reglas alcancen esos elementos.
+
+Todo texto visible nuevo debe pasar por `TranslatePipe` o `TranslationService`, con claves
+simétricas en español e inglés. Los títulos y tooltips enviados a controles compartidos también
+se traducen. No aumentar presupuestos de CSS para ocultar una regresión de estilos.

@@ -1,4 +1,5 @@
-import { Injectable, ChangeDetectorRef } from '@angular/core';
+import { NodePluginRegistryService } from '../../../../../core/plugins/node-plugin-registry.service';
+import { Injectable, ChangeDetectorRef, inject } from '@angular/core';
 import { UmlClassNode } from '../../../../../core/models/diagram.model';
 
 export interface NodeResizeResult {
@@ -10,33 +11,14 @@ export interface NodeResizeResult {
 
 @Injectable({ providedIn: 'root' })
 export class DiagramNodeResizeService {
+  private readonly nodePlugins = inject(NodePluginRegistryService);
   /**
    * Determina las dimensiones mínimas para un nodo según su tipo de classifier UML.
    */
   getMinDimensions(node: UmlClassNode, dynamicNodeWidthFn?: (node: UmlClassNode) => number): { minW: number; minH: number } {
-    let minW = 120;
-    let minH = 60;
-    if (node.nodeType === 'actor') {
-      minW = 50;
-      minH = 65;
-    } else if (node.nodeType === 'use_case') {
-      minW = 80;
-      minH = 45;
-    } else if (node.nodeType === 'package' || node.nodeType === 'boundary_box') {
-      minW = 120;
-      minH = 70;
-    } else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      minW = 50;
-      minH = 50;
-    } else if (node.nodeType === 'component') {
-      minW = 140;
-      minH = 50;
-    } else if (node.nodeType === 'device' || node.nodeType === 'executionEnvironment' || node.nodeType === 'node') {
-      minW = 160;
-      minH = 90;
-    } else if (dynamicNodeWidthFn) {
-      minW = Math.max(90, dynamicNodeWidthFn(node));
-    }
+    const geometry = this.nodePlugins.forNode(node)?.geometry;
+    const minW = geometry?.transparent ? geometry.minWidth : Math.max(90, dynamicNodeWidthFn?.(node) ?? geometry?.minWidth ?? 120);
+    const minH = geometry?.minHeight ?? 60;
     return { minW, minH };
   }
 

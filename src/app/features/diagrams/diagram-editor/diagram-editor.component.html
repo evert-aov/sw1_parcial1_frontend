@@ -49,6 +49,7 @@
   <div class="flex-1 flex overflow-hidden relative">
     <!-- 2.1 [SIDEBAR / TOOLBOX & EXPLORER] SEPARADO COMO COMPONENTE MODULAR -->
     <app-diagram-sidebar
+      (addPluginNode)="createNodeOfType($event.type, undefined, $event.stereotype)"
       [isOpen]="isSidebarOpen()"
       [activeDiagramType]="activeDiagramType()"
       [selectedRelationType]="selectedRelationType()"
@@ -200,18 +201,10 @@
     </div>
 
     <!-- 2.3 [PANEL LATERAL DERECHO]: COPILOT IA -->
-    @defer (when isAiPanelOpen()) {
-      <app-ai-assistant-panel
-        [isOpen]="isAiPanelOpen()"
-        [diagramId]="currentDiagramId()"
-        [roomCode]="collaborationService.activeRoomCode()"
-        [currentNodes]="nodes()"
-        [currentConnections]="connections()"
-        [diagramType]="activeDiagramType()"
-        (closePanel)="isAiPanelOpen.set(false)"
-        (applyMutation)="onAiMutation($event)"
-      >
-      </app-ai-assistant-panel>
+    @if (isAiPanelOpen()) {
+      <ng-container [pluginEnvironment]="plugins.environmentFor('ai-assistant')" [appPluginOutlet]="plugins.component('ai-assistant', 'panel')"
+        [pluginInputs]="{ isOpen: isAiPanelOpen(), diagramId: currentDiagramId(), roomCode: collaborationService.activeRoomCode(), currentNodes: nodes(), currentConnections: connections(), diagramType: activeDiagramType() }"
+        (pluginEvent)="onAiPluginEvent($event)" />
     }
   </div>
 
@@ -234,40 +227,21 @@
     </app-user-profile-modal>
   }
 
-  @defer (when isEditNodeModalOpen()) {
-    <app-edit-node-modal
-      [isOpen]="isEditNodeModalOpen()"
-      [node]="editingNode()"
-      [activeDiagramType]="activeDiagramType()"
-      (close)="closeEditNodeModal()"
-      (save)="onSaveEditedNode($event)"
-    >
-    </app-edit-node-modal>
+  @if (isEditNodeModalOpen()) {
+    <ng-container [appPluginOutlet]="plugins.component('uml-language', 'nodeEditor')" [pluginEnvironment]="plugins.environmentFor('uml-language')"
+      [pluginInputs]="{ isOpen: isEditNodeModalOpen(), node: editingNode(), activeDiagramType: activeDiagramType() }"
+      (pluginEvent)="onNodeEditorEvent($event)" />
+  }
+  @if (isEditConnModalOpen()) {
+    <ng-container [appPluginOutlet]="plugins.component('uml-language', 'connectionEditor')" [pluginEnvironment]="plugins.environmentFor('uml-language')"
+      [pluginInputs]="{ isOpen: isEditConnModalOpen(), connection: editingConnection(), activeDiagramType: activeDiagramType() }"
+      (pluginEvent)="onConnectionEditorEvent($event)" />
   }
 
-  @defer (when isEditConnModalOpen()) {
-    <app-edit-connection-modal
-      [isOpen]="isEditConnModalOpen()"
-      [connection]="editingConnection()"
-      [activeDiagramType]="activeDiagramType()"
-      (close)="closeEditConnModal()"
-      (save)="onSaveEditedConnection($event)"
-      (delete)="removeConnection($event)"
-    >
-    </app-edit-connection-modal>
-  }
-
-  @defer (when showSpringBootModal()) {
-    <app-spring-boot-modal
-      [isOpen]="showSpringBootModal()"
-      [diagramId]="currentDiagramId()"
-      [diagramName]="currentDiagramName()"
-      [nodes]="nodes()"
-      [connections]="connections()"
-      [project]="currentProject()"
-      (closeModal)="showSpringBootModal.set(false)"
-    >
-    </app-spring-boot-modal>
+  @if (showSpringBootModal()) {
+    <ng-container [pluginEnvironment]="plugins.environmentFor('code-generation')" [appPluginOutlet]="plugins.component('code-generation', 'modal')"
+      [pluginInputs]="{ isOpen: showSpringBootModal(), diagramId: currentDiagramId(), diagramName: currentDiagramName(), nodes: nodes(), connections: connections(), project: currentProject() }"
+      (pluginEvent)="showSpringBootModal.set(false)" />
   }
 
   @defer (when showJsonModal()) {

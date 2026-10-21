@@ -8,7 +8,7 @@ import {
   heroClipboardDocument,
   heroCheck,
 } from '@ng-icons/heroicons/outline';
-import { TranslatePipe } from '../../../../../core/i18n';
+import { TranslatePipe } from '../../../../../core/i18n/index';
 
 @Component({
   selector: 'app-json-modal',
@@ -49,6 +49,9 @@ export class JsonModalComponent {
     );
   }
 
+  /**
+   * Copia el texto JSON al portapapeles del sistema y activa el estado visual temporal de copiado.
+   */
   async copyToClipboard(): Promise<void> {
     const text = this.jsonContent();
     if (!text) return;
@@ -79,11 +82,17 @@ export class JsonModalComponent {
     }
   }
 
+  /**
+   * Aplica el JSON ingresado en modo importación hacia el editor y cierra la ventana.
+   */
   onApply(): void {
     this.applyImport.emit(this.jsonContent());
     this.close.emit();
   }
 
+  /**
+   * Cierra el modal JSON limpiando temporizadores pendientes.
+   */
   onClose(): void {
     if (this.copyTimeout) {
       clearTimeout(this.copyTimeout);

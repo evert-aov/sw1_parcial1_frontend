@@ -1,102 +1,91 @@
-# 00 - Arquitectura y Configuración del Frontend
+# 00 — Arquitectura y configuración del frontend
 
-## 1. Visión General del Sistema
-El frontend es una aplicación de modelado visual de software avanzada desarrollada con **Angular 19 Standalone**, estilizada con **Tailwind CSS v4** y potenciada con **@foblex/flow** para la gestión reactiva de grafos de nodos y conexiones orientadas a objetos.
+## Stack y configuración Angular
 
-Puede ejecutarse tanto en **navegadores web modernos** como empaquetada como **aplicación de escritorio multiplataforma (Linux, Windows, macOS)** mediante **Electron**.
+La aplicación usa **Angular 22**, TypeScript 6, Tailwind CSS v4, Foblex Flow 19 y Vitest 4.
+La numeración de Foblex es independiente de Angular. Los rangos declarados están en
+[package.json](../package.json); consultar `node_modules/<paquete>/package.json` para la versión
+instalada. Este checkout no contiene lockfile; si se incorpora uno, usarlo como referencia
+de resolución y para instalaciones reproducibles.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           ENTORNO DE EJECUCIÓN                              │
-│              Navegador Web (Chrome/Firefox)  ó  Electron Runtime            │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           ANGULAR 19 APLICACIÓN                             │
-│                                                                             │
-│  ┌─────────────────────────┐  ┌───────────────────────────────────────────┐ │
-│  │     CORE SINGLETONS     │  │                ROUTING                    │ │
-│  │ ├── AuthService         │  │ ├── /auth/login, /auth/register           │ │
-│  │ ├── TranslationService  │  │ ├── /projects (Dashboard de proyectos)    │ │
-│  │ ├── ThemeService        │  │ └── /projects/:id/editor (Editor Gráfico) │ │
-│  │ └── CollaborationServ   │  └───────────────────────────────────────────┘ │
-│  └─────────────────────────┘                         │                      │
-│                                                      ▼                      │
-│  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │                  SUBSISTEMA DIAGRAM-EDITOR (PUDS)                      │ │
-│  │  ┌────────────────────────┐ ┌──────────────────┐ ┌───────────────────┐ │ │
-│  │  │ DiagramAppbarComponent │ │ DiagramCanvasComp│ │ DiagramSidebarComp│ │ │
-│  │  └────────────────────────┘ └──────────────────┘ └───────────────────┘ │ │
-│  │  ┌───────────────────────────────────────────────────────────────────┐ │ │
-│  │  │        14 Servicios de Dominio Especializados (Cohesión)          │ │ │
-│  │  └───────────────────────────────────────────────────────────────────┘ │ │
-│  └────────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
+[app.config.ts](../src/app/app.config.ts) instala `provideEditorPlugins()`,
+`provideZonelessChangeDetection()`, los listeners globales de errores, HttpClient con
+`jwtInterceptor` y el router con `withHashLocation()`. Los componentes nuevos son standalone,
+con OnPush y Signals; las actualizaciones desde callbacks externos deben notificar a Angular.
+
+Las rutas reales son `/login`, `/register`, `/projects`, `/diagram` y `/diagrams/:id`,
+según [app.routes.ts](../src/app/app.routes.ts). Las vistas de proyectos y diagramas usan `authGuard`.
+
+## Partición microkernel
+
+```text
+src/app/
+├── core/
+│   ├── plugins/            # Contratos, registro, outlet y capacidades
+│   ├── models/             # AST, UmlDiagramProject, proyectos y usuarios
+│   ├── services/           # Sesión, HTTP, colaboración, tema y notificaciones
+│   └── i18n/               # Traducciones es/en
+├── composition/            # Catálogo concreto e integración de plug-ins
+├── plugin-sdk/             # Factoría, geometría compartida, UI y utilidades
+├── plugins/                # Paquetes independientes por dominio
+└── features/               # Pantallas de autenticación, proyectos y host del editor
 ```
 
----
+El Core System comprende la infraestructura del registro en `core/plugins/` y el host del
+editor en `features/diagrams/diagram-editor/`. El nombre de la carpeta `core/` no implica
+que todas las funciones del producto deban vivir allí.
 
-## 2. Estructura de Directorios
+| Origen | Dependencias internas admitidas |
+| --- | --- |
+| Core | Modelos, contratos y servicios de infraestructura de Core. |
+| SDK | Core y otras utilidades del SDK. |
+| Un plug-in | Core, SDK y archivos de su propio paquete. |
+| Host | Core, SDK y servicios propios del host; resuelve extensiones por contrato/registro. |
+| Composición | Definiciones concretas de plug-ins y contratos de registro. |
 
-```
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── app.config.ts        # Proveedores globales (HttpClient, Routing, Interceptors)
-│   │   ├── app.routes.ts        # Definición de rutas y Guards de seguridad
-│   │   ├── app.ts / app.html    # Contenedor raíz con Toasts y Diálogos globales
-│   │   ├── core/                # Servicios singleton, modelos y utilidades
-│   │   │   ├── guards/          # AuthGuard
-│   │   │   ├── i18n/            # TranslationService, TranslatePipe, diccionarios
-│   │   │   ├── interceptors/    # JwtInterceptor
-│   │   │   ├── models/          # Interfaces TypeScript (Diagram, Project, User)
-│   │   │   └── services/        # Clientes HTTP (Diagram, Project, XMI, AI, Export)
-│   │   └── features/            # Módulos visuales por caso de uso
-│   │       ├── auth/            # Vistas de Login y Registro
-│   │       ├── projects/        # Gestión de proyectos y modal de miembros
-│   │       └── diagrams/        # Editor completo de diagramas UML
-│   │           └── diagram-editor/
-│   │               ├── components/  # Canvas, Appbar, Sidebar, Modales, Shared-UI
-│   │               ├── directives/  # AutofocusInputDirective
-│   │               └── services/    # 5 Módulos de dominio especializados (index.ts)
-│   │                   ├── orchestration/       # UI, hotkeys, toolbars, modales
-│   │                   ├── state-persistence/   # Autosave, historial, clipboard
-│   │                   ├── spatial-engine/      # Geometría, drag, colisiones, zoom
-│   │                   ├── uml-domain/          # Nodos, factoría, conexiones, resize
-│   │                   └── collaboration-ai-io/ # WebSockets, IA sync, import/export
-│   ├── environments/            # Variables de entorno (Web, Prod, Electron)
-│   └── styles.css               # Estilos globales y tokens Tailwind CSS
-├── angular.json                 # Configuración del compilador Angular
-├── main.js                      # Proceso principal de Electron
-└── package.json                 # Dependencias y scripts
+Las bibliotecas externas se consumen según la responsabilidad de cada paquete.
+El verificador también analiza los specs; las integraciones entre implementaciones viven
+en `composition/`. Las pruebas del host/SDK pueden usar la composición como fixture.
+
+```mermaid
+flowchart TD
+    Composition[Composición] --> Registry[Registro y contratos]
+    Host[Host: lienzo y estado] --> Registry
+    Host --> SDK[SDK compartido]
+    Plugins[Plug-ins independientes] --> Registry
+    Plugins --> SDK
 ```
 
----
+Los plug-ins se registran y retiran en ejecución; el catálogo actual se importa estáticamente.
+Esto no representa descarga remota de código ni aislamiento de seguridad entre extensiones.
+Ver [MICROKERNEL.md](../MICROKERNEL.md) para el ciclo de vida y sus límites.
 
-## 3. Entornos y Variables de Configuración
+## Entornos
 
-Ubicados en `src/environments/`:
-- **`environment.ts` (Desarrollo Web)**:
-  ```typescript
-  export const environment = {
-    production: false,
-    apiUrl: 'http://localhost:3000/api',
-    wsUrl: 'http://localhost:3000',
-  };
-  ```
-- **`environment.electron.ts` (Modo Escritorio)**:
-  - Configura el soporte de persistencia local y puertos adaptativos de comunicación con el backend integrado.
-- **`environment.prod.ts` (Producción)**:
-  - URLs relativas o de CDN con optimización estricta de empaquetado.
+[angular.json](../angular.json) selecciona los reemplazos de archivos:
 
----
+| Configuración | Archivo | Conexión |
+| --- | --- | --- |
+| Desarrollo web | `src/environments/environment.ts` | API local en puerto 4000. |
+| Producción web | `src/environments/environment.prod.ts` | API de producción configurada en el archivo. |
+| `electron-local` | `src/environments/environment.electron.ts` | Backend local para escritorio. |
+| `electron-prod` | `src/environments/environment.prod.ts` | Backend de producción. |
 
-## 4. Scripts del `package.json`
+Las propiedades son `apiUrl`, `socketUrl` y `production`. No duplicar URLs en componentes.
+El proceso principal de Electron está en [main.js](../main.js).
 
-| Comando | Acción |
-| :--- | :--- |
-| `npm start` | Inicia el servidor de desarrollo de Angular en `http://localhost:4200`. |
-| `npm run build` | Compila el bundle de producción en `dist/frontend` con tree-shaking agresivo. |
-| `npm test` | Ejecuta la suite de pruebas unitarias automatizadas con **Vitest** (78 pruebas en 11 suites, 100% pasando). |
-| `npm run electron:serve` | Compila el frontend e inicia la ventana nativa de **Electron**. |
+## Comandos
+
+| Comando | Resultado |
+| --- | --- |
+| `npm install` | Instala las dependencias; si se incorpora un lockfile, usar `npm ci` en CI. |
+| `npm start` | Servidor de desarrollo web. |
+| `npm run check:architecture` | Análisis AST de límites de dependencia. |
+| `npm run test:architecture` | Pruebas del propio verificador. |
+| `npm test -- --watch=false` | Suite Angular/Vitest, con controles de arquitectura previos. |
+| `npm run build` | Verifica arquitectura y genera la compilación de producción en `dist/frontend`. |
+| `npm run electron:start` | Compila para escritorio local y abre Electron. |
+| `npm run build:electron:prod` | Compila para escritorio conectado a producción. |
+
+Los scripts específicos de Electron llaman a `ng build` directamente; no suponer que pasan
+por el hook `prebuild` de `npm run build`. Ejecutar el control de arquitectura al validar esos flujos.

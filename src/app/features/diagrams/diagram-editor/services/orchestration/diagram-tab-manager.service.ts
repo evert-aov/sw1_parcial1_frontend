@@ -59,11 +59,20 @@ export class DiagramTabManagerService {
   readonly openTabs = signal<DiagramTab[]>([]);
   readonly currentDiagramName = signal<string>('Diagrama UML');
 
+  /**
+   * Obtiene la etiqueta corta correspondiente al tipo de diagrama UML para mostrar en la pestaña.
+   * @param type Tipo de diagrama UML.
+   * @returns Etiqueta abreviada (ej. 'Clases', 'Secuencia').
+   */
   getTabTypeShort(type: DiagramType): string {
     const found = UML_DIAGRAM_TYPES.find((d) => d.id === type);
     return found ? found.shortLabel : 'UML';
   }
 
+  /**
+   * Añade una nueva pestaña de diagrama a la barra de pestañas si no existe previamente.
+   * @param tab Datos de la pestaña a agregar.
+   */
   addTab(tab: DiagramTab): void {
     this.openTabs.update((tabs) => {
       if (!tabs.some((t) => t.id === tab.id)) {
@@ -73,6 +82,11 @@ export class DiagramTabManagerService {
     });
   }
 
+  /**
+   * Actualiza el título visual de una pestaña existente al renombrar un diagrama.
+   * @param diagramId Identificador del diagrama.
+   * @param newName Nuevo nombre del diagrama.
+   */
   updateTabName(diagramId: string, newName: string): void {
     this.openTabs.update((tabs) =>
       tabs.map((t) => (t.id === diagramId ? { ...t, name: newName } : t)),

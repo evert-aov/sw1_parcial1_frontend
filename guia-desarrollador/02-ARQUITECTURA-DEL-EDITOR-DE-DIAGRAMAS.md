@@ -1,119 +1,77 @@
-# 02 - Arquitectura del Editor de Diagramas
+# 02 — Arquitectura microkernel del editor de diagramas
 
-## 1. Visión General de la Modularización
+## Host estable
 
-Para cumplir estrictamente con los principios de **Bajo Acoplamiento, Alta Cohesión y Responsabilidad Única (SRP)**, el editor de diagramas está estructurado en una jerarquía desacoplada de 3 niveles:
+[DiagramEditorComponent](../src/app/features/diagrams/diagram-editor/diagram-editor.component.ts)
+coordina el documento, el lienzo, las pestañas, el guardado y la colaboración. El host mantiene
+el camino mínimo del editor: renderizado genérico, selección, drag, viewport e historial.
+Los nodos UML y las herramientas se incorporan mediante contratos y registro.
 
-1. **Un Coordinador Ligero**: [`DiagramEditorComponent`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/diagram-editor.component.ts) que actúa como orquestador de alto nivel del ciclo de vida y eventos globales.
-2. **Componentes Visuales Especializados**: `diagram-appbar`, `diagram-canvas`, `diagram-sidebar`, `diagram-toolbox`, modales y menús contextuales.
-3. **5 Módulos de Servicios por Responsabilidad**: Ubicados en [`services/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/services/), cada uno con su propio barrel (`index.ts`) y unificados a través del barrel raíz `services/index.ts`.
+El host no importa renderizadores concretos ni introduce ramas por `nodeType` o por formato
+de exportación. Los cambios de un tipo UML pertenecen a su descriptor/renderizador o a la
+capacidad de dominio responsable. La geometría se consulta mediante `NodeGeometry`.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           DIAGRAM-EDITOR COMPONENT                          │
-│                   Coordinador de Ciclo de Vida y Eventos                    │
-└──────┬──────────────┬──────────────┬──────────────┬─────────────────────────┘
-       │              │              │              │
-       ▼              ▼              ▼              ▼
-┌──────────────┐┌──────────────┐┌──────────────┐┌──────────────┐
-│DiagramAppbar ││DiagramCanvas ││DiagramSidebar││DiagramToolbox│
-└──────────────┘└──────────────┘└──────────────┘└──────────────┘
-       │              │              │              │
-       └──────────────┴──────┬───────┴──────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│              5 PAQUETES MODULARES DE SERVICIOS DE DOMINIO                   │
-│                                                                             │
-│ 1. ORCHESTRATION           2. STATE & PERSISTENCE    3. SPATIAL ENGINE      │
-│    - ToolbarService           - PersistenceService      - GeometryService   │
-│    - HotkeysService           - HistoryService          - DragService       │
-│    - ModalService             - ClipboardService        - ConnLayoutService │
-│    - ContextMenuService       - SelectionService        - AssemblyService   │
-│    - InteractionService                                 - ContainmentService│
-│    - TabManagerService                                  - AlignmentService  │
-│                                                         - ViewportService   │
-│                                                                             │
-│ 4. UML DOMAIN              5. COLLABORATION, AI & IO                        │
-│    - NodeOperationsService    - CollaborationCoordinatorService             │
-│    - NodeFactoryService       - AiSyncService                               │
-│    - NodeResizeService        - ExportService                               │
-│    - ConnOperationsService    - ImportService                               │
-│    - SequenceActivationService                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+## Distribución de responsabilidades
 
----
+Los directorios de servicios del host conservan parte de los nombres anteriores. Sus barrels
+pueden reexportar contratos o servicios del SDK; no indican que la implementación siga allí.
 
-## 2. Los 5 Módulos de Responsabilidad
+| Responsabilidad | Ubicación actual |
+| --- | --- |
+| Toolbar, atajos, menú contextual, interacción, modales y pestañas | `features/diagrams/diagram-editor/services/orchestration/` |
+| Persistencia, historial y selección | `features/diagrams/diagram-editor/services/state-persistence/` |
+| Geometría del lienzo, drag, viewport, contención y alineación | `features/diagrams/diagram-editor/services/spatial-engine/` |
+| Redimensionamiento genérico | `features/diagrams/diagram-editor/services/uml-domain/diagram-node-resize.service.ts` |
+| Coordinación de colaboración | `features/diagrams/diagram-editor/services/collaboration-ai-io/diagram-collaboration-coordinator.service.ts` |
+| Factoría de nodos por registro | `plugin-sdk/diagram-node-factory.service.ts` |
+| Layout compartido de conexiones | `plugin-sdk/geometry/diagram-connection-layout.service.ts` |
+| Operaciones UML, portapapeles, activaciones, normalización y sincronización de documentos | `plugins/uml-language/` |
+| Importación/exportación JSON y coordinación de formatos | `plugins/document-io/` |
+| Herramientas específicas | Sus paquetes en `plugins/`; ver [capítulo 06](06-EXPORTACION-XMI-CODEGEN-E-IA.md). |
 
-### 📦 Módulo 1: `orchestration/` (Orquestación y UI)
-Gestiona la interacción del usuario, la interfaz de herramientas, la navegación por pestañas y la interceptación de atajos de teclado y menús:
+`DiagramDocumentSyncService` pertenece a `uml-language`. La normalización del documento y
+el guardado no requieren instalar el asistente IA. Este último es un consumidor opcional.
 
-1. **`DiagramToolbarService`**: Controla el modo activo de la barra de herramientas (selección, conexión, tipo de línea, estilo de conector), el estado de las herramientas activas y la sincronización con el canvas.
-2. **`DiagramHotkeysService`**: Centraliza la captura de atajos de teclado globales (`Ctrl+Z`, `Ctrl+Y`, `Ctrl+S`, `Ctrl+A`, `Delete`, `Ctrl++`, `Ctrl+-`), suspendiendo atajos destructivos cuando hay modales abiertos.
-3. **`DiagramModalService`**: Orquesta el ciclo de vida de los modales (`EditNodeModalComponent`, `EditConnectionModalComponent`, `SpringBootModalComponent`, export/import XMI/JSON) y expone el signal computado `isAnyModalOpen` para aislar el canvas.
-4. **`DiagramContextMenuService`**: Gestiona la posición, visibilidad y acciones disponibles del menú contextual al hacer clic derecho sobre nodos, conexiones o fondo del lienzo.
-5. **`DiagramCanvasInteractionService`**: Desacopla la lógica de interacción de clics, arrastres rápidos y selección en el lienzo visual.
-6. **`DiagramTabManagerService`**: Administra la apertura, cierre y cambio de pestañas entre múltiples diagramas en el mismo proyecto.
-7. **`DiagramEditorContext` (Util)**: Provee tipos de contexto y validaciones para la orquestación.
+## Composición, registro y resolución
 
-### 📦 Módulo 2: `state-persistence/` (Estado, Historial y Persistencia)
-Garantiza la integridad de datos, serialización, deshacer/rehacer y portapapeles:
+1. [app.config.ts](../src/app/app.config.ts) instala `provideEditorPlugins()`.
+2. [composition/editor-plugins.ts](../src/app/composition/editor-plugins.ts) reúne nodos y
+   herramientas. [composition/node-plugins.ts](../src/app/composition/node-plugins.ts) define
+   el catálogo de nodos. Estas son las entradas de producción que importan implementaciones.
+3. `PluginRegistryService` recibe `EDITOR_PLUGINS`. Sin ese provider, el catálogo está vacío.
+4. El registro valida IDs, versión del contrato y colisiones; crea un injector por plug-in.
+5. `resolve(token)` crea y conserva una instancia de la capacidad cuando se necesita.
+6. `unregister(id)` retira la definición, ejecuta `deactivate` y destruye el injector.
 
-1. **`DiagramPersistenceService`**: Gestiona el guardado periódico y manual del AST del diagrama, rastreo de cambios sucios (`isDirty`), autosave debounced y sincronización con PostgreSQL.
-2. **`DiagramHistoryService`**: Implementa el patrón **Command / Memento** para el soporte de **Deshacer (Undo)** y **Rehacer (Redo)** con pilas inmutables de estados en memoria.
-3. **`DiagramClipboardService`**: Proporciona copiar (`Ctrl+C`), cortar (`Ctrl+X`) y pegar (`Ctrl+V`) para nodos y relaciones seleccionadas, asignando nuevos UUIDs y calculando desplazamientos ortogonales.
-4. **`DiagramSelectionService`**: Administra el conjunto de nodos y conexiones seleccionadas actualmente (`selectedNodes`, `selectedConnections`), selección múltiple con Shift/Ctrl y selección en área (*marquee selection*).
+`activate`/`deactivate` son síncronos. El registro detecta ciclos de resolución; los consumers
+que retengan servicios deben finalizar su operación antes de desregistrar el proveedor.
+No hay carga remota ni descubrimiento automático de archivos por colocar una carpeta en `plugins/`.
 
-### 📦 Módulo 3: `spatial-engine/` (Motor Espacial, Geometría y Layout)
-Calcula métricas matemáticas 2D, transformaciones de cámara, enrutamiento y contención física:
+## Renderizado de extensiones
 
-1. **`DiagramCanvasGeometryService`**: Cálculos de cajas delimitadoras (*bounding boxes*), centros, intersecciones, distancias ortogonales y proyecciones de pantalla a canvas (`screenToCanvas`).
-2. **`DiagramCanvasDragService`**: Gestiona el arrastre fluido de nodos individuales o agrupaciones, aplicando restricciones de límites del lienzo.
-3. **`DiagramConnectionLayoutService`**: Calcula los puntos de anclaje geométrico entre nodos origen y destino (`f-connection`), aplicando enrutamiento ortogonal, directo, Bézier y redondeado.
-4. **`DiagramAssemblyConnectionService`**: Soporta la conexión de puertos e interfaces ensamble de componentes UML (`provided` / `required` socket & lollipop).
-5. **`DiagramContainmentService`**: Algoritmo de detección espacial de contención. Permite que las cajas de delimitación (`boundary_box`) y paquetes (`package`) detecten qué nodos están dentro de su área delimitadora, moviéndolos jerárquicamente en bloque al arrastrar el contenedor.
-6. **`DiagramAlignmentService`**: Algoritmos matemáticos de alineación (izquierda, centro, derecha, arriba, medio, abajo) y distribución equiespaciada horizontal/vertical.
-7. **`DiagramViewportService`**: Controla el zoom (0.2x a 3.0x), paneo (`panX`, `panY`), escala 1:1 y la función **Ajustar a la Vista (Fit View)** calculando el bounding box global.
+El canvas consulta `NodePluginRegistryService.forNode(node)` y entrega su `renderer`, injector
+e inputs a `PluginOutletDirective`. La directiva conserva el injector del elemento padre,
+necesario para que los conectores encuentren su `fNode`, y aplica el entorno del plug-in.
 
-### 📦 Módulo 4: `uml-domain/` (Dominio y Semántica UML)
-Encapsula la semántica UML formal, tipos de nodos, conexiones válidas y validación estructural:
+Las herramientas visuales se descubren por ID y slot: `ai-assistant/panel`,
+`code-generation/modal`, `user-guide/launcher` y los editores de `uml-language`.
+El host comprueba su disponibilidad antes de mostrarlas. Los plug-ins no buscan otros
+plug-ins por ID: sus colaboraciones se expresan con tokens de capacidades.
 
-1. **`DiagramNodeOperationsService`**: Operaciones CRUD sobre nodos del AST: creación, actualización de propiedades, atributos, métodos y eliminación en cascada de conexiones asociadas.
-2. **`DiagramNodeFactoryService`**: Factoría que instancia la estructura de datos correcta para cada tipo de nodo UML (clases, casos de uso, actores, robustez BCE, componentes, despliegue, paquetes).
-3. **`DiagramNodeResizeService`**: Gestiona el redimensionamiento dinámico interactivo con cálculo de dimensiones mínimas según el contenido y etiquetas.
-4. **`DiagramConnectionOperationsService`**: Validación semántica de conexiones UML (generalización, agregación, composición, asociación, dependencia, realización, mensaje de secuencia).
-5. **`DiagramSequenceActivationService`**: Gestiona la activación, anidamiento y cálculo de altura de los bloques de activación en líneas de vida para diagramas de Secuencia.
+El canvas puede arrancar sin extensiones. Si un documento contiene un nodo sin renderizador
+registrado, conserva los datos y muestra el fallback del host; no elimina el documento.
 
-### 📦 Módulo 5: `collaboration-ai-io/` (Colaboración, IA e Interoperabilidad)
-Comunicaciones externas en tiempo real, sincronización inteligente de IA y formatos de archivo:
+## Gobernanza y pruebas
 
-1. **`DiagramCollaborationCoordinatorService`**: Coordina la sesión multiusuario vía Socket.IO, sincroniza cursores remotos, solicita y libera bloqueos de nodos (`lockNode`, `unlockNode`) y renderiza indicadores de concurrencia.
-2. **`DiagramAiSyncService`**: Coordina la inyección de nodos generados por el asistente de IA o reconocidos por visión computacional en el lienzo con algoritmo de evasión de colisiones.
-3. **`DiagramExportService`**: Orquesta la exportación del lienzo a formatos visuales: PNG de alta densidad (2x / 3x) y BMP sin pérdida vía Web Workers.
-4. **`DiagramImportService`**: Carga y reconstruye diagramas a partir de archivos JSON o estructuras AST serializadas.
+[scripts/check-plugin-boundaries.mjs](../scripts/check-plugin-boundaries.mjs) analiza archivos
+TypeScript, incluidos specs, importaciones de tipos, alias, reexportaciones e imports dinámicos
+con ruta literal. Impide dependencias entre paquetes de plug-ins y referencias a `features/`
+desde Core, SDK y plug-ins. Además detecta comparaciones de la propiedad `nodeType` y switches
+sobre ese tipo fuera de plug-ins/composición en producción.
 
----
+El análisis no reemplaza la revisión semántica: no detecta todas las formas posibles de
+acoplamiento por cadenas ni toda lógica de formatos. Revisar esas reglas también al cambiar código.
 
-## 3. Patrón de Exportación Barrel (`index.ts`)
-
-Cada paquete contiene un archivo `index.ts` que exporta todos sus servicios:
-```typescript
-// services/orchestration/index.ts
-export * from './diagram-toolbar.service';
-export * from './diagram-hotkeys.service';
-// ...
-```
-
-Y la raíz `services/index.ts` re-exporta los 5 módulos:
-```typescript
-// services/index.ts
-export * from './orchestration';
-export * from './state-persistence';
-export * from './spatial-engine';
-export * from './uml-domain';
-export * from './collaboration-ai-io';
-```
-
-Esto permite a los componentes (`DiagramEditorComponent`, `DiagramCanvasComponent`) importar cualquier servicio limpiamente desde `'./services'` o `'../../services'` sin rutas relativas frágiles.
+Las pruebas en [composition/](../src/app/composition/) verifican el arranque sin plug-ins,
+extensiones desconocidas, conectores y providers, guardado sin herramientas opcionales e
+integración de exportación. Las pruebas de una implementación residen en su paquete.

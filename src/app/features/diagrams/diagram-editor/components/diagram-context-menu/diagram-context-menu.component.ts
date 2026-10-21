@@ -78,76 +78,132 @@ export class DiagramContextMenuComponent {
   @Output() resetView = new EventEmitter<void>();
   @Output() fitView = new EventEmitter<void>();
 
+  /**
+   * Cierra el menú contextual emitiendo el evento correspondiente.
+   */
   onClose(): void {
     this.close.emit();
   }
 
+  /**
+   * Ejecuta la acción de copiar elementos seleccionados y cierra el menú.
+   */
   onCopy(): void {
     this.copyNodes.emit();
     this.close.emit();
   }
 
+  /**
+   * Ejecuta la acción de cortar elementos seleccionados.
+   */
   onCut(): void {
     this.cutNodes.emit();
   }
 
+  /**
+   * Duplica los elementos seleccionados en el diagrama.
+   */
   onDuplicate(): void {
     this.duplicateNodes.emit();
   }
 
+  /**
+   * Pega los elementos del portapapeles en la posición del puntero o centro del visor.
+   * @param canvasPos Coordenadas relativas al lienzo (opcional).
+   */
   onPaste(canvasPos?: { x: number; y: number }): void {
     this.pasteNodes.emit(canvasPos);
     this.close.emit();
   }
 
+  /**
+   * Abre el modal de edición de propiedades para el nodo indicado.
+   * @param node Nodo UML a editar.
+   */
   onEditNode(node: UmlClassNode): void {
     this.editNode.emit(node);
     this.close.emit();
   }
 
+  /**
+   * Inicia el modo de renombrado en línea para el nodo especificado.
+   * @param nodeId Identificador del nodo.
+   */
   onRenameNode(nodeId: string): void {
     this.renameNode.emit(nodeId);
     this.close.emit();
   }
 
+  /**
+   * Aplica un nuevo color de fondo al nodo seleccionado.
+   * @param color Código hexadecimal o RGB del color.
+   */
   onSetColor(color: string): void {
     this.setNodeColor.emit(color);
     this.close.emit();
   }
 
+  /**
+   * Emite la orden de eliminación para los elementos seleccionados.
+   */
   onDelete(): void {
     this.deleteSelected.emit();
     this.close.emit();
   }
 
+  /**
+   * Abre el editor modal para la relación o conexión seleccionada.
+   * @param conn Conexión UML a editar.
+   */
   onEditConn(conn: UmlConnection): void {
     this.editConnection.emit(conn);
     this.close.emit();
   }
 
+  /**
+   * Invierte el origen y destino de la conexión seleccionada.
+   * @param conn Conexión UML a invertir.
+   */
   onReverseConn(conn: UmlConnection): void {
     this.reverseConnection.emit(conn);
   }
 
+  /**
+   * Cambia el estilo de trazado o routing de la conexión.
+   * @param conn Conexión afectada.
+   * @param lineStyle Nuevo estilo de línea.
+   */
   onSetLineStyle(conn: UmlConnection, lineStyle: UmlLineStyle): void {
     this.setConnectionLineStyle.emit({ connection: conn, lineStyle });
   }
 
+  /**
+   * Selecciona todos los nodos y elementos del diagrama actual.
+   */
   onSelectAll(): void {
     this.selectAll.emit();
     this.close.emit();
   }
 
+  /**
+   * Deselecciona todos los elementos en el lienzo.
+   */
   onDeselectAll(): void {
     this.deselectAll.emit();
     this.close.emit();
   }
 
+  /**
+   * Restablece el zoom al 100% y centra la vista en el origen.
+   */
   onResetView(): void {
     this.resetView.emit();
     this.close.emit();
   }
 
+  /**
+   * Ajusta el zoom y desplazamiento del lienzo para encuadrar todo el contenido.
+   */
   onFitView(): void {
     this.fitView.emit();
     this.close.emit();

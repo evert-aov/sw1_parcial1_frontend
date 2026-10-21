@@ -1,9 +1,18 @@
+import { PluginRegistryService } from '../../../../../core/plugins/plugin-registry.service';
+import { NodePluginRegistryService } from '../../../../../core/plugins/node-plugin-registry.service';
+import { inject } from '@angular/core';
 import { Injectable } from '@angular/core';
 import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
-import { ConnectionCascadeUtil } from '../../utils/connection-cascade.util';
+import { ConnectionCascadeUtil } from '../../../../../core/plugins/contracts/connection-cascade.util.contract';
 
 @Injectable({ providedIn: 'root' })
 export class DiagramAssemblyConnectionService {
+  private readonly registry = inject(PluginRegistryService);
+  private readonly nodePlugins = inject(NodePluginRegistryService);
+  /**
+   * Resuelve perezosamente las reglas de conexión y cascada provistas por el plug-in correspondiente.
+   */
+  private get cascadeRules() { return this.registry.resolve(ConnectionCascadeUtil); }
   /**
    * Resuelve el lado de conexión del nodo ('top' | 'right' | 'bottom' | 'left') según el ID del conector o defaultSide.
    */
@@ -31,10 +40,7 @@ export class DiagramAssemblyConnectionService {
     const w = node.isAnchor ? 0 : (nodeWidth || 200);
     const h = nodeHeight || 60;
     const bottomExtra =
-      node.nodeType === 'actor' ||
-      node.nodeType === 'boundary' ||
-      node.nodeType === 'control' ||
-      node.nodeType === 'entity'
+      this.nodePlugins.forNode(node)?.geometry.externalLabel
         ? 38 + Math.max(0, node.labelOffset?.y || 0)
         : 0;
 
@@ -112,8 +118,8 @@ export class DiagramAssemblyConnectionService {
     } catch (_) {}
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-    const sId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
-    const tId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
+    const sId = conn.sourceNodeId || this.cascadeRules.extractBaseNodeId(conn.sourceId);
+    const tId = conn.targetNodeId || this.cascadeRules.extractBaseNodeId(conn.targetId);
     const sNode = nodeMap.get(sId);
     const tNode = nodeMap.get(tId);
     if (!sNode || !tNode) return 0;

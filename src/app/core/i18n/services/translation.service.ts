@@ -81,6 +81,12 @@ export class TranslationService {
     return this.translate(key, params);
   }
 
+  /**
+   * Resuelve recursivamente una clave separada por puntos dentro del diccionario de traducciones.
+   * @param obj Objeto o diccionario de cadenas.
+   * @param path Ruta jerárquica (ej. 'auth.login.title').
+   * @returns Valor localizado o undefined si no existe la clave.
+   */
   private resolveKey(obj: any, path: string): any {
     if (!obj || !path) return undefined;
     const parts = path.split('.');
@@ -92,6 +98,10 @@ export class TranslationService {
     return current;
   }
 
+  /**
+   * Determina el idioma inicial del usuario leyendo localStorage o la configuración del navegador.
+   * @returns Idioma detectado ('es' o 'en').
+   */
   private getInitialLanguage(): SupportedLanguage {
     try {
       if (typeof localStorage !== 'undefined' && localStorage.getItem) {
@@ -112,6 +122,10 @@ export class TranslationService {
     return 'es';
   }
 
+  /**
+   * Actualiza el atributo lang del elemento html en el DOM.
+   * @param lang Código de idioma establecido.
+   */
   private updateHtmlLangAttribute(lang: SupportedLanguage): void {
     if (typeof document !== 'undefined' && document.documentElement) {
       document.documentElement.lang = lang;

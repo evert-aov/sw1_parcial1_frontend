@@ -28,7 +28,11 @@
     "dist:linux:prod:nix": "nix-shell --run 'npm run dist:linux:prod'",
     "dist:win": "npm run build:electron && electron-builder --win",
     "dist:mac": "npm run build:electron && electron-builder --mac",
-    "appimage:run": "nix-shell -p appimage-run --run \"appimage-run 'release/Diagramador UML-1.0.0.AppImage'\""
+    "appimage:run": "nix-shell -p appimage-run --run \"appimage-run 'release/Diagramador UML-1.0.0.AppImage'\"",
+    "check:architecture": "node scripts/check-plugin-boundaries.mjs",
+    "prebuild": "npm run check:architecture",
+    "test:architecture": "node --test scripts/check-plugin-boundaries.spec.mjs",
+    "pretest": "npm run test:architecture && npm run check:architecture"
   },
   "private": true,
   "packageManager": "npm@11.19.0",

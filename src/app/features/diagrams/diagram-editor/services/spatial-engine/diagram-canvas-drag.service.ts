@@ -1,8 +1,8 @@
-import { ChangeDetectorRef, ElementRef, Injectable } from '@angular/core';
+import { inject, ChangeDetectorRef, ElementRef, Injectable } from '@angular/core';
 import { FCanvasComponent, FZoomDirective } from '@foblex/flow';
 import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
 import { DiagramCanvasViewState } from '../../components/diagram-canvas/diagram-canvas.component';
-import { getNodeHeight, getNodeWidth } from '../../utils/node-metrics.util';
+import { NodeMetricsService } from '../../utils/node-metrics.util';
 
 /**
  * Servicio de interacción de arrastre local y cámara para el lienzo:
@@ -14,6 +14,7 @@ import { getNodeHeight, getNodeWidth } from '../../utils/node-metrics.util';
   providedIn: 'root',
 })
 export class DiagramCanvasDragService {
+  private readonly metrics = inject(NodeMetricsService);
   /**
    * Inicia una sesión de arrastre para la etiqueta libre de un nodo.
    *
@@ -238,8 +239,8 @@ export class DiagramCanvasDragService {
     for (const n of realNodes) {
       const x = n.position?.x || 0;
       const y = n.position?.y || 0;
-      const w = getNodeWidth(n);
-      const h = getNodeHeight(n);
+      const w = this.metrics.getNodeWidth(n);
+      const h = this.metrics.getNodeHeight(n);
       if (x < minX) minX = x;
       if (y < minY) minY = y;
       if (x + w > maxX) maxX = x + w;

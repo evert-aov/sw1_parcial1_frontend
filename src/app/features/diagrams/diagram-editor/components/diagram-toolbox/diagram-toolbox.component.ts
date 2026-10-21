@@ -21,9 +21,9 @@ import {
   UML_RELATION_TYPES,
   UML_LINE_STYLES,
 } from '../../../../../core/models/diagram.model';
-import { UML_SVG_COMPONENTS } from '../uml-svg';
-import { SHARED_DIAGRAM_UI_COMPONENTS } from '../shared-ui';
-import { TranslatePipe } from '../../../../../core/i18n';
+import { UML_SVG_COMPONENTS } from '../../../../../plugin-sdk/ui/uml-svg/index';
+import { SHARED_DIAGRAM_UI_COMPONENTS } from '../../../../../plugin-sdk/ui/shared-ui/index';
+import { TranslatePipe } from '../../../../../core/i18n/index';
 
 @Component({
   selector: 'app-diagram-toolbox',
@@ -75,14 +75,25 @@ export class DiagramToolboxComponent {
   readonly fitView = output<void>();
   readonly addClass = output<void>();
 
+  /**
+   * Activa el modo de puntero estándar en el lienzo del diagrama.
+   */
   onSelectPointer(): void {
     this.setPointerMode.emit();
   }
 
+  /**
+   * Emite la selección de un tipo de relación UML para comenzar a trazar aristas.
+   * @param type Tipo de relación UML seleccionado.
+   */
   onSelectRelation(type: UmlRelationshipType): void {
     this.selectRelationType.emit(type);
   }
 
+  /**
+   * Emite el cambio en el estilo de trazado o routing de las líneas.
+   * @param style Estilo de línea seleccionado.
+   */
   onSetLineStyle(style: UmlLineStyle): void {
     this.setDefaultLineStyle.emit(style);
   }

@@ -1,3 +1,4 @@
+import { inject } from '@angular/core';
 import { Injectable, signal } from '@angular/core';
 import { Subject, Subscription, debounceTime } from 'rxjs';
 import {
@@ -8,9 +9,8 @@ import {
   UmlRelationshipType,
 } from '../../../../../core/models/diagram.model';
 import {
-  EXPLICIT_SIZE_NODE_TYPES,
   UmlNodeNormalizerUtil,
-} from '../../utils/uml-node-normalizer.util';
+} from '../../../../../core/plugins/contracts/uml-node-normalizer.util.contract';
 
 export interface UmlDiagramDraft {
   diagramId: string;
@@ -29,6 +29,7 @@ export interface UmlDiagramDraft {
   providedIn: 'root',
 })
 export class DiagramPersistenceService {
+  private readonly normalizer = inject(UmlNodeNormalizerUtil);
   readonly hasUnsavedChanges = signal<boolean>(false);
   readonly saveSuccessMessage = signal<boolean>(false);
 
@@ -278,43 +279,7 @@ export class DiagramPersistenceService {
       const serverUpdated = serverUpdatedAt ? new Date(serverUpdatedAt).getTime() : 0;
       if (draft.timestamp && draft.timestamp > serverUpdated && draft.nodes?.length > 0) {
         const sanitizedDraftNodes: UmlClassNode[] = (draft.nodes || []).map((n: any) => {
-          const nodeType = UmlNodeNormalizerUtil.inferNodeType(n, { isSequence });
-          let name = n.name || '';
-          if (nodeType === 'boundary_box' && (name === 'ClassName' || !name.trim())) {
-            name = '.';
-          }
-          const nodeColor = UmlNodeNormalizerUtil.resolveNodeColor(
-            n.color,
-            nodeType,
-            n.stereotype,
-            getDefaultColor,
-          );
-          const isExplicitSizeNode = (EXPLICIT_SIZE_NODE_TYPES as readonly string[]).includes(nodeType);
-          const { defaultHeight } = UmlNodeNormalizerUtil.getDefaultDimensions(nodeType);
-          const draftH = nodeType === 'lifeline' ? 60 : n.height || n.customHeight || defaultHeight;
-          const rawX = n.position?.x ?? n.positionX;
-          const rawY = n.position?.y ?? n.positionY;
-          const numX = typeof rawX === 'number' ? rawX : parseFloat(rawX);
-          const numY = typeof rawY === 'number' ? rawY : parseFloat(rawY);
-          const posX = Number.isFinite(numX) ? Math.round(numX) : 50;
-          const posY = Number.isFinite(numY) ? Math.round(numY) : 50;
-
-          return {
-            ...n,
-            nodeType,
-            name,
-            position: { x: posX, y: posY },
-            height: draftH,
-            customHeight: n.customHeight || (isExplicitSizeNode ? draftH : undefined),
-            customWidth: n.customWidth || (isExplicitSizeNode ? n.width || 220 : undefined),
-            isCustomSize:
-              n.isCustomSize !== undefined
-                ? n.isCustomSize
-                : isExplicitSizeNode || (!!draftH && nodeType === 'class'),
-            color: nodeColor,
-            stereotype: n.stereotype || null,
-            labelOffset: undefined,
-          };
+          return this.normalizer.normalizeDraftNode(n, isSequence, getDefaultColor);
         });
 
         return {
@@ -385,97 +350,6 @@ export class DiagramPersistenceService {
     normalizeDataType?: (type: string) => string,
     normalizeReturnType?: (type: string) => string,
   ): { nodes: UmlClassNode[]; connections: UmlConnection[] } {
-    const isSequence = diagram.type === 'sequence';
-
-    const mappedNodes: UmlClassNode[] = (diagram.nodes || []).map((n: any) => {
-      const nodeType = UmlNodeNormalizerUtil.inferNodeType(n, {
-        isSequence,
-        diagramType: diagram.type,
-      });
-      const isBce = nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity';
-      const isLifeline = nodeType === 'lifeline';
-      const isExplicitSizeNode = (EXPLICIT_SIZE_NODE_TYPES as readonly string[]).includes(nodeType);
-      const hasExplicitDbHeight = !!(n.height && n.height > 0);
-      const hasCustomFlag =
-        !!n.isCustomSize ||
-        (!!n.customHeight && n.customHeight > 0) ||
-        (!!n.customWidth && n.customWidth > 0);
-      const isManuallyResized =
-        hasCustomFlag ||
-        isExplicitSizeNode ||
-        (hasExplicitDbHeight &&
-          (nodeType === 'class' || isBce || nodeType === 'actor' || nodeType === 'use_case'));
-
-      let nodeName = n.name || '';
-      if (nodeType === 'boundary_box' && (nodeName === 'ClassName' || !nodeName.trim())) {
-        nodeName = '.';
-      }
-
-      const nodeColor = UmlNodeNormalizerUtil.resolveNodeColor(
-        n.color,
-        nodeType,
-        n.stereotype,
-        getDefaultColor,
-      );
-      const { defaultWidth, defaultHeight } = UmlNodeNormalizerUtil.getDefaultDimensions(nodeType);
-      const resolvedWidth = n.width || defaultWidth;
-      const resolvedHeight = isLifeline ? 60 : n.height || defaultHeight;
-
-      const rawX = n.position?.x ?? n.positionX;
-      const rawY = n.position?.y ?? n.positionY;
-      const numX = typeof rawX === 'number' ? rawX : parseFloat(rawX);
-      const numY = typeof rawY === 'number' ? rawY : parseFloat(rawY);
-      const posX = Number.isFinite(numX) ? Math.round(numX) : 50;
-      const posY = Number.isFinite(numY) ? Math.round(numY) : 50;
-
-      return {
-        id: n.id,
-        name: nodeName,
-        position: { x: posX, y: posY },
-        width: resolvedWidth,
-        height: resolvedHeight,
-        customWidth: isManuallyResized ? n.customWidth || resolvedWidth : undefined,
-        customHeight: isManuallyResized ? n.customHeight || resolvedHeight : undefined,
-        isCustomSize: isManuallyResized,
-        color: nodeColor,
-        isAnchor: n.isAnchor,
-        nodeType,
-        stereotype: n.stereotype || null,
-        assocMainConnId: n.assocMainConnId || undefined,
-        activations: n.activations || [],
-        attributes: (n.attributes || []).map((a: any) => ({
-          name: a.name,
-          type: normalizeDataType ? normalizeDataType(a.type) : a.type,
-          orderIndex: a.orderIndex,
-          nullable: a.nullable !== undefined ? a.nullable : true,
-          unique: a.unique !== undefined ? a.unique : false,
-          length: a.length !== undefined ? a.length : 255,
-          defaultValue: a.defaultValue ?? a.default ?? null,
-          default: a.default ?? a.defaultValue ?? null,
-        })),
-        methods: (n.methods || []).map((m: any) => ({
-          name: m.name,
-          parameters: m.parameters,
-          returnType: normalizeReturnType ? normalizeReturnType(m.returnType) : m.returnType,
-        })),
-      };
-    });
-
-    const mappedConnections: UmlConnection[] = (diagram.connections || []).map((c: any) => ({
-      id: c.id,
-      sourceNodeId: c.sourceNodeId || undefined,
-      targetNodeId: c.targetNodeId || undefined,
-      sourceId: c.sourceId,
-      targetId: c.targetId,
-      type: c.type as UmlRelationshipType,
-      lineStyle: sanitizeLineStyle(c.lineStyle, isSequence ? 'straight' : 'segment'),
-      name: c.name || undefined,
-      sourceMultiplicity: isSequence ? '' : c.sourceMultiplicity || '',
-      targetMultiplicity: isSequence ? '' : c.targetMultiplicity || '',
-      assocAnchorNodeId: c.assocAnchorNodeId || undefined,
-      messages: c.messages || [],
-    }));
-
-    return { nodes: mappedNodes, connections: mappedConnections };
+    return this.normalizer.mapServerDiagramToLocal(diagram, getDefaultColor, normalizeDataType, normalizeReturnType);
   }
 }

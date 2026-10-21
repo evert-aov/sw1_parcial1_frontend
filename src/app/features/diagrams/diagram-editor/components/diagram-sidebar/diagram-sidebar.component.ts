@@ -1,3 +1,5 @@
+import { NodePluginRegistryService } from '../../../../../core/plugins/node-plugin-registry.service';
+import { PluginOutletDirective } from '../../../../../core/plugins/plugin-outlet.directive';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -63,11 +65,10 @@ import {
   UmlRelationTypeItem,
   UmlRelationshipType,
 } from '../../../../../core/models/diagram.model';
-import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
-import { UML_SVG_COMPONENTS } from '../uml-svg';
-import { UML_WEBGL_COMPONENTS } from '../uml-webgl';
-import { SHARED_DIAGRAM_UI_COMPONENTS } from '../shared-ui';
-import { UmlNodeNormalizerUtil } from '../../utils/uml-node-normalizer.util';
+import { TranslatePipe, TranslationService } from '../../../../../core/i18n/index';
+import { UML_SVG_COMPONENTS } from '../../../../../plugin-sdk/ui/uml-svg/index';
+import { SHARED_DIAGRAM_UI_COMPONENTS } from '../../../../../plugin-sdk/ui/shared-ui/index';
+import { UmlNodeNormalizerUtil } from '../../../../../core/plugins/contracts/uml-node-normalizer.util.contract';
 import {
   computeDroppedDiagramOrder,
   computeMovedDiagramOrder,
@@ -99,12 +100,12 @@ const RELATION_TYPES_BY_DIAGRAM: Partial<Record<DiagramType, UmlRelationTypeItem
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    PluginOutletDirective,
     CommonModule,
     FormsModule,
     NgIconComponent,
     TranslatePipe,
     ...UML_SVG_COMPONENTS,
-    ...UML_WEBGL_COMPONENTS,
     ...SHARED_DIAGRAM_UI_COMPONENTS,
   ],
   providers: [
@@ -151,6 +152,10 @@ const RELATION_TYPES_BY_DIAGRAM: Partial<Record<DiagramType, UmlRelationTypeItem
   templateUrl: './diagram-sidebar.component.html',
 })
 export class DiagramSidebarComponent {
+  private readonly normalizer = inject(UmlNodeNormalizerUtil);
+  readonly nodePlugins = inject(NodePluginRegistryService);
+  readonly addPluginNode = output<{ type: string; stereotype?: string }>();
+  readonly pluginTools = computed(() => this.nodePlugins.plugins().flatMap(plugin => plugin.tools.filter(tool => tool.diagramTypes.includes(this.activeDiagramType())).map(tool => ({ ...tool, type: plugin.nodeTypes[0] }))));
   readonly DiagramType = DiagramType;
   protected readonly translationService = inject(TranslationService);
 
@@ -262,38 +267,80 @@ export class DiagramSidebarComponent {
     });
   }
 
+  /**
+   * Traduce una clave utilizando el servicio de i18n o devuelve el texto alternativo si no existe traducción.
+   * @param key Clave de internacionalización.
+   * @param fallback Texto predeterminado.
+   * @returns Traducción o texto por defecto.
+   */
   private translateWithFallback(key: string, fallback: string): string {
     this.translationService.currentLang();
     const translated = this.translationService.translate(key);
     return translated !== key ? translated : fallback;
   }
 
+  /**
+   * Obtiene la etiqueta traducida para un tipo de relación UML.
+   * @param rel Ítem de relación UML.
+   * @returns Nombre de la relación para la UI.
+   */
   getRelationLabel(rel: UmlRelationTypeItem): string {
     return this.translateWithFallback(`editor.toolbox.${rel.id}`, rel.label);
   }
 
+  /**
+   * Obtiene la descripción explicativa de un tipo de relación UML para tooltips.
+   * @param rel Ítem de relación UML.
+   * @returns Texto descriptivo.
+   */
   getRelationDescription(rel: UmlRelationTypeItem): string {
     return this.translateWithFallback(`editor.toolbox.${rel.id}Desc`, rel.description);
   }
 
+  /**
+   * Obtiene el nombre del estilo de línea (directa, ortogonal, bezier, etc.).
+   * @param id Identificador del estilo de línea.
+   * @param fallback Texto por defecto si no hay traducción.
+   * @returns Etiqueta localizada.
+   */
   getLineStyleLabel(id: string, fallback: string): string {
     return this.translateWithFallback(`editor.toolbox.${id}`, fallback);
   }
 
+  /**
+   * Obtiene la etiqueta legible de un tipo de diagrama UML.
+   * @param dt Objeto o identificador del tipo de diagrama.
+   * @returns Nombre localizado del tipo de diagrama.
+   */
   getDiagramTypeLabel(dt: DiagramTypeItem | DiagramType | string): string {
     const id = typeof dt === 'string' ? dt : dt.id;
     const fallback = typeof dt === 'object' ? dt.label : id;
     return this.translateWithFallback(`editor.explorer.folders.${id}`, fallback);
   }
 
+  /**
+   * Obtiene el nombre de la carpeta virtual para un tipo de diagrama en el explorador.
+   * @param dt Ítem del tipo de diagrama.
+   * @returns Nombre de carpeta traducido.
+   */
   getDiagramTypeFolderName(dt: DiagramTypeItem): string {
     return this.translateWithFallback(`editor.explorer.folders.${dt.id}`, dt.folderName);
   }
 
+  /**
+   * Obtiene el nombre legible para un tipo de nodo en el árbol del explorador.
+   * @param nodeType Tipo de nodo UML ('class', 'actor', 'component', etc.).
+   * @returns Etiqueta formateada.
+   */
   getNodeTypeLabel(nodeType: string): string {
     return this.translateWithFallback(`editor.explorer.nodeTypes.${nodeType}`, nodeType);
   }
 
+  /**
+   * Alterna la expansión o colapso del nodo de un diagrama en el explorador de proyecto.
+   * @param diagramId Identificador del diagrama a alternar.
+   * @param event Evento del ratón.
+   */
   toggleDiagramExpanded(diagramId: string, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.expandedDiagrams.set({
@@ -302,23 +349,45 @@ export class DiagramSidebarComponent {
     });
   }
 
+  /**
+   * Verifica si un diagrama tiene su lista de nodos desplegada en el árbol.
+   * @param diagramId Identificador del diagrama.
+   * @returns Verdadero si está expandido.
+   */
   isDiagramExpanded(diagramId: string): boolean {
     const map = this.expandedDiagrams();
     return map[diagramId] !== undefined ? map[diagramId] : diagramId === this.currentDiagramId();
   }
 
+  /**
+   * Obtiene la lista de nodos válidos correspondientes a un diagrama del proyecto.
+   * @param diag DTO del diagrama.
+   * @returns Arreglo de nodos excluyendo anclas de routing.
+   */
   getNodesForDiagram(diag: DiagramDto): any[] {
     const source = diag.id === this.currentDiagramId() ? this.currentNodes() : diag.nodes;
     return (source || []).filter((n) => !n.isAnchor);
   }
 
+  /**
+   * Comprueba si un tipo de nodo es compatible con el tipo del diagrama actualmente abierto.
+   * @param nodeType Tipo de nodo.
+   * @param _sourceDiagramType Tipo del diagrama de procedencia.
+   * @returns Verdadero si puede ser insertado en el diagrama actual.
+   */
   isNodeTypeCompatibleWithCurrent(
     nodeType?: string,
     _sourceDiagramType?: DiagramType | string
   ): boolean {
-    return UmlNodeNormalizerUtil.isNodeTypeCompatible(nodeType, this.activeDiagramType());
+    return this.normalizer.isNodeTypeCompatible(nodeType, this.activeDiagramType());
   }
 
+  /**
+   * Construye el texto de ayuda o tooltip contextual al pasar el ratón sobre un nodo en el explorador.
+   * @param diag Diagrama contenedor.
+   * @param node Elemento o nodo inspeccionado.
+   * @returns Texto descriptivo de la acción posible (copiar, duplicar o aviso de incompatibilidad).
+   */
   getCopyTooltip(diag: DiagramDto, node: any): string {
     this.translationService.currentLang();
     const typeLabel = this.getNodeTypeLabel(node.nodeType);
@@ -339,6 +408,12 @@ export class DiagramSidebarComponent {
     });
   }
 
+  /**
+   * Emite la solicitud de copia o duplicación de un nodo del explorador hacia el diagrama activo.
+   * @param diag Diagrama de procedencia.
+   * @param node Nodo a copiar.
+   * @param event Evento del ratón.
+   */
   onCopyNode(diag: DiagramDto, node: any, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
@@ -349,12 +424,22 @@ export class DiagramSidebarComponent {
     });
   }
 
+  /**
+   * Gestiona el clic en un nodo del explorador: si pertenece al diagrama activo lo selecciona, si no lo copia.
+   * @param diag Diagrama contenedor.
+   * @param node Nodo pulsado.
+   * @param event Evento del ratón.
+   */
   onNodeItemClick(diag: DiagramDto, node: any, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     if (diag.id === this.currentDiagramId()) this.selectNode.emit(node.id);
     else this.onCopyNode(diag, node);
   }
 
+  /**
+   * Gestiona accesos rápidos por teclado en el explorador, como F2 para renombrar.
+   * @param event Evento de pulsación de teclado.
+   */
   onExplorerKeyDown(event: KeyboardEvent): void {
     if (this.activeTab() !== 'explorer' || this.isReadOnly() || !this.isOpen()) return;
     if (event.key === 'F2') {
@@ -369,6 +454,11 @@ export class DiagramSidebarComponent {
     }
   }
 
+  /**
+   * Activa el modo de edición en línea del nombre de un diagrama.
+   * @param diag Diagrama a renombrar.
+   * @param event Evento del ratón opcional.
+   */
   startRenameDiagram(diag: DiagramDto, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     if (this.isReadOnly()) return;
@@ -376,6 +466,10 @@ export class DiagramSidebarComponent {
     this.editingDiagramName.set(diag.name);
   }
 
+  /**
+   * Confirma y emite el nuevo nombre asignado al diagrama en el explorador.
+   * @param diagId Identificador del diagrama modificado.
+   */
   saveRenameDiagram(diagId: string): void {
     const newName = this.editingDiagramName().trim();
     if (newName && this.editingDiagramId() === diagId) {
@@ -384,25 +478,59 @@ export class DiagramSidebarComponent {
     this.editingDiagramId.set(null);
   }
 
+  /**
+   * Cancela la edición en línea del nombre del diagrama sin guardar cambios.
+   */
   cancelRenameDiagram(): void {
     this.editingDiagramId.set(null);
   }
 
+  /**
+   * Emite la solicitud de eliminación de un diagrama del proyecto.
+   * @param diag Diagrama a eliminar.
+   * @param event Evento de clic.
+   */
   onDeleteDiagram(diag: DiagramDto, event: MouseEvent): void {
     event.stopPropagation();
     if (!this.isReadOnly()) this.deleteDiagram.emit(diag.id);
   }
 
+  /**
+   * Emite el cambio de tipo de diagrama UML activo.
+   * @param type Nuevo tipo de diagrama.
+   */
   onSelectDiagramType(type: DiagramType): void { this.diagramTypeChange.emit(type); }
+
+  /**
+   * Activa el modo de selección y puntero general en el lienzo.
+   */
   onSelectPointer(): void { this.setPointerMode.emit(); }
+
+  /**
+   * Selecciona una herramienta de relación para enlazar elementos.
+   * @param type Tipo de relación UML a dibujar.
+   */
   onSelectRelation(type: UmlRelationshipType): void { this.selectRelationType.emit(type); }
+
+  /**
+   * Establece el estilo de trazado predeterminado para las nuevas conexiones.
+   * @param style Estilo de enrutamiento ('segment', 'orthogonal', etc.).
+   */
   onSetLineStyle(style: UmlLineStyle): void { this.setDefaultLineStyle.emit(style); }
 
+  /**
+   * Alterna la visibilidad de una carpeta de categoría de diagrama en el árbol del explorador.
+   * @param type Tipo de diagrama correspondiente a la carpeta.
+   */
   toggleFolder(type: DiagramType): void {
     const curr = this.expandedFolders();
     this.expandedFolders.set({ ...curr, [type]: !curr[type] });
   }
 
+  /**
+   * Inicia el arrastre interactivo para redimensionar el ancho del panel lateral.
+   * @param event Evento inicial mousedown.
+   */
   onStartResize(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
@@ -413,12 +541,19 @@ export class DiagramSidebarComponent {
     document.body.style.cursor = 'col-resize';
   }
 
+  /**
+   * Actualiza dinámicamente el ancho del panel lateral mientras se arrastra el separador.
+   * @param event Evento mousemove global.
+   */
   onWindowMouseMove(event: MouseEvent): void {
     if (!this.isResizing()) return;
     const delta = event.clientX - this.resizeStartX;
     this.sidebarWidth.set(Math.min(Math.max(220, this.resizeStartWidth + delta), 750));
   }
 
+  /**
+   * Finaliza la operación de redimensionado del panel lateral y guarda la preferencia de ancho.
+   */
   onWindowMouseUp(): void {
     if (!this.isResizing()) return;
     this.isResizing.set(false);
@@ -427,16 +562,30 @@ export class DiagramSidebarComponent {
     saveSidebarWidth(this.sidebarWidth());
   }
 
+  /**
+   * Restablece el ancho del panel lateral a su dimensión predeterminada (280px).
+   * @param event Evento del ratón.
+   */
   resetWidth(event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.sidebarWidth.set(280);
     saveSidebarWidth(280);
   }
 
+  /**
+   * Comprueba si la carpeta de una categoría de diagramas está expandida.
+   * @param type Tipo de diagrama consultado.
+   * @returns Verdadero si está desplegada.
+   */
   isFolderExpanded(type: DiagramType): boolean {
     return !!this.expandedFolders()[type];
   }
 
+  /**
+   * Obtiene la lista ordenada de diagramas de un tipo específico respetando el orden personalizado.
+   * @param type Categoría de diagrama UML.
+   * @returns Lista ordenada de diagramas.
+   */
   getDiagramsForType(type: DiagramType): DiagramDto[] {
     return sortDiagramsByCustomOrder(
       this.diagramsByType().get(type) || [],
@@ -444,6 +593,13 @@ export class DiagramSidebarComponent {
     );
   }
 
+  /**
+   * Reordena un diagrama desplazándolo hacia arriba o abajo dentro de su categoría.
+   * @param diagramId Identificador del diagrama a mover.
+   * @param direction Sentido del desplazamiento ('up' o 'down').
+   * @param type Tipo de diagrama correspondiente.
+   * @param event Evento del ratón.
+   */
   moveDiagram(
     diagramId: string,
     direction: 'up' | 'down',
@@ -464,10 +620,22 @@ export class DiagramSidebarComponent {
     }
   }
 
+  /**
+   * Configura la información de transferencia al arrastrar una herramienta desde la caja de herramientas al lienzo.
+   * @param nodeType Tipo de nodo UML.
+   * @param event Evento DragEvent del navegador.
+   * @param stereotype Estereotipo asociado (opcional).
+   */
   onToolboxDragStart(nodeType: string, event: DragEvent, stereotype?: string): void {
     if (!this.isReadOnly()) setToolboxDragTransfer(nodeType, event, stereotype);
   }
 
+  /**
+   * Configura la información de transferencia al arrastrar un nodo desde el explorador al lienzo.
+   * @param diag Diagrama origen.
+   * @param node Nodo arrastrado.
+   * @param event Evento DragEvent.
+   */
   onNodeDragStart(diag: DiagramDto, node: any, event: DragEvent): void {
     if (this.isReadOnly()) return;
     event.stopPropagation();
@@ -480,10 +648,18 @@ export class DiagramSidebarComponent {
     );
   }
 
+  /**
+   * Limpia el identificador del nodo que estaba siendo arrastrado.
+   */
   onNodeDragEnd(): void {
     this.draggedNodeId.set(null);
   }
 
+  /**
+   * Inicia la operación de arrastrar un diagrama para reordenarlo en el explorador.
+   * @param diag Diagrama en movimiento.
+   * @param event Evento DragEvent.
+   */
   onDiagramDragStart(diag: DiagramDto, event: DragEvent): void {
     if (this.isReadOnly()) return;
     if (event.dataTransfer) {
@@ -493,6 +669,11 @@ export class DiagramSidebarComponent {
     this.draggedDiagramId.set(diag.id);
   }
 
+  /**
+   * Calcula la posición visual ('above' o 'below') al arrastrar un diagrama sobre otro en la lista.
+   * @param diag Diagrama destino sobre el que se sobrevuela.
+   * @param event Evento DragEvent.
+   */
   onDiagramDragOver(diag: DiagramDto, event: DragEvent): void {
     if (this.isReadOnly()) return;
     const draggedId = this.draggedDiagramId();
@@ -506,6 +687,11 @@ export class DiagramSidebarComponent {
     this.dragOverPosition.set(event.clientY < rect.top + rect.height / 2 ? 'above' : 'below');
   }
 
+  /**
+   * Limpia el indicador de destino al salir del área de un diagrama durante el arrastre.
+   * @param diag Diagrama que se deja de sobrevolar.
+   * @param _event Evento DragEvent.
+   */
   onDiagramDragLeave(diag: DiagramDto, _event: DragEvent): void {
     if (this.dragOverDiagramId() === diag.id) {
       this.dragOverDiagramId.set(null);
@@ -513,6 +699,12 @@ export class DiagramSidebarComponent {
     }
   }
 
+  /**
+   * Aplica el nuevo orden al soltar un diagrama sobre otra posición de la lista y lo persiste.
+   * @param targetDiag Diagrama destino.
+   * @param type Tipo de diagrama.
+   * @param event Evento DragEvent.
+   */
   onDiagramDrop(targetDiag: DiagramDto, type: DiagramType, event: DragEvent): void {
     if (this.isReadOnly()) return;
     event.preventDefault();
@@ -530,25 +722,43 @@ export class DiagramSidebarComponent {
     this.clearDragState();
   }
 
+  /**
+   * Limpia los estados de arrastre al culminar o cancelar el drag and drop de un diagrama.
+   */
   onDiagramDragEnd(): void {
     this.clearDragState();
   }
 
+  /**
+   * Restablece las señales de control de arrastre de diagramas a sus valores nulos.
+   */
   private clearDragState(): void {
     this.draggedDiagramId.set(null);
     this.dragOverDiagramId.set(null);
     this.dragOverPosition.set(null);
   }
 
+  /**
+   * Emite la selección de un diagrama para ser cargado y mostrado en el editor.
+   * @param diagramId Identificador del diagrama seleccionado.
+   */
   onSelectDiagram(diagramId: string): void {
     this.selectDiagram.emit(diagramId);
   }
 
+  /**
+   * Emite la solicitud de creación de un diagrama preconfigurado para una carpeta específica.
+   * @param type Tipo de diagrama sugerido.
+   * @param event Evento de clic.
+   */
   onCreateInFolder(type: DiagramType, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.openCreateDiagram.emit(type);
   }
 
+  /**
+   * Emite la solicitud de creación de un diagrama genérico sin tipo preseleccionado.
+   */
   onCreateDiagramGeneral(): void {
     this.openCreateDiagram.emit(null);
   }

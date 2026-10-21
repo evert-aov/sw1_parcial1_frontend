@@ -13,6 +13,12 @@ import { TranslationService } from '../services/translation.service';
 export class TranslatePipe implements PipeTransform {
   private readonly translationService = inject(TranslationService);
 
+  /**
+   * Transforma una clave de traducción en el texto localizado en el idioma actual, interpolando parámetros opcionales.
+   * @param key Clave jerárquica de internacionalización (ej. 'auth.login.title').
+   * @param params Diccionario opcional de variables a interpolar.
+   * @returns Cadena traducida.
+   */
   transform(key: string, params?: Record<string, string | number>): string {
     if (!key) return '';
     // Consumir el signal currentLang para registrar la dependencia reactiva

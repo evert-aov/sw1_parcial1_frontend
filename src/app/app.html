@@ -1,4 +1,4 @@
 <router-outlet />
-<app-user-guide-chatbot />
+<ng-container [appPluginOutlet]="plugins.component('user-guide', 'launcher')" [pluginEnvironment]="plugins.environmentFor('user-guide')" />
 <app-confirm-modal />
 <app-toast-notification />

@@ -272,7 +272,8 @@
             </button>
 
             <!-- Manual Interactivo -->
-            <button
+            @if (plugins.find('user-guide')) {
+<button
               (click)="openGuide()"
               [title]="'guide.openTooltip' | translate"
               class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-13.5 group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]"
@@ -291,6 +292,7 @@
                 {{ 'guide.manual' | translate }}
               </span>
             </button>
+}
           </div>
           <div
             class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
@@ -305,7 +307,8 @@
         >
           <div class="flex items-center gap-1.5 flex-1 justify-center">
             <!-- Exportar Imagen BMP -->
-            <button
+            @if (plugins.find('image-export') && plugins.find('bmp-encoder')) {
+<button
               (click)="handleExportBmp()"
               [class.opacity-50]="multiUserBlocked()"
               [title]="
@@ -329,9 +332,11 @@
                 Export BMP
               </span>
             </button>
+}
 
             <!-- Exportar Imagen PNG -->
-            <button
+            @if (plugins.find('image-export')) {
+<button
               (click)="handleExportPng()"
               [class.opacity-50]="multiUserBlocked()"
               [title]="
@@ -355,6 +360,7 @@
                 Export PNG
               </span>
             </button>
+}
 
             <!-- Guardar / Save (Como en la sección Diagram Image de EA) -->
             @if (diagramId() && !isReadOnly()) {
@@ -414,7 +420,8 @@
         >
           <div class="flex items-center gap-2 flex-1 justify-center">
             <!-- Botón Exportar XMI 2.1 (Principal CASE) -->
-            <button
+            @if (plugins.find('xmi')) {
+<button
               (click)="handleExportXmi()"
               [class.opacity-50]="multiUserBlocked()"
               [title]="
@@ -445,6 +452,7 @@
                 Export XMI
               </span>
             </button>
+}
 
             <!-- Botón Importar XMI 2.1 (Principal CASE) -->
             <button
@@ -521,7 +529,8 @@
           class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
         >
           <div class="flex items-center gap-2 flex-1 justify-center">
-            <button
+            @if (plugins.component('code-generation', 'modal')) {
+<button
               (click)="openSpringBoot.emit()"
               [title]="'appbar.generateTooltip' | translate"
               class="bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-[11px] font-bold px-3 py-1.5 rounded-md flex items-center gap-2 border border-emerald-400/40 shadow-xs cursor-pointer transition-all hover:scale-102"
@@ -553,6 +562,7 @@
                 </svg>
               </div>
             </button>
+}
           </div>
           <div
             class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
@@ -1045,7 +1055,8 @@
           class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
         >
           <div class="flex items-center gap-2 flex-1 justify-center">
-            <button
+            @if (plugins.component('code-generation', 'modal')) {
+<button
               (click)="openSpringBoot.emit()"
               [title]="'appbar.generateTooltip' | translate"
               class="bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-xs font-bold px-3 py-1.5 rounded flex items-center gap-2 border border-emerald-400/40 shadow-xs cursor-pointer transition-all hover:scale-102"
@@ -1077,6 +1088,7 @@
                 </svg>
               </div>
             </button>
+}
           </div>
           <div
             class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
@@ -1235,7 +1247,8 @@
           class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
         >
           <div class="flex items-center gap-1.5 flex-1 justify-center">
-            <button
+            @if (plugins.find('xmi')) {
+<button
               (click)="handleExportXmi()"
               [class.opacity-50]="multiUserBlocked()"
               class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-12.5"
@@ -1249,6 +1262,7 @@
                 >XMI 2.1</span
               >
             </button>
+}
             <button
               (click)="triggerFileInput()"
               [class.opacity-50]="multiUserBlocked()"
@@ -1263,7 +1277,8 @@
                 >Import</span
               >
             </button>
-            <button
+            @if (plugins.find('image-export') && plugins.find('bmp-encoder')) {
+<button
               (click)="handleExportBmp()"
               [class.opacity-50]="multiUserBlocked()"
               class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-12.5"
@@ -1277,6 +1292,7 @@
                 >BMP</span
               >
             </button>
+}
           </div>
           <div
             class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
@@ -1290,12 +1306,14 @@
           class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
         >
           <div class="flex items-center gap-2 flex-1 justify-center">
-            <button
+            @if (plugins.component('code-generation', 'modal')) {
+<button
               (click)="openSpringBoot.emit()"
               class="bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-[10.5px] font-bold px-2.5 py-1 rounded flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <span>{{ 'appbar.generateCode' | translate }}</span>
             </button>
+}
           </div>
           <div
             class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"

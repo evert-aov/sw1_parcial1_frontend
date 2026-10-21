@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { heroSun, heroMoon } from '@ng-icons/heroicons/outline';
 import { ThemeService, ThemeMode } from '../../services/theme.service';
-import { TranslatePipe } from '../../i18n';
+import { TranslatePipe } from '../../i18n/index';
 
 @Component({
   selector: 'app-theme-toggle',
@@ -46,10 +46,17 @@ export class ThemeToggleComponent {
   readonly variant = input<'dark' | 'light' | 'auto'>('auto');
   readonly isDarkMode = this.themeService.isDarkMode;
 
+  /**
+   * Aplica un tema visual específico ('light' o 'dark').
+   * @param theme Modo de tema deseado.
+   */
   setTheme(theme: ThemeMode): void {
     this.themeService.setTheme(theme);
   }
 
+  /**
+   * Alterna entre el tema claro y oscuro de la aplicación.
+   */
   toggleTheme(): void {
     this.themeService.toggleTheme();
   }

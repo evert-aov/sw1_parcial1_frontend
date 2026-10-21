@@ -1,3 +1,6 @@
+import { RELATIONSHIP_RULES } from '../../../core/plugins/contracts/relationship-rules.contract';
+import { PluginRegistryService } from '../../../core/plugins/plugin-registry.service';
+import { PluginOutletDirective, PluginOutputEvent } from '../../../core/plugins/plugin-outlet.directive';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -41,9 +44,8 @@ import { DiagramService } from '../../../core/services/diagram.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { XmiService } from '../../../core/services/xmi.service';
-import { TranslatePipe, TranslationService } from '../../../core/i18n';
-import { AiAssistantPanelComponent } from './components/ai-assistant-panel/ai-assistant-panel.component';
+import { XmiService } from '../../../core/plugins/contracts/xmi.service.contract';
+import { TranslatePipe, TranslationService } from '../../../core/i18n/index';
 import { CreateDiagramModalComponent } from './components/create-diagram-modal/create-diagram-modal.component';
 import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
 import { DiagramCanvasComponent } from './components/diagram-canvas/diagram-canvas.component';
@@ -51,14 +53,11 @@ import { DiagramContextMenuComponent } from './components/diagram-context-menu/d
 import { DiagramSidebarComponent } from './components/diagram-sidebar/diagram-sidebar.component';
 import { DiagramStatusbarComponent } from './components/diagram-statusbar/diagram-statusbar.component';
 import { DiagramTabsComponent } from './components/diagram-tabs/diagram-tabs.component';
-import { EditConnectionModalComponent } from './components/edit-connection-modal/edit-connection-modal.component';
-import { EditNodeModalComponent } from './components/edit-node-modal/edit-node-modal.component';
 import { JsonModalComponent } from './components/json-modal/json-modal.component';
-import { SpringBootModalComponent } from './components/spring-boot-modal/spring-boot-modal.component';
 import { UserProfileModalComponent } from './components/user-profile-modal/user-profile-modal.component';
 import {
   AlignmentDirection,
-  DiagramAiSyncService,
+  DiagramDocumentSyncService,
   DiagramAlignmentService,
   DiagramAssemblyConnectionService,
   DiagramCanvasInteractionService,
@@ -85,23 +84,11 @@ import {
   DiagramToolbarService,
   DiagramViewportService,
   DistributionDirection,
-} from './services';
-import {
-  getDefaultColorForNodeType as getDefaultColorForNodeTypeUtil,
-  getNodeHeight as getNodeHeightUtil,
-  getNodeWidth as getNodeWidthUtil,
-} from './utils/node-metrics.util';
+} from './services/index';
+import { NodeMetricsService } from './utils/node-metrics.util';
 import { resolveUserRoleInProject } from './utils/project-role.util';
-import { UmlNodeNormalizerUtil } from './utils/uml-node-normalizer.util';
+import { UmlNodeNormalizerUtil } from '../../../core/plugins/contracts/uml-node-normalizer.util.contract';
 
-/** Estructura de proyecto exportable/importable en formato JSON. */
-export interface UmlDiagramProject {
-  version: string;
-  name: string;
-  defaultLineStyle?: UmlLineStyle;
-  nodes: UmlClassNode[];
-  connections: UmlConnection[];
-}
 
 /**
  * Componente principal del Editor de Diagramas UML.
@@ -112,6 +99,7 @@ export interface UmlDiagramProject {
   selector: 'app-diagram-editor',
   standalone: true,
   imports: [
+    PluginOutletDirective,
     CommonModule,
     FormsModule,
     NgIconComponent,
@@ -121,12 +109,8 @@ export interface UmlDiagramProject {
     DiagramSidebarComponent,
     DiagramCanvasComponent,
     DiagramStatusbarComponent,
-    AiAssistantPanelComponent,
     DiagramContextMenuComponent,
-    EditNodeModalComponent,
-    EditConnectionModalComponent,
     JsonModalComponent,
-    SpringBootModalComponent,
     CreateDiagramModalComponent,
     UserProfileModalComponent,
   ],
@@ -142,6 +126,37 @@ export interface UmlDiagramProject {
   },
 })
 export class DiagramEditorComponent implements OnInit, OnDestroy {
+  private readonly normalizer = inject(UmlNodeNormalizerUtil);
+  private readonly metrics = inject(NodeMetricsService);
+  /**
+   * Procesa eventos emitidos por el plugin del modal de edición de nodo (guardar o cerrar).
+   * @param event Evento de salida del plugin con nombre y valor.
+   */
+  onNodeEditorEvent(event: PluginOutputEvent): void {
+    if (event.name === 'close') this.closeEditNodeModal();
+    if (event.name === 'save') this.onSaveEditedNode(event.value as UmlClassNode);
+  }
+
+  /**
+   * Procesa eventos emitidos por el plugin del modal de edición de relaciones (guardar, eliminar o cerrar).
+   * @param event Evento de salida del plugin con nombre y valor.
+   */
+  onConnectionEditorEvent(event: PluginOutputEvent): void {
+    if (event.name === 'close') this.closeEditConnModal();
+    if (event.name === 'save') this.onSaveEditedConnection(event.value as UmlConnection);
+    if (event.name === 'delete') this.removeConnection(event.value as string);
+  }
+
+  /**
+   * Procesa eventos emitidos por el asistente de inteligencia artificial para mutar el diagrama o cerrar el panel.
+   * @param event Evento de salida del plugin de IA.
+   */
+  onAiPluginEvent(event: PluginOutputEvent): void {
+    if (event.name === 'closePanel') this.isAiPanelOpen.set(false);
+    if (event.name === 'applyMutation') this.onAiMutation(event.value as { nodes: UmlClassNode[]; connections: UmlConnection[] });
+  }
+  readonly plugins = inject(PluginRegistryService);
+  private readonly relationshipRules = inject(RELATIONSHIP_RULES);
   readonly route = inject(ActivatedRoute);
   readonly router = inject(Router);
   readonly cdr = inject(ChangeDetectorRef);
@@ -152,7 +167,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly translationService = inject(TranslationService);
   readonly collaborationService = inject(CollaborationService);
   readonly confirmDialog = inject(ConfirmDialogService);
-  readonly xmiService = inject(XmiService, { optional: true });
+
+  /** Obtiene la instancia del servicio XMI si el plugin se encuentra registrado en el sistema. */
+  get xmiService(): XmiService | null { return this.plugins.has(XmiService) ? this.plugins.resolve(XmiService) : null; }
   readonly toastService = inject(ToastService, { optional: true });
 
   readonly viewportService = inject(DiagramViewportService);
@@ -169,7 +186,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly assemblyConnectionService = inject(DiagramAssemblyConnectionService);
   readonly sequenceActivationService = inject(DiagramSequenceActivationService);
   readonly connectionLayoutService = inject(DiagramConnectionLayoutService);
-  readonly aiSyncService = inject(DiagramAiSyncService);
+  readonly documentSyncService = inject(DiagramDocumentSyncService);
   readonly persistenceService = inject(DiagramPersistenceService);
   readonly exportService = inject(DiagramExportService);
   readonly importService = inject(DiagramImportService);
@@ -811,7 +828,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   /** Construye el payload canónico AST para guardar el diagrama en el backend. */
   buildSaveAstPayload(): SaveDiagramAstRequest {
-    const exp = (this as any).diagramExportService || this.exportService || new DiagramExportService();
+    const exp = (this as any).diagramExportService || this.exportService;
     return exp.buildSaveAstPayload(
       this.activeDiagramType(),
       this.defaultLineStyle(),
@@ -848,19 +865,19 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   /** Normaliza un tipo de dato de atributo al catálogo predefinido. */
   normalizeDataType(type: string): string {
-    const sync = (this as any).diagramAiSyncService || this.aiSyncService || new DiagramAiSyncService();
+    const sync = (this as any).diagramDocumentSyncService || this.documentSyncService;
     return sync.normalizeDataType(type);
   }
 
   /** Normaliza un tipo de retorno de método al catálogo predefinido. */
   normalizeReturnType(type: string): string {
-    const sync = (this as any).diagramAiSyncService || this.aiSyncService || new DiagramAiSyncService();
+    const sync = (this as any).diagramDocumentSyncService || this.documentSyncService;
     return sync.normalizeReturnType(type);
   }
 
   /** Normaliza un mensaje de secuencia o comunicación delegando en `UmlNodeNormalizerUtil`. */
   normalizeUmlMessage(m: any, defaultSeq = '1'): UmlMessage {
-    return UmlNodeNormalizerUtil.normalizeUmlMessage(m, defaultSeq);
+    return this.normalizer.normalizeUmlMessage(m, defaultSeq);
   }
 
   /** Recalcula la numeración jerárquica de mensajes en diagramas de secuencia. */
@@ -879,14 +896,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   /** Devuelve el color predeterminado asociado a un tipo de nodo y estereotipo. */
   getDefaultColorForNodeType(nodeType?: string | null, stereotype?: string | null): string {
-    return getDefaultColorForNodeTypeUtil(nodeType, stereotype);
+    return this.metrics.getDefaultColorForNodeType(nodeType, stereotype);
   }
 
   /** Calcula el ancho visual estimado de un nodo UML. */
-  getNodeWidth(node: UmlClassNode): number { return getNodeWidthUtil(node); }
+  getNodeWidth(node: UmlClassNode): number { return this.metrics.getNodeWidth(node); }
 
   /** Calcula el alto visual estimado de un nodo UML. */
-  getNodeHeight(node: UmlClassNode): number { return getNodeHeightUtil(node); }
+  getNodeHeight(node: UmlClassNode): number { return this.metrics.getNodeHeight(node); }
 
   /** Obtiene el nombre legible de un nodo por su ID. */
   getNodeName(nodeId: string): string {
@@ -900,7 +917,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   /** Determina si un tipo de relación pertenece a diagramas de secuencia. */
   isSequenceConnection(relType: UmlRelationshipType | null): boolean {
-    return DiagramEditorContextUtil.isSequenceRelation(relType, this.activeDiagramType());
+    return this.relationshipRules.isSequenceConnection(relType, this.activeDiagramType());
   }
 
   /** Calcula los conectores óptimos de salida y entrada entre dos nodos. */
@@ -967,7 +984,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.pushSnapshot();
     this.defaultLineStyle.set(style);
     const updated = this.connections().map((c) =>
-      DiagramEditorContextUtil.isSequenceRelation(c.type, this.activeDiagramType())
+      this.relationshipRules.isSequenceConnection(c.type, this.activeDiagramType())
         ? c
         : { ...c, lineStyle: style },
     );
@@ -1039,8 +1056,8 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   /** Crea y valida un nodo del tipo especificado en el diagrama. */
-  private createNodeOfType(nodeType: string, customPos?: { x: number; y: number }, stereotype?: string | null): void {
-    const ops = (this as any).diagramNodeOpsService || this.nodeOps || new DiagramNodeOperationsService();
+  createNodeOfType(nodeType: string, customPos?: { x: number; y: number }, stereotype?: string | null): void {
+    const ops = (this as any).diagramNodeOpsService || this.nodeOps;
     const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
     const newNode = ops.createValidatedNode(nodeType, {
       isReadOnly: this.isReadOnly(),
@@ -1603,7 +1620,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   /** Sanitiza las conexiones entrantes desde el cliente o asistente IA. */
   sanitizeClientConnections(conns: any[], targetNodes: UmlClassNode[]): UmlConnection[] {
-    const sync = (this as any).diagramAiSyncService || this.aiSyncService || new DiagramAiSyncService();
+    const sync = (this as any).diagramDocumentSyncService || this.documentSyncService;
     return sync.sanitizeClientConnections(
       conns,
       targetNodes,
@@ -1622,7 +1639,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   onApplyAiDiagramChanges(changes: { nodes: any[]; connections: any[] }): void {
     if (this.isReadOnly()) return;
     this.pushSnapshot();
-    const { cleanNodes, cleanConns } = this.aiSyncService.processAiMutation({
+    const { cleanNodes, cleanConns } = this.documentSyncService.processDocumentMutation({
       targetNodes: changes.nodes || [],
       targetConns: changes.connections || [],
       activeDiagramType: this.activeDiagramType(),
@@ -1634,7 +1651,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     });
     this.nodes.set(cleanNodes);
     this.connections.set(cleanConns);
-    this.aiSyncService.schedulePostMutationRedraw({
+    this.documentSyncService.schedulePostMutationRedraw({
       updateEndpoints: () => this.updateConnectionEndpoints(),
       resetCanvas: () => this.resetView(),
       fitView: () => this.fitView(),

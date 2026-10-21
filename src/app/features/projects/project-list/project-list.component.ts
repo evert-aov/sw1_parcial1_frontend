@@ -1,3 +1,4 @@
+import { PluginRegistryService } from '../../../core/plugins/plugin-registry.service';
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
@@ -26,11 +27,11 @@ import {
 
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { UserGuideService } from '../../../core/services/user-guide.service';
+import { UserGuideService } from '../../../core/plugins/contracts/user-guide.contract';
 import { Project, ProjectRole } from '../../../core/models/project.model';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { UserProfileModalComponent } from '../../diagrams/diagram-editor/components/user-profile-modal/user-profile-modal.component';
-import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
+import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n/index';
 import { ThemeToggleComponent } from '../../../core/components/theme-toggle/theme-toggle.component';
 
 @Component({
@@ -75,12 +76,20 @@ export class ProjectListComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   readonly projectService = inject(ProjectService);
   readonly authService = inject(AuthService);
-  readonly guideService = inject(UserGuideService);
+  readonly plugins = inject(PluginRegistryService);
+  /**
+   * Obtiene la instancia del servicio de guía interactiva si se encuentra registrado.
+   */
+  get guideService(): UserGuideService | undefined { return this.plugins.has(UserGuideService) ? this.plugins.resolve(UserGuideService) : undefined; }
   private readonly router = inject(Router);
   private readonly confirmDialogService = inject(ConfirmDialogService);
 
+  /**
+   * Abre el asistente interactivo o guía de usuario.
+   * @param prompt Mensaje o consulta inicial opcional.
+   */
   openGuide(prompt?: string): void {
-    this.guideService.openGuide(prompt);
+    this.guideService?.openGuide(prompt);
   }
 
   // Filtro de búsqueda
@@ -133,6 +142,9 @@ export class ProjectListComponent implements OnInit {
     );
   });
 
+  /**
+   * Cierra la sesión activa del usuario autenticado.
+   */
   logout(): void {
     this.authService.logout();
   }
@@ -142,11 +154,17 @@ export class ProjectListComponent implements OnInit {
   readonly editErrorMessageKey = signal<string | null>(null);
   readonly editCustomErrorMessage = signal<string | null>(null);
 
+  /**
+   * Inicializa la vista cargando la lista de proyectos del usuario.
+   */
   ngOnInit(): void {
     this.projectService.loadProjects().subscribe({ error: () => {} });
   }
 
   // --- CREAR PROYECTO ---
+  /**
+   * Abre el modal de creación de proyectos reiniciando los valores del formulario.
+   */
   openCreateModal(): void {
     this.createErrorMessageKey.set(null);
     this.createCustomErrorMessage.set(null);
@@ -160,12 +178,18 @@ export class ProjectListComponent implements OnInit {
     this.isCreateModalOpen.set(true);
   }
 
+  /**
+   * Cierra el modal de creación de proyectos.
+   */
   closeCreateModal(): void {
     this.isCreateModalOpen.set(false);
     this.createErrorMessageKey.set(null);
     this.createCustomErrorMessage.set(null);
   }
 
+  /**
+   * Valida y envía la solicitud para crear un nuevo proyecto.
+   */
   onCreateSubmit(): void {
     this.createErrorMessageKey.set(null);
     this.createCustomErrorMessage.set(null);
@@ -191,6 +215,11 @@ export class ProjectListComponent implements OnInit {
   }
 
   // --- EDITAR PROYECTO ---
+  /**
+   * Abre el modal de edición cargando los datos del proyecto seleccionado.
+   * @param project Proyecto a editar.
+   * @param event Evento del ratón opcional.
+   */
   openEditModal(project: Project, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.editErrorMessageKey.set(null);
@@ -206,6 +235,9 @@ export class ProjectListComponent implements OnInit {
     this.isEditModalOpen.set(true);
   }
 
+  /**
+   * Cierra el modal de edición de proyectos.
+   */
   closeEditModal(): void {
     this.isEditModalOpen.set(false);
     this.selectedProjectForEdit.set(null);
@@ -213,6 +245,9 @@ export class ProjectListComponent implements OnInit {
     this.editCustomErrorMessage.set(null);
   }
 
+  /**
+   * Valida y persiste las modificaciones del proyecto seleccionado.
+   */
   onEditSubmit(): void {
     const project = this.selectedProjectForEdit();
     this.editErrorMessageKey.set(null);
@@ -238,6 +273,10 @@ export class ProjectListComponent implements OnInit {
     });
   }
 
+  /**
+   * Redirige al editor de diagramas para el proyecto indicado.
+   * @param project Proyecto seleccionado.
+   */
   openDiagram(project: Project): void {
     this.router.navigate(['/diagram'], {
       queryParams: { projectId: project.id, projectName: project.name },
@@ -245,6 +284,11 @@ export class ProjectListComponent implements OnInit {
   }
 
   // --- GESTIÓN DE MIEMBROS ---
+  /**
+   * Abre el modal para administrar los colaboradores y miembros del proyecto.
+   * @param project Proyecto seleccionado.
+   * @param event Evento del ratón.
+   */
   openMembersModal(project: Project, event?: MouseEvent): void {
     if (event) event.stopPropagation();
     this.selectedProjectForMembers.set(project);
@@ -252,11 +296,17 @@ export class ProjectListComponent implements OnInit {
     this.isMembersModalOpen.set(true);
   }
 
+  /**
+   * Cierra el modal de gestión de miembros.
+   */
   closeMembersModal(): void {
     this.isMembersModalOpen.set(false);
     this.selectedProjectForMembers.set(null);
   }
 
+  /**
+   * Envía la invitación para agregar un nuevo miembro al proyecto.
+   */
   onAddMemberSubmit(): void {
     const project = this.selectedProjectForMembers();
     if (!project || this.addMemberForm.invalid) {
@@ -276,6 +326,10 @@ export class ProjectListComponent implements OnInit {
     });
   }
 
+  /**
+   * Solicita confirmación y elimina un colaborador del proyecto.
+   * @param userId Identificador del usuario a remover.
+   */
   async onRemoveMember(userId: string): Promise<void> {
     const project = this.selectedProjectForMembers();
     if (!project) return;
@@ -299,6 +353,11 @@ export class ProjectListComponent implements OnInit {
     }
   }
 
+  /**
+   * Actualiza el rol de permisos de un miembro en el proyecto.
+   * @param userId Identificador del usuario.
+   * @param newRole Nuevo rol asignado ('VIEWER', 'EDITOR', 'ADMIN').
+   */
   onRoleChange(userId: string, newRole: ProjectRole): void {
     const project = this.selectedProjectForMembers();
     if (!project) return;
@@ -314,6 +373,11 @@ export class ProjectListComponent implements OnInit {
     });
   }
 
+  /**
+   * Solicita confirmación al usuario y procede a eliminar el proyecto de forma irreversible.
+   * @param project Proyecto a eliminar.
+   * @param event Evento del ratón.
+   */
   async onDeleteProject(project: Project, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     const confirmed = await this.confirmDialogService.confirm({
@@ -328,6 +392,9 @@ export class ProjectListComponent implements OnInit {
     }
   }
 
+  /**
+   * Abre el modal de configuración de perfil del usuario actual.
+   */
   openProfileModal(): void {
     this.isProfileModalOpen.set(true);
   }

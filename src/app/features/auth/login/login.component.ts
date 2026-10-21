@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
+import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n/index';
 import { ThemeToggleComponent } from '../../../core/components/theme-toggle/theme-toggle.component';
 
 @Component({
@@ -25,10 +25,16 @@ export class LoginComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
+  /**
+   * Alterna la visibilidad del texto de la contraseña en el campo de formulario.
+   */
   togglePassword(): void {
     this.showPassword.update((val) => !val);
   }
 
+  /**
+   * Valida el formulario e inicia la sesión del usuario redirigiendo a la vista de proyectos.
+   */
   onSubmit(): void {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();

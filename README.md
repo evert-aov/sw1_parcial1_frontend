@@ -1,8 +1,10 @@
 # 🎨 UML/ER Collaborative Studio - Frontend
 
-Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow (`@foblex/flow`)** y **Tailwind CSS v4**. Ofrece un entorno integral para el modelado visual colaborativo de diagramas de clases UML, asistencia de Inteligencia Artificial en caliente (**Google Gemini**), interoperabilidad con **Enterprise Architect (XMI 2.1)** y previsualización interactiva de código generado para **Spring Boot** y **Flutter**.
+La arquitectura actual del editor y los pasos para crear plug-ins están en [Arquitectura microkernel](MICROKERNEL.md).
 
-> 📘 **Documentación Oficial para Desarrolladores**: Para consultar la arquitectura técnica detallada, el lienzo de nodos modulares, sincronización colaborativa y suite de componentes reutilizables, revisa la [**Guía Integral del Desarrollador del Frontend**](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/guia-desarrollador/README.md).
+Aplicación web moderna y reactiva construida con **Angular 22**, **Foblex Flow (`@foblex/flow`)** y **Tailwind CSS v4**. Ofrece un entorno integral para el modelado visual colaborativo de diagramas de clases UML, asistencia de Inteligencia Artificial en caliente (**Google Gemini**), interoperabilidad con **Enterprise Architect (XMI 2.1)** y previsualización interactiva de código generado para **Spring Boot** y **Flutter**.
+
+> 📘 **Documentación Oficial para Desarrolladores**: Para consultar la arquitectura técnica detallada, el lienzo de nodos modulares, sincronización colaborativa y suite de componentes reutilizables, revisa la [**Guía Integral del Desarrollador del Frontend**](guia-desarrollador/README.md).
 
 ---
 
@@ -123,7 +125,7 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
 
 ## 🛠 Stack Tecnológico
 
-* **Framework:** Angular 22+ (Standalone Components, Signals & Reactive Forms).
+* **Framework:** Angular 22 (Standalone Components, Signals & Reactive Forms).
 * **Motor de Diagramación:** `@foblex/flow` v19 + `@foblex/2d`.
 * **Renderizado SVG:** Componentes vectoriales personalizados para Actores, Jacobson Robustness (Boundary, Control, Entity), Activaciones y Marcadores UML.
 * **Colaboración:** `socket.io-client`.
@@ -138,7 +140,7 @@ Aplicación web moderna y reactiva construida con **Angular 22+**, **Foblex Flow
 Toda la configuración de conexión con el backend y websockets está **centralizada en un único lugar** mediante los entornos de Angular:
 
 ### 1. Modo Desarrollo (`DEV`)
-Edita el archivo [`src/environments/environment.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/environments/environment.ts):
+Edita el archivo [`src/environments/environment.ts`](src/environments/environment.ts):
 
 ```typescript
 export const environment = {
@@ -150,7 +152,7 @@ export const environment = {
 ```
 
 ### 2. Modo Producción (`PROD`)
-Edita el archivo [`src/environments/environment.prod.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/environments/environment.prod.ts):
+Edita el archivo [`src/environments/environment.prod.ts`](src/environments/environment.prod.ts):
 
 ```typescript
 export const environment = {
@@ -170,85 +172,44 @@ export const environment = {
 ```text
 frontend/
 ├── src/
-│   ├── main.ts
-│   ├── styles.css                    # Configuración de Tailwind CSS v4 y temas
-│   ├── environments/                 # Configuración centralizada de backend
-│   │   ├── environment.ts            # Entorno de desarrollo (DEV)
-│   │   └── environment.prod.ts       # Entorno de producción (PROD)
-│   └── app/
-│       ├── app.config.ts             # Proveedores globales (Router, HttpClient con interceptores)
-│       ├── app.routes.ts             # Rutas de la aplicación y guards de autenticación
-│       ├── core/                     # Servicios singleton, componentes globales y lógica compartida
-│       │   ├── components/           # Componentes globales reutilizables
-│       │   │   ├── theme-toggle/     # Selector de tema (Claro / Oscuro)
-│       │   │   └── user-guide-chatbot/ # 🤖 Guía interactiva & Manual de usuario con Chatbot
-│       │   ├── guards/               # AuthGuard
-│       │   ├── interceptors/         # jwtInterceptor
-│       │   ├── models/               # Modelos TypeScript (diagram, project, user, auth)
-│       │   └── services/             # Servicios HTTP, WebSocket y Guía
-│       │       ├── auth.service.ts
-│       │       ├── diagram.service.ts
-│       │       ├── project.service.ts
-│       │       ├── collaboration.service.ts
-│       │       ├── ai-assistant.service.ts
-│       │       ├── code-generator.service.ts
-│       │       ├── user-guide.service.ts
-│       │       └── xmi.service.ts
-│       └── features/                 # Módulos de funcionalidad (UI)
-│           ├── auth/                 # Login y Registro
-│           ├── projects/             # Dashboard de proyectos y gestión de miembros
-│           └── diagrams/             # Editor principal de diagramas
-│               └── diagram-editor/
-│                   ├── components/
-│                   │   ├── ai-assistant-panel/
-│                   │   ├── diagram-appbar/
-│                   │   ├── diagram-canvas/
-│                   │   │   ├── nodes/        # Nodos especializados por tipo UML (Bajo Acoplamiento)
-│                   │   │   │   ├── uml-actor-node/
-│                   │   │   │   ├── uml-class-node/
-│                   │   │   │   ├── uml-component-node/
-│                   │   │   │   ├── uml-deployment-node/
-│                   │   │   │   ├── uml-lifeline-node/
-│                   │   │   │   ├── uml-package-node/
-│                   │   │   │   ├── uml-robustness-node/
-│                   │   │   │   └── uml-use-case-node/
-│                   │   │   ├── diagram-canvas.component.html
-│                   │   │   └── diagram-canvas.component.ts
-│                   │   ├── diagram-context-menu/  # Menú contextual flotante interactivo
-│                   │   ├── diagram-floating-label/# Etiquetas flotantes con offset arrastrable
-│                   │   ├── diagram-tabs/          # Barra de pestañas multi-diagrama
-│                   │   ├── diagram-toolbox/       # Paleta contextual filtrada por tipo de diagrama
-│                   │   ├── diagram-sidebar/       # Panel lateral multi-diagrama UML
-│                   │   ├── shared-ui/             # Suite de componentes UI reutilizables (Zoom, LineRouting, ToolButtons)
-│                   │   ├── uml-svg/               # Componentes de renderizado vectorial SVG (UML 2.5)
-│                   │   ├── uml-webgl/             # Canvas interactivos WebGL acelerados por GPU
-│                   │   ├── spring-boot-modal/
-│                   │   ├── user-profile-modal/
-│                   │   ├── xmi-import-modal/
-│                   │   └── xmi-versions-modal/
-│                   ├── directives/
-│                   │   └── autofocus-input.directive.ts # Directiva de foco automático para edición in-place
-│                   ├── services/                  # Servicios de Dominio Especializados (Alta Cohesión)
-│                   │   ├── diagram-ai-sync.service.ts
-│                   │   ├── diagram-alignment.service.ts
-│                   │   ├── diagram-clipboard.service.ts
-│                   │   ├── diagram-collaboration-coordinator.service.ts # WebSocket y exclusión mutua
-│                   │   ├── diagram-connection-layout.service.ts
-│                   │   ├── diagram-containment.service.ts
-│                   │   ├── diagram-export.service.ts
-│                   │   ├── diagram-history.service.ts
-│                   │   ├── diagram-hotkeys.service.ts
-│                   │   ├── diagram-import.service.ts
-│                   │   ├── diagram-modal.service.ts
-│                   │   ├── diagram-node-factory.service.ts
-│                   │   ├── diagram-persistence.service.ts
-│                   │   └── diagram-viewport.service.ts
-│                   ├── diagram-editor.icons.ts    # Iconografía HeroIcons optimizada para tree-shaking
-│                   ├── diagram-editor.component.html
-│                   └── diagram-editor.component.ts
+│   ├── app/
+│   │   ├── app.config.ts          # Angular 22 zoneless y provideEditorPlugins()
+│   │   ├── app.routes.ts          # Router con hash y guards
+│   │   ├── core/
+│   │   │   ├── plugins/           # Registro, outlet, contratos y tokens
+│   │   │   ├── models/            # AST y UmlDiagramProject
+│   │   │   ├── services/          # Sesión, HTTP base, colaboración y tema
+│   │   │   └── i18n/              # Traducciones es/en
+│   │   ├── composition/           # Catálogos concretos y pruebas de integración
+│   │   ├── plugin-sdk/
+│   │   │   ├── geometry/          # Layout compartido de conexiones
+│   │   │   ├── ui/                # Controles, SVG y etiquetas flotantes
+│   │   │   └── diagram-node-factory.service.ts
+│   │   ├── plugins/
+│   │   │   ├── uml-class-node/
+│   │   │   ├── uml-actor-node/
+│   │   │   ├── uml-use-case-node/
+│   │   │   ├── uml-package-node/
+│   │   │   ├── uml-robustness-node/
+│   │   │   ├── uml-lifeline-node/
+│   │   │   ├── uml-component-node/
+│   │   │   ├── uml-deployment-node/
+│   │   │   ├── uml-language/      # Reglas UML y sincronización de documentos
+│   │   │   ├── document-io/       # JSON y coordinación de formatos
+│   │   │   ├── xmi/
+│   │   │   ├── image-export/
+│   │   │   ├── bmp-encoder/
+│   │   │   ├── code-generation/
+│   │   │   ├── ai-assistant/
+│   │   │   └── user-guide/
+│   │   └── features/              # Auth, proyectos y host del editor
+│   ├── environments/             # Desarrollo, producción y Electron
+│   └── styles.css
+├── guia-desarrollador/            # Guías de Angular 22 y microkernel
+├── scripts/                      # Verificador AST y sus pruebas
+├── MICROKERNEL.md
 ├── angular.json
-├── tsconfig.json
-├── vitest.config.ts
+├── main.js                       # Proceso principal de Electron
 └── package.json
 ```
 
@@ -256,8 +217,8 @@ frontend/
 
 ## 📋 Requisitos Previos
 
-* **Node.js**: Versión `20.x` o `22.x`.
-* **npm**: Versión `10.x` o superior.
+* **Node.js**: Compatible con los engines del Angular instalado. Angular CLI 22.1.6 declara `^22.22.3 || ^24.15.0 || >=26.0.0`.
+* **npm**: `packageManager` declara `npm@11.19.0`. Este checkout no contiene lockfile.
 * **Backend**: Backend API ejecutándose (por defecto en `http://localhost:4000`).
 
 ---
@@ -328,7 +289,7 @@ La aplicación cuenta con soporte nativo de escritorio mediante **Electron**, pe
 ### ❄️ NixOS (Linux Declarativo)
 
 > [!NOTE]
-> En NixOS, los binarios FHS estándar precompilados de Electron descargados por `npm` en `node_modules` no encuentran librerías dinámicas del sistema (`libnspr4.so`, `libnss3.so`, etc.). El proyecto ya incluye un [`shell.nix`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/shell.nix) configurado para resolver esto automáticamente.
+> En NixOS, los binarios FHS estándar precompilados de Electron descargados por `npm` en `node_modules` no encuentran librerías dinámicas del sistema (`libnspr4.so`, `libnss3.so`, etc.). El proyecto ya incluye un [`shell.nix`](shell.nix) configurado para resolver esto automáticamente.
 
 #### Flujo Recomendado en NixOS:
 Simplemente entra al entorno interactivo de Nix:
@@ -371,7 +332,7 @@ Si no deseas abrir un sub-shell, puedes usar los scripts directos `:nix`:
 Cuando tu backend esté desplegado en un servidor o dominio accesible:
 
 1. **Configurar la URL de tu backend de producción:**
-   Edita [`src/environments/environment.prod.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/environments/environment.prod.ts) con las URLs reales de tu API y WebSockets:
+   Edita [`src/environments/environment.prod.ts`](src/environments/environment.prod.ts) con las URLs reales de tu API y WebSockets:
    ```typescript
    export const environment = {
      production: true,
@@ -431,59 +392,35 @@ Cuando tu backend esté desplegado en un servidor o dominio accesible:
 
 ## 🧩 Módulos y Componentes Clave
 
-### 🏛️ Arquitectura Modular (Bajo Acoplamiento + Alta Cohesión)
-El editor de diagramas ha sido reestructurado desde un archivo monolítico de más de 5,000 líneas hacia un ecosistema desacoplado y altamente cohesivo guiado por principios de arquitectura limpia:
+### Arquitectura microkernel
 
-1. **Orquestador Principal (`DiagramEditorComponent`)**:
-   - Actúa estrictamente como coordinador de alto nivel del ciclo de vida del diagrama, orquestando las señales reactivas del canvas, la barra de herramientas y los paneles laterales.
-   - Reducción drástica de complejidad delegando responsabilidades a servicios inyectables e interfaces bien tipadas.
+El Core System mantiene el host del editor, canvas genérico, motor espacial, viewport,
+historial, selección y pestañas. Las extensiones aportan comportamiento mediante
+`PluginDefinition`, `NodePlugin`, contratos de capacidades y `PluginRegistryService`.
 
-2. **Capa de Nodos Especializados (`components/diagram-canvas/nodes/`)**:
-   - **`UmlClassNodeComponent`**: Clases, interfaces, enumeraciones, atributos tipados, modificadores y métodos.
-   - **`UmlPackageNodeComponent`**: Paquetes UML con pestañas superiores y soporte nativo para recuadros agrupadores (`boundary_box`) en diagramas de capas y componentes.
-   - **`UmlDeploymentNodeComponent`**: Nodos físicos y virtuales con prisma 3D oblicuo conforme al estándar UML 2.5 (`node`, `device`, `executionEnvironment`).
-   - **`UmlComponentNodeComponent`**: Subsistemas y componentes ejecutables con iconografía incrustada.
-   - **`UmlActorNodeComponent`**: Actores vectoriales calibrados con líneas de vida opcionales para análisis.
-   - **`UmlLifelineNodeComponent`**: Líneas de vida en diagramas de secuencia con especificaciones de activación temporal.
-   - **`UmlUseCaseNodeComponent`**: Casos de uso elípticos con soporte para estereotipos `«include»` y `«extend»`.
-   - **`UmlRobustnessNodeComponent`**: Objetos de análisis BCE de Jacobson (Boundary, Control, Entity) con dimensiones calibradas.
-   - **Estilos de Host Flexibles (`host`)**: Todos los componentes de nodo cuentan con `host: { class: 'w-full h-full flex flex-col flex-1 min-h-0 min-w-0' }`, eliminando el comportamiento `display: inline` nativo de los custom elements de Angular y garantizando que el recuadro visual responda al 100% de la geometría redimensionada en el canvas.
-   - **Sincronización Geométrica 3D**: Nodos de despliegue con cálculo unificado (`isDeploymentNode` y `getDeploymentHeight`) que sincroniza milimétricamente las caras superior y lateral derecha SVG con la cara frontal principal.
+- **Host**: `DiagramEditorComponent` coordina servicios y el canvas monta renderizadores
+  mediante `PluginOutletDirective`, sin importar clases de nodos concretas.
+- **Nodos**: 13 definiciones agrupadas en ocho paquetes `plugins/uml-*-node/`. Cada descriptor
+  define fabricación, geometría, herramientas e inputs/outputs de su renderer standalone.
+- **Reglas UML**: `plugins/uml-language/` contiene operaciones, portapapeles, activaciones,
+  normalización, sincronización de documentos y editores de propiedades.
+- **Herramientas**: JSON, XMI, imágenes, BMP, generación de código, IA y guía interactiva
+  viven en sus propios paquetes. Colaboran mediante tokens, sin imports entre plug-ins.
+- **SDK**: `plugin-sdk/` comparte factoría, geometría, SVG, etiquetas y controles de UI.
+- **Composición**: `composition/` reúne las implementaciones y aloja sus pruebas de integración.
 
-3. **Servicios de Dominio Desacoplados (`services/`)**:
-   - **`DiagramCollaborationCoordinatorService`**: Gestión aislada de la coordinación WebSocket multiusuario, cursores remotos, salas Socket.io y bloqueo de exclusión mutua de nodos (`NodeLock`).
-   - **`DiagramClipboardService`**: Operaciones de portapapeles (copiar, cortar, pegar) con validación estricta de compatibilidad entre tipos de diagramas y offset automático de pegado.
-   - **`DiagramNodeFactoryService`**: Fábrica estandarizada de creación de nodos para los 9 tipos de diagramas UML con dimensiones, colores y estereotipos predeterminados.
-   - **`DiagramExportService`**: Exportación de diagramas a imágenes PNG de alta resolución, BMP y estructuras AST limpias para persistencia.
-   - **`DiagramAiSyncService`**: Sincronización bidireccional y normalización de diagramas generados o modificados por el Copilot IA.
-   - **`DiagramHistoryService`**: Pila de deshacer/rehacer (*Undo/Redo*) con estados inmutables en memoria.
-   - **`DiagramHotkeysService`**: Mapeo centralizado de atajos de teclado (`Ctrl+Z`, `Ctrl+Y`, `Ctrl+C`, `Ctrl+V`, `Del`, `Ctrl+S`, `Ctrl++`, `Ctrl+-`).
-   - **`DiagramContainmentService`**: Algoritmo espacial de detección de contención para cajas de agrupación (`boundary_box`) y arrastre jerárquico.
-   - **`DiagramAlignmentService`**: Algoritmos de alineación y distribución espacial automática de nodos (izquierda, centro, derecha, superior, medio, inferior).
+Los contratos están en `core/plugins/`; no dependen de componentes del host. La captura de
+imágenes usa `DiagramExportCanvasTarget`, que restaura zoom y posición incluso ante fallos.
+`UmlDiagramProject` pertenece a los modelos de Core. Guardar el documento no requiere IA,
+XMI ni exportadores de imagen instalados.
 
-4. **Componentes y Directivas UI Especializadas**:
-   - **`DiagramContextMenuComponent`**: Menú contextual interactivo activado por clic derecho con opciones de alineación, ordenamiento z-index, bloqueo, duplicación y eliminación.
-   - **`DiagramFloatingLabelComponent`**: Etiquetas flotantes arrastrables con offset independiente (`labelOffset`) para nombres de actores y objetos de robustez.
-   - **`DiagramTabsComponent`**: Barra de pestañas reactiva para conmutación fluida entre múltiples diagramas abiertos.
-   - **`AutofocusInputDirective`**: Directiva de auto-enfoque y selección de texto para renombrado in-place sin retrasos visuales.
-   - **`diagram-editor.icons.ts`**: Centralización de iconos HeroIcons organizados por propósito y optimizados para empaquetado mínimo.
-   - **`shared-ui/` (Suite de Controles Reutilizables)**:
-     - **`DiagramZoomControlsComponent`**: Controles de zoom unificados (`ZoomIn`, `ZoomOut`, `1:1`, `FitView`) con variantes `grid` (sidebar) y `flex` (toolbox).
-     - **`DiagramLineRoutingSelectorComponent`**: Selector estandarizado de estilo de líneas (`segment`, `straight`, `bezier`, `adaptive-curve`) con enlaces a `UML_LINE_STYLES` e i18n reactivo.
-     - **`DiagramRelationshipButtonComponent`**: Botón de relación UML estilizado con previsualización SVG reactiva y esquemas de color por diagrama (`blue`, `amber`, `cyan`, `rose`).
-     - **`DiagramToolItemButtonComponent`**: Tarjeta reutilizable para entidades UML con soporte de proyección de iconos, drag-and-drop y badges de interacción.
-     - **`DiagramToolSectionHeaderComponent`**: Encabezado colapsable para paneles de acordeón con soporte para deselección de puntero y chevrons dinámicos.
+La aplicación usa Angular 22 con Signals y detección zoneless. El catálogo actual se importa
+estáticamente, aunque el registro permite altas/bajas en ejecución. No implica descarga remota
+de código. Los componentes WebGL fueron eliminados; los nodos de despliegue usan SVG.
 
-* **`ComponentSvgComponent`**: Componente visual standalone para la representación gráfica precisa de componentes UML conforme al estándar.
-* **`DeploymentNodeSvgComponent`**: Componente visual standalone para nodos tridimensionales isométricos de despliegue (`node`, `device`, `executionEnvironment`).
-* **`GroupingBoundaryComponent`**: Componente standalone para cajas de delimitación y agrupación de sistemas, capas y redes con etiquetas centradas superiores y jerarquía de contención reactiva.
-* **`DiagramToolboxComponent`**: Barra de herramientas contextual que filtra automáticamente los elementos y relaciones válidas para el diagrama activo (Clases, Casos de Uso, Componentes, Capas, Despliegue, etc.) y admite arrastrar elementos directamente al lienzo.
-* **`DiagramTreeExplorerComponent`**: Explorador jerárquico del proyecto organizado por carpetas con soporte para arrastrar elementos directamente al canvas.
-* **`EditConnectionModalComponent`**: Modal flotante reactivo activado por doble clic sobre cualquier relación para editar nombres, multiplicidades ($0..1$, $1..*$, etc.), estereotipos y tipo de relación UML.
-* **`UserGuideChatbotComponent`**: Manual de usuario interactivo global tipo chatbot con tour guiado en 7 etapas, búsqueda semántica en lenguaje natural, renderizado Markdown enriquecido, bloques con copia de comandos y carrusel de temas con scroll y flechas.
-* **`AiAssistantPanelComponent`**: Asistente inteligente lateral con integración de cámara web para captura en vivo y prompts en lenguaje natural.
-* **`SpringBootModalComponent`**: Modal de generación de código fullstack con explorador de archivos y visor de código en tiempo real para Java/Spring Boot y Dart/Flutter.
-* **`DiagramAppbarComponent`**: Barra de herramientas superior con opciones de guardado, historial de versiones XMI, exportación a imagen PNG, control de colaboradores, botón de Manual Interactivo y estado de conexión en vivo.
+Consultar [MICROKERNEL.md](MICROKERNEL.md) y la [guía del desarrollador](guia-desarrollador/README.md)
+para contratos, ciclo de vida y pasos de extensión. El verificador AST incluye specs,
+reexportaciones, imports dinámicos con ruta literal y aliases TypeScript.
 
 ---
 
@@ -494,7 +431,9 @@ El editor de diagramas ha sido reestructurado desde un archivo monolítico de m�
 | `npm start` | Inicia el servidor de desarrollo web local en `http://localhost:4200/`. |
 | `npm run build` | Compila la aplicación web optimizada para producción en `dist/frontend`. |
 | `npm run watch` | Compila y escucha cambios continuos en Angular en modo desarrollo. |
-| `npm test` | Ejecuta las pruebas unitarias del proyecto con Vitest. |
+| `npm test -- --watch=false` | Ejecuta controles de arquitectura y la suite Angular/Vitest completa. |
+| `npm run check:architecture` | Comprueba los límites de dependencia mediante AST. |
+| `npm run test:architecture` | Verifica casos permitidos y rechazados del analizador. |
 | `npm run build:electron` | Compila la aplicación para Electron apuntando al backend local (`http://localhost:4000/api`). |
 | `npm run build:electron:prod` | Compila la aplicación para Electron apuntando al backend de producción. |
 | `npm run electron:start` | Compila y ejecuta la aplicación de escritorio nativa conectada a local. |

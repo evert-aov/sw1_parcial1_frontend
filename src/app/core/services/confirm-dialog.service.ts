@@ -23,6 +23,11 @@ export class ConfirmDialogService {
 
   private resolver: ((value: boolean) => void) | null = null;
 
+  /**
+   * Abre un modal de confirmación asíncrono con opciones de aceptar y cancelar.
+   * @param options Configuración del diálogo (título, mensaje, textos de botones y estilo).
+   * @returns Promesa que resuelve a `true` si el usuario confirma o `false` si cancela.
+   */
   confirm(options: ConfirmDialogOptions): Promise<boolean> {
     // Si ya había un diálogo abierto, resolverlo como false
     if (this.resolver) {
@@ -47,6 +52,11 @@ export class ConfirmDialogService {
     });
   }
 
+  /**
+   * Abre un diálogo de alerta modal con un único botón de entendido/aceptar.
+   * @param options Configuración de la alerta.
+   * @returns Promesa que resuelve a `true` tras presionar el botón de confirmación.
+   */
   alert(options: ConfirmDialogOptions): Promise<boolean> {
     return this.confirm({
       ...options,
@@ -56,6 +66,9 @@ export class ConfirmDialogService {
     });
   }
 
+  /**
+   * Manejador de confirmación: cierra el modal y resuelve la promesa pendiente como verdadera.
+   */
   handleConfirm(): void {
     this.isOpen.set(false);
     if (this.resolver) {
@@ -64,6 +77,9 @@ export class ConfirmDialogService {
     }
   }
 
+  /**
+   * Manejador de cancelación o cierre: oculta el diálogo y resuelve la promesa como falsa.
+   */
   handleCancel(): void {
     this.isOpen.set(false);
     if (this.resolver) {

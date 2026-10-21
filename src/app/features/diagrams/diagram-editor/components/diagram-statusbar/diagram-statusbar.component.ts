@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslatePipe } from '../../../../../core/i18n';
+import { TranslatePipe } from '../../../../../core/i18n/index';
 import { UmlLineStyle } from '../../../../../core/models/diagram.model';
 
 @Component({

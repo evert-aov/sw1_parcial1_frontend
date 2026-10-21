@@ -423,36 +423,26 @@
               (mouseenter)="hoveredNodeId.set(node.id)"
               (mouseleave)="onNodeMouseLeave(node.id)"
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
-              [style.minWidth.px]="node.isAnchor ? 0 : (isDeploymentNode(node) ? 160 : (node.nodeType === 'package' || node.nodeType === 'boundary_box' ? 120 : (node.nodeType === 'use_case' ? 80 : (node.nodeType === 'actor' ? 50 : (node.nodeType === 'lifeline' ? 100 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 140 : getNodeWidth(node))))))))"
-              [style.minHeight.px]="node.isAnchor ? 0 : (isDeploymentNode(node) ? 90 : (node.nodeType === 'package' ? 70 : (node.nodeType === 'boundary_box' ? 80 : (node.nodeType === 'use_case' ? 45 : (node.nodeType === 'actor' ? 65 : (node.nodeType === 'lifeline' ? 40 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 50 : (node.nodeType === 'component' ? 50 : null))))))))"
-              [style.height.px]="node.isAnchor ? 0 : (isDeploymentNode(node) ? getDeploymentHeight(node) : (getNodeHeight(node) || (node.nodeType === 'boundary_box' ? 200 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'actor' ? 95 : (node.nodeType === 'lifeline' ? 60 : (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' ? 70 : (node.nodeType === 'component' ? 70 : null)))))))))"
+              [style.minWidth.px]="node.isAnchor ? 0 : nodePlugins.forNode(node)?.geometry?.minWidth"
+              [style.minHeight.px]="node.isAnchor ? 0 : nodePlugins.forNode(node)?.geometry?.minHeight"
+              [style.height.px]="getNodeHeight(node)"
               [style.zIndex]="getNodeZIndex(node)"
               [style.--node-bg]="node.color || null"
-              [style.background]="(node.nodeType && node.nodeType !== 'class') || isDeploymentNode(node) || ['component'].includes(node.stereotype || '') ? 'transparent' : null"
-              [style.border]="(node.nodeType && node.nodeType !== 'class') || isDeploymentNode(node) || ['component'].includes(node.stereotype || '') ? 'none' : null"
-              [style.boxShadow]="(node.nodeType && node.nodeType !== 'class') || isDeploymentNode(node) || ['component'].includes(node.stereotype || '') ? 'none' : null"
+              [style.background]="nodePlugins.forNode(node)?.geometry?.transparent ? 'transparent' : null"
+              [style.border]="nodePlugins.forNode(node)?.geometry?.transparent ? 'none' : null"
+              [style.boxShadow]="nodePlugins.forNode(node)?.geometry?.transparent ? 'none' : null"
               [style.outline]="(!node.isAnchor && isNodeLockedByOther(node.id)) ? ('2px solid ' + (getNodeLock(node.id)?.color || '#EF4444')) : null"
               [class.f-selected]="isNodeSelected(node.id)"
-              [class.f-node-actor]="node.nodeType === 'actor'"
-              [class.f-node-use-case]="node.nodeType === 'use_case'"
-              [class.f-node-package]="node.nodeType === 'package'"
-              [class.f-node-boundary-box]="node.nodeType === 'boundary_box'"
-              [class.f-node-boundary]="node.nodeType === 'boundary'"
-              [class.f-node-control]="node.nodeType === 'control'"
-              [class.f-node-entity]="node.nodeType === 'entity'"
-              [class.f-node-lifeline]="node.nodeType === 'lifeline'"
-              [class.f-node-component]="node.nodeType === 'component'"
-              [class.f-node-deployment]="isDeploymentNode(node)"
-              [class.f-node-class]="(!node.nodeType || node.nodeType === 'class') && !['device', 'node', 'executionEnvironment', 'component', 'actor', 'use_case', 'package', 'boundary', 'control', 'entity', 'lifeline', 'boundary_box'].includes(node.nodeType || '') && !isDeploymentNode(node) && !['component'].includes(node.stereotype || '')"
+              [class]="nodePlugins.forNode(node)?.geometry?.cssClass || ''"
               [ngClass]="{
                 'w-0 h-0 opacity-0 pointer-events-none absolute': node.isAnchor,
                 'font-sans text-[#241C18] select-none relative group/node transition-shadow flex flex-col': !node.isAnchor,
-                'rounded-none': !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
-                'overflow-visible': isNodeSelected(node.id) || (!node.isAnchor && (node.nodeType === 'actor' || node.nodeType === 'use_case' || node.nodeType === 'package' || node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity' || node.nodeType === 'lifeline' || node.nodeType === 'component' || isDeploymentNode(node) || node.nodeType === 'boundary_box')),
-                'overflow-hidden': !isNodeSelected(node.id) && !node.isAnchor && (!node.nodeType || node.nodeType === 'class'),
+                'rounded-none': !node.isAnchor && !nodePlugins.forNode(node)?.geometry?.transparent,
+                'overflow-visible': isNodeSelected(node.id) || (!node.isAnchor && nodePlugins.forNode(node)?.geometry?.transparent),
+                'overflow-hidden': !isNodeSelected(node.id) && !node.isAnchor && !nodePlugins.forNode(node)?.geometry?.transparent,
                 'ring-2 ring-emerald-500 shadow-[0_0_12px_rgba(5,150,105,0.4)]': !node.isAnchor && selectedSourceNodeId() === node.id,
-                'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)]': !node.isAnchor && isNodeSelected(node.id) && selectedSourceNodeId() !== node.id && (!node.nodeType || node.nodeType === 'class'),
-                'ring-2 ring-indigo-400': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id) && selectedSourceNodeId() !== node.id && (!node.nodeType || node.nodeType === 'class'),
+                'ring-2 ring-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.35)]': !node.isAnchor && isNodeSelected(node.id) && selectedSourceNodeId() !== node.id && !nodePlugins.forNode(node)?.geometry?.transparent,
+                'ring-2 ring-indigo-400': !node.isAnchor && !isNodeSelected(node.id) && isNeighborNode(node.id) && selectedSourceNodeId() !== node.id && !nodePlugins.forNode(node)?.geometry?.transparent,
                 'hover:ring-2 hover:ring-blue-500 hover:shadow-md': selectedSourceNodeId() !== null && selectedSourceNodeId() !== node.id && !node.isAnchor,
                 'cursor-crosshair': !node.isAnchor && selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                 'cursor-move': !node.isAnchor && selectedRelationType() === null && !isNodeLockedByOther(node.id),
@@ -713,131 +703,10 @@
                   <div class="uml-resize-handle uml-handle-left" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'left', $event)"></div>
                 }
 
-                <!-- CONTENIDO SEGÚN TIPO DE ELEMENTO UML -->
-                @if (node.nodeType === 'actor') {
-                  <app-uml-actor-node
-                    class="w-full h-full flex flex-col flex-1 min-h-0 min-w-0"
-                    [node]="node"
-                    [isSelected]="isNodeSelected(node.id)"
-                    [isLocked]="isNodeLockedByOther(node.id)"
-                    [activeDiagramType]="activeDiagramType()"
-                    [selectedRelationType]="selectedRelationType()"
-                    [renamingNodeId]="renamingNodeId()"
-                    [isReadOnly]="isReadOnly()"
-                    [lifelineLength]="getLifelineLength(node)"
-                    [activations]="getNodeActivations(node)"
-                    [sequenceSlots]="sequenceSlots"
-                    [isSequenceSlotOccupiedFn]="isSequenceSlotOccupiedFn"
-                    [getSlotTopFn]="getSlotTopFn"
-                    (nodeClick)="onNodeClick(node.id, $event)"
-                    (deleteNode)="onDeleteNode(node.id, $event)"
-                    (tableClick)="onTableClick(node.id, $event)"
-                    (labelDblClick)="onLabelDblClick(node, $event)"
-                    (commitRename)="commitNodeRename(node.id, $event)"
-                    (cancelRename)="cancelNodeRename()"
-                  />
-                } @else if (node.nodeType === 'use_case') {
-                  <app-uml-use-case-node
-                    class="w-full h-full flex flex-col flex-1 min-h-0 min-w-0"
-                    [node]="node"
-                    [isSelected]="isNodeSelected(node.id)"
-                    [isLocked]="isNodeLockedByOther(node.id)"
-                    [renamingNodeId]="renamingNodeId()"
-                    (nodeClick)="onNodeClick(node.id, $event)"
-                    (deleteNode)="onDeleteNode(node.id, $event)"
-                    (commitRename)="commitNodeRename(node.id, $event)"
-                    (cancelRename)="cancelNodeRename()"
-                  />
-                } @else if (node.nodeType === 'package' || node.nodeType === 'boundary_box') {
-                  <app-uml-package-node
-                    class="w-full h-full flex flex-col flex-1 min-h-0 min-w-0"
-                    [node]="node"
-                    [isSelected]="isNodeSelected(node.id)"
-                    [isLocked]="isNodeLockedByOther(node.id)"
-                    [renamingNodeId]="renamingNodeId()"
-                    [packageTabTitle]="getPackageTabTitle(node)"
-                    [packageBodyText]="getPackageBodyText(node)"
-                    (nodeClick)="onNodeClick(node.id, $event)"
-                    (deleteNode)="onDeleteNode(node.id, $event)"
-                    (commitRename)="commitNodeRename(node.id, $event)"
-                    (cancelRename)="cancelNodeRename()"
-                  />
-                } @else if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-                  <app-uml-robustness-node
-                    class="w-full h-full flex flex-col flex-1 min-h-0 min-w-0"
-                    [node]="node"
-                    [isSelected]="isNodeSelected(node.id)"
-                    [isLocked]="isNodeLockedByOther(node.id)"
-                    [renamingNodeId]="renamingNodeId()"
-                    [isReadOnly]="isReadOnly()"
-                    (nodeClick)="onNodeClick(node.id, $event)"
-                    (deleteNode)="onDeleteNode(node.id, $event)"
-                    (labelDblClick)="onLabelDblClick(node, $event)"
-                    (commitRename)="commitNodeRename(node.id, $event)"
-                    (cancelRename)="cancelNodeRename()"
-                  />
-                } @else if (node.nodeType === 'lifeline') {
-                  <app-uml-lifeline-node
-                    class="w-full h-full flex flex-col flex-1 min-h-0 min-w-0"
-                    [node]="node"
-                    [isSelected]="isNodeSelected(node.id)"
-                    [isLocked]="isNodeLockedByOther(node.id)"
-                    [activeDiagramType]="activeDiagramType()"
-                    [selectedRelationType]="selectedRelationType()"
-                    [renamingNodeId]="renamingNodeId()"
-                    [lifelineLength]="getLifelineLength(node)"
-                    [activations]="getNodeActivations(node)"
-                    [sequenceSlots]="sequenceSlots"
-                    [isSequenceSlotOccupiedFn]="isSequenceSlotOccupiedFn"
-                    [getSlotTopFn]="getSlotTopFn"
-                    (nodeClick)="onNodeClick(node.id, $event)"
-                    (deleteNode)="onDeleteNode(node.id, $event)"
-                    (tableClick)="onTableClick(node.id, $event)"
-                    (commitRename)="commitNodeRename(node.id, $event)"
-                    (cancelRename)="cancelNodeRename()"
-                  />
-                } @else if (node.nodeType === 'component') {
-                  <app-uml-component-node
-                    class="w-full h-full flex flex-col flex-1 min-h-0 min-w-0"
-                    [node]="node"
-                    [isSelected]="isNodeSelected(node.id)"
-                    [isLocked]="isNodeLockedByOther(node.id)"
-                    [renamingNodeId]="renamingNodeId()"
-                    (nodeClick)="onNodeClick(node.id, $event)"
-                    (deleteNode)="onDeleteNode(node.id, $event)"
-                    (commitRename)="commitNodeRename(node.id, $event)"
-                    (cancelRename)="cancelNodeRename()"
-                  />
-                } @else if (isDeploymentNode(node)) {
-                  <app-uml-deployment-node
-                    class="w-full h-full flex flex-col flex-1 min-h-0 min-w-0 relative"
-                    [node]="node"
-                    [isSelected]="isNodeSelected(node.id)"
-                    [isLocked]="isNodeLockedByOther(node.id)"
-                    [renamingNodeId]="renamingNodeId()"
-                    [nodeWidth]="getNodeWidth(node)"
-                    [nodeHeight]="getDeploymentHeight(node)"
-                    [frontWidth]="getDeploymentFrontWidth(node)"
-                    [frontHeight]="getDeploymentFrontHeight(node)"
-                    [colors]="getDeploymentColors(node)"
-                    (nodeClick)="onNodeClick(node.id, $event)"
-                    (deleteNode)="onDeleteNode(node.id, $event)"
-                    (commitRename)="commitNodeRename(node.id, $event)"
-                    (cancelRename)="cancelNodeRename()"
-                  />
-                } @else {
-                  <app-uml-class-node
-                    class="w-full h-full flex flex-col flex-1 min-h-0 min-w-0"
-                    [node]="node"
-                    [isSelected]="isNodeSelected(node.id)"
-                    [isNeighbor]="isNeighborNode(node.id)"
-                    [isLocked]="isNodeLockedByOther(node.id)"
-                    [renamingNodeId]="renamingNodeId()"
-                    (nodeClick)="onNodeClick(node.id, $event)"
-                    (deleteNode)="onDeleteNode(node.id, $event)"
-                    (commitRename)="commitNodeRename(node.id, $event)"
-                    (cancelRename)="cancelNodeRename()"
-                  />
+                <ng-container [appPluginOutlet]="nodePlugins.forNode(node)?.renderer" [pluginEnvironment]="nodePlugins.environmentFor(node)"
+                  [pluginInputs]="nodePluginInputs(node)" (pluginEvent)="onPluginEvent(node, $event)" />
+                @if (!nodePlugins.forNode(node)) {
+                  <span class="p-2 text-xs">{{ 'plugins.unavailableNode' | translate }}: {{ node.name }}</span>
                 }
               }
             </div>

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n';
+import { TranslatePipe, LanguageSelectorComponent } from '../../../core/i18n/index';
 import { ThemeToggleComponent } from '../../../core/components/theme-toggle/theme-toggle.component';
 
 @Component({
@@ -26,10 +26,16 @@ export class RegisterComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
+  /**
+   * Alterna la visibilidad de los caracteres en el campo de contraseña.
+   */
   togglePassword(): void {
     this.showPassword.update((val) => !val);
   }
 
+  /**
+   * Valida el formulario y registra una nueva cuenta de usuario en el sistema.
+   */
   onSubmit(): void {
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();

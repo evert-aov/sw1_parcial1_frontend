@@ -1,70 +1,70 @@
-# 01 - Core, Servicios e Internacionalización
+# 01 — Core, contratos, servicios e internacionalización
 
-## 1. Visión General
-El directorio [`frontend/src/app/core/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/) aloja los servicios singleton, modelos de datos, interceptores HTTP y el motor de internacionalización. Estos elementos tienen alcance global y dan soporte a todas las pantallas de la aplicación.
+## Registro y contratos
 
----
+[core/plugins/](../src/app/core/plugins/) contiene la infraestructura estable:
 
-## 2. Sistema de Internacionalización Reactivo (i18n)
+| Elemento | Función |
+| --- | --- |
+| `PluginDefinition` | Metadatos, providers, capacidades, slots visuales y hooks de ciclo de vida. |
+| `PluginRegistryService` | Registro, descubrimiento e instanciación diferida de capacidades. |
+| `NodePlugin` | Contrato de creación, renderizado, herramientas y geometría de nodos. |
+| `NodePluginRegistryService` | Búsqueda por tipo/estereotipo y acceso al injector de cada nodo. |
+| `PluginOutletDirective` | Instancia componentes y conecta sus inputs/outputs dinámicamente. |
 
-Implementado en [`frontend/src/app/core/i18n/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/i18n/):
+Las capacidades se definen como interfaces e `InjectionToken<T>` en
+[core/plugins/contracts/](../src/app/core/plugins/contracts/). Sus factories resuelven la
+implementación mediante `PluginRegistryService.resolve(token)`. El registro verifica colisiones,
+crea un `EnvironmentInjector` por plug-in y destruye sus providers al retirarlo.
 
-### 1. `TranslationService` (`src/app/core/i18n/services/translation.service.ts`)
-- Mantiene el idioma actual mediante un Signal reactivo: `currentLang = signal<'es' | 'en'>('es')`.
-- Almacena y lee la preferencia del usuario en `localStorage` (`app_language`).
-- Soporta interpolación de variables dinámicas:
-  ```typescript
-  // Clave: 'editor.toolbox.paletteOf': 'Paleta de {{name}}'
-  translationService.translate('editor.toolbox.paletteOf', { name: 'Casos de Uso' });
-  // Retorna: 'Paleta de Casos de Uso'
-  ```
+Los contratos solo describen lo que consume el host o un plug-in. No deben importar
+componentes de `features/` ni implementaciones de `plugins/`. Por ejemplo,
+`DiagramExportCanvasTarget` ofrece `clearSelection()`, `getExportElement()` y
+`prepareForExport()`, que devuelve una función para restaurar el viewport.
 
-### 2. `TranslatePipe` (`src/app/core/i18n/pipes/translate.pipe.ts`)
-- Pipe puro con detección de cambios automática cuando cambia el signal de idioma:
-  ```html
-  <button>{{ 'toolbar.save' | translate }}</button>
-  <span>{{ 'editor.paletteOf' | translate:{ name: diagramName() } }}</span>
-  ```
+Los documentos JSON comparten `UmlDiagramProject`, definido en
+[diagram.model.ts](../src/app/core/models/diagram.model.ts), junto a los modelos del AST.
+No importar modelos desde un componente del editor.
 
-### 3. Diccionarios de Idioma
-- [`es.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/i18n/translations/es.ts): Español (predeterminado).
-- [`en.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/i18n/translations/en.ts): Inglés completo.
-- Cubren más de 400 términos de modelado UML, mensajes de error, botones, tooltips y menús contextuales.
+## Infraestructura de aplicación
 
----
+[core/services/](../src/app/core/services/) mantiene autenticación, proyectos, diagramas,
+colaboración, temas, toasts y confirmaciones. Los clientes de IA, XMI, generación de código,
+exportación gráfica y guía interactiva pertenecen a sus plug-ins; sus contratos públicos
+permanecen en Core.
 
-## 3. Manejo de Temas (Dark / Light Mode)
+`authGuard` consulta `AuthService.isAuthenticated()` y redirige a `/login` cuando no hay sesión.
+`jwtInterceptor` agrega `Authorization: Bearer ...` si existe token. La autorización efectiva
+corresponde al backend; no asumir validaciones o recuperación de errores que el interceptor
+actual no implementa.
 
-Implementado en [`ThemeService`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/services/theme.service.ts):
-- Signal reactivo `isDark = signal<boolean>(false)`.
-- Sincroniza la clase `.dark` en el elemento raíz `<html>` del DOM.
-- Escucha y responde a la preferencia del sistema operativo (`prefers-color-scheme: dark`) y persiste la selección manual en `localStorage` (`app_theme`).
+## Internacionalización
 
----
+[TranslationService](../src/app/core/i18n/services/translation.service.ts) expone
+`currentLang`, `setLanguage()`, `translate()` y `t()`. Persiste la preferencia bajo `app_lang`,
+actualiza `html.lang` y usa español como fallback. Admite parámetros `{{nombre}}`.
 
-## 4. Seguridad en el Cliente
+[TranslatePipe](../src/app/core/i18n/pipes/translate.pipe.ts) es standalone y **`pure: false`**;
+consulta el Signal del idioma. Los componentes que lo usan deben importarlo.
 
-### 1. `AuthGuard` (`src/app/core/guards/auth.guard.ts`)
-- Protege las rutas `/projects` y `/projects/:id/editor`.
-- Verifica si el usuario cuenta con un token JWT válido y no expirado en `localStorage`. Si no existe sesión, redirige inmediatamente a `/auth/login`.
+```html
+<button>{{ 'auth.login.title' | translate }}</button>
+```
 
-### 2. `JwtInterceptor` (`src/app/core/interceptors/jwt.interceptor.ts`)
-- Intercepta automáticamente todas las peticiones salientes de `HttpClient`.
-- Inyecta la cabecera `Authorization: Bearer <token>` cuando la petición se dirige a la API del backend.
-- Si el backend responde con un error `401 Unauthorized`, elimina el token caducado y redirige al login con notificación.
+Registrar toda clave nueva en ambos archivos:
 
----
+- [es.ts](../src/app/core/i18n/translations/es.ts).
+- [en.ts](../src/app/core/i18n/translations/en.ts).
 
-## 5. Servicios de Dominio Core
+Los descriptores de plug-in usan `metadata.labelKey` y `tools[].labelKey`; no almacenan
+etiquetas de UI traducidas de forma fija. Para notificaciones construidas en TypeScript,
+usar `TranslationService`. La regla aplica al texto nuevo; no implica que todo el legado
+ya haya sido traducido.
 
-| Servicio | Archivo | Responsabilidad Principal |
-| :--- | :--- | :--- |
-| **`AuthService`** | `auth.service.ts` | Peticiones de login, registro, logout y actualización de perfil. |
-| **`ProjectService`** | `project.service.ts` | CRUD de proyectos, invitación de miembros y cambio de roles. |
-| **`DiagramService`** | `diagram.service.ts` | Peticiones REST de diagramas, carga de AST y versiones históricas. |
-| **`CollaborationService`** | `collaboration.service.ts` | Conexión cliente WebSocket mediante `socket.io-client`. |
-| **`BmpExportService`** | `bmp-export.service.ts` | Renderizado y rasterización del lienzo a imágenes de alta definición. |
-| **`XmiService`** | `xmi.service.ts` | Envío y recepción de documentos XMI 2.1 con el backend. |
-| **`CodeGeneratorService`** | `code-generator.service.ts` | Solicitud de vistas previas de código y descarga de microservicios ZIP. |
-| **`AiAssistantService`** | `ai-assistant.service.ts` | Envío de prompts y capturas de cámara web a los endpoints de Gemini. |
-| **`ConfirmDialogService`**| `confirm-dialog.service.ts` | Diálogos modales de confirmación desacoplados con Promesas. |
+## Tema y reactividad
+
+[ThemeService](../src/app/core/services/theme.service.ts) centraliza el tema y la clase `dark`.
+Reutilizarlo desde host y extensiones. El modo zoneless se configura en `app.config.ts`;
+actualizar Signals o usar `markForCheck()` cuando un callback cambie datos visibles.
+Los servicios de infraestructura compartidos no deben depender de la presencia de una
+herramienta opcional como el asistente IA.

@@ -11,7 +11,7 @@ import {
   heroFolder,
   heroLockClosed,
 } from '@ng-icons/heroicons/outline';
-import { TranslatePipe, TranslationService } from '../../../../../core/i18n';
+import { TranslatePipe, TranslationService } from '../../../../../core/i18n/index';
 import {
   DiagramType,
   UML_DIAGRAM_TYPES,
@@ -72,6 +72,11 @@ export class CreateDiagramModalComponent {
     return translated !== key ? translated : (this.targetTypeItem()?.folderName || 'Diagramas de Clases');
   });
 
+  /**
+   * Obtiene el nombre traducido del tipo de diagrama para las tarjetas de selección.
+   * @param dt Ítem del tipo de diagrama.
+   * @returns Etiqueta localizada.
+   */
   getTypeLabel(dt: DiagramTypeItem | undefined): string {
     if (!dt) return '';
     this.translationService.currentLang();
@@ -80,6 +85,11 @@ export class CreateDiagramModalComponent {
     return translated !== key ? translated : dt.label;
   }
 
+  /**
+   * Obtiene la descripción traducida del tipo de diagrama seleccionado.
+   * @param dt Ítem del tipo de diagrama.
+   * @returns Descripción explicativa para la tarjeta.
+   */
   getTypeDescription(dt: DiagramTypeItem | undefined): string {
     if (!dt) return '';
     this.translationService.currentLang();
@@ -105,11 +115,18 @@ export class CreateDiagramModalComponent {
     );
   }
 
+  /**
+   * Cambia el tipo de diagrama seleccionado si no se encuentra bloqueado por la carpeta de origen.
+   * @param type Tipo de diagrama UML a activar.
+   */
   selectType(type: DiagramType): void {
     if (this.lockedType()) return; // Si está fijado por la carpeta, no se puede cambiar
     this.selectedType.set(type);
   }
 
+  /**
+   * Valida y emite la creación del nuevo diagrama con el nombre y tipo configurados.
+   */
   onCreate(): void {
     const name = this.diagramName().trim();
     if (!name) return;
@@ -121,6 +138,9 @@ export class CreateDiagramModalComponent {
     this.close.emit();
   }
 
+  /**
+   * Cierra el modal de creación de diagramas.
+   */
   onClose(): void {
     this.close.emit();
   }

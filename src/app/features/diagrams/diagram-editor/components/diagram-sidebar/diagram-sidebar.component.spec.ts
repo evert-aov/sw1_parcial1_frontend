@@ -1,7 +1,8 @@
+import { provideEditorPlugins } from '../../../../../composition/editor-plugins';
 import { TestBed } from '@angular/core/testing';
 import { DiagramSidebarComponent } from './diagram-sidebar.component';
 import { DiagramType } from '../../../../../core/models/diagram.model';
-import { TranslationService } from '../../../../../core/i18n';
+import { TranslationService } from '../../../../../core/i18n/index';
 
 describe('DiagramSidebarComponent', () => {
   let component: DiagramSidebarComponent;
@@ -9,7 +10,7 @@ describe('DiagramSidebarComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DiagramSidebarComponent],
-      providers: [TranslationService],
+      providers: [TranslationService, provideEditorPlugins()],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(DiagramSidebarComponent);

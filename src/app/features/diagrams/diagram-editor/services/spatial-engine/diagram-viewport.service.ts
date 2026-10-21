@@ -89,34 +89,69 @@ export class DiagramViewportService {
     } catch (_) {}
   }
 
+  /**
+   * Sincroniza la señal reactiva de zoom con el nivel de escala actual del lienzo Foblex.
+   * @param diagramCanvas Referencia al componente del lienzo.
+   */
   syncZoomFromCanvas(diagramCanvas?: DiagramCanvasComponent): void {
     diagramCanvas?.syncZoomFromCanvas();
   }
 
+  /**
+   * Incrementa el nivel de zoom en el lienzo activo.
+   * @param diagramCanvas Referencia al componente del lienzo.
+   */
   zoomIn(diagramCanvas?: DiagramCanvasComponent): void {
     diagramCanvas?.zoomIn();
   }
 
+  /**
+   * Reduce el nivel de zoom en el lienzo activo.
+   * @param diagramCanvas Referencia al componente del lienzo.
+   */
   zoomOut(diagramCanvas?: DiagramCanvasComponent): void {
     diagramCanvas?.zoomOut();
   }
 
+  /**
+   * Restaura la posición previa de scroll horizontal y vertical en el contenedor del lienzo.
+   * @param diagramCanvas Referencia al componente del lienzo.
+   * @param diagramId Identificador del diagrama a restaurar.
+   */
   restoreViewportScroll(diagramCanvas: DiagramCanvasComponent | undefined, diagramId: string | null): void {
     diagramCanvas?.restoreViewportScroll(diagramId);
   }
 
+  /**
+   * Centra el viewport del lienzo sobre el centro geométrico del tablero.
+   * @param diagramCanvas Referencia al componente del lienzo.
+   */
   centerViewportOnBoard(diagramCanvas?: DiagramCanvasComponent): void {
     diagramCanvas?.centerViewportOnBoard();
   }
 
+  /**
+   * Restablece el zoom al 100% y devuelve la vista a su posición de origen.
+   * @param diagramCanvas Referencia al componente del lienzo.
+   */
   resetView(diagramCanvas?: DiagramCanvasComponent): void {
     diagramCanvas?.resetView();
   }
 
+  /**
+   * Ajusta automáticamente el zoom y posición para encuadrar todos los nodos en pantalla.
+   * @param diagramCanvas Referencia al componente del lienzo.
+   */
   fitView(diagramCanvas?: DiagramCanvasComponent): void {
     diagramCanvas?.fitView();
   }
 
+  /**
+   * Restaura el estado visual completo de un diagrama (zoom, posición y conexiones) asegurando doble ciclo de render.
+   * @param diagramCanvas Referencia al componente del lienzo.
+   * @param diagramId Identificador del diagrama cuyo estado se restaura.
+   * @param onUpdateEndpoints Función callback para recalcular los extremos de conexión Foblex.
+   */
   restoreCanvasViewState(diagramCanvas: DiagramCanvasComponent | undefined, diagramId: string, onUpdateEndpoints: () => void): void {
     requestAnimationFrame(() => {
       onUpdateEndpoints();

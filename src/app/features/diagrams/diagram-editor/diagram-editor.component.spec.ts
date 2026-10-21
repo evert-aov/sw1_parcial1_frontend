@@ -1,9 +1,17 @@
+import { DiagramNodeOperationsService } from '../../../core/plugins/contracts/diagram-node-operations.service.contract';
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideEditorPlugins } from '../../../composition/editor-plugins';
+import { NodeMetricsService } from './utils/node-metrics.util';
+import { UmlNodeNormalizerUtil } from '../../../core/plugins/contracts/uml-node-normalizer.util.contract';
+import { RELATIONSHIP_RULES } from '../../../core/plugins/contracts/relationship-rules.contract';
+import { DiagramExportService } from '../../../core/plugins/contracts/diagram-export.service.contract';
 import { signal } from '@angular/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DiagramEditorComponent } from './diagram-editor.component';
 import { DiagramCanvasComponent } from './components/diagram-canvas/diagram-canvas.component';
 import { DiagramType, UmlClassNode, UmlConnection } from '../../../core/models/diagram.model';
-import { DiagramNodeFactoryService, DiagramAiSyncService, DiagramConnectionLayoutService } from './services';
+import { DiagramNodeFactoryService, DiagramDocumentSyncService, DiagramConnectionLayoutService } from './services/index';
 
 const nodes: UmlClassNode[] = [
   { id: 'actor', name: 'Ingeniero Anfitrión', nodeType: 'actor', position: { x: 50, y: 50 }, width: 65, attributes: [], methods: [] },
@@ -31,15 +39,18 @@ describe('DiagramEditorComponent: estado de mensajes de secuencia', () => {
     (editor as any).sanitizeClientConnections(conns, nodes);
 
   beforeEach(() => {
-    // Solo lógica de estado: no plantilla, inyección, sockets, HTTP ni lifecycle.
-    const layoutService = new DiagramConnectionLayoutService();
-    const aiSyncService = new DiagramAiSyncService(layoutService);
+    // Real plug-in composition with state-only editor fixture (no DOM or sockets).
+    TestBed.configureTestingModule({ providers: [provideEditorPlugins(), provideHttpClient()] });
+    const layoutService = TestBed.inject(DiagramConnectionLayoutService);
+    const documentSyncService = TestBed.inject(DiagramDocumentSyncService);
     editor = Object.assign(Object.create(DiagramEditorComponent.prototype), {
+      metrics: TestBed.inject(NodeMetricsService), normalizer: TestBed.inject(UmlNodeNormalizerUtil),
+      relationshipRules: TestBed.inject(RELATIONSHIP_RULES), exportService: TestBed.inject(DiagramExportService),
       nodes: signal(structuredClone(nodes)), connections: signal<UmlConnection[]>([]),
       activeDiagramType: signal(DiagramType.SEQUENCE), defaultLineStyle: signal('straight'),
-      diagramNodeFactoryService: new DiagramNodeFactoryService(),
+      diagramNodeFactoryService: TestBed.inject(DiagramNodeFactoryService),
       diagramConnectionLayoutService: layoutService,
-      diagramAiSyncService: aiSyncService,
+      diagramDocumentSyncService: documentSyncService,
     });
   });
 
@@ -50,7 +61,7 @@ describe('DiagramEditorComponent: estado de mensajes de secuencia', () => {
   });
 
   it('mantiene altura fija 60 en editor, lienzo y payload, con ancho adaptable al nombre', () => {
-    const canvas = Object.create(DiagramCanvasComponent.prototype) as DiagramCanvasComponent;
+    const canvas = Object.assign(Object.create(DiagramCanvasComponent.prototype), { metrics: TestBed.inject(NodeMetricsService) }) as DiagramCanvasComponent;
     const short: UmlClassNode = { ...nodes[1], name: 'UI', height: 48, customHeight: 200, isCustomSize: true, width: 130 };
     const long: UmlClassNode = { ...short, id: 'long', name: 'ServicioDeGestionDeProyectosYParticipantes' };
     for (const component of [editor, canvas]) {
@@ -177,13 +188,17 @@ describe('DiagramEditorComponent: persistencia de altura en diagramas de desplie
   let canvas: DiagramCanvasComponent;
 
   beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [provideEditorPlugins(), provideHttpClient()] });
     editor = Object.assign(Object.create(DiagramEditorComponent.prototype), {
+      metrics: TestBed.inject(NodeMetricsService), normalizer: TestBed.inject(UmlNodeNormalizerUtil),
+      nodeOps: TestBed.inject(DiagramNodeOperationsService), exportService: TestBed.inject(DiagramExportService),
+      relationshipRules: TestBed.inject(RELATIONSHIP_RULES), documentSyncService: TestBed.inject(DiagramDocumentSyncService),
       nodes: signal<UmlClassNode[]>([]),
       connections: signal<UmlConnection[]>([]),
       activeDiagramType: signal(DiagramType.DEPLOYMENT),
       defaultLineStyle: signal('straight'),
     });
-    canvas = Object.create(DiagramCanvasComponent.prototype) as DiagramCanvasComponent;
+    canvas = Object.assign(Object.create(DiagramCanvasComponent.prototype), { metrics: TestBed.inject(NodeMetricsService) }) as DiagramCanvasComponent;
   });
 
   it('preserva la altura personalizada en nodos de componentes al calcular altura y generar payload', () => {

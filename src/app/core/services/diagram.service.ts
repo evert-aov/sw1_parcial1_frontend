@@ -26,6 +26,11 @@ export class DiagramService {
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
+  /**
+   * Carga desde el backend la definición completa de un diagrama por su identificador.
+   * @param diagramId Identificador único del diagrama.
+   * @returns Observable con el DTO del diagrama.
+   */
   loadDiagram(diagramId: string): Observable<DiagramDto> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -45,6 +50,11 @@ export class DiagramService {
     );
   }
 
+  /**
+   * Obtiene la lista de todos los diagramas asociados a un proyecto.
+   * @param projectId Identificador del proyecto.
+   * @returns Observable con la colección de diagramas.
+   */
   loadDiagramsByProject(projectId: string): Observable<DiagramDto[]> {
     this.isLoading.set(true);
     return this.http.get<ApiResponse<DiagramDto[]>>(`${this.apiUrl}/project/${projectId}`).pipe(
@@ -60,6 +70,13 @@ export class DiagramService {
     );
   }
 
+  /**
+   * Crea un nuevo diagrama dentro de un proyecto con el tipo UML especificado.
+   * @param projectId Identificador del proyecto contenedor.
+   * @param name Nombre inicial del diagrama.
+   * @param type Tipo de diagrama UML (ej. CLASS, SEQUENCE, etc.).
+   * @returns Observable con el diagrama recién creado.
+   */
   createDiagram(
     projectId: string,
     name: string,
@@ -83,6 +100,12 @@ export class DiagramService {
     );
   }
 
+  /**
+   * Persiste el AST (nodos, conexiones y metadatos) del diagrama en la base de datos.
+   * @param diagramId Identificador del diagrama a guardar.
+   * @param payload Estructura AST serializada.
+   * @returns Observable con el diagrama actualizado tras el guardado.
+   */
   saveAst(diagramId: string, payload: SaveDiagramAstRequest): Observable<DiagramDto> {
     this.isSaving.set(true);
     return this.http.put<ApiResponse<DiagramDto>>(`${this.apiUrl}/${diagramId}/ast`, payload).pipe(
@@ -99,6 +122,12 @@ export class DiagramService {
     );
   }
 
+  /**
+   * Renombra un diagrama existente.
+   * @param diagramId Identificador del diagrama.
+   * @param name Nuevo nombre asignado.
+   * @returns Observable con el diagrama renombrado.
+   */
   renameDiagram(diagramId: string, name: string): Observable<DiagramDto> {
     return this.http.patch<ApiResponse<DiagramDto>>(`${this.apiUrl}/${diagramId}`, { name }).pipe(
       map((res) => res.data),
@@ -113,6 +142,11 @@ export class DiagramService {
     );
   }
 
+  /**
+   * Elimina un diagrama del proyecto en el backend y de la lista reactiva local.
+   * @param diagramId Identificador del diagrama a eliminar.
+   * @returns Observable vacío al finalizar la eliminación.
+   */
   deleteDiagram(diagramId: string): Observable<void> {
     return this.http.delete<ApiResponse<any>>(`${this.apiUrl}/${diagramId}`).pipe(
       map(() => void 0),

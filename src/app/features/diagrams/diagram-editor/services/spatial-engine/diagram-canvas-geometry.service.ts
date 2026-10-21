@@ -1,3 +1,5 @@
+import { PluginRegistryService } from '../../../../../core/plugins/plugin-registry.service';
+import { NodePluginRegistryService } from '../../../../../core/plugins/node-plugin-registry.service';
 import { Injectable, inject } from '@angular/core';
 import {
   DiagramType,
@@ -7,21 +9,13 @@ import {
   UmlRelationshipType,
 } from '../../../../../core/models/diagram.model';
 import { DiagramAssemblyConnectionService } from './diagram-assembly-connection.service';
-import {
-  DeploymentColors,
-} from '../../components/diagram-canvas/nodes/uml-deployment-node/uml-deployment-node.component';
-import {
-  getActorBottomExtra,
-  getSequenceMessageColor,
-  isDeploymentNode as isDeploymentNodeLogic,
-  isSequenceConnection as isSequenceConnectionLogic,
-} from '../../components/diagram-canvas/nodes';
+import { RELATIONSHIP_RULES } from '../../../../../core/plugins/contracts/relationship-rules.contract';
 import {
   UmlMarkerConfig,
   getUmlMarkerConfig,
-} from '../../components/uml-svg/connection-marker-svg.component';
-import { getNodeHeight, getNodeWidth } from '../../utils/node-metrics.util';
-import { ConnectionCascadeUtil } from '../../utils/connection-cascade.util';
+} from '../../../../../plugin-sdk/ui/uml-svg/connection-marker-svg.component';
+import { NodeMetricsService } from '../../utils/node-metrics.util';
+import { ConnectionCascadeUtil } from '../../../../../core/plugins/contracts/connection-cascade.util.contract';
 
 /**
  * Servicio de geometría, estilos visuales y metadatos de presentación para nodos y conexiones en el lienzo UML.
@@ -33,6 +27,13 @@ export const DEPLOYMENT_NODE_DEPTH = 14;
   providedIn: 'root',
 })
 export class DiagramCanvasGeometryService {
+  private readonly registry = inject(PluginRegistryService);
+  /** Reglas de compatibilidad de relaciones resueltas dinámicamente desde el plug-in del lenguaje. */
+  private get relationshipRules() { return this.registry.resolve(RELATIONSHIP_RULES); }
+  /** Reglas de cálculo en cascada de conexiones resueltas dinámicamente desde el plug-in. */
+  private get cascadeRules() { return this.registry.resolve(ConnectionCascadeUtil); }
+  private readonly metrics = inject(NodeMetricsService);
+  private readonly nodePlugins = inject(NodePluginRegistryService);
   private readonly assemblyConnectionService = inject(DiagramAssemblyConnectionService);
 
   /**
@@ -56,7 +57,7 @@ export class DiagramCanvasGeometryService {
    * @returns `true` cuando el rombo debe renderizarse al inicio según la multiplicidad.
    */
   isDiamondAtStart(conn: UmlConnection): boolean {
-    return ConnectionCascadeUtil.isDiamondAtStart(conn);
+    return this.cascadeRules.isDiamondAtStart(conn);
   }
 
   /**
@@ -67,7 +68,7 @@ export class DiagramCanvasGeometryService {
    * @returns `true` si la conexión es secuencial.
    */
   isSequenceConnection(conn: UmlConnection, activeDiagramType: DiagramType): boolean {
-    return isSequenceConnectionLogic(conn, activeDiagramType);
+    return this.relationshipRules.isSequenceConnection(conn, activeDiagramType);
   }
 
   /**
@@ -77,8 +78,8 @@ export class DiagramCanvasGeometryService {
    * @returns `true` si origen y destino corresponden al mismo nodo base.
    */
   isRecursiveConn(conn: UmlConnection): boolean {
-    const s = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
-    const t = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
+    const s = conn.sourceNodeId || this.cascadeRules.extractBaseNodeId(conn.sourceId);
+    const t = conn.targetNodeId || this.cascadeRules.extractBaseNodeId(conn.targetId);
     return !!s && s === t;
   }
 
@@ -97,13 +98,13 @@ export class DiagramCanvasGeometryService {
    * Determina el lado de salida para un estilo de enrutamiento 'tree_vertical'.
    */
   getTreeVerticalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
-    const sId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
-    const tId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
+    const sId = conn.sourceNodeId || this.cascadeRules.extractBaseNodeId(conn.sourceId);
+    const tId = conn.targetNodeId || this.cascadeRules.extractBaseNodeId(conn.targetId);
     const sNode = nodes.find((n) => n.id === sId);
     const tNode = nodes.find((n) => n.id === tId);
     if (!sNode || !tNode) return 'bottom';
-    const sCy = (sNode.position?.y ?? 50) + getNodeHeight(sNode) / 2;
-    const tCy = (tNode.position?.y ?? 200) + getNodeHeight(tNode) / 2;
+    const sCy = (sNode.position?.y ?? 50) + this.metrics.getNodeHeight(sNode) / 2;
+    const tCy = (tNode.position?.y ?? 200) + this.metrics.getNodeHeight(tNode) / 2;
     return tCy >= sCy ? 'bottom' : 'top';
   }
 
@@ -119,13 +120,13 @@ export class DiagramCanvasGeometryService {
    * Determina el lado de salida para un estilo de enrutamiento 'tree_horizontal'.
    */
   getTreeHorizontalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
-    const sId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
-    const tId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
+    const sId = conn.sourceNodeId || this.cascadeRules.extractBaseNodeId(conn.sourceId);
+    const tId = conn.targetNodeId || this.cascadeRules.extractBaseNodeId(conn.targetId);
     const sNode = nodes.find((n) => n.id === sId);
     const tNode = nodes.find((n) => n.id === tId);
     if (!sNode || !tNode) return 'right';
-    const sCx = (sNode.position?.x ?? 50) + getNodeWidth(sNode) / 2;
-    const tCx = (tNode.position?.x ?? 200) + getNodeWidth(tNode) / 2;
+    const sCx = (sNode.position?.x ?? 50) + this.metrics.getNodeWidth(sNode) / 2;
+    const tCx = (tNode.position?.x ?? 200) + this.metrics.getNodeWidth(tNode) / 2;
     return tCx >= sCx ? 'right' : 'left';
   }
 
@@ -196,8 +197,8 @@ export class DiagramCanvasGeometryService {
       conn,
       nodes,
       boardElement,
-      (n) => getNodeWidth(n),
-      (n) => getNodeHeight(n),
+      (n) => this.metrics.getNodeWidth(n),
+      (n) => this.metrics.getNodeHeight(n),
     );
   }
 
@@ -233,7 +234,7 @@ export class DiagramCanvasGeometryService {
   getSequenceConnColor(conn: UmlConnection): string {
     const msg = conn.messages?.[0];
     if (msg?.color) return msg.color;
-    return getSequenceMessageColor(msg?.sequenceNumber || conn.name);
+    return this.relationshipRules.getSequenceMessageColor(msg?.sequenceNumber || conn.name);
   }
 
   /**
@@ -335,7 +336,7 @@ export class DiagramCanvasGeometryService {
    */
   getCommMessageColor(msg: UmlMessage): string {
     if (msg.color) return msg.color;
-    return getSequenceMessageColor(msg.sequenceNumber);
+    return this.relationshipRules.getSequenceMessageColor(msg.sequenceNumber);
   }
 
   /**
@@ -347,8 +348,8 @@ export class DiagramCanvasGeometryService {
   getNodeSize(node: UmlClassNode): { width: number; height: number } {
     if (node.isAnchor) return { width: 0, height: 0 };
     return {
-      width: getNodeWidth(node),
-      height: getNodeHeight(node),
+      width: this.metrics.getNodeWidth(node),
+      height: this.metrics.getNodeHeight(node),
     };
   }
 
@@ -369,43 +370,7 @@ export class DiagramCanvasGeometryService {
    */
   getNodeZIndex(node: UmlClassNode, isSelected: boolean): number {
     if (node.isAnchor) return 45;
-
-    // 1. Boundary Box: el más al fondo en diagramas de despliegue, componentes y casos de uso
-    if (node.nodeType === 'boundary_box') {
-      return isSelected ? 2 : 1;
-    }
-
-    // 2. Package / Subsistema contenedor
-    if (node.nodeType === 'package') {
-      return isSelected ? 4 : 3;
-    }
-
-    // 3. Dispositivos físicos («device»): servidores de hardware, nodos físicos de infraestructura
-    const isDevice = node.nodeType === 'device' || node.stereotype === 'device';
-    if (isDevice) {
-      return isSelected ? 7 : 5;
-    }
-
-    // 4. Entornos de ejecución («executionEnvironment» / «node»): servidores de aplicación, Docker, VM, OS
-    const isExecutionEnv =
-      node.nodeType === 'executionEnvironment' ||
-      node.nodeType === 'execution-environment' ||
-      node.nodeType === 'node' ||
-      node.stereotype === 'executionEnvironment' ||
-      node.stereotype === 'execution-environment' ||
-      node.stereotype === 'node';
-    if (isExecutionEnv) {
-      return isSelected ? 12 : 10;
-    }
-
-    // 5. Componentes de software («component»): módulos, subsistemas lógicos, artefactos
-    const isComponent = node.nodeType === 'component' || node.stereotype === 'component';
-    if (isComponent) {
-      return isSelected ? 18 : 15;
-    }
-
-    // 6. Clases, actores, casos de uso, interfaces y otros nodos contenidos
-    return isSelected ? 25 : 20;
+    return this.nodePlugins.forNode(node)?.geometry.zIndex[isSelected ? 1 : 0] ?? (isSelected ? 25 : 20);
   }
 
   /**
@@ -415,13 +380,7 @@ export class DiagramCanvasGeometryService {
    * @returns Desplazamiento `bottom` en píxeles.
    */
   getBottomConnectorOffset(node: UmlClassNode): number {
-    if (node.nodeType === 'actor') {
-      return -6 - getActorBottomExtra(node);
-    }
-    if (node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity') {
-      return -20;
-    }
-    return -6;
+    return this.nodePlugins.forNode(node)?.geometry.bottomOffset ?? -6;
   }
 
   /**
@@ -430,9 +389,7 @@ export class DiagramCanvasGeometryService {
    * @param node Nodo UML.
    * @returns `true` si es dispositivo, entorno de ejecución o nodo físico.
    */
-  isDeploymentNode(node: UmlClassNode): boolean {
-    return isDeploymentNodeLogic(node.nodeType) || ['device', 'executionEnvironment', 'node'].includes(node.stereotype || '');
-  }
+
 
   /**
    * Obtiene el alto total de un nodo de despliegue 3D.
@@ -440,9 +397,7 @@ export class DiagramCanvasGeometryService {
    * @param node Nodo UML.
    * @returns Alto en píxeles.
    */
-  getDeploymentHeight(node: UmlClassNode): number {
-    return node.customHeight || node.height || getNodeHeight(node) || 120;
-  }
+
 
   /**
    * Obtiene el ancho frontal de la caja isométrica 3D de un nodo de despliegue.
@@ -450,9 +405,7 @@ export class DiagramCanvasGeometryService {
    * @param node Nodo UML.
    * @returns Ancho frontal en píxeles.
    */
-  getDeploymentFrontWidth(node: UmlClassNode): number {
-    return Math.max(100, getNodeWidth(node) - DEPLOYMENT_NODE_DEPTH);
-  }
+
 
   /**
    * Obtiene el alto frontal de la caja isométrica 3D de un nodo de despliegue.
@@ -460,9 +413,7 @@ export class DiagramCanvasGeometryService {
    * @param node Nodo UML.
    * @returns Alto frontal en píxeles.
    */
-  getDeploymentFrontHeight(node: UmlClassNode): number {
-    return Math.max(70, this.getDeploymentHeight(node) - DEPLOYMENT_NODE_DEPTH);
-  }
+
 
   /**
    * Obtiene la paleta cromática para las caras superior, lateral y frontal de un nodo de despliegue 3D.
@@ -470,22 +421,7 @@ export class DiagramCanvasGeometryService {
    * @param node Nodo UML.
    * @returns Paleta de colores 3D.
    */
-  getDeploymentColors(node: UmlClassNode): DeploymentColors {
-    if (node.nodeType === 'executionEnvironment' || node.stereotype === 'executionEnvironment') {
-      return {
-        top: '#E0F2FE',
-        right: '#BAE6FD',
-        front: node.color || '#F0F9FF',
-        border: '#0284C7',
-      };
-    }
-    return {
-      top: '#EFE2D3',
-      right: '#DFCBB7',
-      front: node.color || '#FDFAF3',
-      border: '#796354',
-    };
-  }
+
 
   /**
    * Obtiene el texto de la pestaña superior de un paquete UML.
@@ -493,10 +429,7 @@ export class DiagramCanvasGeometryService {
    * @param node Nodo de paquete.
    * @returns Título de la pestaña.
    */
-  getPackageTabTitle(node: UmlClassNode): string {
-    if (node.stereotype) return `«${node.stereotype}»`;
-    return node.name || 'Package';
-  }
+
 
   /**
    * Obtiene el texto principal del cuerpo de un paquete UML.
@@ -504,9 +437,7 @@ export class DiagramCanvasGeometryService {
    * @param node Nodo de paquete.
    * @returns Nombre del paquete.
    */
-  getPackageBodyText(node: UmlClassNode): string {
-    return node.name || 'Package';
-  }
+
 
   /**
    * Construye la transformación CSS `translate(x, y)` para una etiqueta libre de nodo.

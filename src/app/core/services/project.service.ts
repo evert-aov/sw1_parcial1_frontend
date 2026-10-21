@@ -25,6 +25,10 @@ export class ProjectService {
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
+  /**
+   * Carga la lista completa de proyectos pertenecientes al usuario autenticado.
+   * @returns Observable con el arreglo de proyectos.
+   */
   loadProjects(): Observable<Project[]> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -44,6 +48,11 @@ export class ProjectService {
     );
   }
 
+  /**
+   * Obtiene la información detallada de un proyecto por su ID.
+   * @param id Identificador único del proyecto.
+   * @returns Observable con los datos del proyecto.
+   */
   getProject(id: string): Observable<Project> {
     this.isLoading.set(true);
     return this.http.get<ApiResponse<Project>>(`${this.apiUrl}/${id}`).pipe(
@@ -59,6 +68,11 @@ export class ProjectService {
     );
   }
 
+  /**
+   * Crea un nuevo proyecto en la plataforma.
+   * @param payload Datos del nuevo proyecto (nombre, descripción).
+   * @returns Observable con el proyecto creado.
+   */
   createProject(payload: CreateProjectRequest): Observable<Project> {
     this.isLoading.set(true);
     return this.http.post<ApiResponse<Project>>(this.apiUrl, payload).pipe(
@@ -74,6 +88,12 @@ export class ProjectService {
     );
   }
 
+  /**
+   * Actualiza el nombre o descripción de un proyecto existente.
+   * @param id Identificador del proyecto.
+   * @param payload Datos a modificar.
+   * @returns Observable con el proyecto actualizado.
+   */
   updateProject(id: string, payload: UpdateProjectRequest): Observable<Project> {
     return this.http.patch<ApiResponse<Project>>(`${this.apiUrl}/${id}`, payload).pipe(
       map((res) => res.data),
@@ -86,6 +106,11 @@ export class ProjectService {
     );
   }
 
+  /**
+   * Elimina un proyecto del sistema y actualiza la lista local.
+   * @param id Identificador del proyecto a borrar.
+   * @returns Observable con el resultado de la operación.
+   */
   deleteProject(id: string): Observable<{ success: boolean; message: string }> {
     return this.http.delete<ApiResponse<{ success: boolean; message: string }>>(`${this.apiUrl}/${id}`).pipe(
       map((res) => res.data),
@@ -98,6 +123,12 @@ export class ProjectService {
     );
   }
 
+  /**
+   * Añade un nuevo miembro colaborador al proyecto indicado.
+   * @param projectId Identificador del proyecto.
+   * @param payload Datos del miembro (email, rol).
+   * @returns Observable con el miembro agregado.
+   */
   addMember(projectId: string, payload: AddMemberRequest): Observable<ProjectMember> {
     return this.http.post<ApiResponse<ProjectMember>>(`${this.apiUrl}/${projectId}/members`, payload).pipe(
       map((res) => res.data),
@@ -116,6 +147,13 @@ export class ProjectService {
     );
   }
 
+  /**
+   * Actualiza el rol asignado a un miembro dentro del proyecto.
+   * @param projectId Identificador del proyecto.
+   * @param userId Identificador del usuario miembro.
+   * @param payload Nuevo rol asignado.
+   * @returns Observable con la información del miembro actualizada.
+   */
   updateMemberRole(projectId: string, userId: string, payload: UpdateMemberRoleRequest): Observable<ProjectMember> {
     return this.http.patch<ApiResponse<ProjectMember>>(`${this.apiUrl}/${projectId}/members/${userId}`, payload).pipe(
       map((res) => res.data),
@@ -133,6 +171,12 @@ export class ProjectService {
     );
   }
 
+  /**
+   * Remueve a un miembro colaborador del proyecto.
+   * @param projectId Identificador del proyecto.
+   * @param userId Identificador del usuario a desvincular.
+   * @returns Observable con el estado de la operación.
+   */
   removeMember(projectId: string, userId: string): Observable<{ success: boolean; message: string }> {
     return this.http.delete<ApiResponse<{ success: boolean; message: string }>>(`${this.apiUrl}/${projectId}/members/${userId}`).pipe(
       map((res) => res.data),

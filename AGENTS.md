@@ -1,25 +1,35 @@
-# 🤖 AGENTS.md - Directivas para Agentes de IA en el Frontend
+# AGENTS.md — Frontend Angular 22 y microkernel
 
-Este archivo es leído por los agentes de IA que operen dentro del workspace del **Frontend**.
+## Referencias del proyecto
 
----
+Aplicar la skill [sw1-fullstack-architect](.agents/skills/sw1-fullstack-architect/SKILL.md)
+para diseño, implementación, depuración y revisión de este proyecto. Consultar la
+[guía del desarrollador](guia-desarrollador/README.md) y [MICROKERNEL.md](MICROKERNEL.md)
+antes de modificar límites o contratos. Las instrucciones explícitas del usuario prevalecen.
 
-## 🎯 Skill Obligatoria: `sw1-fullstack-architect`
+## Reglas del frontend
 
-Lee y aplica estrictamente la skill del proyecto:
-👉 [**`.agents/skills/sw1-fullstack-architect/SKILL.md`**](file:///frontend/.agents/skills/sw1-fullstack-architect/SKILL.md)
-
----
-
-## 🎨 Reglas del Dev Senior Frontend (Angular 19 + Tailwind CSS + @foblex/flow)
-
-1. **Standalone Puro**: Todos los componentes deben ser `standalone: true` con `ChangeDetectionStrategy.OnPush`.
-2. **Reactividad con Signals**: Usa `signal()`, `computed()`, `effect()`, `input()` y `output()`.
-3. **Internacionalización Obligatoria**: Nunca hardcodear cadenas visibles. Usa siempre `{{ 'clave' | translate }}` y define las claves en `src/app/core/i18n/translations/es.ts` y `en.ts`.
-4. **Lienzo Nodal Modular**: Cada nodo UML se implementa como componente independiente en `src/app/features/diagrams/diagram-editor/components/diagram-canvas/nodes/`.
-5. **Suite de UI Reutilizable**: Usa los componentes compartidos de `src/app/features/diagrams/diagram-editor/components/shared-ui/` (`DiagramZoomControlsComponent`, `DiagramLineRoutingSelectorComponent`, `DiagramRelationshipButtonComponent`, etc.).
-6. **Consultar la Guía**: Antes de modificar código, consulta [`guia-desarrollador/README.md`](file:///frontend/guia-desarrollador/README.md).
-7. **Verificación Estricta**: Antes de terminar, ejecuta `npm test -- --watch=false` (61 tests pasando) y `npm run build` (0 errores).
+1. **Angular 22**: componentes standalone con OnPush. Usar Signals y `input()`/`output()`
+   en componentes nuevos. El arranque configura `provideZonelessChangeDetection()`.
+   Verificar rangos en `package.json` y versiones instaladas en `node_modules`; Foblex tiene versión independiente.
+2. **Core estable**: host de canvas, motor espacial, viewport, selección, historial,
+   pestañas y orquestación. No introducir ramas por tipos concretos de nodos o formatos
+   ni imports de implementaciones de plug-ins en el host.
+3. **Plug-ins independientes**: nodos en `src/app/plugins/uml-*-node/`; herramientas y reglas
+   en sus paquetes de dominio. Cero dependencias entre paquetes de plug-ins; consumir contratos.
+4. **Contratos y composición**: interfaces, tokens, registro y outlet en `core/plugins/`.
+   Registro concreto en `composition/`. Core, SDK y plug-ins no importan `features/`.
+   Los contratos no exponen componentes del editor.
+5. **SDK compartido**: reutilizar `src/app/plugin-sdk/ui/shared-ui/`, `ui/uml-svg/`,
+   la factoría por registro y `geometry/`. No recrear los componentes WebGL eliminados.
+6. **Internacionalización**: traducir textos visibles nuevos mediante `TranslatePipe` o
+   `TranslationService` y definir claves en `src/app/core/i18n/translations/es.ts` y `en.ts`.
+7. **Verificación**: antes de terminar ejecutar `npm test -- --watch=false` y `npm run build`.
+   `pretest` ejecuta `test:architecture` y `check:architecture`; `prebuild` ejecuta el análisis.
+   Debe pasar toda la suite vigente y compilar sin errores. No usar conteos históricos fijos;
+   informar advertencias separadamente. Las pruebas entre implementaciones van en `composition/`.
+8. **Mantenimiento**: preservar documentos/IDs, actualizar las guías al cambiar arquitectura
+   y eliminar directorios vacíos tras mover archivos.
 
 ---
 

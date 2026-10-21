@@ -23,10 +23,17 @@ export class DiagramContextMenuService {
     }
   }
 
+  /**
+   * Cierra el menú contextual activo estableciendo su estado en null.
+   */
   closeContextMenu(): void {
     this.contextMenu.set(null);
   }
 
+  /**
+   * Abre el menú contextual asociado a un nodo UML, posicionándolo dentro de los límites de la ventana.
+   * @param data Datos del nodo, evento de ratón y callbacks de selección/coordenadas.
+   */
   onNodeContextMenu(data: {
     node: UmlClassNode;
     event: MouseEvent;

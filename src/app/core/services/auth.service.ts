@@ -33,6 +33,11 @@ export class AuthService {
     }
   }
 
+  /**
+   * Registra una nueva cuenta de usuario en la plataforma y establece la sesión.
+   * @param payload Datos de registro del usuario (email, password, fullName).
+   * @returns Observable con la respuesta de autenticación (token y perfil).
+   */
   register(payload: RegisterRequest): Observable<AuthResponse> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -52,6 +57,11 @@ export class AuthService {
     );
   }
 
+  /**
+   * Inicia sesión con credenciales existentes (email y password) y almacena el token.
+   * @param payload Credenciales del usuario.
+   * @returns Observable con la respuesta de autenticación.
+   */
   login(payload: LoginRequest): Observable<AuthResponse> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -71,6 +81,10 @@ export class AuthService {
     );
   }
 
+  /**
+   * Obtiene del backend los datos actualizados del perfil del usuario autenticado.
+   * @returns Observable con el perfil del usuario.
+   */
   fetchProfile(): Observable<User> {
     return this.http.get<ApiResponse<User>>(`${this.apiUrl}/me`).pipe(
       map((res) => res.data),
@@ -81,6 +95,11 @@ export class AuthService {
     );
   }
 
+  /**
+   * Actualiza el perfil del usuario activo (nombre completo o contraseña).
+   * @param payload Objeto con campos a actualizar.
+   * @returns Observable con el usuario actualizado.
+   */
   updateProfile(payload: { fullName?: string; password?: string }): Observable<User> {
     return this.http.patch<ApiResponse<User>>(`${this.apiUrl}/me`, payload).pipe(
       map((res) => res.data),
@@ -91,6 +110,9 @@ export class AuthService {
     );
   }
 
+  /**
+   * Cierra la sesión activa, borra tokens y datos de almacenamiento local y redirige a /login.
+   */
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
@@ -99,6 +121,11 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  /**
+   * Almacena las credenciales de sesión en localStorage y actualiza las señales reactivas.
+   * @param token Token JWT de acceso.
+   * @param user Datos del usuario autenticado.
+   */
   private setSession(token: string, user: User): void {
     localStorage.setItem(this.TOKEN_KEY, token);
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
@@ -106,10 +133,18 @@ export class AuthService {
     this.currentUser.set(user);
   }
 
+  /**
+   * Recupera el token JWT guardado en el almacenamiento local del navegador.
+   * @returns El token o null si no existe.
+   */
   private getStoredToken(): string | null {
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
+  /**
+   * Recupera y parsea los datos del usuario persistidos en el almacenamiento local.
+   * @returns El objeto de usuario o null si no existe o es inválido.
+   */
   private getStoredUser(): User | null {
     const raw = localStorage.getItem(this.USER_KEY);
     if (!raw) return null;

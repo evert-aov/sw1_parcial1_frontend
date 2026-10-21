@@ -1,4 +1,4 @@
 export * from './diagram-collaboration-coordinator.service';
-export * from './diagram-ai-sync.service';
-export * from './diagram-export.service';
-export * from './diagram-import.service';
+export * from '../../../../../core/plugins/contracts/diagram-document-sync.service.contract';
+export * from '../../../../../core/plugins/contracts/diagram-export.service.contract';
+export * from '../../../../../core/plugins/contracts/diagram-import.service.contract';

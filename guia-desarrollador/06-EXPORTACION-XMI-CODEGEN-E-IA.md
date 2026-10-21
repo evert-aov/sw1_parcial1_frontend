@@ -1,64 +1,76 @@
-# 06 - Exportación, Interoperabilidad XMI, Codegen e IA
+# 06 — Plug-ins de documentos, exportación, código e IA
 
-## 1. Visión General
-Este capítulo detalla las capacidades avanzadas de exportación gráfica, serialización XMI, generación de código fullstack y asistencia de inteligencia artificial en el cliente.
+## Catálogo de capacidades
 
----
+Las herramientas se componen en
+[editor-plugins.ts](../src/app/composition/editor-plugins.ts). Sus implementaciones son
+independientes; la colaboración entre paquetes usa tokens de
+[core/plugins/contracts/](../src/app/core/plugins/contracts/).
 
-## 2. Exportación a Imagen de Alta Densidad (BMP / PNG)
+| Paquete | Responsabilidad | Contratos/slots principales |
+| --- | --- | --- |
+| [document-io](../src/app/plugins/document-io/) | JSON, construcción del AST y coordinación de importación/exportación. | `DiagramImportService`, `DiagramExportService` |
+| [xmi](../src/app/plugins/xmi/) | Parser cliente, adaptaciones de Enterprise Architect y cliente HTTP XMI. | `XmiClientParser`, `XmiService` |
+| [image-export](../src/app/plugins/image-export/) | Captura DOM y generación de imágenes PNG/BMP. | `BmpExportService` |
+| [bmp-encoder](../src/app/plugins/bmp-encoder/) | Codificación binaria BMP, worker y fallback. | `BmpEncoder` |
+| [code-generation](../src/app/plugins/code-generation/) | Cliente de generación y explorador/modal de código. | `CodeGeneratorService`, slot `modal` |
+| [ai-assistant](../src/app/plugins/ai-assistant/) | Cliente IA y panel de prompts, imágenes y cámara. | `AiAssistantService`, slot `panel` |
+| [user-guide](../src/app/plugins/user-guide/) | Guía interactiva y chatbot de ayuda. | `UserGuideService`, slot `launcher` |
+| [uml-language](../src/app/plugins/uml-language/) | Operaciones, normalización y sincronización UML; editores de propiedades. | Contratos de dominio, slots `nodeEditor` y `connectionEditor` |
 
-Implementado en [`BmpExportService`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/services/bmp-export.service.ts):
+Los nombres de interfaz/token pueden coincidir con el servicio concreto. Desde el host o
+un paquete distinto, importar siempre el archivo `*.contract.ts`, nunca la implementación.
+Las herramientas opcionales se comprueban con `registry.has(token)` o por su slot antes de usarlas.
 
-1. **Cálculo del Bounding Box Real**:
-   - Itera sobre todos los nodos visibles para calcular el rectángulo mínimo envolvente:
-     `minX`, `minY`, `maxX`, `maxY` con margen de seguridad (*padding* de 40px).
-2. **Clonación del DOM y Aislamiento de Estilos**:
-   - Clona el contenido del lienzo (`f-canvas`) en un nodo temporal en memoria.
-   - Resuelve fuentes web, variables CSS de Tailwind y estilos computados para que no dependan del tema activo.
-3. **Rasterización a Canvas HTML5**:
-   - Renderiza el contenido vectorial a un elemento `<canvas>` con factor de escala de alta resolución (2x para pantallas Retina / alta densidad).
-4. **Codificación a Formato Deseado**:
-   - **PNG**: Mediante `canvas.toBlob('image/png')`.
-   - **BMP**: Generación binaria directa con cabecera BMP de 54 bytes (DIB header) y datos de píxeles RGB de 24 bits sin compresión con pérdida.
-5. **Descarga Automática**:
-   - Crea un enlace temporal `<a>` y dispara la descarga con nombre sugerido: `{proyecto}_{diagrama}_{fecha}.bmp`.
+## Exportación de imágenes y viewport
 
----
+`DiagramExportService` recibe un `DiagramExportCanvasTarget`; no conoce
+`DiagramCanvasComponent` ni los tipos de Foblex. El host implementa:
 
-## 3. Interoperabilidad XMI en el Cliente (`xmi-client-parser.ts`)
+```typescript
+interface DiagramExportCanvasTarget {
+  clearSelection(): void;
+  getExportElement(): HTMLElement | undefined;
+  prepareForExport(): () => void;
+}
+```
 
-Ubicado en [`frontend/src/app/core/services/xmi-client-parser.ts`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/core/services/xmi-client-parser.ts):
-- Parser ligero del lado del cliente que permite previsualizar y validar archivos `.xmi` y `.xml` exportados desde **Enterprise Architect** antes de enviarlos al backend.
-- Detecta clases, atributos, visibilidades, operaciones y relaciones.
-- Cuenta con suite de pruebas unitarias exhaustivas en `xmi-client-parser.spec.ts` (13 pruebas pasando).
+El lienzo guarda zoom y posición, normaliza el viewport y devuelve una función de restauración.
+El exportador espera el renderizado, solicita la captura mediante `BmpExportService` y ejecuta
+la restauración en `finally`, también ante fallos. Si no hay elemento DOM, utiliza la ruta
+alternativa desde nodos/conexiones; la exportación BMP asíncrona se espera antes de restaurar.
 
----
+`image-export` usa `html-to-image` y Canvas para capturas. Para BMP consume `BmpEncoder` por
+contrato. `bmp-encoder` mantiene el worker y su fallback; no importar su servicio directamente
+desde `image-export` ni trasladar el worker a Core.
 
-## 4. Modal de Generación de Código (`SpringBootModalComponent`)
+Las regresiones están en
+[diagram-export.service.spec.ts](../src/app/plugins/document-io/diagram-export.service.spec.ts),
+[diagram-canvas-export.spec.ts](../src/app/features/diagrams/diagram-editor/components/diagram-canvas/diagram-canvas-export.spec.ts)
+y [image-export.integration.spec.ts](../src/app/composition/image-export.integration.spec.ts).
 
-Ubicado en [`frontend/src/app/features/diagrams/diagram-editor/components/spring-boot-modal/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/components/spring-boot-modal/):
+## Documentos JSON y XMI
 
-1. **Explorador de Archivos en Tiempo Real**:
-   - Envía el AST del diagrama al endpoint `/api/code-generator/preview`.
-   - Renderiza un árbol jerárquico con carpetas y archivos generados para **Spring Boot** (`src/main/java/...`) o **Flutter** (`lib/models/...`).
-2. **Visor de Código con Resaltado de Sintaxis**:
-   - Permite al desarrollador hacer clic en cualquier archivo del árbol para ver su contenido en tiempo real antes de descargar.
-   - Botón de copia al portapapeles con confirmación visual.
-3. **Descarga de Microservicio Empaquetado**:
-   - Llama al endpoint `/api/code-generator/download-zip` y descarga el archivo comprimido `.zip` listo para abrir en IntelliJ IDEA, VS Code o Android Studio y ejecutar `mvn spring-boot:run` o `flutter run`.
+`UmlDiagramProject` vive en Core y permite compartir la forma del documento sin importar el
+componente del editor. `document-io` resuelve los contratos XMI de forma diferida cuando se
+solicita ese formato. Guardar/construir el AST no debe activar XMI, IA ni exportadores de imagen.
 
----
+Los parsers están en `plugins/xmi/parsers/`, junto a `xmi-client-parser.ts` y sus pruebas.
+Conservar IDs, conexiones, estereotipos, coordenadas y compatibilidad de datos existentes al
+modificar la interpretación de archivos de Enterprise Architect.
 
-## 5. Panel de Asistente IA (`AiAssistantPanelComponent`)
+## Código, IA y guía interactiva
 
-Ubicado en [`frontend/src/app/features/diagrams/diagram-editor/components/ai-assistant-panel/`](file:///mnt/datos/uagrm/8vo_semestre/sw1/parcial_1/frontend/src/app/features/diagrams/diagram-editor/components/ai-assistant-panel/):
+`code-generation` contiene el cliente HTTP y `spring-boot-modal/`. El modal permite explorar
+archivos generados y solicitar descargas; los templates del generador corresponden al backend.
+No documentar endpoints o modelos de generación que no estén en su cliente/configuración actual.
 
-1. **Generación por Prompt Textual**:
-   - El usuario ingresa un requerimiento en lenguaje natural (ej. *"Crea un diagrama de clases para un sistema de e-commerce con carrito, productos, clientes y pagos"*).
-   - El panel invoca al servicio `AiAssistantService`.
-   - El AST generado se inserta en el lienzo actual mediante `DiagramAiSyncService` calculando posiciones armoniosas sin solapamientos.
+`ai-assistant` contiene el servicio y `ai-assistant-panel/`, incluidos los helpers de medios.
+Los cambios de documentos se aplican mediante `DiagramDocumentSyncService`, contrato de
+`uml-language`. Esta capacidad también sirve a documentos recibidos por otras vías; no hacer
+que la normalización dependa de tener IA instalada. La selección del proveedor/modelo IA
+corresponde a la configuración del backend, no al núcleo del lienzo.
 
-2. **Visión Computacional y Captura en Vivo**:
-   - Integra la API `navigator.mediaDevices.getUserMedia()` para encender la cámara web del dispositivo.
-   - Permite al usuario sostener un dibujo en papel o apuntar a una pizarra blanca y presionar **Capturar Foto**.
-   - La imagen se convierte a Base64 y se transmite a Gemini 2.0 Flash / Pro para digitalizar el boceto automáticamente.
+`user-guide` publica su launcher; la raíz y las barras lo descubren mediante el registro.
+Retirar una herramienta debe eliminar su UI mediante el outlet sin afectar el documento.
+Las pruebas de integración entre estos paquetes pertenecen a `composition/`.

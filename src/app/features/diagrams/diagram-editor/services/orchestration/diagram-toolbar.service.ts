@@ -6,7 +6,7 @@ import {
 } from '../../../../../core/models/diagram.model';
 import { DiagramAlignmentService, AlignmentDirection, DistributionDirection } from '../spatial-engine/diagram-alignment.service';
 import { DiagramSelectionService } from '../state-persistence/diagram-selection.service';
-import { DiagramNodeOperationsService } from '../uml-domain/diagram-node-operations.service';
+import { DiagramNodeOperationsService } from '../../../../../core/plugins/contracts/diagram-node-operations.service.contract';
 
 export interface ToolbarTransformContext {
   pushSnapshot: () => void;
@@ -69,17 +69,27 @@ export class DiagramToolbarService {
 
     this.alignmentService = alignmentService ?? injectedAlignment ?? new DiagramAlignmentService();
     this.selectionService = selectionService ?? injectedSelection ?? new DiagramSelectionService();
-    this.nodeOps = nodeOps ?? injectedNodeOps ?? new DiagramNodeOperationsService();
+    this.nodeOps = nodeOps ?? injectedNodeOps!;
   }
 
   // --- GUÍAS INTELIGENTES ---
 
+  /**
+   * Alterna la habilitación de las guías magnéticas inteligentes de alineación espacial.
+   */
   toggleSmartGuides(): void {
     this.smartGuidesEnabled.update((val) => !val);
   }
 
   // --- COLOR SELECCIONADO ---
 
+  /**
+   * Obtiene el color efectivo del nodo seleccionado para sincronizar el selector de color de la barra superior.
+   * @param selectedNodeId Identificador del nodo seleccionado.
+   * @param nodes Lista de nodos del diagrama.
+   * @param getDefaultColor Función resolutora del color por defecto según tipo y estereotipo.
+   * @returns Código de color hexadecimal o null si no hay nodo seleccionado.
+   */
   computeSelectedNodeColor(
     selectedNodeId: string | null,
     nodes: UmlClassNode[],
@@ -90,6 +100,11 @@ export class DiagramToolbarService {
     return node?.color || getDefaultColor(node?.nodeType, node?.stereotype);
   }
 
+  /**
+   * Aplica un color de fondo a los nodos actualmente seleccionados y emite la sincronización colaborativa.
+   * @param color Nuevo color hexadecimal o null para restaurar el color por defecto.
+   * @param context Contexto de ejecución con colecciones de nodos, conexiones y callbacks de historial.
+   */
   applySelectedNodeColor(color: string | null, context: ToolbarColorContext): void {
     if (context.isReadOnly || context.selectedNodeIds.length === 0) return;
 
@@ -104,6 +119,13 @@ export class DiagramToolbarService {
 
   // --- ALINEACIÓN Y DISTRIBUCIÓN ---
 
+  /**
+   * Aplica una transformación de posición en bloque a los nodos modificados (alineación o distribución),
+   * registrando el snapshot en el historial y sincronizando los cambios con la sala colaborativa.
+   * @param modified Nodos modificados con nuevas posiciones espaciales.
+   * @param action Nombre semántico de la acción ejecutada.
+   * @param context Contexto de la barra de herramientas.
+   */
   applyNodesTransformation(modified: UmlClassNode[], action: string, context: ToolbarTransformContext): void {
     if (modified.length === 0) return;
     context.pushSnapshot();
@@ -116,6 +138,11 @@ export class DiagramToolbarService {
     context.sendDiagramSync(context.nodes, context.connections, action, context.defaultLineStyle);
   }
 
+  /**
+   * Alinea los nodos seleccionados en la dirección indicada (arriba, abajo, izquierda, derecha, etc.).
+   * @param direction Dirección de alineación.
+   * @param context Contexto de transformación y colecciones de elementos.
+   */
   alignNodes(direction: AlignmentDirection, context: ToolbarAlignmentContext): void {
     if (context.isReadOnly || context.selectedNodeIds.size < 2) return;
     const modified = this.alignmentService.alignNodes(
@@ -128,6 +155,11 @@ export class DiagramToolbarService {
     context.onApplyTransformation(modified, 'align_nodes');
   }
 
+  /**
+   * Distribuye equitativamente el espacio entre 3 o más nodos seleccionados de forma horizontal o vertical.
+   * @param direction Eje de distribución ('horizontal' o 'vertical').
+   * @param context Contexto de alineación.
+   */
   distributeNodes(direction: DistributionDirection, context: ToolbarAlignmentContext): void {
     if (context.isReadOnly || context.selectedNodeIds.size < 3) return;
     const modified = this.alignmentService.distributeNodes(
@@ -140,6 +172,11 @@ export class DiagramToolbarService {
     context.onApplyTransformation(modified, 'distribute_nodes');
   }
 
+  /**
+   * Ajusta las coordenadas de los nodos seleccionados para alinearse a la cuadrícula fija (grid).
+   * @param context Contexto de alineación.
+   * @param gridSize Tamaño del paso de rejilla en píxeles (por defecto 20).
+   */
   snapSelectedToGrid(context: ToolbarAlignmentContext, gridSize = 20): void {
     if (context.isReadOnly) return;
     const modified = this.alignmentService.snapToGrid(context.nodes, context.selectedNodeIds, gridSize);

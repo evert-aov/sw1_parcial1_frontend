@@ -72,11 +72,19 @@ export class LanguageSelectorComponent {
   readonly currentLang = this.translationService.currentLang;
   readonly isOpen = signal<boolean>(false);
 
+  /**
+   * Cambia el idioma activo de la aplicación y cierra el menú desplegable.
+   * @param lang Código del idioma seleccionado ('es' o 'en').
+   */
   selectLang(lang: SupportedLanguage): void {
     this.translationService.setLanguage(lang);
     this.isOpen.set(false);
   }
 
+  /**
+   * Cierra el menú desplegable si el usuario hace clic fuera de los límites del componente.
+   * @param event Evento MouseEvent global.
+   */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!this.elementRef.nativeElement.contains(event.target)) {

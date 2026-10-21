@@ -51,11 +51,21 @@ export class DiagramCanvasInteractionService {
     }
   }
 
+  /**
+   * Registra el inicio de interacción de ratón sobre el lienzo y cierra menús contextuales.
+   * @param event Evento de ratón (mousedown).
+   * @param closeContextMenu Callback para cerrar el menú contextual activo.
+   */
   handleCanvasMouseDown(event: MouseEvent, closeContextMenu?: () => void): void {
     if (closeContextMenu) closeContextMenu();
     this.canvasMouseDownPos = { x: event.clientX, y: event.clientY };
   }
 
+  /**
+   * Maneja el clic en el fondo del lienzo, deseleccionando elementos si no hubo arrastre.
+   * @param event Evento de ratón (click).
+   * @param onDeselect Callback para limpiar la selección activa.
+   */
   handleCanvasBackgroundClick(event: MouseEvent | undefined, onDeselect: () => void): void {
     if (event && isDragMovement(this.canvasMouseDownPos.x, this.canvasMouseDownPos.y, event.clientX, event.clientY)) {
       return;
@@ -63,6 +73,14 @@ export class DiagramCanvasInteractionService {
     onDeselect();
   }
 
+  /**
+   * Procesa el movimiento del ratón sobre el lienzo, calculando coordenadas virtuales y emitiendo cursor remoto.
+   * @param event Evento de ratón (mousemove).
+   * @param exportElement Elemento HTML contenedor del lienzo.
+   * @param transform Transformación actual (escala y posición de cámara).
+   * @param sendCursorPosition Callback para emitir posición de cursor a pares colaborativos.
+   * @returns Coordenadas calculadas en el lienzo o null.
+   */
   handleCanvasMouseMove(
     event: MouseEvent,
     exportElement?: HTMLElement | null,
@@ -78,10 +96,16 @@ export class DiagramCanvasInteractionService {
     return coords;
   }
 
+  /**
+   * Manejador global de mousedown en la ventana para resetear banderas de desplazamiento.
+   */
   handleWindowMouseDown(): void {
     this.hasMovedDuringPointerDown = false;
   }
 
+  /**
+   * Manejador global de mouseup en la ventana para finalizar arrastres y limpiar contención.
+   */
   handleWindowMouseUp(): void {
     this.containmentService.resetDragState();
     setTimeout(() => {
@@ -89,11 +113,21 @@ export class DiagramCanvasInteractionService {
     }, 50);
   }
 
+  /**
+   * Procesa el cambio de posición de un nodo individual durante la interacción de arrastre.
+   * @param params Parámetros de cambio de posición y callbacks.
+   * @returns Indicador de si se requiere redibujar.
+   */
   handleNodePositionChange(params: NodePositionChangeParams): { shouldRedraw: boolean } {
     this.hasMovedDuringPointerDown = true;
     return this.containmentService.processNodePositionChange(params);
   }
 
+  /**
+   * Procesa el movimiento en lote de múltiples nodos emitido por Foblex Flow.
+   * @param params Parámetros del evento de movimiento múltiple.
+   * @returns Indicador de si algún nodo cambió de posición efectivamente.
+   */
   handleMoveNodes(params: MoveNodesParams): { anyMoved: boolean } {
     this.hasMovedDuringPointerDown = true;
     return this.containmentService.processMoveNodes({

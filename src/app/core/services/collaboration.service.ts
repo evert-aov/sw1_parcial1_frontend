@@ -70,6 +70,10 @@ export class CollaborationService {
   private lastCursorSent = 0;
   private readonly lastNodeDragSent = new Map<string, number>();
 
+  /**
+   * Obtiene los datos del usuario actual desde el estado reactivo o el almacenamiento local.
+   * @returns El perfil del usuario o null si no se encuentra autenticado.
+   */
   private getCurrentUser(): User | null {
     const fromAuth = this.authService.currentUser();
     if (fromAuth) return fromAuth;
@@ -81,6 +85,9 @@ export class CollaborationService {
     return null;
   }
 
+  /**
+   * Inicializa y conecta el socket WebSocket con el servidor colaborativo en tiempo real.
+   */
   connect(): void {
     if (this.socket) {
       if (!this.socket.connected) {
@@ -207,6 +214,11 @@ export class CollaborationService {
     });
   }
 
+  /**
+   * Conecta y se une a la sala colaborativa asignada a un diagrama.
+   * @param diagramId Identificador del diagrama a editar colaborativamente.
+   * @param customRoomCode Código opcional personalizado de sala.
+   */
   joinRoom(diagramId: string, customRoomCode?: string): void {
     this.currentDiagramId.set(diagramId);
     this.connect();
@@ -216,6 +228,11 @@ export class CollaborationService {
     }
   }
 
+  /**
+   * Emite el evento de conexión e ingreso a la sala WebSocket con los metadatos del usuario.
+   * @param diagramId Identificador del diagrama.
+   * @param customRoomCode Código opcional de la sala.
+   */
   private emitJoinRoom(diagramId: string, customRoomCode?: string): void {
     const user = this.getCurrentUser();
     const userId = user?.id || `anon_${Math.random().toString(36).substring(2, 7)}`;
@@ -251,6 +268,9 @@ export class CollaborationService {
     );
   }
 
+  /**
+   * Abandona la sala colaborativa actual y reinicia los estados de cursores y bloqueos remotos.
+   */
   leaveRoom(): void {
     const user = this.getCurrentUser();
     const roomCode = this.activeRoomCode();
@@ -268,6 +288,10 @@ export class CollaborationService {
     this.activeNodeLocks.set(new Map());
   }
 
+  /**
+   * Solicita el bloqueo exclusivo de un nodo UML para evitar edición concurrente conflictiva.
+   * @param nodeId Identificador del nodo a bloquear.
+   */
   requestNodeLock(nodeId: string): void {
     const user = this.getCurrentUser();
     const diagramId = this.currentDiagramId();
@@ -298,6 +322,10 @@ export class CollaborationService {
     });
   }
 
+  /**
+   * Libera el bloqueo de edición sobre el nodo especificado.
+   * @param nodeId Identificador del nodo a desbloquear.
+   */
   releaseNodeLock(nodeId: string): void {
     this.lastNodeDragSent.delete(nodeId);
     const user = this.getCurrentUser();
@@ -320,6 +348,11 @@ export class CollaborationService {
     });
   }
 
+  /**
+   * Emite la posición del cursor local al servidor WebSocket con throttle a ~40 FPS.
+   * @param x Coordenada X del cursor en el lienzo.
+   * @param y Coordenada Y del cursor en el lienzo.
+   */
   sendCursorPosition(x: number, y: number): void {
     const now = Date.now();
     if (now - this.lastCursorSent < 25) return; // ~40 fps
@@ -341,6 +374,11 @@ export class CollaborationService {
     });
   }
 
+  /**
+   * Emite el desplazamiento en vivo de un nodo durante la operación de arrastre (throttle a ~30 FPS).
+   * @param nodeId Identificador del nodo en movimiento.
+   * @param position Coordenadas actuales del nodo ({ x, y }).
+   */
   sendNodeDrag(nodeId: string, position: { x: number; y: number }): void {
     const now = Date.now();
     const last = this.lastNodeDragSent.get(nodeId) || 0;
@@ -364,6 +402,14 @@ export class CollaborationService {
     });
   }
 
+  /**
+   * Sincroniza el estado global de nodos y conexiones con todos los participantes conectados en la sala.
+   * @param nodes Lista actualizada de nodos UML.
+   * @param connections Lista actualizada de relaciones.
+   * @param action Tipo de acción descriptiva de sincronización ('update', 'delete', etc.).
+   * @param defaultLineStyle Estilo de línea por defecto.
+   * @param diagramType Tipo de diagrama UML actual.
+   */
   sendDiagramSync(
     nodes: UmlClassNode[],
     connections: UmlConnection[],
@@ -388,6 +434,10 @@ export class CollaborationService {
     });
   }
 
+  /**
+   * Envía un mensaje de texto al chat grupal de la sala de colaboración activa.
+   * @param message Texto del mensaje a transmitir.
+   */
   sendChatMessage(message: string): void {
     const user = this.getCurrentUser();
     const diagramId = this.currentDiagramId();
@@ -403,6 +453,9 @@ export class CollaborationService {
     });
   }
 
+  /**
+   * Cierra completamente la conexión del socket WebSocket y limpia recursos de la sala.
+   */
   disconnect(): void {
     this.lastNodeDragSent.clear();
     this.leaveRoom();
@@ -413,6 +466,11 @@ export class CollaborationService {
     this.isConnected.set(false);
   }
 
+  /**
+   * Genera de forma determinista un color distinguible para el usuario a partir de su identificador o nombre.
+   * @param seed Cadena base para el hash determinista.
+   * @returns Color en formato hexadecimal.
+   */
   private generateUserColor(seed: string): string {
     const palette = [
       '#EF4444', // Rojo Coral

@@ -24,6 +24,11 @@ export class DiagramModalService {
     }
   }
 
+  /**
+   * Obtiene la clave de internacionalización para el mensaje de incompatibilidad según el tipo de diagrama.
+   * @param diagType Tipo de diagrama UML activo.
+   * @returns Clave de traducción correspondiente.
+   */
   getIncompatibleElementMessageKey(diagType: DiagramType): string {
     const keyMap: Partial<Record<DiagramType, string>> = {
       [DiagramType.USE_CASE]: 'editor.incompatible.useCase',
@@ -39,6 +44,11 @@ export class DiagramModalService {
     return keyMap[diagType] || 'editor.incompatible.class';
   }
 
+  /**
+   * Despliega un diálogo de advertencia informando que un elemento UML es incompatible con el tipo de diagrama actual.
+   * @param diagType Tipo de diagrama activo.
+   * @param customDialog Diálogo de confirmación opcional.
+   */
   showIncompatibleElementModal(diagType: DiagramType, customDialog?: any): void {
     const dialog = customDialog || this.confirmDialogService;
     dialog?.alert({
@@ -82,11 +92,19 @@ export class DiagramModalService {
       this.isCreateDiagramModalOpen()
   );
 
+  /**
+   * Abre el modal de edición de propiedades para un nodo UML específico (clonando sus datos).
+   * @param node Nodo UML a editar.
+   */
   openEditNodeModal(node: UmlClassNode): void {
     this.editingNode.set(JSON.parse(JSON.stringify(node)));
     this.isEditNodeModalOpen.set(true);
   }
 
+  /**
+   * Cierra el modal de edición de nodo y opcionalmente libera el bloqueo colaborativo del elemento.
+   * @param onReleaseLock Callback opcional para desbloquear el nodo.
+   */
   closeEditNodeModal(onReleaseLock?: (nodeId: string) => void): void {
     const current = this.editingNode();
     if (current && onReleaseLock) {
@@ -96,58 +114,98 @@ export class DiagramModalService {
     this.editingNode.set(null);
   }
 
+  /**
+   * Abre el modal de edición para una conexión o relación UML.
+   * @param conn Conexión UML a editar.
+   */
   openEditConnModal(conn: UmlConnection): void {
     this.editingConnection.set(JSON.parse(JSON.stringify(conn)));
     this.isEditConnModalOpen.set(true);
   }
 
+  /**
+   * Cierra el modal de edición de conexión.
+   */
   closeEditConnModal(): void {
     this.isEditConnModalOpen.set(false);
     this.editingConnection.set(null);
   }
 
+  /**
+   * Abre el modal JSON en modo exportación con el contenido JSON formateado.
+   * @param jsonStr Cadena serializada del proyecto JSON.
+   */
   openExportModal(jsonStr: string): void {
     this.jsonContent.set(jsonStr);
     this.jsonModalMode.set('export');
     this.showJsonModal.set(true);
   }
 
+  /**
+   * Abre el modal JSON en modo importación con el área de texto limpia.
+   */
   openImportModal(): void {
     this.jsonContent.set('');
     this.jsonModalMode.set('import');
     this.showJsonModal.set(true);
   }
 
+  /**
+   * Cierra el modal de importación/exportación JSON.
+   */
   closeJsonModal(): void {
     this.showJsonModal.set(false);
   }
 
+  /**
+   * Abre el modal de creación de un nuevo diagrama, permitiendo predefinir el tipo UML.
+   * @param lockedType Tipo UML predeterminado opcional.
+   */
   openCreateDiagramModal(lockedType: DiagramType | null = null): void {
     this.lockedDiagramType.set(lockedType);
     this.isCreateDiagramModalOpen.set(true);
   }
 
+  /**
+   * Cierra el modal de creación de nuevo diagrama y resetea el tipo predefinido.
+   */
   closeCreateDiagramModal(): void {
     this.isCreateDiagramModalOpen.set(false);
     this.lockedDiagramType.set(null);
   }
 
+  /**
+   * Abre el modal de generación de código Spring Boot.
+   */
   openSpringBootModal(): void {
     this.showSpringBootModal.set(true);
   }
 
+  /**
+   * Cierra el modal de generación de código Spring Boot.
+   */
   closeSpringBootModal(): void {
     this.showSpringBootModal.set(false);
   }
 
+  /**
+   * Abre el modal de edición de perfil de usuario.
+   */
   openProfileModal(): void {
     this.isProfileModalOpen.set(true);
   }
 
+  /**
+   * Cierra el modal de edición de perfil de usuario.
+   */
   closeProfileModal(): void {
     this.isProfileModalOpen.set(false);
   }
 
+  /**
+   * Cierra de forma unificada todos los modales y menús desplegables activos en la interfaz.
+   * @param onReleaseNodeLock Callback opcional para liberar el bloqueo colaborativo si había un nodo en edición.
+   */
   closeAllModals(onReleaseNodeLock?: (nodeId: string) => void): void {
     this.closeEditNodeModal(onReleaseNodeLock);
     this.closeEditConnModal();

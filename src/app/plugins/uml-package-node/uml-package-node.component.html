@@ -1,0 +1,126 @@
+<!-- PAQUETE UML O BOUNDARY BOX -->
+@if (!isBoundaryBox) {
+  <!-- PAQUETE UML (PESTAÑA SUPERIOR-IZQUIERDA + CUERPO PRINCIPAL) -->
+  <div
+    (click)="onContainerClick($event)"
+    class="w-full h-full flex flex-col relative select-none cursor-pointer">
+    
+    <!-- Pestaña Superior Izquierda (Folder Tab) -->
+    <div
+      [ngClass]="{
+        'border-blue-600 text-blue-900': isSelected(),
+        'border-[#796354] text-[#241C18] shadow-[2px_0px_0px_rgba(0,0,0,0.15)]': !isSelected()
+      }"
+      [style.backgroundColor]="node().color || '#FAF1EC'"
+      class="h-7.5 max-w-[85%] min-w-[70px] w-fit self-start px-3 py-1 flex items-center justify-between border-2 rounded-none z-10 font-bold text-[12px] font-sans truncate -mb-[2px]">
+      @if (isRenaming) {
+        <input
+          #renamePkgInput
+          appAutofocusInput
+          type="text"
+          [attr.data-rename-node-id]="node().id"
+          [value]="packageTabTitle()"
+          (keydown.enter)="onCommit(renamePkgInput.value)"
+          (keydown.escape)="onCancel()"
+          (blur)="onCommit(renamePkgInput.value)"
+          (keydown)="$event.stopPropagation()"
+          (pointerdown)="$event.stopPropagation()"
+          (mousedown)="$event.stopPropagation()"
+          (click)="$event.stopPropagation()"
+          class="uml-rename-input w-full font-bold text-[12px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded-none px-1 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs"
+        />
+      } @else {
+        <span class="truncate leading-none" [title]="packageTabTitle()">
+          {{ packageTabTitle() }}
+        </span>
+      }
+    </div>
+
+    <!-- Cuerpo Principal del Paquete (Main Body) -->
+    <div
+      [ngClass]="{
+        'border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isSelected(),
+        'border-[#796354] shadow-[3px_3px_0px_rgba(0,0,0,0.15)]': !isSelected()
+      }"
+      [style.backgroundColor]="node().color || '#FAF1EC'"
+      class="flex-1 w-full border-2 rounded-none p-3 flex flex-col justify-start relative z-0">
+      
+      <!-- Botón Eliminar en hover -->
+      <button
+        (click)="onDelete($event)"
+        [disabled]="isLocked()"
+        [title]="'editor.canvas.nodes.deletePackage' | translate"
+        class="absolute top-1.5 right-1.5 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
+        <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+      </button>
+
+      <!-- Contenido / Descripción del Paquete (Alineado a la izquierda según referencia UML) -->
+      <div class="text-left w-full flex flex-col items-start justify-start pt-0.5">
+        @if (node().stereotype) {
+          <span class="text-[9.5px] italic font-serif leading-none tracking-tight opacity-75 select-none block mb-1">
+            «{{ node().stereotype }}»
+          </span>
+        }
+        <span class="font-normal text-[12px] font-sans leading-relaxed text-[#241C18] block text-left break-words select-none max-w-full whitespace-pre-line" [title]="packageBodyText() || packageTabTitle()">
+          {{ packageBodyText() || packageTabTitle() }}
+        </span>
+      </div>
+    </div>
+  </div>
+} @else {
+  <!-- RECUADRO AGRUPADOR UML / BOUNDARY BOX (UN SOLO RECUADRO - ESTÁNDAR DESPLIEGUE) -->
+  <div
+    (click)="onContainerClick($event)"
+    [ngClass]="{
+      'border-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.4)]': isSelected(),
+      'border-[#1E293B] shadow-sm': !isSelected()
+    }"
+    [style.backgroundColor]="(!node().color || node().color === '#FFFDDD' || node().color === '#FAF1EC') ? '#FAF1EC' : node().color"
+    class="w-full h-full border-2 rounded-none p-3 flex flex-col justify-start relative select-none cursor-pointer backdrop-blur-[1px]">
+    
+    <!-- Botón Eliminar en hover -->
+    <button
+      (click)="onDelete($event)"
+      [disabled]="isLocked()"
+      [title]="'editor.canvas.nodes.deleteBoundaryBox' | translate"
+      class="absolute top-1.5 right-1.5 opacity-0 group-hover/node:opacity-100 hover:text-red-600 text-slate-400 p-0.5 cursor-pointer transition-opacity z-20 disabled:opacity-0">
+      <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+    </button>
+
+    <!-- Cabecera / Etiqueta del Recuadro Agrupador (Alineado arriba al centro) -->
+    <div class="text-center w-full flex flex-col items-center justify-center">
+      @if (isRenaming) {
+        <input
+          #renameBoundaryInput
+          appAutofocusInput
+          type="text"
+          [attr.data-rename-node-id]="node().id"
+          [value]="node().name === 'ClassName' || node().name === '.' ? '' : node().name"
+          [placeholder]="'editor.canvas.nodes.boundaryBoxPlaceholder' | translate"
+          (keydown.enter)="onCommit(renameBoundaryInput.value)"
+          (keydown.escape)="onCancel()"
+          (blur)="onCommit(renameBoundaryInput.value)"
+          (keydown)="$event.stopPropagation()"
+          (pointerdown)="$event.stopPropagation()"
+          (mousedown)="$event.stopPropagation()"
+          (click)="$event.stopPropagation()"
+          class="uml-rename-input w-full max-w-[280px] font-bold text-[12px] font-sans leading-tight text-[#241C18] bg-white border border-blue-500 rounded-none px-2 py-0.5 outline-hidden ring-1 ring-blue-500 shadow-xs text-center"
+        />
+      } @else {
+        @if (node().stereotype) {
+          <span class="text-[9.5px] italic font-serif leading-none tracking-tight opacity-75 select-none block mb-0.5 text-center">
+            «{{ node().stereotype }}»
+          </span>
+        }
+        @if (node().name && node().name.trim().length > 0 && node().name !== 'ClassName' && node().name !== '.') {
+          <span class="font-bold text-[12px] font-sans leading-snug text-[#241C18] block text-center truncate max-w-full" [title]="node().name">
+            {{ node().name }}
+          </span>
+        }
+      }
+    </div>
+
+    <!-- Espacio interior para agrupar nodos -->
+    <div class="flex-1 w-full pointer-events-none"></div>
+  </div>
+}
