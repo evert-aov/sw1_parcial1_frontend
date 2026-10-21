@@ -15,16 +15,24 @@ import {
  */
 export class ConnectionCascadeUtil {
   /**
+   * Extrae el identificador base del nodo removiendo cualquier sufijo de conector o slot.
+   */
+  static extractBaseNodeId(id: string | null | undefined): string {
+    if (!id) return '';
+    return id.replace(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/, '');
+  }
+
+  /**
    * Invierte la dirección lógica y los conectores de una relación UML.
    *
    * @param conn Conexión a invertir.
    * @returns Conexión con origen, destino y multiplicidades intercambiados.
    */
   static reverseConnection(conn: UmlConnection): UmlConnection {
-    const currentS = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const currentT = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const sSideMatch = conn.sourceId?.match(/_(top|bottom|left|right|slot_\d+)$/);
-    const tSideMatch = conn.targetId?.match(/_(top|bottom|left|right|slot_\d+)$/);
+    const currentS = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+    const currentT = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
+    const sSideMatch = conn.sourceId?.match(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/);
+    const tSideMatch = conn.targetId?.match(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/);
     const sSide = sSideMatch ? sSideMatch[1] : 'right';
     const tSide = tSideMatch ? tSideMatch[1] : 'left';
 
@@ -90,8 +98,8 @@ export class ConnectionCascadeUtil {
       });
 
       if (conn.type === 'association_class') {
-        const sourceBase = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const targetBase = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right)$/, '');
+        const sourceBase = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+        const targetBase = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
         const sourceNode = nodes.find((n) => n.id === sourceBase);
         const targetNode = nodes.find((n) => n.id === targetBase);
         if (sourceNode?.isAnchor) nodesToDelete.add(sourceNode.id);
@@ -103,8 +111,8 @@ export class ConnectionCascadeUtil {
 
     connections.forEach((c) => {
       if (c.type === 'association_class') {
-        const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
+        const sourceBase = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+        const targetBase = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
         if (nodesToDelete.has(sourceBase)) nodesToDelete.add(targetBase);
         if (nodesToDelete.has(targetBase)) nodesToDelete.add(sourceBase);
       }
@@ -122,8 +130,8 @@ export class ConnectionCascadeUtil {
     });
 
     connections.forEach((c) => {
-      const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
-      const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
+      const sourceBase = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+      const targetBase = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
       if (nodesToDelete.has(sourceBase) || nodesToDelete.has(targetBase)) {
         connsToDelete.add(c.id);
       }
@@ -176,8 +184,8 @@ export class ConnectionCascadeUtil {
     if (!selectedNodeId) return false;
     const conn = connections.find((c) => c.id === connId);
     if (!conn) return false;
-    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+    const s = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+    const t = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
     return s === selectedNodeId || t === selectedNodeId;
   }
 
@@ -194,8 +202,8 @@ export class ConnectionCascadeUtil {
     if (!selectedNodeId) return false;
     const conn = connections.find((c) => c.id === connId);
     if (!conn) return false;
-    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+    const s = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+    const t = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
     return s !== selectedNodeId && t !== selectedNodeId;
   }
 
@@ -222,8 +230,8 @@ export class ConnectionCascadeUtil {
     if (hasMultipleSelected) return false;
     if (!selectedNodeId || nodeId === selectedNodeId) return false;
     return connections.some((c) => {
-      const s = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-      const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
+      const s = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+      const t = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
       return (s === selectedNodeId && t === nodeId) || (t === selectedNodeId && s === nodeId);
     });
   }

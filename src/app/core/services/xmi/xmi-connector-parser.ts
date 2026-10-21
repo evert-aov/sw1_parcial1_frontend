@@ -884,8 +884,8 @@ export class XmiConnectorParser {
       if (mainConn.assocAnchorNodeId && nodeMap.has(mainConn.assocAnchorNodeId)) continue;
       seenAssocNodes.add(pair.assocNodeId);
 
-      const sId = mainConn.sourceNodeId || mainConn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-      const tId = mainConn.targetNodeId || mainConn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+      const sId = mainConn.sourceNodeId || mainConn.sourceId?.replace(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/, '');
+      const tId = mainConn.targetNodeId || mainConn.targetId?.replace(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/, '');
       if (!sId || !tId) continue;
 
       const sourceNode = nodeMap.get(sId);

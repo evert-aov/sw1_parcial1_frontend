@@ -7,6 +7,7 @@ import {
 } from '../../../../../core/models/diagram.model';
 import { DiagramNodeFactoryService } from './diagram-node-factory.service';
 import { DiagramClipboardService } from '../state-persistence/diagram-clipboard.service';
+import { ConnectionCascadeUtil } from '../../utils/connection-cascade.util';
 import {
   sanitizeBoundaryBoxName,
   isSystemBoundaryBox,
@@ -71,8 +72,8 @@ export class DiagramNodeOperationsService {
 
     // 1. Identificar conexiones que tocan directamente a nodeId
     const directConns = connections.filter((c) => {
-      const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
-      const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
+      const sourceBase = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+      const targetBase = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
       return sourceBase === nodeId || targetBase === nodeId;
     });
 
@@ -103,8 +104,8 @@ export class DiagramNodeOperationsService {
     // 3. Buscar todas las tablas/anclas asociadas por conexiones tipo 'association_class'
     connections.forEach((c) => {
       if (c.type === 'association_class') {
-        const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
-        const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
+        const sourceBase = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+        const targetBase = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
         if (nodesToDelete.has(sourceBase)) nodesToDelete.add(targetBase);
         if (nodesToDelete.has(targetBase)) nodesToDelete.add(sourceBase);
       }
@@ -124,8 +125,8 @@ export class DiagramNodeOperationsService {
 
     // 5. Eliminar todas las conexiones que toquen a cualquiera de los nodos marcados
     connections.forEach((c) => {
-      const sourceBase = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right)$/, '');
-      const targetBase = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right)$/, '');
+      const sourceBase = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+      const targetBase = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
       if (nodesToDelete.has(sourceBase) || nodesToDelete.has(targetBase)) {
         connsToDelete.add(c.id);
       }

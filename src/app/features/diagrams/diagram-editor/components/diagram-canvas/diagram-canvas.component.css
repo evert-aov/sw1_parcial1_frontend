@@ -402,21 +402,32 @@
   line-height: 1;
 }
 
-/* Conectores UML */
+/* Conectores UML (12 puntos perimetrales adaptativos) */
 .uml-connector-point {
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
 }
 
 .uml-connector-active {
+  opacity: 1 !important;
   background-color: #3B82F6;
   border: 2px solid #FFFFFF;
   box-shadow: 0 0 0 2px #2563EB;
 }
 
 .uml-connector-inactive {
+  opacity: 0;
   background-color: #94A3B8;
   border: 1.5px solid #FFFFFF;
-  opacity: 0.6;
+}
+
+.group\/node:hover .uml-connector-inactive {
+  opacity: 0.65;
+}
+
+.uml-connector-inactive:hover {
+  opacity: 1 !important;
+  background-color: #3B82F6 !important;
+  box-shadow: 0 0 0 2px #2563EB;
 }
 
 :host-context(.dark) .uml-connector-active,
@@ -430,6 +441,27 @@
 .dark .uml-connector-inactive {
   background-color: #475569;
   border-color: #1E293B;
+}
+
+:host-context(.dark) .uml-connector-inactive:hover,
+.dark .uml-connector-inactive:hover {
+  background-color: #6366F1 !important;
+  box-shadow: 0 0 0 2px #4F46E5;
+}
+
+/* Trazado y uniones de esquinas UML (Miter para Square / Segment, Round para Rounded / Adaptive Curve) */
+::ng-deep .uml-line-style-orthogonal_square path[f-connection-path],
+::ng-deep .uml-line-style-segment path[f-connection-path],
+::ng-deep .uml-line-style-tree_vertical path[f-connection-path],
+::ng-deep .uml-line-style-tree_horizontal path[f-connection-path],
+::ng-deep .uml-line-style-lateral_vertical path[f-connection-path],
+::ng-deep .uml-line-style-lateral_horizontal path[f-connection-path] {
+  stroke-linejoin: miter !important;
+}
+
+::ng-deep .uml-line-style-orthogonal_rounded path[f-connection-path],
+::ng-deep .uml-line-style-adaptive-curve path[f-connection-path] {
+  stroke-linejoin: round !important;
 }
 
 /* =========================================================================

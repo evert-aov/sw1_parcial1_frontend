@@ -14,6 +14,7 @@ import {
   EXPLICIT_SIZE_NODE_TYPES,
   UmlNodeNormalizerUtil,
 } from '../../utils/uml-node-normalizer.util';
+import { ConnectionCascadeUtil } from '../../utils/connection-cascade.util';
 
 export const PREDEFINED_DATA_TYPES: string[] = [
   'UUID', 'String', 'Integer', 'Long', 'Boolean', 'Double',
@@ -65,8 +66,8 @@ export class DiagramAiSyncService {
     for (const conn of targetConns) {
       if (conn.assocAnchorNodeId) {
         const anchorNode = nodeMap.get(conn.assocAnchorNodeId);
-        const baseSourceId = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-        const baseTargetId = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        const baseSourceId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+        const baseTargetId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
         const sourceNode = baseSourceId ? nodeMap.get(baseSourceId) : undefined;
         const targetNode = baseTargetId ? nodeMap.get(baseTargetId) : undefined;
         if (anchorNode && sourceNode && targetNode) {
@@ -251,7 +252,7 @@ export class DiagramAiSyncService {
     const nodeMap = new Map(validNodes.map((n) => [n.id, n]));
     const nodeIds = new Set(validNodes.map((n) => n.id));
     const extractBaseNodeId = (rawId?: string) =>
-      rawId ? rawId.replace(/_(top|bottom|left|right)$/, '').replace(/_slot_\d+$/, '') : '';
+      ConnectionCascadeUtil.extractBaseNodeId(rawId);
 
     const isCommDiagram = activeDiagramType === DiagramType.COMMUNICATION;
     const seqConns: any[] = [];

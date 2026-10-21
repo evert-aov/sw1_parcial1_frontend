@@ -264,7 +264,61 @@ export class DiagramCanvasComponent {
     if (this.isSequenceConnection(conn) && !this.isRecursiveConn(conn)) {
       return 'straight';
     }
-    return sanitizeLineStyle(conn?.lineStyle, this.defaultLineStyle() || 'segment');
+    const style = sanitizeLineStyle(conn?.lineStyle, this.defaultLineStyle() || 'orthogonal_square');
+    switch (style) {
+      case 'straight':
+        return 'straight';
+      case 'bezier':
+        return 'bezier';
+      case 'orthogonal_rounded':
+      case 'adaptive-curve':
+        return 'adaptive-curve';
+      case 'orthogonal_square':
+      case 'segment':
+      case 'tree_vertical':
+      case 'tree_horizontal':
+      case 'lateral_vertical':
+      case 'lateral_horizontal':
+      default:
+        return 'segment';
+    }
+  }
+
+  getConnectionRadius(conn: UmlConnection): number {
+    const style = sanitizeLineStyle(conn?.lineStyle, this.defaultLineStyle() || 'orthogonal_square');
+    if (style === 'orthogonal_rounded' || style === 'adaptive-curve') {
+      return 14;
+    }
+    return 0;
+  }
+
+  getConnectionTypeForCreate(): 'segment' | 'straight' | 'bezier' | 'adaptive-curve' {
+    const style = sanitizeLineStyle(this.defaultLineStyle() || 'orthogonal_square');
+    switch (style) {
+      case 'straight':
+        return 'straight';
+      case 'bezier':
+        return 'bezier';
+      case 'orthogonal_rounded':
+      case 'adaptive-curve':
+        return 'adaptive-curve';
+      case 'orthogonal_square':
+      case 'segment':
+      case 'tree_vertical':
+      case 'tree_horizontal':
+      case 'lateral_vertical':
+      case 'lateral_horizontal':
+      default:
+        return 'segment';
+    }
+  }
+
+  getConnectionRadiusForCreate(): number {
+    const style = sanitizeLineStyle(this.defaultLineStyle() || 'orthogonal_square');
+    if (style === 'orthogonal_rounded' || style === 'adaptive-curve') {
+      return 14;
+    }
+    return 0;
   }
 
   getConnectionBehavior(conn: UmlConnection): 'floating' | 'fixed' {
@@ -276,6 +330,19 @@ export class DiagramCanvasComponent {
     if (this.isRecursiveConn(conn)) {
       return this.getConnSide(conn.sourceId, 'top');
     }
+    const style = sanitizeLineStyle(conn?.lineStyle, this.defaultLineStyle() || 'orthogonal_square');
+    if (style === 'tree_vertical') {
+      return this.geometryService.getTreeVerticalSourceSide(conn, this.nodes());
+    }
+    if (style === 'tree_horizontal') {
+      return this.geometryService.getTreeHorizontalSourceSide(conn, this.nodes());
+    }
+    if (style === 'lateral_vertical') {
+      return this.geometryService.getLateralVerticalSourceSide(conn, this.nodes());
+    }
+    if (style === 'lateral_horizontal') {
+      return this.geometryService.getLateralHorizontalSourceSide(conn, this.nodes());
+    }
     if (this.isFloatingConn(conn)) {
       return 'default';
     }
@@ -285,6 +352,19 @@ export class DiagramCanvasComponent {
   getConnectionInputSide(conn: UmlConnection): 'default' | 'top' | 'right' | 'bottom' | 'left' {
     if (this.isRecursiveConn(conn)) {
       return this.getConnSide(conn.targetId, 'right');
+    }
+    const style = sanitizeLineStyle(conn?.lineStyle, this.defaultLineStyle() || 'orthogonal_square');
+    if (style === 'tree_vertical') {
+      return this.geometryService.getTreeVerticalTargetSide(conn, this.nodes());
+    }
+    if (style === 'tree_horizontal') {
+      return this.geometryService.getTreeHorizontalTargetSide(conn, this.nodes());
+    }
+    if (style === 'lateral_vertical') {
+      return this.geometryService.getLateralVerticalTargetSide(conn, this.nodes());
+    }
+    if (style === 'lateral_horizontal') {
+      return this.geometryService.getLateralHorizontalTargetSide(conn, this.nodes());
     }
     if (this.isFloatingConn(conn)) {
       return 'default';

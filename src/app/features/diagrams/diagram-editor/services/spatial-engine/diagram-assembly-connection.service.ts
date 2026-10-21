@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
+import { ConnectionCascadeUtil } from '../../utils/connection-cascade.util';
 
 @Injectable({ providedIn: 'root' })
 export class DiagramAssemblyConnectionService {
@@ -11,10 +12,10 @@ export class DiagramAssemblyConnectionService {
     defaultSide: 'top' | 'right' | 'bottom' | 'left' = 'right',
   ): 'top' | 'right' | 'bottom' | 'left' {
     if (!connectorId) return defaultSide;
-    if (connectorId.endsWith('_top')) return 'top';
-    if (connectorId.endsWith('_right')) return 'right';
-    if (connectorId.endsWith('_bottom')) return 'bottom';
-    if (connectorId.endsWith('_left')) return 'left';
+    if (connectorId.includes('_top')) return 'top';
+    if (connectorId.includes('_right')) return 'right';
+    if (connectorId.includes('_bottom')) return 'bottom';
+    if (connectorId.includes('_left')) return 'left';
     return defaultSide;
   }
 
@@ -36,17 +37,47 @@ export class DiagramAssemblyConnectionService {
       node.nodeType === 'entity'
         ? 38 + Math.max(0, node.labelOffset?.y || 0)
         : 0;
-    switch (side) {
+
+    const normalizedSide = side.startsWith(node.id)
+      ? side.slice(node.id.length).replace(/^_/, '')
+      : side;
+
+    switch (normalizedSide) {
+      case 'left_start':
+        return { x: node.position.x, y: node.position.y + h * 0.25 };
       case 'left':
         return { x: node.position.x, y: node.position.y + h / 2 };
+      case 'left_end':
+        return { x: node.position.x, y: node.position.y + h * 0.75 };
+
+      case 'right_start':
+        return { x: node.position.x + w, y: node.position.y + h * 0.25 };
       case 'right':
         return { x: node.position.x + w, y: node.position.y + h / 2 };
+      case 'right_end':
+        return { x: node.position.x + w, y: node.position.y + h * 0.75 };
+
+      case 'top_start':
+        return { x: node.position.x + w * 0.25, y: node.position.y };
       case 'top':
         return { x: node.position.x + w / 2, y: node.position.y };
+      case 'top_end':
+        return { x: node.position.x + w * 0.75, y: node.position.y };
+
+      case 'bottom_start':
+        return { x: node.position.x + w * 0.25, y: node.position.y + h + bottomExtra };
       case 'bottom':
         return { x: node.position.x + w / 2, y: node.position.y + h + bottomExtra };
-      default:
+      case 'bottom_end':
+        return { x: node.position.x + w * 0.75, y: node.position.y + h + bottomExtra };
+
+      default: {
+        if (normalizedSide.includes('top')) return { x: node.position.x + w / 2, y: node.position.y };
+        if (normalizedSide.includes('bottom')) return { x: node.position.x + w / 2, y: node.position.y + h + bottomExtra };
+        if (normalizedSide.includes('left')) return { x: node.position.x, y: node.position.y + h / 2 };
+        if (normalizedSide.includes('right')) return { x: node.position.x + w, y: node.position.y + h / 2 };
         return { x: node.position.x + w / 2, y: node.position.y + h / 2 };
+      }
     }
   }
 
@@ -81,8 +112,8 @@ export class DiagramAssemblyConnectionService {
     } catch (_) {}
 
     const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-    const sId = conn.sourceNodeId || conn.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const tId = conn.targetNodeId || conn.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const sId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+    const tId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
     const sNode = nodeMap.get(sId);
     const tNode = nodeMap.get(tId);
     if (!sNode || !tNode) return 0;

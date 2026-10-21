@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { DiagramType, UmlClassNode, UmlConnection, UmlMessage } from '../../../../../core/models/diagram.model';
 import { isSequenceConnection as isSequenceConnectionLogic } from '../../components/diagram-canvas/nodes';
+import { ConnectionCascadeUtil } from '../../utils/connection-cascade.util';
 
 export interface SequenceActivationInterval {
   id: string;
@@ -97,8 +98,8 @@ export class DiagramSequenceActivationService {
     for (const c of connections) {
       if (!isSequenceConnectionLogic(c, activeDiagramType)) continue;
 
-      const baseSrc = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-      const baseTgt = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const baseSrc = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+      const baseTgt = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
       if (!baseSrc || !baseTgt) continue;
 
       const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
@@ -356,8 +357,8 @@ export class DiagramSequenceActivationService {
 
     const nodeSlotsMap = new Map<string, number[]>();
     for (const c of seqConns) {
-      const sNodeId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-      const tNodeId = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+      const sNodeId = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+      const tNodeId = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
       const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
       const tMatch = c.targetId?.match(/_slot_(\d+)$/);
       const slot = sMatch ? parseInt(sMatch[1], 10) : tMatch ? parseInt(tMatch[1], 10) : 0;

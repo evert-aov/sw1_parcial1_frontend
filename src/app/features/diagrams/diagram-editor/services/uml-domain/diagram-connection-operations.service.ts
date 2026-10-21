@@ -105,8 +105,8 @@ export class DiagramConnectionOperationsService {
       return {};
     }
 
-    const baseSourceId = fOutputId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const baseTargetId = fInputId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const baseSourceId = ConnectionCascadeUtil.extractBaseNodeId(fOutputId);
+    const baseTargetId = ConnectionCascadeUtil.extractBaseNodeId(fInputId);
 
     if (isNodeLockedByOther(baseSourceId) || isNodeLockedByOther(baseTargetId)) {
       return {
@@ -158,15 +158,28 @@ export class DiagramConnectionOperationsService {
           targetId = `${baseTargetId}_slot_${slotNum}`;
         }
       } else if (baseSourceId === baseTargetId) {
-        const valid = [`${baseSourceId}_top`, `${baseSourceId}_right`, `${baseSourceId}_bottom`, `${baseSourceId}_left`];
+        const valid = [
+          `${baseSourceId}_top`, `${baseSourceId}_top_start`, `${baseSourceId}_top_end`,
+          `${baseSourceId}_right`, `${baseSourceId}_right_start`, `${baseSourceId}_right_end`,
+          `${baseSourceId}_bottom`, `${baseSourceId}_bottom_start`, `${baseSourceId}_bottom_end`,
+          `${baseSourceId}_left`, `${baseSourceId}_left_start`, `${baseSourceId}_left_end`,
+        ];
         if (!(valid.includes(sourceId) && valid.includes(targetId) && sourceId !== targetId)) {
-          sourceId = `${baseSourceId}_top`;
-          targetId = `${baseTargetId}_right`;
+          sourceId = `${baseSourceId}_top_end`;
+          targetId = `${baseTargetId}_right_start`;
         }
       } else {
-        const optimal = this.layoutService.getOptimalConnectorId(sourceNode, targetNode);
-        sourceId = optimal.sourceId;
-        targetId = optimal.targetId;
+        const isSourceSpecificPort = /_((top|bottom|left|right)(_start|_end)?)$/.test(fOutputId);
+        const isTargetSpecificPort = /_((top|bottom|left|right)(_start|_end)?)$/.test(fInputId);
+
+        if (isSourceSpecificPort && isTargetSpecificPort) {
+          sourceId = fOutputId;
+          targetId = fInputId;
+        } else {
+          const optimal = this.layoutService.getOptimalConnectorId(sourceNode, targetNode);
+          sourceId = isSourceSpecificPort ? fOutputId : optimal.sourceId;
+          targetId = isTargetSpecificPort ? fInputId : optimal.targetId;
+        }
       }
     }
 
@@ -229,8 +242,8 @@ export class DiagramConnectionOperationsService {
             isOccupied = true;
             return c;
           }
-          const baseSrc = sId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-          const baseTgt = tId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+          const baseSrc = ConnectionCascadeUtil.extractBaseNodeId(sId);
+          const baseTgt = ConnectionCascadeUtil.extractBaseNodeId(tId);
           sId = `${baseSrc}_slot_${slotNum}`;
           tId = `${baseTgt}_slot_${slotNum}`;
         }

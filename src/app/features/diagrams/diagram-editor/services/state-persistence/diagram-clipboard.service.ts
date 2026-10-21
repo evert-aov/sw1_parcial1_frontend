@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { DiagramType, UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
+import { ConnectionCascadeUtil } from '../../utils/connection-cascade.util';
 
 export interface ClipboardData {
   diagramType: DiagramType;
@@ -62,8 +63,8 @@ export class DiagramClipboardService {
     const copiedNodeIdSet = new Set(nodesToCopy.map((n) => n.id));
 
     const connectionsToCopy = connections.filter((c) => {
-      const s = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-      const t = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right)$/, '');
+      const s = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+      const t = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
       return s && t && copiedNodeIdSet.has(s) && copiedNodeIdSet.has(t);
     });
 
@@ -160,15 +161,15 @@ export class DiagramClipboardService {
     const newConnections: UmlConnection[] = [];
     if (clip.connections && clip.connections.length > 0) {
       for (const oldConn of clip.connections) {
-        const oldSourceNode = oldConn.sourceNodeId || oldConn.sourceId?.replace(/_(top|bottom|left|right)$/, '');
-        const oldTargetNode = oldConn.targetNodeId || oldConn.targetId?.replace(/_(top|bottom|left|right)$/, '');
+        const oldSourceNode = oldConn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(oldConn.sourceId);
+        const oldTargetNode = oldConn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(oldConn.targetId);
 
         const newSourceNodeId = oldSourceNode ? oldToNewIdMap.get(oldSourceNode) : undefined;
         const newTargetNodeId = oldTargetNode ? oldToNewIdMap.get(oldTargetNode) : undefined;
 
         if (newSourceNodeId && newTargetNodeId) {
-          const sSideMatch = oldConn.sourceId?.match(/_(top|bottom|left|right)$/);
-          const tSideMatch = oldConn.targetId?.match(/_(top|bottom|left|right)$/);
+          const sSideMatch = oldConn.sourceId?.match(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/);
+          const tSideMatch = oldConn.targetId?.match(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/);
           const sSide = sSideMatch ? sSideMatch[1] : 'right';
           const tSide = tSideMatch ? tSideMatch[1] : 'left';
 

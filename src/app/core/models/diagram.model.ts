@@ -141,21 +141,58 @@ export type UmlRelationshipType =
   | 'self'
   | 'assembly';
 
-export type UmlLineStyle = 'segment' | 'straight' | 'bezier' | 'adaptive-curve';
+export type UmlLineStyle =
+  | 'segment'
+  | 'straight'
+  | 'bezier'
+  | 'adaptive-curve'
+  | 'orthogonal_square'
+  | 'orthogonal_rounded'
+  | 'tree_vertical'
+  | 'tree_horizontal'
+  | 'lateral_vertical'
+  | 'lateral_horizontal';
 
 export const VALID_UML_LINE_STYLES: readonly UmlLineStyle[] = [
+  'orthogonal_square',
+  'orthogonal_rounded',
   'segment',
   'straight',
   'bezier',
   'adaptive-curve',
+  'tree_vertical',
+  'tree_horizontal',
+  'lateral_vertical',
+  'lateral_horizontal',
 ] as const;
 
-export function sanitizeLineStyle(style: unknown, fallback: UmlLineStyle = 'segment'): UmlLineStyle {
-  if (typeof style === 'string' && (VALID_UML_LINE_STYLES as readonly string[]).includes(style)) {
-    return style as UmlLineStyle;
-  }
-  if (style === 'tree_horizontal' || style === 'tree_vertical' || style === 'orthogonal') {
-    return 'segment';
+export function sanitizeLineStyle(style: unknown, fallback: UmlLineStyle = 'orthogonal_square'): UmlLineStyle {
+  if (typeof style === 'string') {
+    const s = style.toLowerCase();
+    if (s === 'orthogonal_square' || s === 'segment' || s === 'orthogonal' || s === 'custom' || s === 'auto_routing') {
+      return 'orthogonal_square';
+    }
+    if (s === 'orthogonal_rounded' || s === 'adaptive-curve') {
+      return 'orthogonal_rounded';
+    }
+    if (s === 'straight' || s === 'direct') {
+      return 'straight';
+    }
+    if (s === 'bezier') {
+      return 'bezier';
+    }
+    if (s === 'tree_vertical') {
+      return 'tree_vertical';
+    }
+    if (s === 'tree_horizontal') {
+      return 'tree_horizontal';
+    }
+    if (s === 'lateral_vertical') {
+      return 'lateral_vertical';
+    }
+    if (s === 'lateral_horizontal') {
+      return 'lateral_horizontal';
+    }
   }
   return fallback;
 }
@@ -256,10 +293,14 @@ export const ALL_UML_RELATION_TYPES: UmlRelationTypeItem[] = [
 
 
 export const UML_LINE_STYLES: UmlLineStyleItem[] = [
-  { id: 'segment', label: 'Custom Line (EA Default / Segmentos)', shortcut: 'Ctrl+Shift+C' },
+  { id: 'orthogonal_square', label: 'Ortogonal - Square (EA Default)', shortcut: 'Ctrl+Shift+C' },
+  { id: 'orthogonal_rounded', label: 'Ortogonal - Rounded (Curva Adaptativa)' },
   { id: 'straight', label: 'Direct (Directa / Recta)', shortcut: 'Ctrl+Shift+D' },
   { id: 'bezier', label: 'Bezier (Curva Suave)' },
-  { id: 'adaptive-curve', label: 'Orthogonal - Rounded (Curva Adaptativa)' },
+  { id: 'tree_vertical', label: 'Árbol - Vertical' },
+  { id: 'tree_horizontal', label: 'Árbol - Horizontal' },
+  { id: 'lateral_vertical', label: 'Lateral - Vertical' },
+  { id: 'lateral_horizontal', label: 'Lateral - Horizontal' },
 ];
 
 export const UML_MULTIPLICITY_OPTIONS: string[] = ['1', '0..1', '1..*', '0..*', '*', 'n', 'm'];

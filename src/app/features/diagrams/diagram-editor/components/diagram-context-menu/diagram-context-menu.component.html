@@ -258,27 +258,39 @@
         </div>
         <button
           type="button"
-          (click)="onSetLineStyle(menu.connection, 'straight')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'straight'"
-          [class.text-blue-600]="menu.connection.lineStyle === 'straight'"
+          (click)="onSetLineStyle(menu.connection, 'orthogonal_square')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'orthogonal_square' || menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle"
+          [class.text-blue-600]="
+            menu.connection.lineStyle === 'orthogonal_square' || menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle
+          "
           class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
         >
-          <span>Recta</span>
-          @if (menu.connection.lineStyle === 'straight') {
+          <span>Ortogonal - Square</span>
+          @if (menu.connection.lineStyle === 'orthogonal_square' || menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle) {
             <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
           }
         </button>
         <button
           type="button"
-          (click)="onSetLineStyle(menu.connection, 'segment')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle"
-          [class.text-blue-600]="
-            menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle
-          "
+          (click)="onSetLineStyle(menu.connection, 'orthogonal_rounded')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'orthogonal_rounded' || menu.connection.lineStyle === 'adaptive-curve'"
+          [class.text-blue-600]="menu.connection.lineStyle === 'orthogonal_rounded' || menu.connection.lineStyle === 'adaptive-curve'"
           class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
         >
-          <span>Ortogonal / Segmentada</span>
-          @if (menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle) {
+          <span>Ortogonal - Rounded</span>
+          @if (menu.connection.lineStyle === 'orthogonal_rounded' || menu.connection.lineStyle === 'adaptive-curve') {
+            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
+          }
+        </button>
+        <button
+          type="button"
+          (click)="onSetLineStyle(menu.connection, 'straight')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'straight'"
+          [class.text-blue-600]="menu.connection.lineStyle === 'straight'"
+          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
+        >
+          <span>Direct / Recta</span>
+          @if (menu.connection.lineStyle === 'straight') {
             <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
           }
         </button>
@@ -289,8 +301,56 @@
           [class.text-blue-600]="menu.connection.lineStyle === 'bezier'"
           class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
         >
-          <span>Curva</span>
+          <span>Curva Bézier</span>
           @if (menu.connection.lineStyle === 'bezier') {
+            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
+          }
+        </button>
+        <button
+          type="button"
+          (click)="onSetLineStyle(menu.connection, 'tree_vertical')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'tree_vertical'"
+          [class.text-blue-600]="menu.connection.lineStyle === 'tree_vertical'"
+          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
+        >
+          <span>Árbol - Vertical</span>
+          @if (menu.connection.lineStyle === 'tree_vertical') {
+            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
+          }
+        </button>
+        <button
+          type="button"
+          (click)="onSetLineStyle(menu.connection, 'tree_horizontal')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'tree_horizontal'"
+          [class.text-blue-600]="menu.connection.lineStyle === 'tree_horizontal'"
+          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
+        >
+          <span>Árbol - Horizontal</span>
+          @if (menu.connection.lineStyle === 'tree_horizontal') {
+            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
+          }
+        </button>
+        <button
+          type="button"
+          (click)="onSetLineStyle(menu.connection, 'lateral_vertical')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'lateral_vertical'"
+          [class.text-blue-600]="menu.connection.lineStyle === 'lateral_vertical'"
+          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
+        >
+          <span>Lateral - Vertical</span>
+          @if (menu.connection.lineStyle === 'lateral_vertical') {
+            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
+          }
+        </button>
+        <button
+          type="button"
+          (click)="onSetLineStyle(menu.connection, 'lateral_horizontal')"
+          [class.bg-blue-50]="menu.connection.lineStyle === 'lateral_horizontal'"
+          [class.text-blue-600]="menu.connection.lineStyle === 'lateral_horizontal'"
+          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
+        >
+          <span>Lateral - Horizontal</span>
+          @if (menu.connection.lineStyle === 'lateral_horizontal') {
             <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
           }
         </button>

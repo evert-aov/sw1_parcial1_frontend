@@ -14,7 +14,7 @@ export class DiagramLineRoutingSelectorComponent {
   private readonly i18n = inject(TranslationService);
   readonly lineStyles: UmlLineStyleItem[] = UML_LINE_STYLES;
 
-  @Input() selectedStyle: UmlLineStyle = 'segment';
+  @Input() selectedStyle: UmlLineStyle = 'orthogonal_square';
   @Output() styleChange = new EventEmitter<UmlLineStyle>();
 
   getLineStyleLabel(styleId: string, fallback: string): string {

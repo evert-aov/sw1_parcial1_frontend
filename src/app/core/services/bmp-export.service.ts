@@ -866,7 +866,7 @@ export class BmpExportService {
     nodeMap: Map<string, { x: number; y: number; w: number; h: number; name: string }>,
   ): { x: number; y: number; w: number; h: number; name: string } | undefined {
     if (!idOrPort) return undefined;
-    const cleanId = idOrPort.replace(/_(top|bottom|left|right)$/, '').trim();
+    const cleanId = idOrPort.replace(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/, '').trim();
     return nodeMap.get(cleanId);
   }
 

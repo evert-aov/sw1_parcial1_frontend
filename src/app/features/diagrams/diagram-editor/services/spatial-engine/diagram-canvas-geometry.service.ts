@@ -77,8 +77,8 @@ export class DiagramCanvasGeometryService {
    * @returns `true` si origen y destino corresponden al mismo nodo base.
    */
   isRecursiveConn(conn: UmlConnection): boolean {
-    const s = conn.sourceNodeId || conn.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const t = conn.targetNodeId || conn.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const s = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+    const t = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
     return !!s && s === t;
   }
 
@@ -88,9 +88,81 @@ export class DiagramCanvasGeometryService {
    */
   isFloatingConn(conn: UmlConnection): boolean {
     if (!conn) return false;
-    const isSourcePort = /_(top|right|bottom|left|slot_\d+)$/.test(conn.sourceId || '');
-    const isTargetPort = /_(top|right|bottom|left|slot_\d+)$/.test(conn.targetId || '');
+    const isSourcePort = /_((top|right|bottom|left)(_start|_end)?|slot_\d+)$/.test(conn.sourceId || '');
+    const isTargetPort = /_((top|right|bottom|left)(_start|_end)?|slot_\d+)$/.test(conn.targetId || '');
     return !isSourcePort && !isTargetPort && !this.isRecursiveConn(conn);
+  }
+
+  /**
+   * Determina el lado de salida para un estilo de enrutamiento 'tree_vertical'.
+   */
+  getTreeVerticalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
+    const sId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+    const tId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
+    const sNode = nodes.find((n) => n.id === sId);
+    const tNode = nodes.find((n) => n.id === tId);
+    if (!sNode || !tNode) return 'bottom';
+    const sCy = (sNode.position?.y ?? 50) + getNodeHeight(sNode) / 2;
+    const tCy = (tNode.position?.y ?? 200) + getNodeHeight(tNode) / 2;
+    return tCy >= sCy ? 'bottom' : 'top';
+  }
+
+  /**
+   * Determina el lado de entrada para un estilo de enrutamiento 'tree_vertical'.
+   */
+  getTreeVerticalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
+    const sSide = this.getTreeVerticalSourceSide(conn, nodes);
+    return sSide === 'bottom' ? 'top' : 'bottom';
+  }
+
+  /**
+   * Determina el lado de salida para un estilo de enrutamiento 'tree_horizontal'.
+   */
+  getTreeHorizontalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
+    const sId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+    const tId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
+    const sNode = nodes.find((n) => n.id === sId);
+    const tNode = nodes.find((n) => n.id === tId);
+    if (!sNode || !tNode) return 'right';
+    const sCx = (sNode.position?.x ?? 50) + getNodeWidth(sNode) / 2;
+    const tCx = (tNode.position?.x ?? 200) + getNodeWidth(tNode) / 2;
+    return tCx >= sCx ? 'right' : 'left';
+  }
+
+  /**
+   * Determina el lado de entrada para un estilo de enrutamiento 'tree_horizontal'.
+   */
+  getTreeHorizontalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
+    const sSide = this.getTreeHorizontalSourceSide(conn, nodes);
+    return sSide === 'right' ? 'left' : 'right';
+  }
+
+  /**
+   * Determina el lado de salida para un estilo de enrutamiento 'lateral_vertical'.
+   */
+  getLateralVerticalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
+    return this.getTreeVerticalSourceSide(conn, nodes);
+  }
+
+  /**
+   * Determina el lado de entrada para un estilo de enrutamiento 'lateral_vertical'.
+   */
+  getLateralVerticalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
+    return this.getTreeHorizontalTargetSide(conn, nodes);
+  }
+
+  /**
+   * Determina el lado de salida para un estilo de enrutamiento 'lateral_horizontal'.
+   */
+  getLateralHorizontalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
+    return this.getTreeHorizontalSourceSide(conn, nodes);
+  }
+
+  /**
+   * Determina el lado de entrada para un estilo de enrutamiento 'lateral_horizontal'.
+   */
+  getLateralHorizontalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
+    return this.getTreeVerticalTargetSide(conn, nodes);
   }
 
   /**

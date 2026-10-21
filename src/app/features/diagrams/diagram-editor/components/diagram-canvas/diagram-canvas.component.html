@@ -112,6 +112,7 @@
               [fOutputId]="conn.sourceId"
               [fInputId]="conn.targetId"
               [fType]="getConnectionType(conn)"
+              [fRadius]="getConnectionRadius(conn)"
               [fBehavior]="getConnectionBehavior(conn)"
               [fOutputSide]="getConnectionOutputSide(conn)"
               [fInputSide]="getConnectionInputSide(conn)"
@@ -119,7 +120,7 @@
               (click)="onConnectionClick(conn.id, $event)"
               (dblclick)="onConnectionDblClick(conn, $event)"
               (contextmenu)="onConnectionContextMenu(conn, $event)"
-              [class]="'uml-relation-' + (conn.type || 'association')"
+              [class]="'uml-relation-' + (conn.type || 'association') + ' uml-line-style-' + (conn.lineStyle || 'orthogonal_square')"
               [class.uml-relation-reply]="isReplyConnection(conn)"
               [class.f-selected]="isConnectionSelected(conn.id)"
               [class.f-connection-selected]="isConnectionSelected(conn.id)"
@@ -341,9 +342,10 @@
 
         <!-- CONEXIÓN TEMPORAL EN CREACIÓN -->
         <f-connection-for-create
-          [fType]="defaultLineStyle()"
+          [fType]="getConnectionTypeForCreate()"
+          [fRadius]="getConnectionRadiusForCreate()"
           [fBehavior]="'floating'"
-          [class]="'uml-relation-' + (selectedRelationType() || 'association')">
+          [class]="'uml-relation-' + (selectedRelationType() || 'association') + ' uml-line-style-' + (defaultLineStyle() || 'orthogonal_square')">
           @if (getMarkerConfig(selectedRelationType(), true).hasMarker) {
             <svg
               fMarker
@@ -455,7 +457,25 @@
                   (click)="onTableClick(node.id, $event)">
                 </div>
 
-                <!-- 4 PUNTOS DE REFERENCIA GUÍA -->
+                <!-- 12 PUNTOS DE REFERENCIA ADAPTATIVOS PERIMETRALES (ESTILO ENTERPRISE ARCHITECT / KONVA) -->
+                <!-- LADO SUPERIOR (TOP) -->
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id + '_top_start'"
+                  fConnectableSide="top"
+                  [fConnectorSelfConnectable]="true"
+                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                  (click)="onTableClick(node.id, $event)"
+                  [title]="'editor.canvas.connectTopStart' | translate"
+                  [ngClass]="{
+                    'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                  }"
+                  style="left: 25%;"
+                  class="uml-connector-point absolute -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
+                </div>
+
                 <div
                   fConnector
                   fConnectorType="source-target"
@@ -469,7 +489,43 @@
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                     'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                   }"
-                  class="uml-connector-point absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  style="left: 50%;"
+                  class="uml-connector-point absolute -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
+                </div>
+
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id + '_top_end'"
+                  fConnectableSide="top"
+                  [fConnectorSelfConnectable]="true"
+                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                  (click)="onTableClick(node.id, $event)"
+                  [title]="'editor.canvas.connectTopEnd' | translate"
+                  [ngClass]="{
+                    'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                  }"
+                  style="left: 75%;"
+                  class="uml-connector-point absolute -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
+                </div>
+
+                <!-- LADO DERECHO (RIGHT) -->
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id + '_right_start'"
+                  fConnectableSide="right"
+                  [fConnectorSelfConnectable]="true"
+                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                  (click)="onTableClick(node.id, $event)"
+                  [title]="'editor.canvas.connectRightStart' | translate"
+                  [ngClass]="{
+                    'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                  }"
+                  style="top: 25%;"
+                  class="uml-connector-point absolute -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
                 </div>
 
                 <div
@@ -485,7 +541,44 @@
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                     'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                   }"
-                  class="uml-connector-point absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  style="top: 50%;"
+                  class="uml-connector-point absolute -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
+                </div>
+
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id + '_right_end'"
+                  fConnectableSide="right"
+                  [fConnectorSelfConnectable]="true"
+                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                  (click)="onTableClick(node.id, $event)"
+                  [title]="'editor.canvas.connectRightEnd' | translate"
+                  [ngClass]="{
+                    'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                  }"
+                  style="top: 75%;"
+                  class="uml-connector-point absolute -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
+                </div>
+
+                <!-- LADO INFERIOR (BOTTOM) -->
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id + '_bottom_start'"
+                  fConnectableSide="bottom"
+                  [fConnectorSelfConnectable]="true"
+                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                  (click)="onTableClick(node.id, $event)"
+                  [title]="'editor.canvas.connectBottomStart' | translate"
+                  [style.bottom.px]="getBottomConnectorOffset(node)"
+                  [ngClass]="{
+                    'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                  }"
+                  style="left: 25%;"
+                  class="uml-connector-point absolute -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
                 </div>
 
                 <div
@@ -502,7 +595,44 @@
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                     'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                   }"
-                  class="uml-connector-point absolute left-1/2 -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  style="left: 50%;"
+                  class="uml-connector-point absolute -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
+                </div>
+
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id + '_bottom_end'"
+                  fConnectableSide="bottom"
+                  [fConnectorSelfConnectable]="true"
+                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                  (click)="onTableClick(node.id, $event)"
+                  [title]="'editor.canvas.connectBottomEnd' | translate"
+                  [style.bottom.px]="getBottomConnectorOffset(node)"
+                  [ngClass]="{
+                    'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                  }"
+                  style="left: 75%;"
+                  class="uml-connector-point absolute -translate-x-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
+                </div>
+
+                <!-- LADO IZQUIERDO (LEFT) -->
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id + '_left_start'"
+                  fConnectableSide="left"
+                  [fConnectorSelfConnectable]="true"
+                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                  (click)="onTableClick(node.id, $event)"
+                  [title]="'editor.canvas.connectLeftStart' | translate"
+                  [ngClass]="{
+                    'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                  }"
+                  style="top: 25%;"
+                  class="uml-connector-point absolute -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
                 </div>
 
                 <div
@@ -518,7 +648,25 @@
                     'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
                     'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
                   }"
-                  class="uml-connector-point absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-transform hover:scale-125 cursor-crosshair">
+                  style="top: 50%;"
+                  class="uml-connector-point absolute -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
+                </div>
+
+                <div
+                  fConnector
+                  fConnectorType="source-target"
+                  [fConnectorId]="node.id + '_left_end'"
+                  fConnectableSide="left"
+                  [fConnectorSelfConnectable]="true"
+                  [fConnectorDisabled]="selectedRelationType() === null || isNodeLockedByOther(node.id)"
+                  (click)="onTableClick(node.id, $event)"
+                  [title]="'editor.canvas.connectLeftEnd' | translate"
+                  [ngClass]="{
+                    'uml-connector-active': selectedRelationType() !== null && !isNodeLockedByOther(node.id),
+                    'uml-connector-inactive': selectedRelationType() === null || isNodeLockedByOther(node.id)
+                  }"
+                  style="top: 75%;"
+                  class="uml-connector-point absolute -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full shadow-xs z-50 transition-all hover:scale-125 cursor-crosshair">
                 </div>
 
                 <!-- 8 MANEJADORES MANUALES DE CAMBIO DE TAMAÑO (RESIZE HANDLES) -->

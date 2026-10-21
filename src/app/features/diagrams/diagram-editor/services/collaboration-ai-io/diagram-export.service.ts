@@ -17,6 +17,7 @@ import {
   EXPLICIT_SIZE_NODE_TYPES,
   UmlNodeNormalizerUtil,
 } from '../../utils/uml-node-normalizer.util';
+import { ConnectionCascadeUtil } from '../../utils/connection-cascade.util';
 
 export interface UmlDiagramExportJson {
   version: string;
@@ -278,8 +279,8 @@ export class DiagramExportService {
         };
       }),
       connections: connections.map((c) => {
-        const baseSourceId = c.sourceNodeId || c.sourceId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-        const baseTargetId = c.targetNodeId || c.targetId.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+        const baseSourceId = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
+        const baseTargetId = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
         const fallbackMsgType = ['sync', 'reply', 'async', 'create'].includes(c.type) ? c.type : undefined;
         return {
           id: c.id,

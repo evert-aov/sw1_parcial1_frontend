@@ -188,8 +188,8 @@ export function computeSequenceMessageMove(
     if (!isSeqConn(c)) return c;
 
     const currentSlot = getSlot(c);
-    const baseSrc = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
-    const baseTgt = c.targetNodeId || c.targetId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const baseSrc = c.sourceNodeId || c.sourceId?.replace(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/, '');
+    const baseTgt = c.targetNodeId || c.targetId?.replace(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/, '');
 
     let newSlot = currentSlot;
 
@@ -274,7 +274,7 @@ export function recalculateSequenceNumbers(
   let globalOrderIndex = 0;
   for (const meta of seqMetas as Array<SeqConnMeta & { hasExplicitSlot?: boolean }>) {
     const c = meta.conn;
-    const baseSourceId = c.sourceNodeId || c.sourceId?.replace(/_(top|bottom|left|right|slot_\d+)$/, '');
+    const baseSourceId = c.sourceNodeId || c.sourceId?.replace(/_((top|bottom|left|right)(_start|_end)?|slot_\d+)$/, '');
     const sourceNode = nodeMap.get(baseSourceId);
 
     // Una nueva interacción/grupo inicia cuando el Actor envía un mensaje hacia una línea de vida
