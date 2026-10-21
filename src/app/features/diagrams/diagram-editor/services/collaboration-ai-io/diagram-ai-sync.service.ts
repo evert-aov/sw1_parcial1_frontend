@@ -72,8 +72,8 @@ export class DiagramAiSyncService {
         const targetNode = baseTargetId ? nodeMap.get(baseTargetId) : undefined;
         if (anchorNode && sourceNode && targetNode) {
           const optimal = getOptimalConnectorId(sourceNode, targetNode);
-          const sSide = optimal.sourceId.split('_').pop() || 'right';
-          const tSide = optimal.targetId.split('_').pop() || 'left';
+          const sSide = optimal.sourceId.slice(sourceNode.id.length).replace(/^_/, '') || 'right';
+          const tSide = optimal.targetId.slice(targetNode.id.length).replace(/^_/, '') || 'left';
           const p1 = getConnectorPoint(sourceNode, sSide);
           const p2 = getConnectorPoint(targetNode, tSide);
           anchorNode.position = {

@@ -273,6 +273,7 @@ export class DiagramEditorContextUtil {
         editor.pushSnapshot();
         editor.nodes.set(assocResult.nodes);
         editor.connections.set(assocResult.connections);
+        editor.updateConnectionEndpoints();
         editor.selectedSourceNodeId.set(null);
         editor.selectedRelationType.set(null);
         editor.markAsUnsaved();
@@ -317,6 +318,7 @@ export class DiagramEditorContextUtil {
         editor.pushSnapshot();
         editor.nodes.set(result.nodes);
         editor.connections.set(result.connections);
+        editor.updateConnectionEndpoints();
         editor.selectedRelationType.set(null);
         editor.markAsUnsaved();
         editor.sendDiagramSync(editor.nodes(), editor.connections(), 'add_association_class');

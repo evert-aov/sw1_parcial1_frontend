@@ -36,6 +36,13 @@ export class DiagramConnectionLayoutService {
     connectionIndex = 0,
     totalConnections = 1,
   ): { sourceId: string; targetId: string } {
+    if (sourceNode.isAnchor && targetNode.isAnchor) {
+      return {
+        sourceId: sourceNode.id,
+        targetId: targetNode.id,
+      };
+    }
+
     if (sourceNode.id === targetNode.id) {
       return {
         sourceId: `${sourceNode.id}_top_end`,
@@ -46,12 +53,23 @@ export class DiagramConnectionLayoutService {
     if (sourceNode.isAnchor) {
       return {
         sourceId: sourceNode.id,
-        targetId: this.getOptimalConnectorId(targetNode, sourceNode, getNodeWidth, getNodeHeight).sourceId,
+        targetId: this.getOptimalPortTowardPoint(
+          targetNode,
+          sourceNode.position || { x: 0, y: 0 },
+          getNodeWidth,
+          getNodeHeight,
+        ),
       };
     }
+
     if (targetNode.isAnchor) {
       return {
-        sourceId: this.getOptimalConnectorId(sourceNode, targetNode, getNodeWidth, getNodeHeight).sourceId,
+        sourceId: this.getOptimalPortTowardPoint(
+          sourceNode,
+          targetNode.position || { x: 0, y: 0 },
+          getNodeWidth,
+          getNodeHeight,
+        ),
         targetId: targetNode.id,
       };
     }
@@ -159,6 +177,85 @@ export class DiagramConnectionLayoutService {
       sourceId: `${sourceNode.id}${sourceSide}${sourceSlot}`,
       targetId: `${targetNode.id}${targetSide}${targetSlot}`,
     };
+  }
+
+  /**
+   * Determina el conector óptimo de un nodo hacia un punto específico en el plano (p. ej. un nodo ancla).
+   * Selecciona dinámicamente entre los 12 puntos perimetrales del nodo basándose en la posición relativa.
+   */
+  getOptimalPortTowardPoint(
+    node: UmlClassNode,
+    point: { x: number; y: number },
+    getNodeWidth?: (node: UmlClassNode) => number,
+    getNodeHeight?: (node: UmlClassNode) => number,
+  ): string {
+    const width = getNodeWidth ? getNodeWidth(node) : (node.width || 220);
+    const height = getNodeHeight ? getNodeHeight(node) : (node.height || 60);
+
+    const pos = node.position || { x: 50, y: 50 };
+    const left = Number.isFinite(pos.x) ? pos.x : 50;
+    const top = Number.isFinite(pos.y) ? pos.y : 50;
+    const right = left + width;
+    const bottom = top + height;
+
+    const cx = (left + right) / 2;
+    const cy = (top + bottom) / 2;
+
+    const px = Number.isFinite(point.x) ? point.x : cx;
+    const py = Number.isFinite(point.y) ? point.y : cy;
+
+    const dx = px - cx;
+    const dy = py - cy;
+
+    // Si coincide exactamente con el centro, por defecto borde superior
+    if (Math.abs(dx) < 1e-4 && Math.abs(dy) < 1e-4) {
+      return `${node.id}_top`;
+    }
+
+    // Bandas de solapamiento
+    const padX = Math.min(18, width * 0.2);
+    const padY = Math.min(16, height * 0.2);
+
+    const inHorizBand = px >= left + padX && px <= right - padX;
+    const inVertBand = py >= top + padY && py <= bottom - padY;
+
+    let side: 'top' | 'bottom' | 'left' | 'right';
+
+    if (inHorizBand) {
+      side = dy >= 0 ? 'bottom' : 'top';
+    } else if (inVertBand) {
+      side = dx >= 0 ? 'right' : 'left';
+    } else {
+      // Ángulo relativo considerando aspect ratio del nodo
+      const normDx = dx / (width || 1);
+      const normDy = dy / (height || 1);
+
+      if (Math.abs(normDx) >= Math.abs(normDy)) {
+        side = normDx >= 0 ? 'right' : 'left';
+      } else {
+        side = normDy >= 0 ? 'bottom' : 'top';
+      }
+    }
+
+    // Determinar subdivisión de ranura (_start, centro, _end)
+    let slot = '';
+    if (side === 'top' || side === 'bottom') {
+      const ratioX = (px - left) / (width || 1);
+      if (ratioX < 0.38) {
+        slot = '_start';
+      } else if (ratioX > 0.62) {
+        slot = '_end';
+      }
+    } else {
+      const ratioY = (py - top) / (height || 1);
+      if (ratioY < 0.38) {
+        slot = '_start';
+      } else if (ratioY > 0.62) {
+        slot = '_end';
+      }
+    }
+
+    return `${node.id}_${side}${slot}`;
   }
 
   /**
@@ -309,15 +406,20 @@ export class DiagramConnectionLayoutService {
           isSeqRel ? 'straight' : defaultLineStyle,
         );
 
-        if (conn.type === 'association_class' && conn.sourceNodeId && conn.targetNodeId) {
-          const sourceNode = nodeMap.get(conn.sourceNodeId);
-          const targetNode = nodeMap.get(conn.targetNodeId);
+        const baseSourceId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
+        const baseTargetId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
+        const sourceNode = nodeMap.get(baseSourceId);
+        const targetNode = nodeMap.get(baseTargetId);
+
+        if (conn.type === 'association_class') {
           if (sourceNode && targetNode) {
             if (sourceNode.isAnchor) {
               const optimal = this.getOptimalConnectorId(sourceNode, targetNode, getNodeWidth, getNodeHeight);
               return {
                 ...conn,
                 lineStyle: safeLineStyle,
+                sourceNodeId: baseSourceId,
+                targetNodeId: baseTargetId,
                 sourceId: sourceNode.id,
                 targetId: optimal.targetId,
               };
@@ -326,17 +428,14 @@ export class DiagramConnectionLayoutService {
               return {
                 ...conn,
                 lineStyle: safeLineStyle,
+                sourceNodeId: baseSourceId,
+                targetNodeId: baseTargetId,
                 sourceId: optimal.sourceId,
                 targetId: targetNode.id,
               };
             }
           }
         }
-
-        const baseSourceId = conn.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.sourceId);
-        const baseTargetId = conn.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(conn.targetId);
-        const sourceNode = nodeMap.get(baseSourceId);
-        const targetNode = nodeMap.get(baseTargetId);
 
         if (
           conn.sourceId.includes('_slot_') ||
