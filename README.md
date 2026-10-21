@@ -1,6 +1,7 @@
 # 🎨 UML/ER Collaborative Studio - Frontend
 
 La arquitectura actual del editor y los pasos para crear plug-ins están en [Arquitectura microkernel](MICROKERNEL.md).
+El [mapa de directorios y flujos](guia-desarrollador/07-MAPA-DE-DIRECTORIOS-Y-FLUJOS.md) explica las responsabilidades de cada carpeta con diagramas de apoyo.
 
 Aplicación web moderna y reactiva construida con **Angular 22**, **Foblex Flow (`@foblex/flow`)** y **Tailwind CSS v4**. Ofrece un entorno integral para el modelado visual colaborativo de diagramas de clases UML, asistencia de Inteligencia Artificial en caliente (**Google Gemini**), interoperabilidad con **Enterprise Architect (XMI 2.1)** y previsualización interactiva de código generado para **Spring Boot** y **Flutter**.
 

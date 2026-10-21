@@ -19,6 +19,7 @@ Las versiones y comandos se obtienen de [package.json](../package.json), los paq
 | [04 — Colaboración](04-COLABORACION-TIEMPO-REAL-Y-WEBSOCKETS.md) | Sesión de diagrama, cursores, bloqueos y reconexión. |
 | [05 — UI compartida](05-SUITE-UI-REUTILIZABLE-Y-ESTILOS.md) | SDK, controles, SVG, Signals, temas e i18n. |
 | [06 — Herramientas](06-EXPORTACION-XMI-CODEGEN-E-IA.md) | Documentos, XMI, imágenes, BMP, código, IA y guía interactiva. |
+| [07 — Mapa de directorios y flujos](07-MAPA-DE-DIRECTORIOS-Y-FLUJOS.md) | Responsabilidades de todas las áreas y cuatro diagramas de funcionamiento. |
 
 ## Inicio rápido
 
