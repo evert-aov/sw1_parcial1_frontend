@@ -14,6 +14,7 @@ export interface DiagramCollaborationActions {
   onNodeLockRejected: (data: { nodeId: string; lockedBy: { userId: string; userName: string } }) => void;
   onServerSave: (data: { diagramId: string; savedAt: string }) => void;
   onReconnected: () => void;
+  onDocumentInvalidated?: (diagramId: string) => void;
 }
 
 @Injectable({
@@ -85,6 +86,9 @@ export class DiagramCollaborationCoordinatorService {
       }),
     );
 
+    if (this.collabService.documentInvalidated$) {
+      subs.push(this.collabService.documentInvalidated$.subscribe(id => actions.onDocumentInvalidated?.(id)));
+    }
     return subs;
   }
 

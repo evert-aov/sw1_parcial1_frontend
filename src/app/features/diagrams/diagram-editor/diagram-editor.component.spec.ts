@@ -7,7 +7,8 @@ import { UmlNodeNormalizerUtil } from '../../../core/plugins/contracts/uml-node-
 import { RELATIONSHIP_RULES } from '../../../core/plugins/contracts/relationship-rules.contract';
 import { DiagramExportService } from '../../../core/plugins/contracts/diagram-export.service.contract';
 import { signal } from '@angular/core';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DiagramHotkeysService } from './services/orchestration/diagram-hotkeys.service';
 import { DiagramEditorComponent } from './diagram-editor.component';
 import { DiagramCanvasComponent } from './components/diagram-canvas/diagram-canvas.component';
 import { DiagramType, UmlClassNode, UmlConnection } from '../../../core/models/diagram.model';
@@ -18,6 +19,49 @@ const nodes: UmlClassNode[] = [
   { id: 'ui', name: 'UI: ProjectView', nodeType: 'lifeline', position: { x: 250, y: 50 }, width: 110, attributes: [], methods: [] },
   { id: 'controller', name: 'ProjectController', nodeType: 'lifeline', position: { x: 450, y: 50 }, width: 110, attributes: [], methods: [] },
 ];
+
+describe('DiagramEditorComponent: chat protects the canvas', () => {
+  it('clears selection on opening and restores Delete only after closing', () => {
+    const deleteSelectedNodes = vi.fn();
+    const clearSelection = vi.fn();
+    const closeContextMenu = vi.fn();
+    const editor: DiagramEditorComponent = Object.assign(Object.create(DiagramEditorComponent.prototype), {
+      isAiPanelOpen: signal(false),
+      isReadOnly: signal(false),
+      modalService: { isAnyModalOpen: () => false },
+      hotkeysService: new DiagramHotkeysService(),
+      selectionService: { clearSelection },
+      contextMenuService: { closeContextMenu },
+      deleteSelectedNodes,
+      selectAllClasses: vi.fn(),
+      undo: vi.fn(),
+      copySelectedNodes: vi.fn(),
+    });
+    editor.toggleAiPanel();
+    expect(editor.isAiPanelOpen()).toBe(true);
+    expect(clearSelection).toHaveBeenCalledOnce();
+    expect(closeContextMenu).toHaveBeenCalledOnce();
+
+    for (const init of [
+      { key: 'Delete' }, { key: 'Backspace' },
+      { key: 'a', ctrlKey: true }, { key: 'z', ctrlKey: true },
+      { key: 'x', metaKey: true }, { key: 'c', ctrlKey: true },
+    ]) {
+      const event = new KeyboardEvent('keydown', { ...init, cancelable: true });
+      editor.onKeyDown(event);
+      expect(event.defaultPrevented).toBe(false); // El chat conserva edición/copia nativas.
+    }
+    expect(deleteSelectedNodes).not.toHaveBeenCalled();
+    expect(editor.selectAllClasses).not.toHaveBeenCalled();
+    expect(editor.undo).not.toHaveBeenCalled();
+    expect(editor.copySelectedNodes).not.toHaveBeenCalled();
+
+    editor.onKeyDown(new KeyboardEvent('keydown', { key: 'i', ctrlKey: true }));
+    expect(editor.isAiPanelOpen()).toBe(false);
+    editor.onKeyDown(new KeyboardEvent('keydown', { key: 'Delete' }));
+    expect(deleteSelectedNodes).toHaveBeenCalledOnce();
+  });
+});
 
 function connection(id: string, slot: number, source = 'ui', target = 'controller', type: UmlConnection['type'] = 'sync', sequenceNumber = ''): UmlConnection {
   return {

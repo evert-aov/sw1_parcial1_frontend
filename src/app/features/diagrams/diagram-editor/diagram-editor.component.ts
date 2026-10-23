@@ -24,7 +24,7 @@ import {
   FReassignConnectionEvent,
   FSelectionChangeEvent,
 } from '@foblex/flow';
-import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import { provideIcons } from '@ng-icons/core';
 import { DIAGRAM_EDITOR_ICONS } from './diagram-editor.icons';
 import { environment } from '../../../../environments/environment';
 import {
@@ -102,7 +102,6 @@ import { UmlNodeNormalizerUtil } from '../../../core/plugins/contracts/uml-node-
     PluginOutletDirective,
     CommonModule,
     FormsModule,
-    NgIconComponent,
     TranslatePipe,
     DiagramAppbarComponent,
     DiagramTabsComponent,
@@ -153,7 +152,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
    */
   onAiPluginEvent(event: PluginOutputEvent): void {
     if (event.name === 'closePanel') this.isAiPanelOpen.set(false);
-    if (event.name === 'applyMutation') this.onAiMutation(event.value as { nodes: UmlClassNode[]; connections: UmlConnection[] });
+    if (event.name === 'proposalApplied' && event.value === this.currentDiagramId() && !this.hasUnsavedChanges()) this.loadDiagram(event.value as string);
   }
   readonly plugins = inject(PluginRegistryService);
   private readonly relationshipRules = inject(RELATIONSHIP_RULES);
@@ -313,13 +312,22 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     return resolveUserRoleInProject(project, userId);
   }
 
-  /** Procesa atajos globales de teclado delegando en `DiagramHotkeysService`. */
+  /** Suspende atajos del editor durante el chat y conserva Ctrl/Cmd+I para cerrar el panel. */
   onKeyDown(event: KeyboardEvent): void {
+    if (this.isAiPanelOpen()) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'i') {
+        event.preventDefault();
+        this.toggleAiPanel();
+      }
+      return;
+    }
     this.hotkeysService.handleKeyDown(event, DiagramEditorContextUtil.buildHotkeysActions(this));
   }
 
   /** Registra el inicio de clic global de puntero para control de arrastre. */
-  onWindowMouseDown(): void { this.canvasInteraction.handleWindowMouseDown(); }
+  onWindowMouseDown(): void {
+    this.canvasInteraction.handleWindowMouseDown();
+  }
 
   /** Finaliza estados de arrastre al soltar el botón del ratón. */
   onWindowMouseUp(): void { this.canvasInteraction.handleWindowMouseUp(); }
@@ -339,8 +347,11 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   /** Alterna el colapso de la caja de herramientas de elementos UML. */
   toggleLeftToolbar(): void { this.isLeftToolbarCollapsed.update((v) => !v); }
 
-  /** Alterna la visibilidad del panel lateral del asistente IA. */
-  toggleAiPanel(): void { this.isAiPanelOpen.update((v) => !v); }
+  /** Abre o cierra el chat y elimina selecciones y menús del lienzo antes de conversar. */
+  toggleAiPanel(): void {
+    this.isAiPanelOpen.update((value) => !value);
+    if (this.isAiPanelOpen()) this.deselectAll();
+  }
 
   /** Alterna las guías inteligentes de alineación magnética en el lienzo. */
   toggleSmartGuides(): void { this.toolbarService.toggleSmartGuides(); }

@@ -28,13 +28,6 @@ export interface NodeLock {
   color: string;
 }
 
-export interface ChatMessage {
-  userId: string;
-  userName: string;
-  message: string;
-  timestamp: string;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -51,7 +44,6 @@ export class CollaborationService {
   readonly remoteCursors = signal<RemoteCursor[]>([]);
   readonly activeNodeLocks = signal<Map<string, NodeLock>>(new Map());
   readonly currentDiagramType = signal<string | null>(null);
-  readonly chatMessages = signal<ChatMessage[]>([]);
 
   // Indica si hay 2 o más usuarios editando concurrentemente en la sala
   readonly isMultiUserEditing = computed(() => {
@@ -64,6 +56,7 @@ export class CollaborationService {
   readonly remoteDiagramSync$ = new Subject<{ nodes: UmlClassNode[]; connections: UmlConnection[]; userId: string; action: string }>();
   readonly nodeLockRejected$ = new Subject<{ nodeId: string; lockedBy: NodeLock }>();
   readonly onConnect$ = new Subject<void>();
+  readonly documentInvalidated$ = new Subject<string>();
   readonly lastServerSave$ = new Subject<{ diagramId: string; savedAt: string }>();
 
   // Control de frecuencia de cursores y drag colaborativo
@@ -209,8 +202,8 @@ export class CollaborationService {
       this.remoteDiagramSync$.next(data);
     });
 
-    this.socket.on('chat_message_received', (msg: ChatMessage) => {
-      this.chatMessages.update((list) => [...list, msg]);
+    this.socket.on('document_invalidated', (data: { diagramId: string }) => {
+      if (data.diagramId === this.currentDiagramId()) this.documentInvalidated$.next(data.diagramId);
     });
   }
 
@@ -431,25 +424,6 @@ export class CollaborationService {
       action,
       defaultLineStyle,
       diagramType: diagramType || this.currentDiagramType() || undefined,
-    });
-  }
-
-  /**
-   * Envía un mensaje de texto al chat grupal de la sala de colaboración activa.
-   * @param message Texto del mensaje a transmitir.
-   */
-  sendChatMessage(message: string): void {
-    const user = this.getCurrentUser();
-    const diagramId = this.currentDiagramId();
-    const roomCode = this.activeRoomCode();
-    if (!this.socket || !diagramId || !message.trim()) return;
-
-    this.socket.emit('chat_message', {
-      diagramId,
-      roomCode,
-      userId: user?.id || 'anon',
-      userName: user?.fullName || 'Usuario',
-      message: message.trim(),
     });
   }
 

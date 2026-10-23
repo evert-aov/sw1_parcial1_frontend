@@ -81,6 +81,7 @@
     <!-- FOBLEX FLOW INTERACTIVE CANVAS -->
     <f-flow
       fDraggable
+      [fDraggableDisabled]="interactionDisabled()"
       [fCanvasMoveTrigger]="canvasMoveTrigger"
       [fMultiSelectTrigger]="multiSelectTrigger"
       (fLoaded)="onFlowLoaded()"

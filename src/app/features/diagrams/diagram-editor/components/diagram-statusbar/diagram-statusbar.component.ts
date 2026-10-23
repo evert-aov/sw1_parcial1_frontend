@@ -1,19 +1,20 @@
-import { Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '../../../../../core/i18n/index';
-import { UmlLineStyle } from '../../../../../core/models/diagram.model';
 
 @Component({
   selector: 'app-diagram-statusbar',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './diagram-statusbar.component.html',
+  styleUrl: './diagram-statusbar.component.css',
 })
 export class DiagramStatusbarComponent {
   readonly isConnected = input<boolean>(false);
-  readonly classCount = input<number>(0);
+  readonly nodeCount = input<number>(0);
   readonly relationCount = input<number>(0);
-  readonly lineStyle = input<UmlLineStyle>('segment');
+  readonly selectedCount = input<number>(0);
   readonly zoomLevel = input<number>(100);
 
   readonly zoomIn = output<void>();

@@ -127,6 +127,7 @@ export interface DiagramCanvasViewState {
     }),
   ],
   host: {
+    '[attr.inert]': 'interactionDisabled() ? "" : null',
     '(window:keydown)': 'onWindowKeyDown($event)',
     '(window:keyup)': 'onWindowKeyUp($event)',
     '(window:mouseup)': 'onWindowMouseUp($event)',
@@ -167,6 +168,8 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
   readonly selectedSourceNodeId = input<string | null>(null);
   readonly defaultLineStyle = input<UmlLineStyle>('segment');
   readonly isReadOnly = input<boolean>(false);
+  /** Suspende la interacción local sin detener renderizado ni actualizaciones colaborativas. */
+  readonly interactionDisabled = input(false);
   readonly selectedNodeIds = input<string[]>([]);
   readonly selectedConnIds = input<string[]>([]);
   readonly remoteCursors = input<RemoteCursor[]>([]);
@@ -639,7 +642,9 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
   onMoveNodes(event: FMoveNodesEvent): void { this.moveNodes.emit(event); }
 
   /** Emite cambios en los elementos seleccionados en el diagrama. */
-  onSelectionChange(event: FSelectionChangeEvent): void { this.selectionChange.emit(event); }
+  onSelectionChange(event: FSelectionChangeEvent): void {
+    if (!this.interactionDisabled()) this.selectionChange.emit(event);
+  }
 
   /** Emite eventos de desplazamiento (scroll) dentro del contenedor del viewport. */
   onViewportScroll(event: Event): void { this.viewportScroll.emit(event); }
@@ -1214,6 +1219,7 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
    * @param event Evento KeyboardEvent.
    */
   onWindowKeyDown(event: KeyboardEvent): void {
+    if (this.interactionDisabled()) return;
     const tag = (document.activeElement?.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea') return;
     if (event.code === 'Space' && !this.isSpacePressed()) this.isSpacePressed.set(true);

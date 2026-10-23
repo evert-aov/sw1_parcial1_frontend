@@ -1,22 +1,4 @@
 /**
- * Mensaje individual en el historial conversacional del Copilot IA.
- */
-export interface AiChatMessageItem {
-  id: string;
-  sender: 'user' | 'ai';
-  text: string;
-  timestamp: Date;
-  status?: 'success' | 'clarification' | 'error';
-  changesSummary?: string;
-  modelUsed?: string;
-  imagePreview?: string;
-  audioInfo?: {
-    duration?: number;
-    mimeType?: string;
-  };
-}
-
-/**
  * Resultado de leer un archivo de imagen o blob como cadena DataURL Base64.
  */
 export interface Base64ImageResult {
@@ -35,7 +17,7 @@ export interface Base64ImageResult {
  */
 export function readImageFileAsBase64(
   file: File | Blob,
-  fallbackName = 'captura.png',
+  fallbackName = 'capture.png',
 ): Promise<Base64ImageResult> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -90,6 +72,6 @@ export function captureFrameFromVideo(video: HTMLVideoElement): Base64ImageResul
     dataUrl,
     rawBase64,
     mimeType: 'image/jpeg',
-    fileName: `camara-${Date.now()}.jpg`,
+    fileName: `camera-${Date.now()}.jpg`,
   };
 }

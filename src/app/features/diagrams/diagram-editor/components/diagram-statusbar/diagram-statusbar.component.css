@@ -1,0 +1,11 @@
+:host { display: block; min-width: 0; flex-shrink: 0; }
+footer { display: flex; align-items: center; gap: 14px; height: 30px; padding: 0 76px 0 12px; font-size: 11px; white-space: nowrap; }
+.connection, .zoom-controls { display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.selection-count { margin-left: auto; }
+.zoom-controls button { height: 24px; min-width: 24px; border-radius: 4px; cursor: pointer; }
+.zoom-controls button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+.zoom-controls button:focus-visible { outline: 2px solid #3b82f6; outline-offset: -2px; }
+.zoom-value { font-variant-numeric: tabular-nums; min-width: 44px !important; }
+@media (max-width: 900px) { .document-counts { display: none; } footer { gap: 10px; } }
+@media (max-width: 420px) { .connection-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }

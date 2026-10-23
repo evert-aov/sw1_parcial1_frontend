@@ -74,3 +74,42 @@ corresponde a la configuración del backend, no al núcleo del lienzo.
 `user-guide` publica su launcher; la raíz y las barras lo descubren mediante el registro.
 Retirar una herramienta debe eliminar su UI mediante el outlet sin afectar el documento.
 Las pruebas de integración entre estos paquetes pertenecen a `composition/`.
+
+## Panel de conversación como sidebar
+
+El plug-in `ai-assistant` presenta el chat a la derecha, desde el borde superior de la aplicación
+hasta la barra de estado. La barra superior, las herramientas y el canvas se agrupan en la
+columna izquierda; el panel de IA es su hermano en una fila flexible.
+Su estilo usa superficies discretas, bordes finos y acentos violetas, con variantes clara y oscura.
+El encabezado permite ampliar parcialmente el ancho, ocupar toda el área del editor y restaurar
+el sidebar. También se puede arrastrar el borde izquierdo; con foco en el separador, las flechas
+ajustan el ancho y `Home` recupera el tamaño inicial. En pantallas estrechas ocupa el área disponible.
+
+Los cambios de tamaño conservan la instancia del plug-in, borrador, adjuntos e historial;
+no vuelven a conectar la sala ni consultan nuevamente el catálogo. `Escape` cierra primero
+el desplegable abierto y, después, permite salir del modo expandido.
+
+Mientras el panel está abierto, el lienzo conserva su renderizado y sincronización, pero
+suspende la interacción local mediante `interactionDisabled`: el host del canvas usa `inert`
+y desactiva los gestos de Foblex. Al abrir se limpia la selección y se cierra el menú contextual.
+El editor no despacha atajos de selección, borrado, portapapeles o historial durante el chat;
+la edición y copia de texto siguen siendo nativas. `Ctrl/Cmd+I` permite cerrar el panel y
+recuperar la interacción. Esta suspensión es de UI y no modifica permisos ni impide aplicar
+una propuesta revisada desde el chat.
+
+El compositor reúne:
+
+- Botón `+`: subir imagen, pegar desde portapapeles o abrir cámara.
+- Micrófono: grabar/detener un clip, manteniendo el límite existente.
+- Selector de modelos: catálogo del servidor, modelo activo y proveedores no disponibles deshabilitados.
+- Alternancia entre chat de equipo y consulta al asistente; elegir modelo no activa una consulta por sí solo.
+- Botón de envío y entrada multilínea; `Enter` envía y `Shift+Enter` agrega una línea.
+
+La revisión y aplicación de propuestas conserva los permisos y estados existentes.
+Chat de equipo publica el mensaje para los participantes sin solicitar generación. Consultar
+a la IA publica en el mismo hilo y solicita una respuesta al modelo seleccionado; no es un chat privado.
+Los textos nuevos se encuentran en los diccionarios `es.ts` y `en.ts`.
+
+El sidebar izquierdo permite ocultar toolbox/explorador con su botón de cierre o al pulsar
+la pestaña activa. Una barra estrecha mantiene accesos independientes a ambas secciones.
+El host solo coordina apertura/cierre mediante outputs; no importa la implementación del chat.

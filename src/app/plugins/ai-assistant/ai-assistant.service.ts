@@ -1,171 +1,46 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { UmlClassNode, UmlConnection } from '../../core/models/diagram.model';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AiAssistantService as ConversationPort, ChatHistory, ChatMessage, ChatModels, ChatSubmission } from '../../core/plugins/contracts/ai-assistant.service.contract';
 
-export interface AiModelOption {
-  id: string;
-  name: string;
-  provider: 'vertex';
-  isLocal: boolean;
-  parameterSize?: string;
-  sizeMb?: number;
-  description?: string;
-}
-
-export interface AvailableModelsResponse {
-  defaultModel: string;
-  defaultProvider: 'vertex';
-  isOllamaAvailable: boolean;
-  models: AiModelOption[];
-}
-
-export interface AiResponse {
-  success: boolean;
-  action: string;
-  message: string;
-  nodes: UmlClassNode[];
-  connections: UmlConnection[];
-  changesSummary: string;
-  providerUsed?: 'vertex';
-  modelUsed?: string;
-  diagramType?: string;
-}
-
-@Injectable({
-  providedIn: 'root',
-})
-export class AiAssistantService {
+/** Adaptador del API autorizado de NestJS; nunca se conecta directamente a los modelos. */
+@Injectable({ providedIn: 'root' })
+export class AiAssistantService implements ConversationPort {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/ai`;
+  private readonly baseUrl = `${environment.apiUrl}/conversations`;
 
-  /**
-   * Obtiene la lista de modelos de inteligencia artificial disponibles en el backend.
-   * @returns Observable con los modelos soportados y la configuración por defecto.
-   */
-  getAvailableModels(): Observable<AvailableModelsResponse> {
-    return this.http.get<any>(`${this.apiUrl}/models`).pipe(
-      map((res) => (res && res.data ? res.data : res) as AvailableModelsResponse),
-    );
+  /** Obtiene capacidades y disponibilidad declarada de los proveedores. */
+  getAvailableModels(): Observable<ChatModels> { return this.get<ChatModels>('/models'); }
+
+  /** Recupera los últimos mensajes o una página anterior a una secuencia. */
+  history(diagramId: string, before?: number): Observable<ChatHistory> {
+    return this.get<ChatHistory>(`/${diagramId}/messages${before ? `?before=${before}` : ''}`);
   }
 
-  /**
-   * Envía un prompt textual para generar, editar o reestructurar diagramas mediante IA.
-   * @param prompt Instrucción o requerimiento del usuario.
-   * @param diagramId Identificador del diagrama actual.
-   * @param roomCode Código de la sala colaborativa (opcional).
-   * @param currentNodes Nodos existentes en el lienzo.
-   * @param currentConnections Conexiones existentes en el lienzo.
-   * @param sessionHistory Historial de interacción previo.
-   * @param options Configuración de proveedor y modelo de IA.
-   * @returns Observable con los nodos y relaciones resultantes o actualizados.
-   */
-  sendTextPrompt(
-    prompt: string,
-    diagramId: string,
-    roomCode?: string,
-    currentNodes: UmlClassNode[] = [],
-    currentConnections: UmlConnection[] = [],
-    sessionHistory: any[] = [],
-    options?: { provider?: string; model?: string; diagramType?: string },
-  ): Observable<AiResponse> {
-    return this.http.post<any>(`${this.apiUrl}/prompt`, {
-      prompt,
-      diagramId,
-      roomCode,
-      currentNodes,
-      currentConnections,
-      sessionHistory,
-      provider: options?.provider || 'vertex',
-      model: options?.model || 'gemini-2.5-flash',
-      diagramType: options?.diagramType,
-    }).pipe(
-      map((res) => (res && res.data ? res.data : res) as AiResponse),
-    );
+  /** Envía texto o medios con una clave estable para reintentos de red. */
+  submit(diagramId: string, message: ChatSubmission): Observable<ChatMessage> {
+    return this.post<ChatMessage>(`/${diagramId}/messages`, message);
   }
 
-  /**
-   * Envía una imagen (boceto, foto o diagrama dibujado) junto con un prompt opcional a la IA multimodal.
-   * @param imageBase64 Contenido de la imagen en base64.
-   * @param mimeType Tipo MIME de la imagen (ej. image/png).
-   * @param prompt Instrucción adicional opcional.
-   * @param diagramId Identificador del diagrama activo.
-   * @param roomCode Código de la sala de colaboración (opcional).
-   * @param currentNodes Nodos existentes en el lienzo.
-   * @param currentConnections Conexiones existentes en el lienzo.
-   * @param sessionHistory Historial de la sesión.
-   * @param options Proveedor y modelo seleccionado.
-   * @returns Observable con los componentes UML reconocidos y sintetizados.
-   */
-  sendVisionPrompt(
-    imageBase64: string,
-    mimeType: string,
-    prompt: string | undefined,
-    diagramId: string,
-    roomCode?: string,
-    currentNodes: UmlClassNode[] = [],
-    currentConnections: UmlConnection[] = [],
-    sessionHistory: any[] = [],
-    options?: { provider?: string; model?: string; diagramType?: string },
-  ): Observable<AiResponse> {
-    return this.http.post<any>(`${this.apiUrl}/vision-diagram`, {
-      imageBase64,
-      mimeType,
-      prompt,
-      diagramId,
-      roomCode,
-      currentNodes,
-      currentConnections,
-      sessionHistory,
-      provider: options?.provider || 'vertex',
-      model: options?.model || 'gemini-2.5-flash',
-      diagramType: options?.diagramType,
-    }).pipe(
-      map((res) => (res && res.data ? res.data : res) as AiResponse),
-    );
+  /** Reencola un mensaje fallido cuyo autor es el usuario autenticado. */
+  retry(diagramId: string, messageId: string): Observable<ChatMessage> {
+    return this.post<ChatMessage>(`/${diagramId}/messages/${messageId}/retry`, {});
   }
 
-  /**
-   * Envía una grabación de audio con comandos de voz para que el asistente de IA procese el diagrama.
-   * @param audioBase64 Contenido de audio codificado en base64.
-   * @param mimeType Formato de audio (ej. audio/webm).
-   * @param prompt Texto transcrito o indicaciones complementarias.
-   * @param diagramId Identificador del diagrama actual.
-   * @param roomCode Código de la sala colaborativa (opcional).
-   * @param currentNodes Nodos actuales en el lienzo.
-   * @param currentConnections Conexiones actuales en el lienzo.
-   * @param sessionHistory Historial de conversación previo.
-   * @param options Proveedor y modelo seleccionado.
-   * @returns Observable con el diagrama actualizado tras el comando por voz.
-   */
-  sendAudioPrompt(
-    audioBase64: string,
-    mimeType: string,
-    prompt: string | undefined,
-    diagramId: string,
-    roomCode?: string,
-    currentNodes: UmlClassNode[] = [],
-    currentConnections: UmlConnection[] = [],
-    sessionHistory: any[] = [],
-    options?: { provider?: string; model?: string; diagramType?: string },
-  ): Observable<AiResponse> {
-    return this.http.post<any>(`${this.apiUrl}/audio-prompt`, {
-      audioBase64,
-      mimeType,
-      prompt,
-      diagramId,
-      roomCode,
-      currentNodes,
-      currentConnections,
-      sessionHistory,
-      provider: options?.provider || 'vertex',
-      model: options?.model || 'gemini-2.5-flash',
-      diagramType: options?.diagramType,
-    }).pipe(
-      map((res) => (res && res.data ? res.data : res) as AiResponse),
-    );
+  /** Aplica una propuesta confirmada por el usuario en el servidor autoritativo. */
+  apply(diagramId: string, proposalId: string): Observable<unknown> {
+    return this.post(`/${diagramId}/proposals/${proposalId}/apply`, {});
   }
+
+  /** Recupera el medio con el interceptor JWT habitual y sin URL pública. */
+  attachment(diagramId: string, messageId: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/${diagramId}/messages/${messageId}/attachment`, { responseType: 'blob' });
+  }
+
+  /** Desenvuelve la respuesta estándar del backend para consultas. */
+  private get<T>(path: string): Observable<T> { return this.http.get<{ data: T }>(this.baseUrl + path).pipe(map(response => response.data)); }
+
+  /** Desenvuelve la respuesta estándar del backend para comandos. */
+  private post<T>(path: string, body: unknown): Observable<T> { return this.http.post<{ data: T }>(this.baseUrl + path, body).pipe(map(response => response.data)); }
 }
-

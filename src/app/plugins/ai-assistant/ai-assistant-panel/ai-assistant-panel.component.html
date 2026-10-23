@@ -1,357 +1,163 @@
-@if (isOpen()) {
-  <aside class="w-[420px] bg-white dark:bg-[#0D1124] border-l border-slate-200/80 dark:border-slate-800 flex flex-col shrink-0 text-xs text-slate-800 dark:text-slate-200 shadow-xs z-20 animate-in slide-in-from-right duration-150 h-full">
-    
-    <!-- Header Panel IA con Modelo Gemini -->
-    <div class="bg-white dark:bg-[#0D1124] border-b border-slate-100 dark:border-slate-800/80 shrink-0">
-      <div class="px-4 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300 flex items-center justify-center shadow-xs">
-            <ng-icon name="heroSparkles" class="text-sm"></ng-icon>
-          </div>
-          <div>
-            <div class="font-bold text-slate-900 dark:text-slate-100 leading-tight flex items-center gap-2">
-              <span class="text-xs">AI Copilot (UML)</span>
-              <span class="px-2 py-0.5 rounded-full text-[10px] text-purple-700 dark:text-purple-300 font-semibold bg-purple-50 dark:bg-purple-950/60 border border-purple-200/60 dark:border-purple-800/60">
-                Google Gemini
-              </span>
-            </div>
-            <span class="text-[10px] text-slate-400 dark:text-slate-500 font-medium block mt-0.5">
-              Gemini 2.5 Flash • Multimodal
-            </span>
-          </div>
-        </div>
-        <button
-          (click)="closePanel.emit()"
-          [title]="'ai.hideTooltip' | translate"
-          class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer p-1 rounded-md transition-colors">
-          <ng-icon name="heroChevronRight" class="text-base"></ng-icon>
+<aside class="chat-panel" [attr.aria-label]="'chat.title' | translate">
+  @if (!expanded()) {
+    <div class="resize-handle" role="separator" tabindex="0" aria-orientation="vertical"
+      [attr.aria-label]="'chat.resizePanel' | translate" [attr.aria-valuenow]="panelWidth()" aria-valuemin="320"
+      (pointerdown)="startResize($event)" (pointermove)="resize($event)" (pointerup)="stopResize()"
+      (pointercancel)="stopResize()" (lostpointercapture)="stopResize()" (keydown)="resizeWithKeyboard($event)"></div>
+  }
+  <header class="panel-header">
+    <div class="panel-heading"><ng-icon name="heroSparkles" aria-hidden="true" />
+      <h2>{{ 'chat.title' | translate }}</h2>
+      <span class="connection-dot" [class.connected]="state.connected()" [title]="(state.connected() ? 'chat.connected' : 'chat.reconnecting') | translate"
+        [attr.aria-label]="(state.connected() ? 'chat.connected' : 'chat.reconnecting') | translate" role="status"></span>
+    </div>
+    <div class="header-actions">
+      @if (!expanded()) {
+        <button type="button" class="icon-button" (click)="toggleWidth()" [title]="(panelWidth() > 500 ? 'chat.compactPanel' : 'chat.widenPanel') | translate"
+          [attr.aria-label]="(panelWidth() > 500 ? 'chat.compactPanel' : 'chat.widenPanel') | translate">
+          <ng-icon [name]="panelWidth() > 500 ? 'heroChevronRight' : 'heroChevronLeft'" aria-hidden="true" />
         </button>
-      </div>
+      }
+      <button type="button" class="icon-button" data-testid="expand-chat" (click)="expanded.set(!expanded())" [attr.aria-pressed]="expanded()"
+        [title]="(expanded() ? 'chat.restorePanel' : 'chat.expandPanel') | translate" [attr.aria-label]="(expanded() ? 'chat.restorePanel' : 'chat.expandPanel') | translate">
+        <ng-icon [name]="expanded() ? 'heroArrowsPointingIn' : 'heroArrowsPointingOut'" aria-hidden="true" />
+      </button>
+      <button type="button" class="icon-button" (click)="closePanel.emit()" [title]="'chat.close' | translate" [attr.aria-label]="'chat.close' | translate">
+        <ng-icon name="heroXMark" aria-hidden="true" />
+      </button>
     </div>
-
-    <!-- Barra Informativa del Motor IA Gemini -->
-    <div class="px-4 py-2 bg-slate-50/70 dark:bg-[#111528] border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between shrink-0">
-      <div class="flex items-center gap-1.5">
-        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-        <span class="text-[10.5px] font-semibold text-slate-700 dark:text-slate-300">
-          Google Vertex AI (Gemini 2.5 Flash)
-        </span>
+  </header>
+  @if (!diagramId()) { <p class="panel-notice">{{ 'chat.saveFirst' | translate }}</p> }
+  <div #historyContainer class="chat-history" role="log" aria-live="polite" [attr.aria-label]="'chat.history' | translate">
+    <div class="conversation-content">
+    @if (state.hasMore()) { <button type="button" class="text-button earlier-button" (click)="state.loadEarlier()">{{ 'chat.earlier' | translate }}</button> }
+    @if (!state.messages().length) {
+      <div class="empty-conversation">
+        <span class="empty-icon"><ng-icon name="heroChatBubbleLeftRight" aria-hidden="true" /></span>
+        <h3>{{ 'chat.emptyTitle' | translate }}</h3>
+        <p>{{ 'chat.welcome' | translate }}</p>
+        <span class="empty-hint">{{ 'chat.emptyHint' | translate }}</span>
       </div>
-      <div class="flex items-center gap-1 text-[9.5px] font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded-full border border-purple-200/60 dark:border-purple-800/60">
-        <ng-icon name="heroSparkles" class="text-[10px]"></ng-icon>
-        <span>Texto • Visión • Audio</span>
-      </div>
-    </div>
-
-    <!-- Input oculto para subir imágenes de diagramas -->
-    <input
-      #imageInput
-      type="file"
-      accept="image/png,image/jpeg,image/webp,image/jpg"
-      (change)="onImageSelected($event)"
-      class="hidden" />
-
-    <!-- 1. FEED CONVERSACIONAL DE CHAT (SCROLLABLE) -->
-    <div #chatScrollContainer class="flex-1 p-4 overflow-y-auto space-y-3 min-h-0 bg-slate-50/40 dark:bg-[#0A0D1E]">
-        @for (msg of aiChatMessages(); track msg.id) {
-          
-          <!-- Mensaje del Usuario -->
-          @if (msg.sender === 'user') {
-            <div class="flex items-start justify-end gap-2 animate-in fade-in slide-in-from-bottom-1">
-              <div class="max-w-[85%] space-y-1">
-                @if (msg.imagePreview) {
-                  <div class="p-1 bg-white dark:bg-[#151A30] border border-purple-200 dark:border-purple-800 rounded-md shadow-xs mb-1">
-                    <img [src]="msg.imagePreview" class="max-h-36 max-w-full rounded object-contain" alt="Imagen adjunta" />
-                  </div>
-                }
-                @if (msg.audioInfo) {
-                  <div class="p-1.5 bg-white/15 dark:bg-white/10 border border-white/25 rounded-md flex items-center gap-2 mb-1 text-white">
-                    <div class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                      <ng-icon name="heroMicrophone" class="text-xs"></ng-icon>
-                    </div>
-                    <div class="text-[10px] font-mono leading-tight">
-                      <p class="font-semibold">Audio enviado a Gemini</p>
-                      <p class="text-white/80">{{ msg.audioInfo.duration ? msg.audioInfo.duration + 's' : 'Multimodal' }} • {{ msg.audioInfo.mimeType || 'audio/webm' }}</p>
-                    </div>
-                  </div>
-                }
-                <div class="p-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl rounded-tr-xs text-[11.5px] shadow-xs leading-relaxed">
-                  <p class="whitespace-pre-wrap">{{ msg.text }}</p>
-                </div>
-                <div class="text-[9px] font-mono text-slate-400 dark:text-slate-500 text-right pr-1">
-                  {{ msg.timestamp | date:'HH:mm:ss' }}
-                </div>
-              </div>
-              <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                {{ (authService.currentUser()?.fullName || 'U').charAt(0).toUpperCase() }}
-              </div>
-            </div>
-          }
-
-          <!-- Mensaje del Asistente IA -->
-          @else {
-            <div class="flex items-start gap-2 animate-in fade-in slide-in-from-bottom-1">
-              <div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                <ng-icon name="heroSparkles" class="text-xs"></ng-icon>
-              </div>
-              <div class="max-w-[85%] space-y-1.5">
-                <div
-                  [ngClass]="{
-                    'bg-white dark:bg-[#131830] border-slate-200/80 dark:border-slate-800 text-slate-800 dark:text-slate-200': msg.status === 'success' || !msg.status,
-                    'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200': msg.status === 'clarification',
-                    'bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-700 text-red-900 dark:text-red-200': msg.status === 'error'
-                  }"
-                  class="p-3 border rounded-2xl rounded-tl-xs text-[11.5px] shadow-2xs leading-relaxed space-y-1.5">
-                  
-                  @if (msg.status === 'clarification') {
-                    <div class="flex items-center gap-1 font-bold text-amber-800 dark:text-amber-300 text-[10.5px]">
-                      <span>⚠️ Aclaración Requerida</span>
-                    </div>
-                    <p class="whitespace-pre-wrap text-amber-950 dark:text-amber-100 font-medium">{{ msg.text || 'Por favor especifica las tablas, atributos o relaciones concretas que requieres para el diagrama, o adjunta una imagen.' }}</p>
-                  } @else {
-                    <p class="whitespace-pre-wrap">{{ msg.text }}</p>
-                  }
-
-                  @if (msg.changesSummary) {
-                    <div class="p-1.5 bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 rounded text-[10px] font-mono text-purple-900 dark:text-purple-300 flex items-center gap-1">
-                      <span class="text-purple-600 dark:text-purple-400 font-bold">✓</span>
-                      <span class="truncate">{{ msg.changesSummary }}</span>
-                    </div>
-                  }
-
-                  @if (msg.modelUsed) {
-                    <div class="pt-0.5 flex items-center gap-1 text-[9px] font-mono">
-                      <span class="px-1.5 py-0.5 rounded border flex items-center gap-1 font-semibold bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800">
-                        <ng-icon name="heroSparkles" class="text-[10px]"></ng-icon>
-                        <span>Google Gemini: {{ msg.modelUsed }}</span>
-                      </span>
-                    </div>
-                  }
-                </div>
-                <div class="text-[9px] font-mono text-slate-400 dark:text-slate-500 pl-1">
-                  {{ msg.timestamp | date:'HH:mm:ss' }}
-                </div>
-              </div>
-            </div>
-          }
+    }
+    @for (message of state.messages(); track message.id) {
+      <article class="chat-message" [class.assistant-message]="message.source === 'assistant'">
+        <div class="mb-2 flex justify-between gap-2 text-xs">
+          <strong class="message-author">{{ message.source === 'assistant' ? ('chat.assistant' | translate) : message.sender.displayName }}</strong>
+          <time [attr.datetime]="message.createdAt">{{ message.createdAt | date:'shortTime' }}</time>
+        </div>
+        <app-chat-markdown [content]="message.content" />
+        @if (message.attachment) {
+          <p class="mt-2 text-xs">{{ ('chat.source.' + message.source) | translate }}</p>
+          @if (assets()[message.id]; as asset) {
+            @if (message.source === 'image') { <img [src]="asset" [alt]="'chat.image' | translate" class="mt-2 max-h-64 rounded object-contain" /> }
+            @else { <audio controls [src]="asset" class="mt-2 max-w-full"></audio> }
+          } @else { <button type="button" class="mt-1 text-xs underline" (click)="openAttachment(message)">{{ 'chat.openMedia' | translate }}</button> }
         }
-
-        <!-- Indicador de "Escribiendo / Procesando" -->
-        @if (isAiProcessing()) {
-          <div class="flex items-start gap-2 animate-in fade-in">
-            <div class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-              <ng-icon name="heroSparkles" class="text-xs"></ng-icon>
-            </div>
-            <div class="p-2.5 bg-white dark:bg-[#151A30] border border-slate-200 dark:border-slate-800 rounded-2xl rounded-tl-xs shadow-xs flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-mono">
-              <span class="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></span>
-              <span>Copilot está razonando y generando el diagrama...</span>
-            </div>
-          </div>
+        <p class="message-meta mt-2">{{ ('chat.status.' + message.status) | translate }}</p>
+        @if (message.model) { <p class="message-meta">{{ message.provider }} · {{ message.model }}</p> }
+        @if (message.status === 'failed' && message.sender.userId === auth.currentUser()?.id) {
+          <button type="button" class="mt-2 rounded border px-2 py-1 text-sm" (click)="state.retry(message.id)">{{ 'chat.retry' | translate }}</button>
         }
-      </div>
-
-    <!-- 2. BANDEJA DE ENTRADA INFERIOR (AMPLIA, TIPO CHAT) -->
-    <div class="p-3 bg-white dark:bg-[#0D1124] border-t border-slate-200/80 dark:border-slate-800 shrink-0 space-y-2.5">
-      
-      <!-- Chips de Comandos Sugeridos -->
-      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[10px]">
-        <button
-          (click)="setAiSuggestion('Crea una tabla Producto con atributos id UUID, nombre String, precio Double y relacionala con Usuarios con multiplicidad *')"
-          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
-          ✨ Crear Producto y relación
-        </button>
-        <button
-          (click)="setAiSuggestion('Agrega la clase FacturaDetalle con cantidad Integer, precio_unitario Double y subtotal Double')"
-          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
-          ✨ Agregar FacturaDetalle
-        </button>
-        <button
-          (click)="setAiSuggestion('Crear relación de Composición entre Pedido y DetallePedido con multiplicidad 1 a 1..*')"
-          class="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 dark:bg-[#161C38] dark:hover:bg-[#20274E] text-slate-600 hover:text-purple-700 dark:text-slate-300 dark:hover:text-purple-300 border border-slate-200/80 dark:border-slate-700 rounded-full shrink-0 transition-colors cursor-pointer text-[10.5px]">
-          ✨ Composición 1 a n
-        </button>
-      </div>
-
-      <!-- Preview de Imagen Adjunta (si hay una cargada) -->
-      @if (attachedImageBase64()) {
-        <div class="p-1.5 bg-purple-50 dark:bg-[#1A203E] border border-purple-300 dark:border-[#3B487A] rounded-lg flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 truncate">
-            <img [src]="attachedImageBase64()" class="w-9 h-9 object-cover rounded border border-purple-200 dark:border-purple-800" alt="Vista previa" />
-            <div class="truncate">
-              <p class="text-[11px] font-mono text-purple-900 dark:text-purple-200 truncate font-medium">{{ attachedImageName() }}</p>
-              <p class="text-[9px] text-purple-600 dark:text-purple-400">
-                Imagen lista para digitalizar con Gemini Vision
-              </p>
-            </div>
-          </div>
-          <button
-            (click)="removeAttachedImage()"
-            title="Quitar imagen"
-            class="text-purple-600 dark:text-purple-400 hover:text-red-700 dark:hover:text-red-400 font-bold text-base px-1.5 cursor-pointer">
-            &times;
-          </button>
-        </div>
-      }
-
-      <!-- Preview de Audio Adjunto (Grabación de voz lista para Gemini) -->
-      @if (attachedAudioBase64()) {
-        <div class="p-1.5 bg-indigo-50 dark:bg-[#1A203E] border border-indigo-300 dark:border-[#3B487A] rounded-lg flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 truncate">
-            <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
-              <ng-icon name="heroMicrophone" class="text-sm"></ng-icon>
-            </div>
-            <div class="truncate">
-              <p class="text-[11px] font-mono text-indigo-900 dark:text-indigo-200 truncate font-medium">
-                {{ attachedAudioDuration() ? 'Audio grabado (' + attachedAudioDuration() + 's)' : 'Audio listo' }}
-              </p>
-              <p class="text-[9px] text-indigo-600 dark:text-indigo-400">
-                Se enviará a Gemini 2.5 Flash para procesamiento multimodal directo
-              </p>
-            </div>
-          </div>
-          <button
-            (click)="removeAttachedAudio()"
-            title="Quitar audio"
-            class="text-indigo-600 dark:text-indigo-400 hover:text-red-700 dark:hover:text-red-400 font-bold text-base px-1.5 cursor-pointer">
-            &times;
-          </button>
-        </div>
-      }
-
-      <!-- Indicador de Grabación de Audio Activa -->
-      @if (isRecordingAudio()) {
-        <div class="px-2.5 py-1.5 bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-700 rounded-lg text-[11px] font-mono text-red-700 dark:text-red-300 flex items-center justify-between animate-pulse">
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-red-600"></span>
-            <span class="font-semibold">Grabando audio... ({{ recordingSeconds() }}s) Habla ahora</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <button (click)="cancelAudioRecording()" class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 text-[10px] cursor-pointer">Cancelar</button>
-            <button (click)="stopAudioRecording(false)" class="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded font-bold text-[10px] cursor-pointer flex items-center gap-1">
-              <span>Terminar</span>
-            </button>
-          </div>
-        </div>
-      }
-
-      <!-- Caja de Entrada con Textarea Alto, Drag&Drop y Pegado Directo (Ctrl+V) -->
-      <div
-        (paste)="onPasteImage($event)"
-        (dragover)="$event.preventDefault()"
-        (drop)="onDropImage($event)"
-        class="relative border border-slate-200 dark:border-slate-700/80 rounded-xl bg-white dark:bg-[#111528] shadow-xs focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500/50 transition-all p-2">
-        <textarea
-          [ngModel]="aiPrompt()"
-          (ngModelChange)="aiPrompt.set($event)"
-          (keydown)="onAiInputKeyDown($any($event))"
-          (paste)="onPasteImage($event)"
-          rows="4"
-          [placeholder]="attachedAudioBase64() ? 'Instrucción o comentario opcional para acompañar el audio (o presiona Enter para enviar)...' : attachedImageBase64() ? 'Instrucción opcional para la imagen (o presiona Enter para digitalizar todo)...' : 'Escribe tu instrucción, graba un comando por voz, pega una captura (Ctrl+V) o arrastra una imagen aquí...'"
-          class="w-full p-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent focus:outline-none resize-none min-h-[85px] pr-28"></textarea>
-
-        <!-- Botones de Acción Multimedia e interactivos en la esquina inferior derecha -->
-        <div class="absolute bottom-2.5 right-2.5 flex items-center gap-1.5">
-          <!-- Botón Micrófono / Grabación de Audio -->
-          <button
-            (click)="toggleAudioRecording()"
-            type="button"
-            [title]="isRecordingAudio() ? 'Detener grabación de audio' : 'Grabar comando de voz para Gemini'"
-            [ngClass]="{
-              'bg-red-600 text-white animate-pulse ring-2 ring-red-400': isRecordingAudio(),
-              'text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-[#1E2548] dark:hover:text-slate-200': !isRecordingAudio()
-            }"
-            class="p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center">
-            <ng-icon [name]="isRecordingAudio() ? 'heroStop' : 'heroMicrophone'" class="text-xs"></ng-icon>
-          </button>
-
-          <!-- Botón Pegar del Portapapeles (1 clic) -->
-          <button
-            (click)="pasteFromClipboard()"
-            type="button"
-            title="Pegar captura desde el portapapeles (o presiona Ctrl+V)"
-            class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-[#1E2548] dark:hover:text-slate-200 rounded-full transition-all cursor-pointer flex items-center justify-center">
-            <ng-icon name="heroClipboard" class="text-xs"></ng-icon>
-          </button>
-
-          <!-- Botón Tomar Foto con Cámara Web -->
-          <button
-            (click)="openWebcamModal()"
-            type="button"
-            title="Tomar foto con la cámara (pizarra o cuaderno)"
-            class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-[#1E2548] dark:hover:text-slate-200 rounded-full transition-all cursor-pointer flex items-center justify-center">
-            <ng-icon name="heroCamera" class="text-xs"></ng-icon>
-          </button>
-
-          <!-- Botón Subir Archivo de Imagen -->
-          <button
-            (click)="triggerImageInput()"
-            type="button"
-            title="Subir archivo de imagen desde disco"
-            class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-[#1E2548] dark:hover:text-slate-200 rounded-full transition-all cursor-pointer flex items-center justify-center">
-            <ng-icon name="heroPhoto" class="text-xs"></ng-icon>
-          </button>
-
-          <!-- Botón Enviar Mensaje (Enter) -->
-          <button
-            (click)="applyAiPrompt()"
-            [disabled]="isAiProcessing() || (!aiPrompt().trim() && !attachedImageBase64() && !attachedAudioBase64())"
-            title="Enviar mensaje (Enter)"
-            class="w-7 h-7 bg-purple-600 hover:bg-purple-500 text-white rounded-full transition-all cursor-pointer flex items-center justify-center shadow-xs disabled:opacity-30 disabled:cursor-not-allowed">
-            <ng-icon name="heroPaperAirplane" class="text-xs"></ng-icon>
-          </button>
-        </div>
-      </div>
-
-      <!-- Pie de ayuda -->
-      <div class="flex items-center justify-between text-[9.5px] font-mono text-slate-400 dark:text-slate-500 px-0.5">
-        <span>Enter para enviar • Shift+Enter para nueva línea</span>
-        <span class="text-emerald-600 dark:text-emerald-400 font-medium">● Sincronizado en vivo</span>
-      </div>
-
-    </div>
-
-  </aside>
-}
-
-<!-- MODAL DE CAPTURA CON CÁMARA WEB PARA COPILOT IA -->
-@if (showWebcamModal()) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-    <div class="bg-white dark:bg-[#111528] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden text-xs animate-in zoom-in-95 duration-150">
-      
-      <!-- Header -->
-      <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-            <ng-icon name="heroCamera" class="text-base"></ng-icon>
-          </div>
-          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight">Capturar Diagrama con Cámara Web</h3>
-        </div>
-        <button (click)="closeWebcamModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg cursor-pointer leading-none">&times;</button>
-      </div>
-
-      <!-- Video en Vivo -->
-      <div class="p-4 bg-slate-950 flex flex-col items-center justify-center min-h-[260px] relative">
-        <video #webcamVideo autoplay playsinline class="w-full max-h-[300px] object-contain rounded-xl border border-slate-800 bg-black"></video>
-        <div class="absolute bottom-6 text-[10.5px] font-mono text-slate-300 bg-slate-900/90 px-3 py-1 rounded-full border border-slate-700/80 shadow-md">
-          Apunta la cámara a tu libreta, pizarra o boceto en papel
-        </div>
-      </div>
-
-      <!-- Footer Acciones -->
-      <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-[#0D1124]">
-        <button
-          (click)="closeWebcamModal()"
-          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-[#1E2548] dark:hover:bg-[#28325E] text-slate-700 dark:text-slate-200 rounded-xl font-semibold transition-colors cursor-pointer">
-          Cancelar
-        </button>
-        <button
-          (click)="captureWebcamPhoto()"
-          class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.98]">
-          <ng-icon name="heroCamera" class="text-sm"></ng-icon>
-          Tomar Foto y Digitalizar
-        </button>
-      </div>
-
+        @if (message.proposal; as proposal) {
+          <section class="proposal-card">
+            <h3 class="font-semibold text-sm">{{ 'chat.proposal' | translate }}</h3>
+            <p class="text-sm whitespace-pre-wrap">{{ proposal.summary }}</p>
+            <p class="text-xs mt-1">{{ 'chat.baseRevision' | translate }}: {{ proposal.baseRevision | date:'medium' }}</p>
+            <details class="my-2 text-xs"><summary class="cursor-pointer">{{ 'chat.review' | translate }} ({{ proposal.ast.nodes.length }} / {{ proposal.ast.connections.length }})</summary>
+              <pre class="max-h-64 overflow-auto whitespace-pre-wrap">{{ proposal.ast | json }}</pre>
+            </details>
+            @if (proposal.status === 'applied') { <p class="text-sm text-emerald-600">{{ 'chat.applied' | translate }}</p> }
+            @else {
+              <button type="button" class="primary-button" [disabled]="!canEdit() || hasUnsavedChanges() || !!applying()" (click)="apply(message)">{{ 'chat.apply' | translate }}</button>
+              @if (hasUnsavedChanges()) { <p class="mt-1 text-xs">{{ 'chat.saveChanges' | translate }}</p> }
+            }
+          </section>
+        }
+      </article>
+    }
     </div>
   </div>
-}
+  @if (error() || state.error() || media.error()) { <p role="alert" class="chat-error">{{ (error() || state.error() || media.error()) | translate }}</p> }
+  <footer class="composer" (paste)="onPaste($event)" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
+    <div class="composer-content">
+      <div class="composer-context">
+        <button type="button" class="assistant-toggle" [class.selected]="askAssistant()" [attr.aria-pressed]="askAssistant()"
+          (click)="askAssistant.set(!askAssistant())" [disabled]="state.sending()">
+          <ng-icon [name]="askAssistant() ? 'heroSparkles' : 'heroChatBubbleLeftRight'" aria-hidden="true" />
+          {{ (askAssistant() ? 'chat.askAssistant' : 'chat.teamChat') | translate }}
+          <span class="toggle-dot"></span>
+        </button>
+        <span class="context-hint">{{ (askAssistant() ? 'chat.savedContext' : 'chat.sharedConversation') | translate }}</span>
+      </div>
+      @if (media.attachment(); as attachment) {
+        <div class="attachment-preview">
+          @if (media.imagePreview(); as preview) { <img [src]="preview" [alt]="'chat.image' | translate" /> }
+          @else { <ng-icon name="heroMicrophone" aria-hidden="true" /> }
+          <span>{{ attachment.name || ('chat.source.' + attachment.kind | translate) }}</span>
+          <button type="button" class="icon-button" (click)="media.clear()" [disabled]="state.sending()" [attr.aria-label]="'chat.remove' | translate"><ng-icon name="heroXMark" aria-hidden="true" /></button>
+        </div>
+        <p class="media-notice">{{ 'chat.mediaCloud' | translate }}</p>
+      }
+      <textarea rows="3" maxlength="12000" class="message-input" [attr.aria-label]="'chat.message' | translate"
+        [placeholder]="'chat.placeholder' | translate" [ngModel]="prompt()" (ngModelChange)="prompt.set($event)"
+        (keydown)="onKeyDown($event)" [disabled]="state.sending() || !diagramId()"></textarea>
+      <div class="composer-toolbar">
+        <input #imageInput type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="selectImage($event)" />
+        <div class="menu-anchor" data-chat-menu>
+          <button type="button" class="icon-button" data-menu-trigger="attachments" (click)="toggleMenu('attachments')"
+            [attr.aria-expanded]="menu() === 'attachments'" aria-controls="chat-attachments"
+            [title]="'chat.addAttachment' | translate" [attr.aria-label]="'chat.addAttachment' | translate"
+            [disabled]="state.sending() || media.busy() || media.recording()">
+            <ng-icon name="heroPlus" aria-hidden="true" />
+          </button>
+          @if (menu() === 'attachments') {
+            <div id="chat-attachments" class="chat-dropdown attachment-menu" role="group" [attr.aria-label]="'chat.addAttachment' | translate">
+              <p class="dropdown-label">{{ 'chat.addAttachment' | translate }}</p>
+              <button type="button" (click)="menu.set(null); imageInput.click()"><ng-icon name="heroPhoto" aria-hidden="true" />{{ 'chat.uploadImage' | translate }}</button>
+              <button type="button" (click)="menu.set(null); pasteClipboard()"><ng-icon name="heroClipboard" aria-hidden="true" />{{ 'chat.paste' | translate }}</button>
+              <button type="button" (click)="menu.set(null); media.openCamera(cameraVideo)" [disabled]="media.cameraOpen()"><ng-icon name="heroCamera" aria-hidden="true" />{{ 'chat.camera' | translate }}</button>
+            </div>
+          }
+        </div>
+        <button type="button" class="icon-button record-button" [class.recording]="media.recording()" (click)="media.toggleRecording()"
+          [disabled]="state.sending() || media.busy()" [title]="(media.recording() ? 'chat.stopRecording' : 'chat.record') | translate"
+          [attr.aria-label]="(media.recording() ? 'chat.stopRecording' : 'chat.record') | translate" [attr.aria-pressed]="media.recording()">
+          <ng-icon [name]="media.recording() ? 'heroStop' : 'heroMicrophone'" aria-hidden="true" />
+        </button>
+        @if (media.recording()) { <span class="recording-time" role="status">{{ media.seconds() }} / 60 s</span> }
+        <div class="model-selector menu-anchor" data-chat-menu>
+          <button type="button" class="model-trigger" data-menu-trigger="models" (click)="toggleMenu('models')"
+            [disabled]="state.sending()" [attr.aria-expanded]="menu() === 'models'" aria-controls="chat-models"
+            [attr.aria-label]="'chat.selectModel' | translate" [title]="'chat.selectModel' | translate">
+            <span>{{ selectedModel()?.id || ('chat.selectModel' | translate) }}</span><ng-icon name="heroChevronDown" aria-hidden="true" />
+          </button>
+          @if (menu() === 'models') {
+            <div id="chat-models" class="chat-dropdown model-menu" role="group" [attr.aria-label]="'chat.selectModel' | translate">
+              <p class="dropdown-label">{{ 'chat.selectModel' | translate }}</p>
+              @for (model of state.models()?.models || []; track model.provider) {
+                <button type="button" class="model-option" [class.active]="provider() === model.provider" [disabled]="!model.available"
+                  [attr.aria-pressed]="provider() === model.provider" (click)="selectProvider(model.provider)">
+                  <ng-icon name="heroSparkles" aria-hidden="true" />
+                  <span class="model-description"><small>{{ model.provider }}</small><span>{{ model.id }}</span>
+                    @if (!model.available) { <small>{{ 'chat.offline' | translate }}</small> }
+                  </span>
+                  @if (provider() === model.provider) { <ng-icon name="heroCheck" aria-hidden="true" /> }
+                </button>
+              } @empty { <p class="dropdown-empty">{{ 'chat.noModels' | translate }}</p> }
+            </div>
+          }
+        </div>
+        <button type="button" class="send-button icon-button" (click)="send()" [title]="'chat.send' | translate"
+          [attr.aria-label]="(state.sending() ? 'chat.sending' : 'chat.send') | translate"
+          [disabled]="state.sending() || media.recording() || media.busy() || !diagramId() || (!prompt().trim() && !media.attachment())">
+          <ng-icon name="heroPaperAirplane" aria-hidden="true" />
+        </button>
+      </div>
+      <p class="composer-shortcuts">{{ 'chat.keyboardHint' | translate }}</p>
+      <div [hidden]="!media.cameraOpen()" class="camera-preview">
+        <video #cameraVideo autoplay playsinline muted></video>
+        <div><button type="button" class="text-button" (click)="media.capture(cameraVideo)">{{ 'chat.capture' | translate }}</button><button type="button" class="text-button" (click)="media.closeCamera()">{{ 'chat.cancel' | translate }}</button></div>
+      </div>
+    </div>
+  </footer>
+</aside>

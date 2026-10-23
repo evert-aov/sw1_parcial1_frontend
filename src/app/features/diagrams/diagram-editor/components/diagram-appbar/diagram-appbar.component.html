@@ -1,633 +1,58 @@
-<!-- =========================================================================
-     APPBAR CON RIBBON MODERNO (UML STUDIO)
-     ========================================================================= -->
-<header
-  class="bg-white dark:bg-[#0D1124] border-b border-slate-200/80 dark:border-slate-800 flex flex-col z-30 shrink-0 select-none shadow-xs transition-colors duration-150"
->
-  <!-- =========================================================================
-       1. TOP TITLE BAR (MODERNO FIGMA/SaaS) ~42px
-       ========================================================================= -->
-  <div
-    class="h-11 px-4 bg-white dark:bg-[#0D1124] border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs"
-  >
-    <!-- Izquierda: Logo UML Studio + Breadcrumbs -->
-    <div class="flex items-center gap-3">
-      <!-- Gradient Logo Icon -->
-      <img src="logo.png" alt="UML/ER Studio" class="w-7 h-7 object-contain" />
-
-      <span class="font-bold text-[14px] text-slate-800 dark:text-slate-100 tracking-tight"
-        >UML/ER Studio</span
-      >
-
-      <!-- Breadcrumbs: < Proyectos > P2 > [EA UML 2.5] -->
-      <div class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-        <a
-          routerLink="/projects"
-          [title]="'appbar.projects' | translate"
-          class="flex items-center gap-1 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 font-medium transition-colors cursor-pointer"
-        >
-          <ng-icon name="heroChevronLeft" class="text-xs"></ng-icon>
-          <span>{{ 'appbar.projects' | translate }}</span>
-        </a>
-
-        <span class="text-slate-300 dark:text-slate-600">›</span>
-
-        <span class="font-semibold text-slate-700 dark:text-slate-200">
-          {{ diagramTitle() }}
-        </span>
-
-        <span class="text-slate-300 dark:text-slate-600">›</span>
-
-        <span
-          class="text-[10.5px] px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-semibold border border-blue-100 dark:border-blue-900/50"
-        >
-          EA UML 2.5
-        </span>
-      </div>
+<header class="editor-header">
+  <div class="workspace-bar">
+    <button #fileTrigger type="button" class="file-trigger" data-menu-trigger="file"
+      [attr.aria-label]="'workspace.fileProject' | translate" aria-haspopup="menu"
+      [attr.aria-expanded]="menu() === 'file'" (click)="toggleMenu('file')">
+      <img src="logo.png" alt="UML/ER Studio" width="28" height="28" />
+      <ng-icon name="heroChevronDown" />
+    </button>
+    <div class="project-heading">
+      <span class="project-title" [title]="projectTitle() || diagramTitle()">{{ projectTitle() || diagramTitle() }}</span>
+      <span class="save-status" role="status" [class.pending]="hasUnsavedChanges()"
+        [title]="saveStatusKey() | translate" [attr.aria-label]="saveStatusKey() | translate">
+        <ng-icon [name]="isSaving() ? 'heroArrowPath' : hasUnsavedChanges() ? 'heroCloudArrowUp' : 'heroCheck'"
+          [class.animate-spin]="isSaving()" />
+      </span>
     </div>
-
-    <!-- Centro: Sala colaborativa tipo píldora moderna -->
-    <div class="flex items-center gap-2">
-      <button
-        (click)="copyRoomCode()"
-        [title]="'appbar.clickToCopy' | translate"
-        class="flex items-center gap-2 bg-slate-50 dark:bg-[#151A30] border border-slate-200/80 dark:border-slate-700/60 px-3 py-1 rounded-full text-xs font-mono text-slate-700 dark:text-slate-300 hover:border-blue-400 transition-colors cursor-pointer shadow-2xs"
-      >
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span
-          >Room:
-          <strong class="text-slate-800 dark:text-slate-100">{{
-            collaborationService.activeRoomCode() || 'ROOM-TVYI9E'
-          }}</strong></span
-        >
-        @if (collaborationService.collaborators().length > 0) {
-          <div class="flex items-center -space-x-1 ml-1.5">
-            @for (collab of collaborationService.collaborators(); track collab.userId) {
-              <div
-                class="w-4.5 h-4.5 rounded-full border-2 border-white dark:border-[#101426] text-white text-[8px] font-bold flex items-center justify-center shadow-xs"
-                [style.backgroundColor]="collab.color"
-                [title]="collab.userName"
-              >
-                {{ collab.userName.charAt(0).toUpperCase() }}
-              </div>
-            }
-          </div>
-        }
-      </button>
-    </div>
-
-    <!-- Derecha: Selector de Tema, Idioma, Modo Espectador, Perfil y Logout -->
-    <div class="flex items-center gap-3">
-      @if (isReadOnly()) {
-        <div
-          class="bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full text-[11px] font-medium flex items-center gap-1"
-        >
-          <ng-icon name="heroEye" class="text-xs"></ng-icon>
-          <span>{{ 'appbar.spectatorMode' | translate }}</span>
-        </div>
+    <nav class="workspace-tabs" [attr.aria-label]="'workspace.tools' | translate">
+      @for (tab of tabs; track tab.id) {
+        <button type="button" [attr.data-tab]="tab.id" [class.active]="activeTab() === tab.id"
+          [attr.aria-pressed]="activeTab() === tab.id" (click)="onTabClick(tab.id)"
+          (dblclick)="onTabDblClick(tab.id, $event)">
+          <ng-icon [name]="tab.icon" /> <span>{{ tab.label | translate }}</span>
+        </button>
       }
-
-      <app-theme-toggle [variant]="'light'" />
-      <app-language-selector [theme]="'light'" />
-
-      @if (authService.currentUser()) {
-        <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-          <button
-            (click)="openProfile.emit()"
-            [title]="'appbar.profileTooltip' | translate"
-            class="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-          >
-            <div
-              class="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs"
-            >
-              {{ authService.currentUser()?.fullName?.slice(0, 2)?.toUpperCase() || 'EN' }}
-            </div>
-            <span class="font-medium text-xs">{{
-              authService.currentUser()?.fullName || 'Evert'
-            }}</span>
-            <ng-icon name="heroChevronDown" class="text-[10px] text-slate-400"></ng-icon>
-          </button>
-          <button
-            (click)="authService.logout()"
-            [title]="'appbar.logoutTooltip' | translate"
-            class="text-xs text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400 p-1 rounded cursor-pointer transition-colors"
-          >
-            <ng-icon name="heroArrowRightOnRectangle" class="text-sm"></ng-icon>
-          </button>
-        </div>
-      }
-    </div>
+    </nav>
+    <span class="room-status" [title]="('appbar.room' | translate) + ': ' + (collaborationService.activeRoomCode() || ('workspace.noRoom' | translate))">
+      <span class="status-dot" [class.connected]="collaborationService.isConnected()"></span>
+      <span class="room-code">{{ collaborationService.activeRoomCode() || ('workspace.noRoom' | translate) }}</span>
+    </span>
+    @if (isReadOnly()) {
+      <ng-icon name="heroEye" [title]="'appbar.spectatorMode' | translate" />
+    }
+    @if (plugins.component('ai-assistant', 'panel')) {
+      <button type="button" class="icon-button" data-action="assistant" [attr.aria-pressed]="isAiPanelOpen()"
+        [attr.aria-label]="'appbar.aiAssistant' | translate" [title]="'workspace.toggleAssistant' | translate"
+        (click)="closeMenu(); toggleAi.emit()"><ng-icon name="heroSparkles" /></button>
+    }
+    @if (plugins.find('user-guide')) {
+      <button type="button" class="icon-button" data-action="manual"
+        [attr.aria-label]="'guide.manual' | translate" [title]="'guide.openTooltip' | translate"
+        (click)="openGuide()"><ng-icon name="heroAcademicCap" /></button>
+    }
+    <button type="button" class="icon-button" data-menu-trigger="preferences" aria-haspopup="menu"
+      [attr.aria-expanded]="menu() === 'preferences'" [attr.aria-label]="'workspace.preferences' | translate"
+      (click)="toggleMenu('preferences')"><ng-icon name="heroCog6Tooth" /></button>
+    <button type="button" class="icon-button" (click)="toggleCollapse()" [attr.aria-expanded]="!isCollapsed()"
+      [attr.aria-label]="(isCollapsed() ? 'workspace.expandTools' : 'workspace.collapseTools') | translate">
+      <ng-icon [name]="isCollapsed() ? 'heroChevronDown' : 'heroChevronUp'" />
+    </button>
   </div>
 
-  <!-- =========================================================================
-       2. RIBBON TABS STRIP (ESTILO MODERNO) ~36px
-       ========================================================================= -->
-  <div
-    (dblclick)="toggleCollapse()"
-    [title]="
-      isCollapsed() ? 'Doble clic para expandir el Ribbon' : 'Doble clic para minimizar el Ribbon'
-    "
-    class="h-9 px-4 flex items-end justify-between bg-white dark:bg-[#0D1124] border-b border-slate-200/80 dark:border-slate-800 select-none text-xs"
-  >
-    <div class="flex items-end gap-1 overflow-x-auto">
-      <!-- Tab Publish -->
-      <button
-        (click)="onTabClick('publish')"
-        (dblclick)="onTabDblClick('publish', $event)"
-        [class.border-b-2]="activeTab() === 'publish' && !isCollapsed()"
-        [class.border-b-blue-600]="activeTab() === 'publish' && !isCollapsed()"
-        [class.text-blue-600]="activeTab() === 'publish'"
-        [class.dark:text-blue-400]="activeTab() === 'publish'"
-        [class.font-semibold]="activeTab() === 'publish'"
-        [class.text-slate-600]="activeTab() !== 'publish'"
-        [class.dark:text-slate-400]="activeTab() !== 'publish'"
-        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs"
-      >
-        <ng-icon name="heroDocumentChartBar" class="text-xs"></ng-icon>
-        <span>{{ 'ribbon.tabs.publish' | translate }}</span>
-      </button>
-
-      <!-- Tab Design -->
-      <button
-        (click)="onTabClick('design')"
-        (dblclick)="onTabDblClick('design', $event)"
-        [class.border-b-2]="activeTab() === 'design' && !isCollapsed()"
-        [class.border-b-blue-600]="activeTab() === 'design' && !isCollapsed()"
-        [class.text-blue-600]="activeTab() === 'design'"
-        [class.dark:text-blue-400]="activeTab() === 'design'"
-        [class.font-semibold]="activeTab() === 'design'"
-        [class.text-slate-600]="activeTab() !== 'design'"
-        [class.dark:text-slate-400]="activeTab() !== 'design'"
-        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs"
-      >
-        <ng-icon name="heroPencilSquare" class="text-xs"></ng-icon>
-        <span>{{ 'ribbon.tabs.design' | translate }}</span>
-      </button>
-
-      <!-- Tab Develop -->
-      <button
-        (click)="onTabClick('develop')"
-        (dblclick)="onTabDblClick('develop', $event)"
-        [class.border-b-2]="activeTab() === 'develop' && !isCollapsed()"
-        [class.border-b-blue-600]="activeTab() === 'develop' && !isCollapsed()"
-        [class.text-blue-600]="activeTab() === 'develop'"
-        [class.dark:text-blue-400]="activeTab() === 'develop'"
-        [class.font-semibold]="activeTab() === 'develop'"
-        [class.text-slate-600]="activeTab() !== 'develop'"
-        [class.dark:text-slate-400]="activeTab() !== 'develop'"
-        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs"
-      >
-        <ng-icon name="heroBolt" class="text-xs"></ng-icon>
-        <span>{{ 'ribbon.tabs.develop' | translate }}</span>
-      </button>
-
-      <!-- Tab Collaborate -->
-      <button
-        (click)="onTabClick('collaborate')"
-        (dblclick)="onTabDblClick('collaborate', $event)"
-        [class.border-b-2]="activeTab() === 'collaborate' && !isCollapsed()"
-        [class.border-b-blue-600]="activeTab() === 'collaborate' && !isCollapsed()"
-        [class.text-blue-600]="activeTab() === 'collaborate'"
-        [class.dark:text-blue-400]="activeTab() === 'collaborate'"
-        [class.font-semibold]="activeTab() === 'collaborate'"
-        [class.text-slate-600]="activeTab() !== 'collaborate'"
-        [class.dark:text-slate-400]="activeTab() !== 'collaborate'"
-        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs"
-      >
-        <ng-icon name="heroUserGroup" class="text-xs"></ng-icon>
-        <span>{{ 'ribbon.tabs.collaborate' | translate }}</span>
-      </button>
-
-      <!-- Tab Start -->
-      <button
-        (click)="onTabClick('start')"
-        (dblclick)="onTabDblClick('start', $event)"
-        [class.border-b-2]="activeTab() === 'start' && !isCollapsed()"
-        [class.border-b-blue-600]="activeTab() === 'start' && !isCollapsed()"
-        [class.text-blue-600]="activeTab() === 'start'"
-        [class.dark:text-blue-400]="activeTab() === 'start'"
-        [class.font-semibold]="activeTab() === 'start'"
-        [class.text-slate-600]="activeTab() !== 'start'"
-        [class.dark:text-slate-400]="activeTab() !== 'start'"
-        class="px-3 py-1.5 flex items-center gap-1.5 border-b-2 border-transparent hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer text-xs"
-      >
-        <ng-icon name="heroCube" class="text-xs"></ng-icon>
-        <span>{{ 'ribbon.tabs.start' | translate }}</span>
-      </button>
-    </div>
-
-    <!-- Botón Chevron para Colapsar/Expandir en el extremo derecho -->
-    <div class="flex items-center pb-1 pr-1">
-      <button
-        (click)="toggleCollapse()"
-        [title]="
-          isCollapsed()
-            ? 'Expandir Ribbon (Doble clic en pestañas)'
-            : 'Minimizar Ribbon (Doble clic en pestañas)'
-        "
-        class="w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-      >
-        <ng-icon
-          [name]="isCollapsed() ? 'heroChevronDown' : 'heroChevronUp'"
-          class="text-xs"
-        ></ng-icon>
-      </button>
-    </div>
-  </div>
-
-  <!-- =========================================================================
-       3. RIBBON ACTION BAR (SEPARADO EN SECCIONES ESTILO ENTERPRISE ARCHITECT)
-       Ocultable con doble clic
-       ========================================================================= -->
   @if (!isCollapsed()) {
-    <div
-      class="bg-white dark:bg-[#0D1124] px-4 py-2 flex items-center overflow-x-auto min-h-16 border-b border-slate-200/80 dark:border-slate-800 transition-all duration-150 select-none"
-    >
-      <!-- TAB 1: PUBLISH (IDÉNTICO A LA CAPTURA DE EA DEL USUARIO) -->
-      @if (activeTab() === 'publish') {
-        <!-- SECCIÓN 1: Model Reports -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-1.5 flex-1 justify-center">
-            <!-- Ver AST JSON -->
-            <button
-              (click)="handleViewJson()"
-              [title]="'Ver estructura JSON del modelo UML'"
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-13.5 group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]"
-            >
-              <div
-                class="w-6 h-6 flex items-center justify-center text-slate-600 dark:text-slate-300 group-hover:scale-105 transition-transform"
-              >
-                <ng-icon
-                  name="heroDocumentText"
-                  class="text-xl text-indigo-600 dark:text-indigo-400"
-                ></ng-icon>
-              </div>
-              <span
-                class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap"
-              >
-                JSON AST
-              </span>
-            </button>
-
-            <!-- Manual Interactivo -->
-            @if (plugins.find('user-guide')) {
-<button
-              (click)="openGuide()"
-              [title]="'guide.openTooltip' | translate"
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-13.5 group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]"
-            >
-              <div
-                class="w-6 h-6 flex items-center justify-center text-slate-600 dark:text-slate-300 group-hover:scale-105 transition-transform"
-              >
-                <ng-icon
-                  name="heroAcademicCap"
-                  class="text-xl text-amber-600 dark:text-amber-400"
-                ></ng-icon>
-              </div>
-              <span
-                class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap"
-              >
-                {{ 'guide.manual' | translate }}
-              </span>
-            </button>
-}
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            Model Reports
-          </div>
-        </div>
-
-        <!-- SECCIÓN 2: Diagram Image -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-1.5 flex-1 justify-center">
-            <!-- Exportar Imagen BMP -->
-            @if (plugins.find('image-export') && plugins.find('bmp-encoder')) {
-<button
-              (click)="handleExportBmp()"
-              [class.opacity-50]="multiUserBlocked()"
-              [title]="
-                multiUserBlocked()
-                  ? ('appbar.multiUserExportBlocked' | translate)
-                  : ('appbar.exportBmp' | translate)
-              "
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-13.5 group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]"
-            >
-              <div
-                class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform"
-              >
-                <ng-icon
-                  name="heroPhoto"
-                  class="text-xl text-purple-600 dark:text-purple-400"
-                ></ng-icon>
-              </div>
-              <span
-                class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap"
-              >
-                Export BMP
-              </span>
-            </button>
-}
-
-            <!-- Exportar Imagen PNG -->
-            @if (plugins.find('image-export')) {
-<button
-              (click)="handleExportPng()"
-              [class.opacity-50]="multiUserBlocked()"
-              [title]="
-                multiUserBlocked()
-                  ? ('appbar.multiUserExportBlocked' | translate)
-                  : ('appbar.exportPng' | translate)
-              "
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-13.5 group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]"
-            >
-              <div
-                class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform"
-              >
-                <ng-icon
-                  name="heroArrowDownTray"
-                  class="text-xl text-indigo-600 dark:text-indigo-400"
-                ></ng-icon>
-              </div>
-              <span
-                class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap"
-              >
-                Export PNG
-              </span>
-            </button>
-}
-
-            <!-- Guardar / Save (Como en la sección Diagram Image de EA) -->
-            @if (diagramId() && !isReadOnly()) {
-              <button
-                (click)="saveDiagram.emit()"
-                [disabled]="isSaving()"
-                [title]="'appbar.saveTooltip' | translate"
-                class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-13.5 group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762] disabled:opacity-60"
-              >
-                <div
-                  class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform"
-                >
-                  @if (isSaving()) {
-                    <span
-                      class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"
-                    ></span>
-                  } @else if (!hasUnsavedChanges()) {
-                    <ng-icon
-                      name="heroCheck"
-                      class="text-xl text-emerald-600 dark:text-emerald-400"
-                    ></ng-icon>
-                  } @else {
-                    <ng-icon
-                      name="heroCloudArrowUp"
-                      class="text-xl text-blue-600 dark:text-blue-400"
-                    ></ng-icon>
-                  }
-                </div>
-                <span
-                  class="text-[10px] font-sans font-medium mt-0.5 leading-tight whitespace-nowrap"
-                  [ngClass]="{
-                    'text-emerald-600 dark:text-emerald-400 font-semibold': !hasUnsavedChanges(),
-                    'text-blue-700 dark:text-blue-300 font-bold': hasUnsavedChanges(),
-                  }"
-                >
-                  @if (isSaving()) {
-                    {{ 'appbar.saving' | translate }}
-                  } @else if (!hasUnsavedChanges()) {
-                    {{ 'appbar.saved' | translate }}
-                  } @else {
-                    {{ 'appbar.save' | translate }}*
-                  }
-                </span>
-              </button>
-            }
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            Diagram Image
-          </div>
-        </div>
-
-        <!-- SECCIÓN 3: Model Exchange (Export / Import XMI & JSON) -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-2 flex-1 justify-center">
-            <!-- Botón Exportar XMI 2.1 (Principal CASE) -->
-            @if (plugins.find('xmi')) {
-<button
-              (click)="handleExportXmi()"
-              [class.opacity-50]="multiUserBlocked()"
-              [title]="
-                multiUserBlocked()
-                  ? ('appbar.multiUserExportBlocked' | translate)
-                  : ('appbar.exportXmi' | translate)
-              "
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-14.5 group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]"
-            >
-              <div
-                class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform relative"
-              >
-                <ng-icon
-                  name="heroArrowDownTray"
-                  class="text-xl text-blue-600 dark:text-blue-400"
-                ></ng-icon>
-                @if (multiUserBlocked()) {
-                  <span
-                    class="absolute -top-1 -right-1 text-[10px]"
-                    title="Bloqueado por edición concurrente"
-                    >🔒</span
-                  >
-                }
-              </div>
-              <span
-                class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap"
-              >
-                Export XMI
-              </span>
-            </button>
-}
-
-            <!-- Botón Importar XMI 2.1 (Principal CASE) -->
-            <button
-              (click)="triggerFileInput()"
-              [class.opacity-50]="multiUserBlocked()"
-              [title]="
-                multiUserBlocked()
-                  ? ('appbar.multiUserImportBlocked' | translate)
-                  : ('appbar.importXmi' | translate)
-              "
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] hover:shadow-xs transition-all text-center cursor-pointer min-w-14.5 group border border-transparent hover:border-slate-200 dark:hover:border-[#2D3762]"
-            >
-              <div
-                class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform relative"
-              >
-                <ng-icon
-                  name="heroArrowUpTray"
-                  class="text-xl text-amber-600 dark:text-amber-400"
-                ></ng-icon>
-                @if (multiUserBlocked()) {
-                  <span
-                    class="absolute -top-1 -right-1 text-[10px]"
-                    title="Bloqueado por edición concurrente"
-                    >🔒</span
-                  >
-                }
-              </div>
-              <span
-                class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-tight whitespace-nowrap"
-              >
-                Import XMI
-              </span>
-            </button>
-
-            <!-- Columna con JSON Export / Import -->
-            <div
-              class="flex flex-col gap-1 justify-center pl-1 border-l border-slate-200 dark:border-[#283256]"
-            >
-              <button
-                (click)="handleExportJson()"
-                [class.opacity-50]="multiUserBlocked()"
-                [title]="'appbar.exportJson' | translate"
-                class="px-2 py-0.5 text-[9.5px] font-sans font-medium rounded hover:bg-white dark:hover:bg-[#1A2246] text-slate-600 dark:text-slate-300 flex items-center gap-1 border border-slate-200 dark:border-[#283256] cursor-pointer"
-              >
-                <ng-icon
-                  name="heroArrowDownTray"
-                  class="text-[11px] text-emerald-600 dark:text-emerald-400"
-                ></ng-icon>
-                <span>Export JSON</span>
-              </button>
-              <button
-                (click)="handleOpenImportJson()"
-                [class.opacity-50]="multiUserBlocked()"
-                [title]="'Importar JSON'"
-                class="px-2 py-0.5 text-[9.5px] font-sans font-medium rounded hover:bg-white dark:hover:bg-[#1A2246] text-slate-600 dark:text-slate-300 flex items-center gap-1 border border-slate-200 dark:border-[#283256] cursor-pointer"
-              >
-                <ng-icon
-                  name="heroArrowUpTray"
-                  class="text-[11px] text-amber-600 dark:text-amber-400"
-                ></ng-icon>
-                <span>Import JSON</span>
-              </button>
-            </div>
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            Model Exchange
-          </div>
-        </div>
-
-        <!-- SECCIÓN 4: Code Engineering (Acceso directo a Generación) -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-2 flex-1 justify-center">
-            @if (plugins.component('code-generation', 'modal')) {
-<button
-              (click)="openSpringBoot.emit()"
-              [title]="'appbar.generateTooltip' | translate"
-              class="bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-[11px] font-bold px-3 py-1.5 rounded-md flex items-center gap-2 border border-emerald-400/40 shadow-xs cursor-pointer transition-all hover:scale-102"
-            >
-              <span>{{ 'appbar.generateCode' | translate }}</span>
-              <div class="flex items-center gap-1 shrink-0">
-                <svg
-                  class="w-3.5 h-3.5 shrink-0 inline-block"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 128 128"
-                >
-                  <path
-                    d="M116.452 6.643a59.104 59.104 0 01-6.837 12.136A64.249 64.249 0 0064.205-.026C28.984-.026 0 28.982 0 64.242a64.316 64.316 0 0019.945 46.562l2.368 2.1a64.22 64.22 0 0041.358 15.122c33.487 0 61.637-26.24 64.021-59.683 1.751-16.371-3.051-37.077-11.24-61.7zM29.067 111.17a5.5 5.5 0 01-4.269 2.034c-3.018 0-5.487-2.484-5.487-5.502 0-3.017 2.485-5.501 5.487-5.501 1.25 0 2.485.433 3.452 1.234 2.351 1.9 2.718 5.384.817 7.735zm87.119-19.238c-15.843 21.122-49.68 14.003-71.376 15.02 0 0-3.852.234-7.721.867 0 0 1.45-.617 3.335-1.334 15.226-5.301 22.43-6.335 31.685-11.086 17.427-8.869 34.654-28.274 38.24-48.463-6.637 19.422-26.75 36.11-45.077 42.895-12.557 4.635-35.238 9.136-35.238 9.136l-.917-.484c-15.442-7.518-15.91-40.977 12.157-51.78 12.291-4.735 24.048-2.134 37.323-5.302 14.175-3.367 30.568-14.004 37.238-27.874 7.471 22.19 16.46 56.932.35 78.405z"
-                    fill="#77bc1f"
-                  />
-                </svg>
-                <svg
-                  class="w-3.5 h-3.5 shrink-0 inline-block"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 128 128"
-                >
-                  <g fill="#3FB6D3">
-                    <path
-                      d="M12.3 64.2L76.3 0h39.4L32.1 83.6zM76.3 128h39.4L81.6 93.9l34.1-34.8H76.3L42.2 93.5z"
-                    />
-                  </g>
-                  <path fill="#27AACD" d="M81.6 93.9l-20-20-19.4 19.6 19.4 19.6z" />
-                  <path fill="#19599A" d="M115.7 128L81.6 93.9l-20 19.2L76.3 128z" />
-                </svg>
-              </div>
-            </button>
-}
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            Code Engineering
-          </div>
-        </div>
-      }
-
-      <!-- TAB 2: DESIGN (DISEÑO Y ELEMENTOS UML) -->
+    <div class="ribbon-content" [attr.aria-label]="'ribbon.tabs.' + activeTab() | translate">
       @if (activeTab() === 'design') {
-        <!-- GRUPO 1: Project Actions (Guardar, Proyectos, Nuevo clase, Seleccionar / Mover) -->
         <div class="flex items-center gap-1">
-          <!-- Guardar -->
-          @if (diagramId() && !isReadOnly()) {
-            <button
-              (click)="saveDiagram.emit()"
-              [disabled]="isSaving()"
-              [title]="'appbar.saveTooltip' | translate"
-              class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent disabled:opacity-50"
-            >
-              <div
-                class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform"
-              >
-                @if (isSaving()) {
-                  <span
-                    class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"
-                  ></span>
-                } @else if (!hasUnsavedChanges()) {
-                  <ng-icon
-                    name="heroCheck"
-                    class="text-lg text-emerald-600 dark:text-emerald-400"
-                  ></ng-icon>
-                } @else {
-                  <ng-icon
-                    name="heroCloudArrowUp"
-                    class="text-lg text-blue-600 dark:text-blue-400"
-                  ></ng-icon>
-                }
-              </div>
-              <span
-                class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight"
-              >
-                {{ 'appbar.save' | translate }}
-              </span>
-            </button>
-          }
-
-          <!-- Proyectos -->
-          <a
-            routerLink="/projects"
-            class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent"
-          >
-            <div
-              class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform"
-            >
-              <ng-icon name="heroFolder" class="text-lg"></ng-icon>
-            </div>
-            <span
-              class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight"
-            >
-              {{ 'appbar.projects' | translate }}
-            </span>
-          </a>
-
           <!-- Seleccionar / Mover ▾ -->
           <button
             (click)="setPointerMode.emit()"
@@ -642,75 +67,10 @@
             <span
               class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight flex items-center gap-0.5"
             >
-              <span>Seleccionar / Mover</span>
+              <span>{{ 'toolbar.pointer' | translate }}</span>
               <ng-icon name="heroChevronDown" class="text-[9px] text-slate-400"></ng-icon>
             </span>
           </button>
-        </div>
-
-        <!-- Hairline divider -->
-        <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
-
-        <!-- GRUPO 2: Color Palette -->
-        <div class="flex flex-col justify-center gap-1 px-1">
-          <!-- Swatches row -->
-          <div class="flex items-center gap-1.5">
-            @for (c of presetColors; track c.color) {
-              <button
-                type="button"
-                (click)="changeNodeColor.emit(c.color)"
-                [disabled]="!selectedNodeId() || isReadOnly()"
-                [title]="c.name"
-                class="w-5 h-5 rounded-md border border-slate-300/80 dark:border-slate-700 transition-all hover:scale-110 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs relative flex items-center justify-center"
-                [style.backgroundColor]="c.color"
-              >
-                @if (
-                  selectedNodeColor() === c.color || (!selectedNodeColor() && c.color === '#FDFAF3')
-                ) {
-                  <span class="text-[10px] font-bold text-slate-800 leading-none select-none"
-                    >✓</span
-                  >
-                }
-              </button>
-            }
-          </div>
-
-          <!-- Dropdown & Reset -->
-          <div class="flex items-center justify-between gap-2 text-xs">
-            <label
-              [title]="
-                selectedNodeId() ? 'Elegir color personalizado' : 'Selecciona una clase primero'
-              "
-              [class.opacity-40]="!selectedNodeId() || isReadOnly()"
-              class="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium cursor-pointer"
-            >
-              <input
-                #nativeColorInput
-                type="color"
-                [disabled]="!selectedNodeId() || isReadOnly()"
-                (focus)="onColorPickerFocus()"
-                (blur)="onColorPickerBlur()"
-                (click)="onColorPickerFocus()"
-                (input)="onCustomColorInput($event)"
-                (change)="onCustomColorChange($event)"
-                (keydown)="$event.stopPropagation()"
-                (pointerdown)="$event.stopPropagation()"
-                class="w-3.5 h-3.5 p-0 border-0 rounded cursor-pointer disabled:cursor-not-allowed bg-transparent"
-              />
-              <span>Elementos de clase</span>
-              <ng-icon name="heroChevronDown" class="text-[9px] text-slate-400"></ng-icon>
-            </label>
-
-            <button
-              type="button"
-              (click)="changeNodeColor.emit('#FDFAF3')"
-              [disabled]="!selectedNodeId() || selectedNodeColor() === '#FDFAF3' || isReadOnly()"
-              title="Restablecer al color por defecto (#FDFAF3)"
-              class="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
-            >
-              Restablecer
-            </button>
-          </div>
         </div>
 
         <!-- Hairline divider -->
@@ -774,7 +134,7 @@
             <span
               class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap"
             >
-              Seleccionar todo
+              {{ 'appbar.selectAll' | translate }}
             </span>
           </button>
 
@@ -791,7 +151,7 @@
             <span
               class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight"
             >
-              Acercar
+              {{ 'toolbar.canvas.zoomIn' | translate }}
             </span>
           </button>
 
@@ -808,7 +168,7 @@
             <span
               class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight"
             >
-              Alejar
+              {{ 'toolbar.canvas.zoomOut' | translate }}
             </span>
           </button>
 
@@ -825,13 +185,13 @@
             <span
               class="text-[11px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight"
             >
-              Ajustar
+              {{ 'toolbar.canvas.fitView' | translate }}
             </span>
           </button>
 
           <button
             (click)="resetView.emit()"
-            title="Restablecer al 100%"
+            [title]="'workspace.resetZoom' | translate"
             class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-13 group border border-transparent"
           >
             <div
@@ -856,9 +216,7 @@
           <button
             (click)="toggleSmartGuides.emit()"
             [title]="
-              smartGuidesEnabled()
-                ? 'Desactivar guías magnéticas inteligentes'
-                : 'Activar guías magnéticas inteligentes'
+              'toolbar.alignment.smartGuides' | translate
             "
             class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-15.5 group border border-transparent"
             [class.bg-blue-50]="smartGuidesEnabled()"
@@ -903,8 +261,104 @@
             </span>
           </button>
 
+          <!-- Botón Ajustar a Cuadrícula -->
+          <button
+            (click)="snapToGrid.emit()"
+            [disabled]="isReadOnly()"
+            [title]="'toolbar.alignment.snapGrid' | translate"
+            class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <div
+              class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M1 5.33h14M1 10.67h14M5.33 1v14M10.67 1v14" />
+              </svg>
+            </div>
+            <span
+              class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap"
+            >
+              {{ 'workspace.grid' | translate }}
+            </span>
+          </button>
+        </div>
+        @if (selectedNodeId() && !isReadOnly()) {
+          <!-- Hairline divider -->
+          <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1"></div>
+          <!-- Paleta contextual del nodo seleccionado -->
+          <div data-context-tools="color" class="flex flex-col justify-center gap-1 px-1">
+            <!-- Swatches row -->
+            <div class="flex items-center gap-1.5">
+              @for (c of presetColors; track c.color) {
+                <button
+                  type="button"
+                  (click)="changeNodeColor.emit(c.color)"
+                  [disabled]="!selectedNodeId() || isReadOnly()"
+                  [title]="c.color"
+                  class="w-5 h-5 rounded-md border border-slate-300/80 dark:border-slate-700 transition-all hover:scale-110 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs relative flex items-center justify-center"
+                  [style.backgroundColor]="c.color"
+                >
+                  @if (
+                    selectedNodeColor() === c.color || (!selectedNodeColor() && c.color === '#FDFAF3')
+                  ) {
+                    <span class="text-[10px] font-bold text-slate-800 leading-none select-none"
+                      >✓</span
+                    >
+                  }
+                </button>
+              }
+            </div>
+
+            <!-- Dropdown & Reset -->
+            <div class="flex items-center justify-between gap-2 text-xs">
+              <label
+                [title]="
+                  (selectedNodeId() ? 'workspace.customColor' : 'workspace.selectNodeFirst') | translate
+                "
+                [class.opacity-40]="!selectedNodeId() || isReadOnly()"
+                class="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium cursor-pointer"
+              >
+                <input
+                  #nativeColorInput
+                  type="color"
+                  [disabled]="!selectedNodeId() || isReadOnly()"
+                  (focus)="onColorPickerFocus()"
+                  (blur)="onColorPickerBlur()"
+                  (click)="onColorPickerFocus()"
+                  (input)="onCustomColorInput($event)"
+                  (change)="onCustomColorChange($event)"
+                  (keydown)="$event.stopPropagation()"
+                  (pointerdown)="$event.stopPropagation()"
+                  class="w-3.5 h-3.5 p-0 border-0 rounded cursor-pointer disabled:cursor-not-allowed bg-transparent"
+                />
+                <span>{{ 'workspace.nodeColor' | translate }}</span>
+                <ng-icon name="heroChevronDown" class="text-[9px] text-slate-400"></ng-icon>
+              </label>
+
+              <button
+                type="button"
+                (click)="changeNodeColor.emit('#FDFAF3')"
+                [disabled]="!selectedNodeId() || selectedNodeColor() === '#FDFAF3' || isReadOnly()"
+                [title]="'workspace.resetStyle' | translate"
+                class="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                {{ 'workspace.resetStyle' | translate }}
+              </button>
+            </div>
+          </div>
+
+
+        }
+        @if (selectedNodesCount() >= 2 && !isReadOnly()) {
           <!-- Botones de Alineación Horizontal y Vertical -->
-          <div
+          <div data-context-tools="alignment"
             class="flex flex-col gap-1 justify-center pl-1 border-l border-slate-200 dark:border-slate-800"
           >
             <div class="flex items-center gap-1">
@@ -1018,331 +472,126 @@
             </div>
           </div>
 
-          <!-- Botón Ajustar a Cuadrícula -->
-          <button
-            (click)="snapToGrid.emit()"
-            [disabled]="isReadOnly()"
-            [title]="'toolbar.alignment.snapGrid' | translate"
-            class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <div
-              class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path d="M1 5.33h14M1 10.67h14M5.33 1v14M10.67 1v14" />
-              </svg>
-            </div>
-            <span
-              class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap"
-            >
-              Cuadrícula
-            </span>
-          </button>
-        </div>
+        }
       }
 
-      <!-- TAB 3: DEVELOP (GENERACIÓN SPRING BOOT & FLUTTER) -->
       @if (activeTab() === 'develop') {
-        <!-- SECCIÓN: Code Engineering -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-2 flex-1 justify-center">
-            @if (plugins.component('code-generation', 'modal')) {
-<button
-              (click)="openSpringBoot.emit()"
-              [title]="'appbar.generateTooltip' | translate"
-              class="bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-xs font-bold px-3 py-1.5 rounded flex items-center gap-2 border border-emerald-400/40 shadow-xs cursor-pointer transition-all hover:scale-102"
-            >
-              <span>{{ 'appbar.generateCode' | translate }}</span>
-              <div class="flex items-center gap-1 shrink-0">
-                <svg
-                  class="w-4 h-4 shrink-0 inline-block"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 128 128"
-                >
-                  <path
-                    d="M116.452 6.643a59.104 59.104 0 01-6.837 12.136A64.249 64.249 0 0064.205-.026C28.984-.026 0 28.982 0 64.242a64.316 64.316 0 0019.945 46.562l2.368 2.1a64.22 64.22 0 0041.358 15.122c33.487 0 61.637-26.24 64.021-59.683 1.751-16.371-3.051-37.077-11.24-61.7zM29.067 111.17a5.5 5.5 0 01-4.269 2.034c-3.018 0-5.487-2.484-5.487-5.502 0-3.017 2.485-5.501 5.487-5.501 1.25 0 2.485.433 3.452 1.234 2.351 1.9 2.718 5.384.817 7.735zm87.119-19.238c-15.843 21.122-49.68 14.003-71.376 15.02 0 0-3.852.234-7.721.867 0 0 1.45-.617 3.335-1.334 15.226-5.301 22.43-6.335 31.685-11.086 17.427-8.869 34.654-28.274 38.24-48.463-6.637 19.422-26.75 36.11-45.077 42.895-12.557 4.635-35.238 9.136-35.238 9.136l-.917-.484c-15.442-7.518-15.91-40.977 12.157-51.78 12.291-4.735 24.048-2.134 37.323-5.302 14.175-3.367 30.568-14.004 37.238-27.874 7.471 22.19 16.46 56.932.35 78.405z"
-                    fill="#77bc1f"
-                  />
-                </svg>
-                <svg
-                  class="w-4 h-4 shrink-0 inline-block"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 128 128"
-                >
-                  <g fill="#3FB6D3">
-                    <path
-                      d="M12.3 64.2L76.3 0h39.4L32.1 83.6zM76.3 128h39.4L81.6 93.9l34.1-34.8H76.3L42.2 93.5z"
-                    />
-                  </g>
-                  <path fill="#27AACD" d="M81.6 93.9l-20-20-19.4 19.6 19.4 19.6z" />
-                  <path fill="#19599A" d="M115.7 128L81.6 93.9l-20 19.2L76.3 128z" />
-                </svg>
-              </div>
+        <div class="workspace-action-group">
+          @if (plugins.component('code-generation', 'modal')) {
+            <button type="button" class="primary-action" data-action="generate" (click)="openSpringBoot.emit()">
+              <ng-icon name="heroBolt" /> {{ 'appbar.generateCode' | translate }}
             </button>
-}
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            {{ 'ribbon.sections.codeEngineering' | translate }}
-          </div>
-        </div>
-
-        <!-- SECCIÓN: Target Frameworks -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-3 flex-1 justify-center text-[10.5px] font-mono">
-            <div class="flex flex-col gap-0.5">
-              <span
-                class="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1"
-              >
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Spring Boot 3.4
-              </span>
-              <span class="text-slate-500 dark:text-slate-400 text-[9.5px]"
-                >Java 21 • JPA / Hibernate</span
-              >
-            </div>
-            <div class="h-6 w-px bg-slate-200 dark:bg-[#283256]"></div>
-            <div class="flex flex-col gap-0.5">
-              <span class="text-sky-700 dark:text-sky-400 font-bold flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span> Flutter 3.24
-              </span>
-              <span class="text-slate-500 dark:text-slate-400 text-[9.5px]">Dart • Material 3</span>
-            </div>
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            Framework Targets
+          }
+          <div class="group-description">
+            <strong>Spring Boot · Flutter</strong>
+            <span>{{ 'workspace.generationHint' | translate }}</span>
           </div>
         </div>
       }
-
-      <!-- TAB 4: COLLABORATE (SESIÓN EN VIVO) -->
       @if (activeTab() === 'collaborate') {
-        <!-- SECCIÓN: Live Session -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-2 flex-1 justify-center">
-            @if (collaborationService.activeRoomCode()) {
-              <button
-                (click)="copyRoomCode()"
-                [title]="'appbar.clickToCopy' | translate"
-                class="flex items-center gap-1.5 bg-white dark:bg-[#1A2246] border border-slate-300 dark:border-[#283256] px-2.5 py-1 rounded text-xs font-mono text-slate-800 dark:text-slate-200 hover:border-blue-500 shadow-xs cursor-pointer"
-              >
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span
-                  >{{ 'appbar.room' | translate }}:
-                  <strong class="text-blue-600 dark:text-sky-300">{{
-                    collaborationService.activeRoomCode()
-                  }}</strong></span
-                >
-                <ng-icon name="heroClipboardDocument" class="text-xs text-slate-400"></ng-icon>
-              </button>
-            } @else {
-              <span class="text-[10.5px] font-mono text-slate-400">Modo local / sin sala</span>
-            }
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            {{ 'ribbon.sections.liveSession' | translate }}
-          </div>
-        </div>
-
-        <!-- SECCIÓN: Collaborators -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-2 flex-1 justify-center">
-            @if (collaborationService.collaborators().length > 0) {
-              <div class="flex items-center gap-1.5">
-                @for (collab of collaborationService.collaborators(); track collab.userId) {
-                  <div
-                    class="flex items-center gap-1 bg-white dark:bg-[#1A2246] px-2 py-0.5 rounded-full border border-slate-200 dark:border-[#283256] text-[10px] font-sans"
-                    [title]="collab.userName"
-                  >
-                    <div
-                      class="w-3.5 h-3.5 rounded-full text-white text-[8px] font-bold flex items-center justify-center"
-                      [style.backgroundColor]="collab.color"
-                    >
-                      {{ collab.userName.charAt(0).toUpperCase() }}
-                    </div>
-                    <span
-                      class="text-slate-700 dark:text-slate-300 font-medium max-w-17.5 truncate"
-                      >{{ collab.userName }}</span
-                    >
-                  </div>
-                }
-              </div>
-            } @else {
-              <span class="text-[10px] font-sans text-slate-400">1 usuario activo</span>
-            }
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            {{ 'ribbon.sections.collaborators' | translate }}
+        <div class="workspace-action-group">
+          <button type="button" class="secondary-action" (click)="copyRoomCode()" [disabled]="!collaborationService.activeRoomCode()">
+            <ng-icon name="heroClipboardDocument" /> {{ 'workspace.copyInvitation' | translate }}
+          </button>
+          <a class="secondary-action" [class.unavailable]="!projectId()" [attr.aria-disabled]="!projectId()"
+            [routerLink]="projectId() ? ['/projects'] : null" [queryParams]="{ projectId: projectId(), panel: 'members' }">
+            <ng-icon name="heroUserGroup" /> {{ 'workspace.manageMembers' | translate }}
+          </a>
+          <div class="group-description">
+            <strong>{{ 'ribbon.sections.collaborators' | translate }} ({{ collaborationService.collaborators().length }})</strong>
+            <div class="participants">
+              @for (collaborator of collaborationService.collaborators(); track collaborator.userId) {
+                <span class="participant" [title]="collaborator.userName">
+                  <span class="avatar" [style.backgroundColor]="collaborator.color">{{ collaborator.userName.charAt(0).toUpperCase() }}</span>
+                  {{ collaborator.userName }}
+                </span>
+              } @empty { <span>{{ 'workspace.noParticipants' | translate }}</span> }
+            </div>
           </div>
         </div>
       }
-
-      <!-- TAB 5: START (INICIO - VISTA RÁPIDA GENERAL) -->
-      @if (activeTab() === 'start') {
-        <!-- SECCIÓN: Proyecto & Guardar -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-1.5 flex-1 justify-center">
-            <a
-              routerLink="/projects"
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-12.5"
-            >
-              <ng-icon
-                name="heroFolder"
-                class="text-lg text-slate-600 dark:text-slate-300"
-              ></ng-icon>
-              <span
-                class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5"
-                >{{ 'appbar.projects' | translate }}</span
-              >
-            </a>
-            @if (diagramId() && !isReadOnly()) {
-              <button
-                (click)="saveDiagram.emit()"
-                [disabled]="isSaving()"
-                class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-12.5"
-              >
-                <ng-icon
-                  name="heroCloudArrowUp"
-                  class="text-lg text-blue-600 dark:text-blue-400"
-                ></ng-icon>
-                <span
-                  class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5"
-                  >{{ 'appbar.save' | translate }}</span
-                >
-              </button>
-            }
+      @if (activeTab() === 'publish') {
+        <div class="workspace-action-group">
+          <button type="button" class="primary-action" data-menu-trigger="export" aria-haspopup="menu"
+            [attr.aria-expanded]="menu() === 'export'" (click)="toggleMenu('export')">
+            <ng-icon name="heroArrowDownTray" /> {{ 'appbar.export' | translate }} <ng-icon name="heroChevronDown" />
+          </button>
+          <div class="group-description">
+            <strong>{{ 'workspace.deliverables' | translate }}</strong>
+            <span>{{ 'workspace.exportHint' | translate }}</span>
           </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            {{ 'ribbon.sections.project' | translate }}
-          </div>
-        </div>
-
-        <!-- SECCIÓN: Model Exchange -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-1.5 flex-1 justify-center">
-            @if (plugins.find('xmi')) {
-<button
-              (click)="handleExportXmi()"
-              [class.opacity-50]="multiUserBlocked()"
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-12.5"
-            >
-              <ng-icon
-                name="heroArrowDownTray"
-                class="text-lg text-blue-600 dark:text-blue-400"
-              ></ng-icon>
-              <span
-                class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5"
-                >XMI 2.1</span
-              >
-            </button>
-}
-            <button
-              (click)="triggerFileInput()"
-              [class.opacity-50]="multiUserBlocked()"
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-12.5"
-            >
-              <ng-icon
-                name="heroArrowUpTray"
-                class="text-lg text-amber-600 dark:text-amber-400"
-              ></ng-icon>
-              <span
-                class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5"
-                >Import</span
-              >
-            </button>
-            @if (plugins.find('image-export') && plugins.find('bmp-encoder')) {
-<button
-              (click)="handleExportBmp()"
-              [class.opacity-50]="multiUserBlocked()"
-              class="flex flex-col items-center justify-center p-1 rounded hover:bg-white dark:hover:bg-[#1A2246] text-center cursor-pointer min-w-12.5"
-            >
-              <ng-icon
-                name="heroPhoto"
-                class="text-lg text-purple-600 dark:text-purple-400"
-              ></ng-icon>
-              <span
-                class="text-[9.5px] font-sans font-medium text-slate-700 dark:text-slate-300 mt-0.5"
-                >BMP</span
-              >
-            </button>
-}
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            Model Exchange
-          </div>
-        </div>
-
-        <!-- SECCIÓN: Code Generation -->
-        <div
-          class="flex flex-col justify-between px-3 py-1 border-r border-[#D8DCE4] dark:border-[#232B4A] min-w-max h-18"
-        >
-          <div class="flex items-center gap-2 flex-1 justify-center">
-            @if (plugins.component('code-generation', 'modal')) {
-<button
-              (click)="openSpringBoot.emit()"
-              class="bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-mono text-[10.5px] font-bold px-2.5 py-1 rounded flex items-center gap-1.5 shadow-xs cursor-pointer"
-            >
-              <span>{{ 'appbar.generateCode' | translate }}</span>
-            </button>
-}
-          </div>
-          <div
-            class="text-[9.5px] font-sans font-semibold text-slate-400 dark:text-slate-400 text-center tracking-tight select-none uppercase"
-          >
-            {{ 'ribbon.sections.codeEngineering' | translate }}
-          </div>
-        </div>
-      }
-
-      <!-- BANNER DE BLOQUEO POR EDICIÓN MULTIUSUARIO (SI ESTÁ ACTIVO) -->
-      @if (multiUserBlocked()) {
-        <div
-          class="self-center ml-auto px-3 py-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60 rounded-md text-[11px] font-sans flex items-center gap-2 shadow-xs shrink-0"
-        >
-          <span class="text-sm">🔒</span>
-          <span class="max-w-85 leading-tight font-medium">{{
-            'appbar.multiUserBanner' | translate
-          }}</span>
         </div>
       }
     </div>
   }
 
-  <!-- Input Oculto de Archivos para Importación (Siempre en DOM) -->
-  <input
-    #fileInput
-    type="file"
-    accept=".json,.xml,.xmi"
-    (change)="fileSelected.emit($event)"
-    class="hidden"
-  />
+  @if (menu() === 'file') {
+    <div class="workspace-menu file-menu" role="menu" [attr.aria-label]="'workspace.fileProject' | translate" (keydown)="onMenuKeyDown($event)">
+      <div class="menu-title"><ng-icon name="heroFolder" /> {{ 'workspace.fileProject' | translate }}</div>
+      <a role="menuitem" routerLink="/projects" (click)="closeMenu()"><ng-icon name="heroFolder" /> {{ 'workspace.openProject' | translate }}</a>
+      <button type="button" role="menuitem" data-action="save" (click)="saveProject()" [disabled]="!diagramId() || isReadOnly() || isSaving()">
+        <ng-icon name="heroCloudArrowUp" /> {{ 'workspace.saveProject' | translate }} <kbd>Ctrl+S</kbd>
+      </button>
+      <button type="button" role="menuitem" [attr.aria-expanded]="importExpanded()" (click)="toggleImport()">
+        <ng-icon name="heroArrowUpTray" /> {{ 'workspace.importModel' | translate }} <ng-icon class="trailing-icon" name="heroChevronDown" />
+      </button>
+      @if (importExpanded()) {
+        <div class="submenu" role="group" [attr.aria-label]="'workspace.importModel' | translate">
+          @if (plugins.find('xmi')) {
+            <button type="button" role="menuitem" (click)="triggerFileInput()" [disabled]="isReadOnly() || multiUserBlocked()">XML / XMI / JSON</button>
+          }
+          @if (plugins.find('document-io')) {
+            <button type="button" role="menuitem" (click)="handleOpenImportJson()" [disabled]="isReadOnly() || multiUserBlocked()">{{ 'workspace.pasteJson' | translate }}</button>
+          }
+        </div>
+      }
+      <button type="button" role="menuitem" (click)="showPublish()"><ng-icon name="heroArrowDownTray" /> {{ 'workspace.exportModel' | translate }} <ng-icon class="trailing-icon" name="heroChevronDown" /></button>
+      <div class="menu-divider"></div>
+      <a role="menuitem" [routerLink]="projectId() && !isReadOnly() ? ['/projects'] : null"
+        [class.unavailable]="!projectId() || isReadOnly()" [attr.aria-disabled]="!projectId() || isReadOnly()"
+        [queryParams]="{ projectId: projectId(), panel: 'settings' }" (click)="closeMenu()">
+        <ng-icon name="heroCog6Tooth" /> {{ 'workspace.projectSettings' | translate }}
+      </a>
+      <div class="model-info">
+        <span>{{ 'workspace.modelInfo' | translate }}</span>
+        <span>{{ 'workspace.modelStorage' | translate }}: JSON AST · UTF-8</span>
+        <span>{{ 'workspace.modelExchange' | translate }}: XML / XMI 2.1</span>
+      </div>
+    </div>
+  }
+  @if (menu() === 'export') {
+    <div class="workspace-menu export-menu" role="menu" [attr.aria-label]="'appbar.export' | translate" (keydown)="onMenuKeyDown($event)">
+      <div class="menu-title">{{ 'workspace.images' | translate }}</div>
+      @if (plugins.find('image-export')) {
+        <button type="button" role="menuitem" (click)="handleExportPng()" [disabled]="multiUserBlocked()"><ng-icon name="heroPhoto" /> {{ 'appbar.exportPng' | translate }}</button>
+        @if (plugins.find('bmp-encoder')) {
+          <button type="button" role="menuitem" (click)="handleExportBmp()" [disabled]="multiUserBlocked()"><ng-icon name="heroPhoto" /> {{ 'appbar.exportBmp' | translate }}</button>
+        }
+      }
+      <div class="menu-title">{{ 'workspace.models' | translate }}</div>
+      @if (plugins.find('xmi')) {
+        <button type="button" role="menuitem" (click)="handleExportXmi()" [disabled]="multiUserBlocked()"><ng-icon name="heroDocumentText" /> XML / XMI 2.1</button>
+      }
+      @if (plugins.find('document-io')) {
+        <button type="button" role="menuitem" (click)="handleExportJson()" [disabled]="multiUserBlocked()"><ng-icon name="heroDocumentText" /> {{ 'appbar.exportJson' | translate }}</button>
+      }
+      <div class="menu-title">{{ 'workspace.reports' | translate }}</div>
+      @if (plugins.find('document-io')) {
+        <button type="button" role="menuitem" (click)="handleViewJson()" [disabled]="multiUserBlocked()"><ng-icon name="heroDocumentChartBar" /> JSON AST</button>
+      }
+    </div>
+  }
+  @if (menu() === 'preferences') {
+    <div class="workspace-menu preferences-menu" (keydown)="onMenuKeyDown($event)" [attr.aria-label]="'workspace.preferences' | translate">
+      <div class="menu-title">{{ 'ribbon.sections.appearanceAndLanguage' | translate }}</div>
+      <div class="preference-row"><span>{{ 'settings.language' | translate }}</span><app-language-selector [theme]="'light'" /></div>
+      <div class="preference-row"><span>{{ 'settings.colorTheme' | translate }}</span><app-theme-toggle [variant]="'light'" /></div>
+      @if (authService.currentUser()) {
+        <div class="menu-divider"></div>
+        <button type="button" (click)="openProfile.emit(); closeMenu()"><ng-icon name="heroUserCircle" /> {{ authService.currentUser()?.fullName }}</button>
+        <button type="button" (click)="authService.logout()"><ng-icon name="heroArrowRightOnRectangle" /> {{ 'appbar.logout' | translate }}</button>
+      }
+    </div>
+  }
+  <input #fileInput type="file" accept=".json,.xml,.xmi" (change)="fileSelected.emit($event)" class="hidden" />
 </header>

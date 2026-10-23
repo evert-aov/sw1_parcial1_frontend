@@ -145,6 +145,7 @@ const RELATION_TYPES_BY_DIAGRAM: Partial<Record<DiagramType, UmlRelationTypeItem
     }),
   ],
   host: {
+    'style': 'display: flex; height: 100%; flex-shrink: 0; min-height: 0;',
     '(window:keydown)': 'onExplorerKeyDown($event)',
     '(window:mousemove)': 'onWindowMouseMove($event)',
     '(window:mouseup)': 'onWindowMouseUp()',
@@ -191,7 +192,6 @@ export class DiagramSidebarComponent {
   readonly dragOverDiagramId = signal<string | null>(null);
   readonly dragOverPosition = signal<'above' | 'below' | null>(null);
 
-  readonly isDiagramTypesOpen = signal<boolean>(false);
   readonly isRelationshipsOpen = signal<boolean>(true);
   readonly isLineStylesOpen = signal<boolean>(true);
 
@@ -219,11 +219,42 @@ export class DiagramSidebarComponent {
     return map;
   });
 
+  readonly diagramSearch = signal('');
+  readonly normalizedDiagramSearch = computed(() => this.normalizeSearchText(this.diagramSearch()));
+  readonly visibleDiagramsByType = computed(() => {
+    const query = this.normalizedDiagramSearch();
+    return new Map(this.diagramTypes().map(type => [
+      type.id,
+      this.getDiagramsForType(type.id).filter(diagram => this.normalizeSearchText(diagram.name).includes(query)),
+    ]));
+  });
+  readonly visibleDiagramTypes = computed(() => this.diagramTypes().filter(
+    type => (this.visibleDiagramsByType().get(type.id)?.length ?? 0) > 0
+  ));
+
+  /** Normaliza nombres para buscar sin distinguir mayúsculas, tildes ni espacios externos. */
+  private normalizeSearchText(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
+
+  /** Obtiene coincidencias sin modificar los datos ni el orden completo del proyecto. */
+  getVisibleDiagramsForType(type: DiagramType): DiagramDto[] {
+    return this.visibleDiagramsByType().get(type) ?? [];
+  }
+
   readonly currentRelations = computed<UmlRelationTypeItem[]>(
     () => RELATION_TYPES_BY_DIAGRAM[this.activeDiagramType()] ?? UML_RELATION_TYPES
   );
 
   readonly closeSidebar = output<void>();
+  readonly openSidebar = output<void>();
+
+  /** Cambia de sección o colapsa la activa; conserva la pestaña al ocultar el panel. */
+  selectPanel(tab: 'toolbox' | 'explorer'): void {
+    if (this.isOpen() && this.activeTab() === tab) this.closeSidebar.emit();
+    else { this.activeTab.set(tab); this.openSidebar.emit(); }
+  }
+
   readonly diagramTypeChange = output<DiagramType>();
   readonly setPointerMode = output<void>();
   readonly selectRelationType = output<UmlRelationshipType>();
@@ -578,7 +609,7 @@ export class DiagramSidebarComponent {
    * @returns Verdadero si está desplegada.
    */
   isFolderExpanded(type: DiagramType): boolean {
-    return !!this.expandedFolders()[type];
+    return !!this.normalizedDiagramSearch() || !!this.expandedFolders()[type];
   }
 
   /**
@@ -607,7 +638,7 @@ export class DiagramSidebarComponent {
     event?: MouseEvent
   ): void {
     if (event) event.stopPropagation();
-    if (this.isReadOnly()) return;
+    if (this.isReadOnly() || this.normalizedDiagramSearch()) return;
     const nextOrder = computeMovedDiagramOrder(
       this.getDiagramsForType(type),
       this.customDiagramOrder(),
@@ -661,7 +692,7 @@ export class DiagramSidebarComponent {
    * @param event Evento DragEvent.
    */
   onDiagramDragStart(diag: DiagramDto, event: DragEvent): void {
-    if (this.isReadOnly()) return;
+    if (this.isReadOnly() || this.normalizedDiagramSearch()) return;
     if (event.dataTransfer) {
       event.dataTransfer.setData('text/plain', diag.id);
       event.dataTransfer.effectAllowed = 'move';
@@ -706,7 +737,7 @@ export class DiagramSidebarComponent {
    * @param event Evento DragEvent.
    */
   onDiagramDrop(targetDiag: DiagramDto, type: DiagramType, event: DragEvent): void {
-    if (this.isReadOnly()) return;
+    if (this.isReadOnly() || this.normalizedDiagramSearch()) return;
     event.preventDefault();
     const nextOrder = computeDroppedDiagramOrder(
       this.getDiagramsForType(type),

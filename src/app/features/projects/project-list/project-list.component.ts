@@ -1,8 +1,10 @@
 import { PluginRegistryService } from '../../../core/plugins/plugin-registry.service';
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TranslationService } from '../../../core/i18n';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
   heroFolderPlus,
@@ -82,6 +84,9 @@ export class ProjectListComponent implements OnInit {
    */
   get guideService(): UserGuideService | undefined { return this.plugins.has(UserGuideService) ? this.plugins.resolve(UserGuideService) : undefined; }
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly translationService = inject(TranslationService);
   private readonly confirmDialogService = inject(ConfirmDialogService);
 
   /**
@@ -159,6 +164,22 @@ export class ProjectListComponent implements OnInit {
    */
   ngOnInit(): void {
     this.projectService.loadProjects().subscribe({ error: () => {} });
+    this.openRequestedProjectPanel();
+  }
+
+  /** Abre la administración solicitada desde el editor reutilizando los formularios del proyecto. */
+  private openRequestedProjectPanel(): void {
+    const projectId = this.route.snapshot.queryParamMap.get('projectId');
+    const panel = this.route.snapshot.queryParamMap.get('panel');
+    if (!projectId || !['settings', 'members'].includes(panel || '')) return;
+    this.projectService.getProject(projectId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (project) => {
+        if (panel === 'members') this.openMembersModal(project);
+        else if (project.userRole === 'OWNER' || project.userRole === 'EDITOR') this.openEditModal(project);
+        void this.router.navigate([], { relativeTo: this.route, queryParams: { projectId: null, panel: null }, queryParamsHandling: 'merge', replaceUrl: true });
+      },
+      error: () => this.projectService.errorMessage.set(this.translationService.translate('workspace.projectLoadFailed')),
+    });
   }
 
   // --- CREAR PROYECTO ---

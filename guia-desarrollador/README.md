@@ -64,3 +64,15 @@ Reportar por separado las advertencias; existe una de presupuesto CSS del lienzo
 - Core, SDK y plug-ins no importan `features/`; los contratos no exponen componentes concretos.
 - Textos visibles nuevos en ambos diccionarios, `es.ts` y `en.ts`.
 - Mantener el AST y los identificadores persistidos. Eliminar directorios vacíos tras mover archivos.
+
+## Chat grupal con IA
+
+El incremento de conversación persistente, FastAPI y Qwen 14B se documenta en
+[Chat grupal: arquitectura, operación y reporte](../docs/chat-grupal/README.md).
+
+La configuración de los proveedores y MongoDB reside en `ia/.env`. NestJS solo conserva
+la URL y el token del puente interno; FastAPI no lee `backend/.env` ni comparte el secreto JWT.
+
+La documentación por servicio está en la [guía del backend NestJS](../../backend/guia-desarrollador/README.md)
+y la [guía del microservicio FastAPI](../../ia/guia-desarrollador/README.md). Incluyen contratos,
+persistencia, recuperación de propuestas y diagramas de flujo de la integración.

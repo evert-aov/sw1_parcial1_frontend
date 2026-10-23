@@ -3,7 +3,7 @@ name: sw1-fullstack-architect
 description: >-
   Diseñar, implementar, depurar o revisar UML Collaborative Studio con Angular 22,
   arquitectura microkernel, Foblex Flow y Tailwind CSS v4; mantener sus contratos
-  con el backend NestJS, PostgreSQL y Socket.IO cuando la tarea afecte esa integración.
+  con NestJS 12, PostgreSQL, Socket.IO y el chat grupal FastAPI cuando la tarea afecte esa integración.
 ---
 
 # Arquitectura de UML Collaborative Studio
@@ -101,6 +101,23 @@ ver el [capítulo de colaboración](../../../guia-desarrollador/04-COLABORACION-
 El backend valida permisos y concurrencia; el indicador de bloqueo de un renderer no reemplaza
 esa validación. Mantener compatibilidad XMI y payloads de generación/IA al cambiar contratos.
 Ejecutar la suite backend únicamente cuando se trabaje en ese workspace o en su integración.
+
+## Chat grupal y FastAPI
+
+Consultar la [guía del backend](../../../../backend/guia-desarrollador/README.md) y la
+[guía de IA](../../../../ia/guia-desarrollador/README.md) al modificar esta integración.
+El plug-in `ai-assistant` consume contratos del Core; no llama directamente a proveedores ni a MongoDB.
+NestJS autentica al usuario y autoriza el diagrama; FastAPI mantiene historial, contexto y modelos.
+Las credenciales pertenecen a `ia/.env`; no copiarlas al frontend ni al entorno del backend.
+
+Conservar una sola sincronización de historial por sala, sin peticiones solapadas, y cancelarla
+al cerrar el panel o cambiar de diagrama. No introducir dependencias reactivas incidentales
+que vuelvan a conectar el chat al cambiar sus propias Signals de carga/modelos.
+
+El alcance actual incluye texto, imágenes y clips de voz; no llamadas ni edge-tts. Las propuestas
+se revisan antes de aplicar y NestJS comprueba contrato, permisos, revisión y recibo idempotente.
+Distinguir errores de validación, permisos y conflicto en la UI con claves traducidas.
+No presentar una respuesta del modelo como confirmación de que el diagrama ya fue modificado.
 
 ## Verificación y entrega
 

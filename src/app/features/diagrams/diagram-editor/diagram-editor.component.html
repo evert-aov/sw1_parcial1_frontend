@@ -1,209 +1,193 @@
 <div
   class="h-screen w-screen flex flex-col bg-[#F9F7F5] dark:bg-[#0D1124] select-none overflow-hidden font-sans transition-colors duration-200"
 >
-  <!-- 1. [TOPBAR / APPBAR] -->
-  <app-diagram-appbar
-    [diagramTitle]="currentDiagramName()"
-    [diagramId]="currentDiagramId()"
-    [isSaving]="diagramService.isSaving()"
-    [saveSuccessMessage]="saveSuccessMessage()"
-    [hasUnsavedChanges]="hasUnsavedChanges()"
-    [isReadOnly]="isReadOnly()"
-    [isMultiUserEditing]="hasMultipleActiveUsers()"
-    [isToolboxOpen]="isSidebarOpen()"
-    [canUndo]="canUndo()"
-    [canRedo]="canRedo()"
-    [selectedNodeId]="selectedNodeId()"
-    [selectedNodeColor]="selectedNodeColor()"
-    [selectedNodesCount]="selectedNodeIdsList().length"
-    [smartGuidesEnabled]="smartGuidesEnabled()"
-    (saveDiagram)="saveToBackend()"
-    (undo)="undo()"
-    (redo)="redo()"
-    (selectAll)="selectAllClasses()"
-    (changeNodeColor)="onSetSelectedNodeColor($event)"
-    (alignNodes)="alignNodes($event)"
-    (distributeNodes)="distributeNodes($event)"
-    (snapToGrid)="snapSelectedToGrid()"
-    (toggleSmartGuides)="toggleSmartGuides()"
-    (exportBmp)="downloadBmpFile()"
-    (exportPng)="downloadPngFile()"
-    (exportXmi)="downloadXmiFile()"
-    (exportJson)="downloadJsonFile()"
-    (viewJson)="openExportModal()"
-    (fileSelected)="onFileSelected($event)"
-    (openImportJson)="openImportModal()"
-    (openSpringBoot)="showSpringBootModal.set(true)"
-    (openProfile)="openProfileModal()"
-    (toggleToolbox)="isSidebarOpen.set(!isSidebarOpen())"
-    (zoomIn)="zoomIn()"
-    (zoomOut)="zoomOut()"
-    (fitView)="fitView()"
-    (resetView)="resetView()"
-    (addClass)="addClass()"
-    (setPointerMode)="setPointerMode()"
-  >
-  </app-diagram-appbar>
-
-  <!-- 2. [CUERPO PRINCIPAL]: SIDEBAR + PIZARRA CENTRAL + COPILOT IA -->
-  <div class="flex-1 flex overflow-hidden relative">
-    <!-- 2.1 [SIDEBAR / TOOLBOX & EXPLORER] SEPARADO COMO COMPONENTE MODULAR -->
-    <app-diagram-sidebar
-      (addPluginNode)="createNodeOfType($event.type, undefined, $event.stereotype)"
-      [isOpen]="isSidebarOpen()"
-      [activeDiagramType]="activeDiagramType()"
-      [selectedRelationType]="selectedRelationType()"
-      [defaultLineStyle]="defaultLineStyle()"
-      [isReadOnly]="isReadOnly()"
-      [projectDiagrams]="projectDiagrams()"
-      [currentDiagramId]="currentDiagramId()"
-      [currentProjectId]="currentProjectId()"
-      [currentProjectName]="currentProject()?.name || currentDiagramName()"
-      [currentNodes]="nodes()"
-      (closeSidebar)="isSidebarOpen.set(false)"
-      (diagramTypeChange)="onDiagramTypeChange($event)"
-      (setPointerMode)="setPointerMode()"
-      (selectRelationType)="selectRelationType($event)"
-      (setDefaultLineStyle)="setDefaultLineStyle($event)"
-      (zoomIn)="zoomIn()"
-      (zoomOut)="zoomOut()"
-      (resetView)="resetView()"
-      (fitView)="fitView()"
-      (addClass)="addClass()"
-      (addClassWithStereotype)="addClass(undefined, $event)"
-      (addActor)="addActor()"
-      (addUseCase)="addUseCase()"
-      (addPackage)="addPackage()"
-      (addBoundary)="addBoundary()"
-      (addControl)="addControl()"
-      (addEntity)="addEntity()"
-      (addLifeline)="addLifeline()"
-      (addDevice)="addDevice()"
-      (addExecutionEnvironment)="addExecutionEnvironment()"
-      (addComponent)="addComponent()"
-      (addBoundaryBox)="addBoundaryBox()"
-      (selectDiagram)="onSelectDiagram($event)"
-      (openCreateDiagram)="openCreateDiagramModal($event)"
-      (renameDiagram)="onRenameDiagram($event)"
-      (deleteDiagram)="onDeleteDiagram($event)"
-      (copyNodeToCurrent)="handleCopyNodeFromExplorer($event)"
-      (selectNode)="handleSelectNodeFromExplorer($event)"
-    >
-    </app-diagram-sidebar>
-
-    <!-- 2.2 [CONTENEDOR CENTRAL]: PESTAÑAS + PIZARRA (CANVAS) -->
-    <div class="flex-1 flex flex-col overflow-hidden relative" [class.pointer-events-none]="isAnyModalOpen()">
-      <!-- Barra de Pestañas (Tabs) del Lienzo estilo SaaS / Enterprise Architect -->
-      <app-diagram-tabs
-        [tabs]="openTabs()"
-        [activeDiagramId]="currentDiagramId()"
-        [hasUnsavedChanges]="hasUnsavedChanges()"
-        [currentDiagramName]="currentDiagramName()"
-        (selectTab)="onSelectDiagram($event)"
-        (closeTab)="closeTab($event.id, $event.event)"
-        (createTab)="openCreateDiagramModal()"
-        (fitView)="fitView()"
-      >
-      </app-diagram-tabs>
-
-      <!-- Botón Flotante para reabrir Sidebar cuando está oculto -->
-      @if (!isSidebarOpen()) {
-        <button
-          (click)="isSidebarOpen.set(true)"
-          [title]="'toolbar.showToolbox' | translate"
-          class="absolute top-12 left-3.5 z-40 bg-white/95 hover:bg-white dark:bg-[#14182E]/95 dark:hover:bg-[#1C2242] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#2D3762] shadow-sm rounded-lg px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-all hover:scale-102 backdrop-blur-xs"
-        >
-          <ng-icon name="heroBars3" class="text-xs text-blue-600 dark:text-blue-400"></ng-icon>
-          <span class="text-xs text-slate-700 dark:text-slate-200">Toolbox</span>
-        </button>
-      }
-
-      <!-- Botón Flotante para reabrir Copilot IA cuando está oculto -->
-      @if (!isAiPanelOpen()) {
-        <button
-          (click)="isAiPanelOpen.set(true)"
-          [title]="'toolbar.openAiTooltip' | translate"
-          class="absolute top-12 right-3.5 z-40 bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-all hover:scale-105"
-        >
-          <ng-icon name="heroSparkles" class="text-xs text-amber-300"></ng-icon>
-          <span>{{ 'toolbar.aiCopilot' | translate }}</span>
-          <ng-icon name="heroBars3CenterLeft" class="text-xs opacity-80"></ng-icon>
-        </button>
-      }
-
-      <!-- Banner Informativo del Modo de Creación de Relaciones -->
-      @if (selectedRelationType()) {
-        <div
-          class="absolute top-12 left-1/2 -translate-x-1/2 z-40 bg-blue-900/90 text-white border border-blue-400 px-4 py-1.5 rounded-full shadow-lg text-xs font-mono flex items-center gap-2 animate-in fade-in slide-in-from-top-2 backdrop-blur-xs"
-        >
-          <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-          <span>
-            @if (selectedSourceNodeId() === null) {
-              {{ 'toolbar.step1' | translate }} <strong>{{ selectedRelationType() }}</strong>
-            } @else {
-              {{ 'toolbar.step2' | translate }}
-            }
-          </span>
-          <button
-            (click)="setPointerMode()"
-            class="ml-2 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] cursor-pointer"
-          >
-            {{ 'toolbar.cancelEsc' | translate }}
-          </button>
-        </div>
-      }
-
-      <!-- PIZARRA / LIENZO MODULAR SEPARADO -->
-      <app-diagram-canvas
-        #diagramCanvas
-        class="flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden"
-        [nodes]="nodes()"
-        [connections]="connections()"
-        [selectedRelationType]="selectedRelationType()"
-        [selectedSourceNodeId]="selectedSourceNodeId()"
-        [defaultLineStyle]="defaultLineStyle()"
-        [isReadOnly]="isReadOnly()"
-        [selectedNodeIds]="selectedNodeIdsList()"
-        [selectedConnIds]="selectedConnIdsList()"
-        [remoteCursors]="collaborationService.remoteCursors()"
-        [nodeLocks]="collaborationService.activeNodeLocks()"
-        [currentUserId]="authService.currentUser()?.id || null"
+  <!-- El chat comparte fila con toda la columna del editor, incluida su barra superior. -->
+  <div class="flex flex-1 min-h-0 relative overflow-hidden">
+    <div class="flex flex-1 min-w-0 min-h-0 flex-col overflow-hidden">
+      <!-- 1. [TOPBAR / APPBAR] -->
+      <app-diagram-appbar
+        [diagramTitle]="currentDiagramName()"
+        [projectId]="currentProjectId()"
+        [projectTitle]="currentProject()?.name || ''"
         [diagramId]="currentDiagramId()"
-        [activeDiagramType]="activeDiagramType()"
+        [isSaving]="diagramService.isSaving()"
+        [saveSuccessMessage]="saveSuccessMessage()"
+        [hasUnsavedChanges]="hasUnsavedChanges()"
+        [isReadOnly]="isReadOnly()"
+        [isMultiUserEditing]="hasMultipleActiveUsers()"
+        [isToolboxOpen]="isSidebarOpen()"
+        [isAiPanelOpen]="isAiPanelOpen()"
+        (toggleAi)="toggleAiPanel()"
+        [canUndo]="canUndo()"
+        [canRedo]="canRedo()"
+        [selectedNodeId]="selectedNodeId()"
+        [selectedNodeColor]="selectedNodeColor()"
+        [selectedNodesCount]="selectedNodeIdsList().length"
         [smartGuidesEnabled]="smartGuidesEnabled()"
-        (flowLoaded)="onFlowLoaded()"
-        (connectionCreated)="onConnectionCreated($event)"
-        (connectionReassigned)="onConnectionReassigned($event)"
-        (moveNodes)="onMoveNodes($event)"
-        (selectionChange)="onSelectionChange($event)"
-        (nodePositionChange)="onNodePositionChange($event.node, $event.newPosition)"
-        (nodeSizeChange)="onNodeSizeChanged($event)"
-        (nodeClick)="onNodeSelect($event.nodeId, $event.event)"
-        (nodeDblClick)="openEditNodeModal($event.node, $event.event)"
-        (connectionClick)="onConnectionSelect($event.connId, $event.event)"
-        (connectionDblClick)="openEditConnModal($event.conn, $event.event)"
-        (deleteNode)="removeClass($event.nodeId, $event.event)"
-        (tableClick)="onTableClick($event.nodeId, $event.event)"
-        (canvasBackgroundClick)="onCanvasBackgroundClick($event)"
-        (canvasMouseDown)="onCanvasMouseDown($event)"
-        (canvasMouseMove)="onCanvasMouseMove($event)"
-        (zoomChange)="onZoomChanged($event)"
-        (viewportScroll)="onViewportScroll($event)"
-        (nodeRename)="onNodeRename($event)"
-        (nodeLabelOffsetChange)="onNodeLabelOffsetChange($event.node, $event.offset)"
-        (sequenceMessageMove)="onSequenceMessageMove($event)"
-        (nodeDropped)="onNodeDropped($event)"
-        (nodeContextMenu)="onNodeContextMenu($event)"
-        (connectionContextMenu)="onConnectionContextMenu($event)"
-        (canvasContextMenu)="onCanvasContextMenu($event)"
+        (saveDiagram)="saveToBackend()"
+        (undo)="undo()"
+        (redo)="redo()"
+        (selectAll)="selectAllClasses()"
+        (changeNodeColor)="onSetSelectedNodeColor($event)"
+        (alignNodes)="alignNodes($event)"
+        (distributeNodes)="distributeNodes($event)"
+        (snapToGrid)="snapSelectedToGrid()"
+        (toggleSmartGuides)="toggleSmartGuides()"
+        (exportBmp)="downloadBmpFile()"
+        (exportPng)="downloadPngFile()"
+        (exportXmi)="downloadXmiFile()"
+        (exportJson)="downloadJsonFile()"
+        (viewJson)="openExportModal()"
+        (fileSelected)="onFileSelected($event)"
+        (openImportJson)="openImportModal()"
+        (openSpringBoot)="showSpringBootModal.set(true)"
+        (openProfile)="openProfileModal()"
+        (toggleToolbox)="isSidebarOpen.set(!isSidebarOpen())"
+        (zoomIn)="zoomIn()"
+        (zoomOut)="zoomOut()"
+        (fitView)="fitView()"
+        (resetView)="resetView()"
+        (addClass)="addClass()"
+        (setPointerMode)="setPointerMode()"
       >
-      </app-diagram-canvas>
-    </div>
+      </app-diagram-appbar>
 
+      <!-- 2. [CUERPO PRINCIPAL]: SIDEBAR + PIZARRA CENTRAL -->
+      <div class="flex-1 min-h-0 flex overflow-hidden relative">
+        <!-- 2.1 [SIDEBAR / TOOLBOX & EXPLORER] SEPARADO COMO COMPONENTE MODULAR -->
+        <app-diagram-sidebar
+          (addPluginNode)="createNodeOfType($event.type, undefined, $event.stereotype)"
+          [isOpen]="isSidebarOpen()"
+          [activeDiagramType]="activeDiagramType()"
+          [selectedRelationType]="selectedRelationType()"
+          [defaultLineStyle]="defaultLineStyle()"
+          [isReadOnly]="isReadOnly()"
+          [projectDiagrams]="projectDiagrams()"
+          [currentDiagramId]="currentDiagramId()"
+          [currentProjectId]="currentProjectId()"
+          [currentProjectName]="currentProject()?.name || currentDiagramName()"
+          [currentNodes]="nodes()"
+          (closeSidebar)="isSidebarOpen.set(false)"
+          (openSidebar)="isSidebarOpen.set(true)"
+          (diagramTypeChange)="onDiagramTypeChange($event)"
+          (setPointerMode)="setPointerMode()"
+          (selectRelationType)="selectRelationType($event)"
+          (setDefaultLineStyle)="setDefaultLineStyle($event)"
+          (zoomIn)="zoomIn()"
+          (zoomOut)="zoomOut()"
+          (resetView)="resetView()"
+          (fitView)="fitView()"
+          (addClass)="addClass()"
+          (addClassWithStereotype)="addClass(undefined, $event)"
+          (addActor)="addActor()"
+          (addUseCase)="addUseCase()"
+          (addPackage)="addPackage()"
+          (addBoundary)="addBoundary()"
+          (addControl)="addControl()"
+          (addEntity)="addEntity()"
+          (addLifeline)="addLifeline()"
+          (addDevice)="addDevice()"
+          (addExecutionEnvironment)="addExecutionEnvironment()"
+          (addComponent)="addComponent()"
+          (addBoundaryBox)="addBoundaryBox()"
+          (selectDiagram)="onSelectDiagram($event)"
+          (openCreateDiagram)="openCreateDiagramModal($event)"
+          (renameDiagram)="onRenameDiagram($event)"
+          (deleteDiagram)="onDeleteDiagram($event)"
+          (copyNodeToCurrent)="handleCopyNodeFromExplorer($event)"
+          (selectNode)="handleSelectNodeFromExplorer($event)"
+        >
+        </app-diagram-sidebar>
+
+        <!-- 2.2 [CONTENEDOR CENTRAL]: PESTAÑAS + PIZARRA (CANVAS) -->
+        <div class="flex-1 min-w-0 flex flex-col overflow-hidden relative" [class.pointer-events-none]="isAnyModalOpen()">
+          <!-- Barra de Pestañas (Tabs) del Lienzo estilo SaaS / Enterprise Architect -->
+          <app-diagram-tabs
+            [tabs]="openTabs()"
+            [activeDiagramId]="currentDiagramId()"
+            [hasUnsavedChanges]="hasUnsavedChanges()"
+            [currentDiagramName]="currentDiagramName()"
+            (selectTab)="onSelectDiagram($event)"
+            (closeTab)="closeTab($event.id, $event.event)"
+            (createTab)="openCreateDiagramModal()"
+            (fitView)="fitView()"
+          >
+          </app-diagram-tabs>
+
+          <!-- Banner Informativo del Modo de Creación de Relaciones -->
+          @if (selectedRelationType()) {
+            <div
+              class="absolute top-12 left-1/2 -translate-x-1/2 z-40 bg-blue-900/90 text-white border border-blue-400 px-4 py-1.5 rounded-full shadow-lg text-xs font-mono flex items-center gap-2 animate-in fade-in slide-in-from-top-2 backdrop-blur-xs"
+            >
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              <span>
+                @if (selectedSourceNodeId() === null) {
+                  {{ 'toolbar.step1' | translate }} <strong>{{ selectedRelationType() }}</strong>
+                } @else {
+                  {{ 'toolbar.step2' | translate }}
+                }
+              </span>
+              <button
+                (click)="setPointerMode()"
+                class="ml-2 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] cursor-pointer"
+              >
+                {{ 'toolbar.cancelEsc' | translate }}
+              </button>
+            </div>
+          }
+
+          <!-- PIZARRA / LIENZO MODULAR SEPARADO -->
+          <app-diagram-canvas
+            #diagramCanvas
+            class="flex-1 relative w-full h-full flex flex-col min-h-0 min-w-0 overflow-hidden"
+            [nodes]="nodes()"
+            [connections]="connections()"
+            [selectedRelationType]="selectedRelationType()"
+            [selectedSourceNodeId]="selectedSourceNodeId()"
+            [defaultLineStyle]="defaultLineStyle()"
+            [isReadOnly]="isReadOnly()"
+            [selectedNodeIds]="selectedNodeIdsList()"
+            [selectedConnIds]="selectedConnIdsList()"
+            [remoteCursors]="collaborationService.remoteCursors()"
+            [nodeLocks]="collaborationService.activeNodeLocks()"
+            [currentUserId]="authService.currentUser()?.id || null"
+            [diagramId]="currentDiagramId()"
+            [activeDiagramType]="activeDiagramType()"
+            [smartGuidesEnabled]="smartGuidesEnabled()"
+            (flowLoaded)="onFlowLoaded()"
+            (connectionCreated)="onConnectionCreated($event)"
+            (connectionReassigned)="onConnectionReassigned($event)"
+            (moveNodes)="onMoveNodes($event)"
+            (selectionChange)="onSelectionChange($event)"
+            (nodePositionChange)="onNodePositionChange($event.node, $event.newPosition)"
+            (nodeSizeChange)="onNodeSizeChanged($event)"
+            (nodeClick)="onNodeSelect($event.nodeId, $event.event)"
+            (nodeDblClick)="openEditNodeModal($event.node, $event.event)"
+            (connectionClick)="onConnectionSelect($event.connId, $event.event)"
+            (connectionDblClick)="openEditConnModal($event.conn, $event.event)"
+            (deleteNode)="removeClass($event.nodeId, $event.event)"
+            (tableClick)="onTableClick($event.nodeId, $event.event)"
+            (canvasBackgroundClick)="onCanvasBackgroundClick($event)"
+            (canvasMouseDown)="onCanvasMouseDown($event)"
+            (canvasMouseMove)="onCanvasMouseMove($event)"
+            (zoomChange)="onZoomChanged($event)"
+            (viewportScroll)="onViewportScroll($event)"
+            (nodeRename)="onNodeRename($event)"
+            (nodeLabelOffsetChange)="onNodeLabelOffsetChange($event.node, $event.offset)"
+            (sequenceMessageMove)="onSequenceMessageMove($event)"
+            (nodeDropped)="onNodeDropped($event)"
+            (nodeContextMenu)="onNodeContextMenu($event)"
+            (connectionContextMenu)="onConnectionContextMenu($event)"
+            (canvasContextMenu)="onCanvasContextMenu($event)"
+          >
+          </app-diagram-canvas>
+        </div>
+      </div>
+    </div>
     <!-- 2.3 [PANEL LATERAL DERECHO]: COPILOT IA -->
     @if (isAiPanelOpen()) {
       <ng-container [pluginEnvironment]="plugins.environmentFor('ai-assistant')" [appPluginOutlet]="plugins.component('ai-assistant', 'panel')"
-        [pluginInputs]="{ isOpen: isAiPanelOpen(), diagramId: currentDiagramId(), roomCode: collaborationService.activeRoomCode(), currentNodes: nodes(), currentConnections: connections(), diagramType: activeDiagramType() }"
+        [pluginInputs]="{ isOpen: isAiPanelOpen(), diagramId: currentDiagramId(), canEdit: !isReadOnly(), hasUnsavedChanges: hasUnsavedChanges() }"
         (pluginEvent)="onAiPluginEvent($event)" />
     }
   </div>
@@ -211,9 +195,9 @@
   <!-- 3. [STATUSBAR INFERIOR] REFACTORIZADO EN COMPONENTE SEPARADO -->
   <app-diagram-statusbar
     [isConnected]="collaborationService.isConnected()"
-    [classCount]="nodes().length"
+    [nodeCount]="nodes().length"
     [relationCount]="connections().length"
-    [lineStyle]="defaultLineStyle()"
+    [selectedCount]="selectedNodeIdsList().length + selectedConnIdsList().length"
     [zoomLevel]="zoomLevel()"
     (zoomIn)="zoomIn()"
     (zoomOut)="zoomOut()"

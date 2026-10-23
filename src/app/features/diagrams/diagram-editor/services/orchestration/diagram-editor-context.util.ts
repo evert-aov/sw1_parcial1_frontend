@@ -163,6 +163,9 @@ export class DiagramEditorContextUtil {
             editor.persistenceService.markAsSaved(data.diagramId);
           }
         },
+        onDocumentInvalidated: (diagramId) => {
+          if (diagramId === editor.currentDiagramId() && !editor.hasUnsavedChanges()) editor.loadDiagram(diagramId);
+        },
         onReconnected: () => {
           const curId = editor.currentDiagramId();
           if (curId) editor.loadDiagram(curId);

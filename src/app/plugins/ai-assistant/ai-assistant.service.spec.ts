@@ -1,87 +1,36 @@
 import '@angular/compiler';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { of } from 'rxjs';
-import { AiAssistantService, AvailableModelsResponse, AiResponse } from './ai-assistant.service';
+import { firstValueFrom, of } from 'rxjs';
+import { AiAssistantService } from './ai-assistant.service';
 
-describe('AiAssistantService', () => {
+describe('Group conversation API adapter', () => {
   let service: AiAssistantService;
-  let mockHttpClient: any;
-
+  let http: { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn> };
   beforeEach(() => {
-    mockHttpClient = {
-      get: vi.fn(),
-      post: vi.fn(),
-    };
+    http = { get: vi.fn(), post: vi.fn() };
     service = Object.create(AiAssistantService.prototype);
-    (service as any).http = mockHttpClient;
-    (service as any).apiUrl = 'http://localhost:3000/api/ai';
+    Object.assign(service, { http, baseUrl: '/api/conversations' });
   });
 
-  it('debe solicitar la lista de modelos disponibles a /ai/models', () => {
-    const mockResponse: AvailableModelsResponse = {
-      defaultModel: 'gemini-2.5-flash',
-      defaultProvider: 'vertex',
-      isOllamaAvailable: false,
-      models: [
-        {
-          id: 'gemini-2.5-flash',
-          name: 'Google Gemini 2.5 Flash',
-          provider: 'vertex',
-          isLocal: false,
-        },
-      ],
-    };
-
-    mockHttpClient.get.mockReturnValue(of(mockResponse));
-
-    service.getAvailableModels().subscribe((res) => {
-      expect(res).toEqual(mockResponse);
-      expect(res.models.length).toBe(1);
-      expect(res.isOllamaAvailable).toBe(false);
-    });
-
-    expect(mockHttpClient.get).toHaveBeenCalledWith(expect.stringContaining('/ai/models'));
+  it('unwraps capabilities from the authenticated product API', async () => {
+    const models = { defaultProvider: 'ollama', models: [{ provider: 'ollama', id: 'qwen2.5-coder:14b' }] };
+    http.get.mockReturnValue(of({ data: models }));
+    expect(await firstValueFrom(service.getAvailableModels())).toEqual(models);
+    expect(http.get).toHaveBeenCalledWith('/api/conversations/models');
   });
 
-  it('debe enviar el proveedor y modelo seleccionados al invocar sendTextPrompt', () => {
-    const mockAiResponse: AiResponse = {
-      success: true,
-      action: 'diagram_mutated',
-      message: 'Tabla Creada',
-      nodes: [],
-      connections: [],
-      changesSummary: 'Cambio aplicado',
-      providerUsed: 'vertex',
-      modelUsed: 'gemini-2.5-flash',
-    };
+  it('sends no client author, history or editable diagram snapshot', async () => {
+    const submission = { clientMessageId: 'request', content: 'Explain inheritance', provider: 'ollama' as const, askAssistant: true };
+    http.post.mockReturnValue(of({ data: { id: 'accepted' } }));
+    await firstValueFrom(service.submit('diagram', submission));
+    expect(http.post).toHaveBeenCalledWith('/api/conversations/diagram/messages', submission);
+    expect(Object.keys(http.post.mock.calls[0][1])).not.toContain('sender');
+  });
 
-    mockHttpClient.post.mockReturnValue(of(mockAiResponse));
-
-    service
-      .sendTextPrompt(
-        'Crea tabla Factura',
-        'diag-123',
-        'ROOM-1',
-        [],
-        [],
-        [],
-        { provider: 'vertex', model: 'gemini-2.5-flash' },
-      )
-      .subscribe((res) => {
-        expect(res).toEqual(mockAiResponse);
-        expect(res.providerUsed).toBe('vertex');
-        expect(res.modelUsed).toBe('gemini-2.5-flash');
-      });
-
-    expect(mockHttpClient.post).toHaveBeenCalledWith(
-      expect.stringContaining('/ai/prompt'),
-      expect.objectContaining({
-        prompt: 'Crea tabla Factura',
-        diagramId: 'diag-123',
-        roomCode: 'ROOM-1',
-        provider: 'vertex',
-        model: 'gemini-2.5-flash',
-      }),
-    );
+  it('retrieves private attachment bytes using HttpClient', async () => {
+    const blob = new Blob(['audio']);
+    http.get.mockReturnValue(of(blob));
+    expect(await firstValueFrom(service.attachment('diagram', 'message'))).toBe(blob);
+    expect(http.get).toHaveBeenCalledWith('/api/conversations/diagram/messages/message/attachment', { responseType: 'blob' });
   });
 });
