@@ -47,10 +47,7 @@ describe('Workspace action ownership', () => {
     expect(root.querySelector('[data-context-tools="alignment"]')).toBeNull();
     fixture.componentRef.setInput('selectedNodesCount', 2);
     await fixture.whenStable();
-    const align = vi.fn();
-    fixture.componentInstance.alignNodes.subscribe(align);
-    root.querySelector<HTMLButtonElement>('[data-context-tools="alignment"] button')!.click();
-    expect(align).toHaveBeenCalledWith('left');
+    expect(root.querySelector('[data-context-tools="alignment"]')).toBeNull();
     fixture.componentRef.setInput('isReadOnly', true);
     await fixture.whenStable();
     expect(root.querySelector('[data-context-tools]')).toBeNull();

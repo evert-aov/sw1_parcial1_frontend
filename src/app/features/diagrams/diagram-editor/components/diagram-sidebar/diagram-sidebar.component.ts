@@ -55,18 +55,15 @@ import {
   UML_COMPONENT_RELATION_TYPES,
   UML_DEPLOYMENT_RELATION_TYPES,
   UML_DIAGRAM_TYPES,
-  UML_LINE_STYLES,
   UML_PACKAGE_RELATION_TYPES,
   UML_RELATION_TYPES,
   UML_SEQUENCE_RELATION_TYPES,
   UML_USE_CASE_RELATION_TYPES,
   UmlLineStyle,
-  UmlLineStyleItem,
   UmlRelationTypeItem,
   UmlRelationshipType,
 } from '../../../../../core/models/diagram.model';
 import { TranslatePipe, TranslationService } from '../../../../../core/i18n/index';
-import { UML_SVG_COMPONENTS } from '../../../../../plugin-sdk/ui/uml-svg/index';
 import { SHARED_DIAGRAM_UI_COMPONENTS } from '../../../../../plugin-sdk/ui/shared-ui/index';
 import { UmlNodeNormalizerUtil } from '../../../../../core/plugins/contracts/uml-node-normalizer.util.contract';
 import {
@@ -105,7 +102,6 @@ const RELATION_TYPES_BY_DIAGRAM: Partial<Record<DiagramType, UmlRelationTypeItem
     FormsModule,
     NgIconComponent,
     TranslatePipe,
-    ...UML_SVG_COMPONENTS,
     ...SHARED_DIAGRAM_UI_COMPONENTS,
   ],
   providers: [
@@ -176,8 +172,6 @@ export class DiagramSidebarComponent {
   readonly selectedRelationType = input<UmlRelationshipType | null>(null);
   readonly defaultLineStyle = input<UmlLineStyle>('segment');
   readonly isReadOnly = input<boolean>(false);
-  readonly relationTypes = input<UmlRelationTypeItem[]>(UML_RELATION_TYPES);
-  readonly lineStyles = input<UmlLineStyleItem[]>(UML_LINE_STYLES);
   readonly diagramTypes = input<DiagramTypeItem[]>(UML_DIAGRAM_TYPES);
 
   readonly projectDiagrams = input<DiagramDto[]>([]);
@@ -191,9 +185,6 @@ export class DiagramSidebarComponent {
   readonly draggedNodeId = signal<string | null>(null);
   readonly dragOverDiagramId = signal<string | null>(null);
   readonly dragOverPosition = signal<'above' | 'below' | null>(null);
-
-  readonly isRelationshipsOpen = signal<boolean>(true);
-  readonly isLineStylesOpen = signal<boolean>(true);
 
   readonly expandedFolders = signal<Record<string, boolean>>({
     [DiagramType.CLASS]: false,
@@ -259,23 +250,6 @@ export class DiagramSidebarComponent {
   readonly setPointerMode = output<void>();
   readonly selectRelationType = output<UmlRelationshipType>();
   readonly setDefaultLineStyle = output<UmlLineStyle>();
-  readonly zoomIn = output<void>();
-  readonly zoomOut = output<void>();
-  readonly resetView = output<void>();
-  readonly fitView = output<void>();
-  readonly addClass = output<void>();
-  readonly addClassWithStereotype = output<string>();
-  readonly addActor = output<void>();
-  readonly addUseCase = output<void>();
-  readonly addPackage = output<void>();
-  readonly addBoundary = output<void>();
-  readonly addControl = output<void>();
-  readonly addEntity = output<void>();
-  readonly addLifeline = output<void>();
-  readonly addDevice = output<void>();
-  readonly addExecutionEnvironment = output<void>();
-  readonly addComponent = output<void>();
-  readonly addBoundaryBox = output<void>();
 
   readonly selectDiagram = output<string>();
   readonly openCreateDiagram = output<DiagramType | null>();

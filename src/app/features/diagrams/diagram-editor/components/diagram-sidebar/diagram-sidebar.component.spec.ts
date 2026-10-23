@@ -72,8 +72,6 @@ describe('DiagramSidebarComponent', () => {
 
   it('should create the component', () => {
     expect(component).toBeTruthy();
-    expect(component.isRelationshipsOpen()).toBe(true);
-    expect(component.isLineStylesOpen()).toBe(true);
   });
 
   it('should emit setPointerMode when onSelectPointer is called', () => {

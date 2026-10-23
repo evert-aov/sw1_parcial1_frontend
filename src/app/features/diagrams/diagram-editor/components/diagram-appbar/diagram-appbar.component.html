@@ -1,50 +1,112 @@
 <header class="editor-header">
   <div class="workspace-bar">
-    <button #fileTrigger type="button" class="file-trigger" data-menu-trigger="file"
-      [attr.aria-label]="'workspace.fileProject' | translate" aria-haspopup="menu"
-      [attr.aria-expanded]="menu() === 'file'" (click)="toggleMenu('file')">
+    <button
+      #fileTrigger
+      type="button"
+      class="file-trigger"
+      data-menu-trigger="file"
+      [attr.aria-label]="'workspace.fileProject' | translate"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="menu() === 'file'"
+      (click)="toggleMenu('file')"
+    >
       <img src="logo.png" alt="UML/ER Studio" width="28" height="28" />
       <ng-icon name="heroChevronDown" />
     </button>
     <div class="project-heading">
-      <span class="project-title" [title]="projectTitle() || diagramTitle()">{{ projectTitle() || diagramTitle() }}</span>
-      <span class="save-status" role="status" [class.pending]="hasUnsavedChanges()"
-        [title]="saveStatusKey() | translate" [attr.aria-label]="saveStatusKey() | translate">
-        <ng-icon [name]="isSaving() ? 'heroArrowPath' : hasUnsavedChanges() ? 'heroCloudArrowUp' : 'heroCheck'"
-          [class.animate-spin]="isSaving()" />
+      <span class="project-title" [title]="projectTitle() || diagramTitle()">{{
+        projectTitle() || diagramTitle()
+      }}</span>
+      <span
+        class="save-status"
+        role="status"
+        [class.pending]="hasUnsavedChanges()"
+        [title]="saveStatusKey() | translate"
+        [attr.aria-label]="saveStatusKey() | translate"
+      >
+        <ng-icon
+          [name]="
+            isSaving() ? 'heroArrowPath' : hasUnsavedChanges() ? 'heroCloudArrowUp' : 'heroCheck'
+          "
+          [class.animate-spin]="isSaving()"
+        />
       </span>
     </div>
     <nav class="workspace-tabs" [attr.aria-label]="'workspace.tools' | translate">
       @for (tab of tabs; track tab.id) {
-        <button type="button" [attr.data-tab]="tab.id" [class.active]="activeTab() === tab.id"
-          [attr.aria-pressed]="activeTab() === tab.id" (click)="onTabClick(tab.id)"
-          (dblclick)="onTabDblClick(tab.id, $event)">
+        <button
+          type="button"
+          [attr.data-tab]="tab.id"
+          [class.active]="activeTab() === tab.id"
+          [attr.aria-pressed]="activeTab() === tab.id"
+          (click)="onTabClick(tab.id)"
+          (dblclick)="onTabDblClick(tab.id, $event)"
+        >
           <ng-icon [name]="tab.icon" /> <span>{{ tab.label | translate }}</span>
         </button>
       }
     </nav>
-    <span class="room-status" [title]="('appbar.room' | translate) + ': ' + (collaborationService.activeRoomCode() || ('workspace.noRoom' | translate))">
+    <span
+      class="room-status"
+      [title]="
+        ('appbar.room' | translate) +
+        ': ' +
+        (collaborationService.activeRoomCode() || ('workspace.noRoom' | translate))
+      "
+    >
       <span class="status-dot" [class.connected]="collaborationService.isConnected()"></span>
-      <span class="room-code">{{ collaborationService.activeRoomCode() || ('workspace.noRoom' | translate) }}</span>
+      <span class="room-code">{{
+        collaborationService.activeRoomCode() || ('workspace.noRoom' | translate)
+      }}</span>
     </span>
     @if (isReadOnly()) {
       <ng-icon name="heroEye" [title]="'appbar.spectatorMode' | translate" />
     }
     @if (plugins.component('ai-assistant', 'panel')) {
-      <button type="button" class="icon-button" data-action="assistant" [attr.aria-pressed]="isAiPanelOpen()"
-        [attr.aria-label]="'appbar.aiAssistant' | translate" [title]="'workspace.toggleAssistant' | translate"
-        (click)="closeMenu(); toggleAi.emit()"><ng-icon name="heroSparkles" /></button>
+      <button
+        type="button"
+        class="icon-button"
+        data-action="assistant"
+        [attr.aria-pressed]="isAiPanelOpen()"
+        [attr.aria-label]="'appbar.aiAssistant' | translate"
+        [title]="'workspace.toggleAssistant' | translate"
+        (click)="closeMenu(); toggleAi.emit()"
+      >
+        <ng-icon name="heroSparkles" />
+      </button>
     }
     @if (plugins.find('user-guide')) {
-      <button type="button" class="icon-button" data-action="manual"
-        [attr.aria-label]="'guide.manual' | translate" [title]="'guide.openTooltip' | translate"
-        (click)="openGuide()"><ng-icon name="heroAcademicCap" /></button>
+      <button
+        type="button"
+        class="icon-button"
+        data-action="manual"
+        [attr.aria-label]="'guide.manual' | translate"
+        [title]="'guide.openTooltip' | translate"
+        (click)="openGuide()"
+      >
+        <ng-icon name="heroAcademicCap" />
+      </button>
     }
-    <button type="button" class="icon-button" data-menu-trigger="preferences" aria-haspopup="menu"
-      [attr.aria-expanded]="menu() === 'preferences'" [attr.aria-label]="'workspace.preferences' | translate"
-      (click)="toggleMenu('preferences')"><ng-icon name="heroCog6Tooth" /></button>
-    <button type="button" class="icon-button" (click)="toggleCollapse()" [attr.aria-expanded]="!isCollapsed()"
-      [attr.aria-label]="(isCollapsed() ? 'workspace.expandTools' : 'workspace.collapseTools') | translate">
+    <button
+      type="button"
+      class="icon-button"
+      data-menu-trigger="preferences"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="menu() === 'preferences'"
+      [attr.aria-label]="'workspace.preferences' | translate"
+      (click)="toggleMenu('preferences')"
+    >
+      <ng-icon name="heroCog6Tooth" />
+    </button>
+    <button
+      type="button"
+      class="icon-button"
+      (click)="toggleCollapse()"
+      [attr.aria-expanded]="!isCollapsed()"
+      [attr.aria-label]="
+        (isCollapsed() ? 'workspace.expandTools' : 'workspace.collapseTools') | translate
+      "
+    >
       <ng-icon [name]="isCollapsed() ? 'heroChevronDown' : 'heroChevronUp'" />
     </button>
   </div>
@@ -215,9 +277,7 @@
           <!-- Toggle Guías Inteligentes EA -->
           <button
             (click)="toggleSmartGuides.emit()"
-            [title]="
-              'toolbar.alignment.smartGuides' | translate
-            "
+            [title]="'toolbar.alignment.smartGuides' | translate"
             class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-15.5 group border border-transparent"
             [class.bg-blue-50]="smartGuidesEnabled()"
             [class.dark:bg-blue-950/40]="smartGuidesEnabled()"
@@ -229,23 +289,7 @@
               [class.text-blue-600]="smartGuidesEnabled()"
               [class.dark:text-blue-400]="smartGuidesEnabled()"
               [class.text-slate-400]="!smartGuidesEnabled()"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3.75 3.75v4.5m0 3v4.5m0 3v1.5M20.25 3.75v4.5m0 3v4.5m0 3v1.5M3.75 12h16.5M12 3.75v16.5"
-                  stroke-dasharray="2 2"
-                />
-              </svg>
-            </div>
+            ></div>
             <span
               class="text-[10px] font-sans font-medium leading-tight whitespace-nowrap"
               [class.text-blue-700]="smartGuidesEnabled()"
@@ -306,7 +350,8 @@
                   [style.backgroundColor]="c.color"
                 >
                   @if (
-                    selectedNodeColor() === c.color || (!selectedNodeColor() && c.color === '#FDFAF3')
+                    selectedNodeColor() === c.color ||
+                    (!selectedNodeColor() && c.color === '#FDFAF3')
                   ) {
                     <span class="text-[10px] font-bold text-slate-800 leading-none select-none"
                       >✓</span
@@ -320,7 +365,8 @@
             <div class="flex items-center justify-between gap-2 text-xs">
               <label
                 [title]="
-                  (selectedNodeId() ? 'workspace.customColor' : 'workspace.selectNodeFirst') | translate
+                  (selectedNodeId() ? 'workspace.customColor' : 'workspace.selectNodeFirst')
+                    | translate
                 "
                 [class.opacity-40]="!selectedNodeId() || isReadOnly()"
                 class="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium cursor-pointer"
@@ -353,132 +399,17 @@
               </button>
             </div>
           </div>
-
-
-        }
-        @if (selectedNodesCount() >= 2 && !isReadOnly()) {
-          <!-- Botones de Alineación Horizontal y Vertical -->
-          <div data-context-tools="alignment"
-            class="flex flex-col gap-1 justify-center pl-1 border-l border-slate-200 dark:border-slate-800"
-          >
-            <div class="flex items-center gap-1">
-              <!-- Alinear a la Izquierda -->
-              <button
-                (click)="alignNodes.emit('left')"
-                [disabled]="selectedNodesCount() < 2 || isReadOnly()"
-                [title]="'toolbar.alignment.alignLeft' | translate"
-                class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="1" width="2" height="14" rx="0.5" />
-                  <rect x="5" y="3" width="9" height="3" rx="0.5" opacity="0.8" />
-                  <rect x="5" y="9" width="6" height="3" rx="0.5" opacity="0.8" />
-                </svg>
-              </button>
-              <!-- Alinear al Centro Horizontal -->
-              <button
-                (click)="alignNodes.emit('center')"
-                [disabled]="selectedNodesCount() < 2 || isReadOnly()"
-                [title]="'toolbar.alignment.alignCenter' | translate"
-                class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="7" y="1" width="2" height="14" rx="0.5" />
-                  <rect x="2" y="3" width="12" height="3" rx="0.5" opacity="0.8" />
-                  <rect x="4" y="9" width="8" height="3" rx="0.5" opacity="0.8" />
-                </svg>
-              </button>
-              <!-- Alinear a la Derecha -->
-              <button
-                (click)="alignNodes.emit('right')"
-                [disabled]="selectedNodesCount() < 2 || isReadOnly()"
-                [title]="'toolbar.alignment.alignRight' | translate"
-                class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="13" y="1" width="2" height="14" rx="0.5" />
-                  <rect x="2" y="3" width="9" height="3" rx="0.5" opacity="0.8" />
-                  <rect x="5" y="9" width="6" height="3" rx="0.5" opacity="0.8" />
-                </svg>
-              </button>
-              <!-- Distribuir Horizontalmente -->
-              <button
-                (click)="distributeNodes.emit('horizontal')"
-                [disabled]="selectedNodesCount() < 3 || isReadOnly()"
-                [title]="'toolbar.alignment.distributeH' | translate"
-                class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="2" width="2" height="12" rx="0.5" />
-                  <rect x="13" y="2" width="2" height="12" rx="0.5" />
-                  <rect x="6.5" y="4" width="3" height="8" rx="0.5" opacity="0.8" />
-                </svg>
-              </button>
-            </div>
-
-            <div class="flex items-center gap-1">
-              <!-- Alinear Arriba -->
-              <button
-                (click)="alignNodes.emit('top')"
-                [disabled]="selectedNodesCount() < 2 || isReadOnly()"
-                [title]="'toolbar.alignment.alignTop' | translate"
-                class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="1" width="14" height="2" rx="0.5" />
-                  <rect x="3" y="5" width="3" height="9" rx="0.5" opacity="0.8" />
-                  <rect x="9" y="5" width="3" height="6" rx="0.5" opacity="0.8" />
-                </svg>
-              </button>
-              <!-- Alinear al Medio Vertical -->
-              <button
-                (click)="alignNodes.emit('middle')"
-                [disabled]="selectedNodesCount() < 2 || isReadOnly()"
-                [title]="'toolbar.alignment.alignMiddle' | translate"
-                class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="7" width="14" height="2" rx="0.5" />
-                  <rect x="3" y="2" width="3" height="12" rx="0.5" opacity="0.8" />
-                  <rect x="9" y="4" width="3" height="8" rx="0.5" opacity="0.8" />
-                </svg>
-              </button>
-              <!-- Alinear Abajo -->
-              <button
-                (click)="alignNodes.emit('bottom')"
-                [disabled]="selectedNodesCount() < 2 || isReadOnly()"
-                [title]="'toolbar.alignment.alignBottom' | translate"
-                class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="1" y="13" width="14" height="2" rx="0.5" />
-                  <rect x="3" y="2" width="3" height="9" rx="0.5" opacity="0.8" />
-                  <rect x="9" y="5" width="3" height="6" rx="0.5" opacity="0.8" />
-                </svg>
-              </button>
-              <!-- Distribuir Verticalmente -->
-              <button
-                (click)="distributeNodes.emit('vertical')"
-                [disabled]="selectedNodesCount() < 3 || isReadOnly()"
-                [title]="'toolbar.alignment.distributeV' | translate"
-                class="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1A2246] text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                  <rect x="2" y="1" width="12" height="2" rx="0.5" />
-                  <rect x="2" y="13" width="12" height="2" rx="0.5" />
-                  <rect x="4" y="6.5" width="8" height="3" rx="0.5" opacity="0.8" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
         }
       }
-
       @if (activeTab() === 'develop') {
         <div class="workspace-action-group">
           @if (plugins.component('code-generation', 'modal')) {
-            <button type="button" class="primary-action" data-action="generate" (click)="openSpringBoot.emit()">
+            <button
+              type="button"
+              class="primary-action"
+              data-action="generate"
+              (click)="openSpringBoot.emit()"
+            >
               <ng-icon name="heroBolt" /> {{ 'appbar.generateCode' | translate }}
             </button>
           }
@@ -490,31 +421,59 @@
       }
       @if (activeTab() === 'collaborate') {
         <div class="workspace-action-group">
-          <button type="button" class="secondary-action" (click)="copyRoomCode()" [disabled]="!collaborationService.activeRoomCode()">
+          <button
+            type="button"
+            class="secondary-action"
+            (click)="copyRoomCode()"
+            [disabled]="!collaborationService.activeRoomCode()"
+          >
             <ng-icon name="heroClipboardDocument" /> {{ 'workspace.copyInvitation' | translate }}
           </button>
-          <a class="secondary-action" [class.unavailable]="!projectId()" [attr.aria-disabled]="!projectId()"
-            [routerLink]="projectId() ? ['/projects'] : null" [queryParams]="{ projectId: projectId(), panel: 'members' }">
+          <a
+            class="secondary-action"
+            [class.unavailable]="!projectId()"
+            [attr.aria-disabled]="!projectId()"
+            [routerLink]="projectId() ? ['/projects'] : null"
+            [queryParams]="{ projectId: projectId(), panel: 'members' }"
+          >
             <ng-icon name="heroUserGroup" /> {{ 'workspace.manageMembers' | translate }}
           </a>
           <div class="group-description">
-            <strong>{{ 'ribbon.sections.collaborators' | translate }} ({{ collaborationService.collaborators().length }})</strong>
+            <strong
+              >{{ 'ribbon.sections.collaborators' | translate }} ({{
+                collaborationService.collaborators().length
+              }})</strong
+            >
             <div class="participants">
-              @for (collaborator of collaborationService.collaborators(); track collaborator.userId) {
+              @for (
+                collaborator of collaborationService.collaborators();
+                track collaborator.userId
+              ) {
                 <span class="participant" [title]="collaborator.userName">
-                  <span class="avatar" [style.backgroundColor]="collaborator.color">{{ collaborator.userName.charAt(0).toUpperCase() }}</span>
+                  <span class="avatar" [style.backgroundColor]="collaborator.color">{{
+                    collaborator.userName.charAt(0).toUpperCase()
+                  }}</span>
                   {{ collaborator.userName }}
                 </span>
-              } @empty { <span>{{ 'workspace.noParticipants' | translate }}</span> }
+              } @empty {
+                <span>{{ 'workspace.noParticipants' | translate }}</span>
+              }
             </div>
           </div>
         </div>
       }
       @if (activeTab() === 'publish') {
         <div class="workspace-action-group">
-          <button type="button" class="primary-action" data-menu-trigger="export" aria-haspopup="menu"
-            [attr.aria-expanded]="menu() === 'export'" (click)="toggleMenu('export')">
-            <ng-icon name="heroArrowDownTray" /> {{ 'appbar.export' | translate }} <ng-icon name="heroChevronDown" />
+          <button
+            type="button"
+            class="primary-action"
+            data-menu-trigger="export"
+            aria-haspopup="menu"
+            [attr.aria-expanded]="menu() === 'export'"
+            (click)="toggleMenu('export')"
+          >
+            <ng-icon name="heroArrowDownTray" /> {{ 'appbar.export' | translate }}
+            <ng-icon name="heroChevronDown" />
           </button>
           <div class="group-description">
             <strong>{{ 'workspace.deliverables' | translate }}</strong>
@@ -526,30 +485,74 @@
   }
 
   @if (menu() === 'file') {
-    <div class="workspace-menu file-menu" role="menu" [attr.aria-label]="'workspace.fileProject' | translate" (keydown)="onMenuKeyDown($event)">
-      <div class="menu-title"><ng-icon name="heroFolder" /> {{ 'workspace.fileProject' | translate }}</div>
-      <a role="menuitem" routerLink="/projects" (click)="closeMenu()"><ng-icon name="heroFolder" /> {{ 'workspace.openProject' | translate }}</a>
-      <button type="button" role="menuitem" data-action="save" (click)="saveProject()" [disabled]="!diagramId() || isReadOnly() || isSaving()">
-        <ng-icon name="heroCloudArrowUp" /> {{ 'workspace.saveProject' | translate }} <kbd>Ctrl+S</kbd>
+    <div
+      class="workspace-menu file-menu"
+      role="menu"
+      [attr.aria-label]="'workspace.fileProject' | translate"
+      (keydown)="onMenuKeyDown($event)"
+    >
+      <div class="menu-title">
+        <ng-icon name="heroFolder" /> {{ 'workspace.fileProject' | translate }}
+      </div>
+      <a role="menuitem" routerLink="/projects" (click)="closeMenu()"
+        ><ng-icon name="heroFolder" /> {{ 'workspace.openProject' | translate }}</a
+      >
+      <button
+        type="button"
+        role="menuitem"
+        data-action="save"
+        (click)="saveProject()"
+        [disabled]="!diagramId() || isReadOnly() || isSaving()"
+      >
+        <ng-icon name="heroCloudArrowUp" /> {{ 'workspace.saveProject' | translate }}
+        <kbd>Ctrl+S</kbd>
       </button>
-      <button type="button" role="menuitem" [attr.aria-expanded]="importExpanded()" (click)="toggleImport()">
-        <ng-icon name="heroArrowUpTray" /> {{ 'workspace.importModel' | translate }} <ng-icon class="trailing-icon" name="heroChevronDown" />
+      <button
+        type="button"
+        role="menuitem"
+        [attr.aria-expanded]="importExpanded()"
+        (click)="toggleImport()"
+      >
+        <ng-icon name="heroArrowUpTray" /> {{ 'workspace.importModel' | translate }}
+        <ng-icon class="trailing-icon" name="heroChevronDown" />
       </button>
       @if (importExpanded()) {
         <div class="submenu" role="group" [attr.aria-label]="'workspace.importModel' | translate">
           @if (plugins.find('xmi')) {
-            <button type="button" role="menuitem" (click)="triggerFileInput()" [disabled]="isReadOnly() || multiUserBlocked()">XML / XMI / JSON</button>
+            <button
+              type="button"
+              role="menuitem"
+              (click)="triggerFileInput()"
+              [disabled]="isReadOnly() || multiUserBlocked()"
+            >
+              XML / XMI / JSON
+            </button>
           }
           @if (plugins.find('document-io')) {
-            <button type="button" role="menuitem" (click)="handleOpenImportJson()" [disabled]="isReadOnly() || multiUserBlocked()">{{ 'workspace.pasteJson' | translate }}</button>
+            <button
+              type="button"
+              role="menuitem"
+              (click)="handleOpenImportJson()"
+              [disabled]="isReadOnly() || multiUserBlocked()"
+            >
+              {{ 'workspace.pasteJson' | translate }}
+            </button>
           }
         </div>
       }
-      <button type="button" role="menuitem" (click)="showPublish()"><ng-icon name="heroArrowDownTray" /> {{ 'workspace.exportModel' | translate }} <ng-icon class="trailing-icon" name="heroChevronDown" /></button>
+      <button type="button" role="menuitem" (click)="showPublish()">
+        <ng-icon name="heroArrowDownTray" /> {{ 'workspace.exportModel' | translate }}
+        <ng-icon class="trailing-icon" name="heroChevronDown" />
+      </button>
       <div class="menu-divider"></div>
-      <a role="menuitem" [routerLink]="projectId() && !isReadOnly() ? ['/projects'] : null"
-        [class.unavailable]="!projectId() || isReadOnly()" [attr.aria-disabled]="!projectId() || isReadOnly()"
-        [queryParams]="{ projectId: projectId(), panel: 'settings' }" (click)="closeMenu()">
+      <a
+        role="menuitem"
+        [routerLink]="projectId() && !isReadOnly() ? ['/projects'] : null"
+        [class.unavailable]="!projectId() || isReadOnly()"
+        [attr.aria-disabled]="!projectId() || isReadOnly()"
+        [queryParams]="{ projectId: projectId(), panel: 'settings' }"
+        (click)="closeMenu()"
+      >
         <ng-icon name="heroCog6Tooth" /> {{ 'workspace.projectSettings' | translate }}
       </a>
       <div class="model-info">
@@ -560,38 +563,98 @@
     </div>
   }
   @if (menu() === 'export') {
-    <div class="workspace-menu export-menu" role="menu" [attr.aria-label]="'appbar.export' | translate" (keydown)="onMenuKeyDown($event)">
+    <div
+      class="workspace-menu export-menu"
+      role="menu"
+      [attr.aria-label]="'appbar.export' | translate"
+      (keydown)="onMenuKeyDown($event)"
+    >
       <div class="menu-title">{{ 'workspace.images' | translate }}</div>
       @if (plugins.find('image-export')) {
-        <button type="button" role="menuitem" (click)="handleExportPng()" [disabled]="multiUserBlocked()"><ng-icon name="heroPhoto" /> {{ 'appbar.exportPng' | translate }}</button>
+        <button
+          type="button"
+          role="menuitem"
+          (click)="handleExportPng()"
+          [disabled]="multiUserBlocked()"
+        >
+          <ng-icon name="heroPhoto" /> {{ 'appbar.exportPng' | translate }}
+        </button>
         @if (plugins.find('bmp-encoder')) {
-          <button type="button" role="menuitem" (click)="handleExportBmp()" [disabled]="multiUserBlocked()"><ng-icon name="heroPhoto" /> {{ 'appbar.exportBmp' | translate }}</button>
+          <button
+            type="button"
+            role="menuitem"
+            (click)="handleExportBmp()"
+            [disabled]="multiUserBlocked()"
+          >
+            <ng-icon name="heroPhoto" /> {{ 'appbar.exportBmp' | translate }}
+          </button>
         }
       }
       <div class="menu-title">{{ 'workspace.models' | translate }}</div>
       @if (plugins.find('xmi')) {
-        <button type="button" role="menuitem" (click)="handleExportXmi()" [disabled]="multiUserBlocked()"><ng-icon name="heroDocumentText" /> XML / XMI 2.1</button>
+        <button
+          type="button"
+          role="menuitem"
+          (click)="handleExportXmi()"
+          [disabled]="multiUserBlocked()"
+        >
+          <ng-icon name="heroDocumentText" /> XML / XMI 2.1
+        </button>
       }
       @if (plugins.find('document-io')) {
-        <button type="button" role="menuitem" (click)="handleExportJson()" [disabled]="multiUserBlocked()"><ng-icon name="heroDocumentText" /> {{ 'appbar.exportJson' | translate }}</button>
+        <button
+          type="button"
+          role="menuitem"
+          (click)="handleExportJson()"
+          [disabled]="multiUserBlocked()"
+        >
+          <ng-icon name="heroDocumentText" /> {{ 'appbar.exportJson' | translate }}
+        </button>
       }
       <div class="menu-title">{{ 'workspace.reports' | translate }}</div>
       @if (plugins.find('document-io')) {
-        <button type="button" role="menuitem" (click)="handleViewJson()" [disabled]="multiUserBlocked()"><ng-icon name="heroDocumentChartBar" /> JSON AST</button>
+        <button
+          type="button"
+          role="menuitem"
+          (click)="handleViewJson()"
+          [disabled]="multiUserBlocked()"
+        >
+          <ng-icon name="heroDocumentChartBar" /> JSON AST
+        </button>
       }
     </div>
   }
   @if (menu() === 'preferences') {
-    <div class="workspace-menu preferences-menu" (keydown)="onMenuKeyDown($event)" [attr.aria-label]="'workspace.preferences' | translate">
+    <div
+      class="workspace-menu preferences-menu"
+      (keydown)="onMenuKeyDown($event)"
+      [attr.aria-label]="'workspace.preferences' | translate"
+    >
       <div class="menu-title">{{ 'ribbon.sections.appearanceAndLanguage' | translate }}</div>
-      <div class="preference-row"><span>{{ 'settings.language' | translate }}</span><app-language-selector [theme]="'light'" /></div>
-      <div class="preference-row"><span>{{ 'settings.colorTheme' | translate }}</span><app-theme-toggle [variant]="'light'" /></div>
+      <div class="preference-row">
+        <span>{{ 'settings.language' | translate }}</span
+        ><app-language-selector [theme]="'light'" />
+      </div>
+      <div class="preference-row">
+        <span>{{ 'settings.colorTheme' | translate }}</span
+        ><app-theme-toggle [variant]="'light'" />
+      </div>
       @if (authService.currentUser()) {
         <div class="menu-divider"></div>
-        <button type="button" (click)="openProfile.emit(); closeMenu()"><ng-icon name="heroUserCircle" /> {{ authService.currentUser()?.fullName }}</button>
-        <button type="button" (click)="authService.logout()"><ng-icon name="heroArrowRightOnRectangle" /> {{ 'appbar.logout' | translate }}</button>
+        <button type="button" (click)="openProfile.emit(); closeMenu()">
+          <ng-icon name="heroUserCircle" /> {{ authService.currentUser()?.fullName }}
+        </button>
+        <button type="button" (click)="authService.logout()">
+          <ng-icon name="heroArrowRightOnRectangle" /> {{ 'appbar.logout' | translate }}
+        </button>
       }
     </div>
   }
-  <input #fileInput type="file" accept=".json,.xml,.xmi" (change)="fileSelected.emit($event)" class="hidden" />
+  <input
+    #fileInput
+    type="file"
+    accept=".json,.xml,.xmi"
+    (change)="fileSelected.emit($event)"
+    class="hidden"
+  />
 </header>

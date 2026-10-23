@@ -278,7 +278,6 @@ export class DiagramAppbarComponent implements AfterViewInit {
   readonly zoomOut = output<void>();
   readonly fitView = output<void>();
   readonly resetView = output<void>();
-  readonly addClass = output<void>();
   readonly setPointerMode = output<void>();
   readonly alignNodes = output<'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'>();
   readonly distributeNodes = output<'horizontal' | 'vertical'>();

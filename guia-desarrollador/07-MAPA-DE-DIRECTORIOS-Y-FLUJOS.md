@@ -223,8 +223,7 @@ Dentro de `features/diagrams/diagram-editor/components/`:
 | Carpeta | Papel en la interfaz |
 | --- | --- |
 | `diagram-canvas/` | Contenedor Foblex, renderizado dinámico, selección e interacción del lienzo. |
-| `diagram-sidebar/` | Explorador y herramientas; utilidades de orden y drag del panel. |
-| `diagram-toolbox/` | Controles de herramientas del editor. |
+| `diagram-sidebar/` | Panel lateral modular: caja de herramientas (toolbox de plug-ins) y explorador de diagramas del proyecto. |
 | `diagram-appbar/` | Acciones superiores: guardado, herramientas y estado de sesión. |
 | `diagram-tabs/` | Navegación entre diagramas abiertos. |
 | `diagram-statusbar/` | Información de estado del editor. |
