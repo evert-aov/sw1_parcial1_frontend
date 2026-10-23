@@ -56,9 +56,9 @@
       <div
         class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 select-none"
         aria-hidden="true">
-        <div class="flex flex-col items-center gap-3 opacity-25 dark:opacity-20">
+        <div class="flex flex-col items-center gap-3 opacity-25">
           <!-- Icono SVG de lienzo vacío -->
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="text-slate-400 dark:text-slate-500">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="text-slate-400">
             <rect x="8" y="8" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2.5" stroke-dasharray="6 3" fill="none"/>
             <line x1="8" y1="22" x2="56" y2="22" stroke="currentColor" stroke-width="2"/>
             <rect x="18" y="52" width="28" height="6" rx="3" fill="currentColor" opacity="0.5"/>
@@ -68,10 +68,10 @@
           </svg>
 
           <!-- Mensaje contextual según tipo de diagrama -->
-          <p class="text-sm font-medium text-slate-500 dark:text-slate-400 text-center max-w-xs leading-relaxed px-4">
+          <p class="text-sm font-medium text-slate-500 text-center max-w-xs leading-relaxed px-4">
             {{ canvasEmptyStateMessage() }}
           </p>
-          <p class="text-xs text-slate-400 dark:text-slate-500 text-center">
+          <p class="text-xs text-slate-400 text-center">
             {{ 'editor.canvas.emptyState.shortcutHint' | translate }}
           </p>
         </div>
@@ -95,6 +95,11 @@
       (dblclick)="onFlowDblClick($event)"
       (contextmenu)="onCanvasContextMenu($event)"
       class="w-full h-full block">
+
+      <!-- Cuadrícula interactiva del lienzo sincronizada con zoom -->
+      <f-background [class.canvas-grid-hidden]="!isGridVisible()">
+        <f-rect-pattern [vSize]="20" [hSize]="20" [vColor]="'#CBD5E1'" [hColor]="'#CBD5E1'" />
+      </f-background>
 
       <f-canvas
         fZoom
@@ -719,10 +724,17 @@
       <f-selection-area [fTrigger]="selectionAreaTrigger"></f-selection-area>
 
       <!-- GUÍAS MAGNÉTICAS DINÁMICAS (ESTILO ENTERPRISE ARCHITECT) -->
-      @if (smartGuidesEnabled()) {
-        <f-magnetic-lines [threshold]="12"></f-magnetic-lines>
-        <f-magnetic-rects [alignThreshold]="16" [spacingThreshold]="16"></f-magnetic-rects>
-      }
+      <!-- Se mantienen montadas de forma permanente para no romper el singleton de renderizado
+           en Foblex Flow (MagneticLinesPreparation / MagneticRectsPreparation) al alternar su activación. -->
+      <f-magnetic-lines
+        [threshold]="smartGuidesEnabled() ? 12 : -1"
+        [style.display]="smartGuidesEnabled() ? '' : 'none'"
+      ></f-magnetic-lines>
+      <f-magnetic-rects
+        [alignThreshold]="smartGuidesEnabled() ? 16 : -1"
+        [spacingThreshold]="smartGuidesEnabled() ? 16 : -1"
+        [style.display]="smartGuidesEnabled() ? '' : 'none'"
+      ></f-magnetic-rects>
     </f-flow>
 
   </div>

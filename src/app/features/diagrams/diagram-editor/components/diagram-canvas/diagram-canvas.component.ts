@@ -22,6 +22,7 @@ import {
   EFConnectionBehavior,
   EFConnectionConnectableSide,
   EFConnectionType,
+  FBackgroundComponent,
   FCanvasComponent,
   FCreateConnectionEvent,
   FEventTrigger,
@@ -29,6 +30,7 @@ import {
   FFlowModule,
   FMoveNodesEvent,
   FReassignConnectionEvent,
+  FRectPatternComponent,
   FSelectionChangeEvent,
   FTriggerEvent,
   FZoomDirective,
@@ -178,6 +180,7 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
   readonly diagramId = input<string | null>(null);
   readonly activeDiagramType = input<DiagramType>(DiagramType.CLASS);
   readonly smartGuidesEnabled = input<boolean>(true);
+  readonly isGridVisible = input<boolean>(false);
 
   readonly flowLoaded = output<void>();
   readonly connectionCreated = output<FCreateConnectionEvent>();

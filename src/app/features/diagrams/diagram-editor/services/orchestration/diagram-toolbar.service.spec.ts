@@ -41,6 +41,16 @@ describe('DiagramToolbarService', () => {
     });
   });
 
+  describe('grid', () => {
+    it('inicia desactivado en false y toggleGrid invierte su valor', () => {
+      expect(service.isGridVisible()).toBe(false);
+      service.toggleGrid();
+      expect(service.isGridVisible()).toBe(true);
+      service.toggleGrid();
+      expect(service.isGridVisible()).toBe(false);
+    });
+  });
+
   describe('computeSelectedNodeColor', () => {
     it('retorna null si no hay nodo seleccionado', () => {
       const color = service.computeSelectedNodeColor(null, [], () => '#FDFAF3');

@@ -256,6 +256,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     ),
   );
   readonly smartGuidesEnabled = this.toolbarService.smartGuidesEnabled;
+  readonly isGridVisible = this.toolbarService.isGridVisible;
 
   readonly isEditNodeModalOpen = this.modalService.isEditNodeModalOpen;
   readonly editingNode = this.modalService.editingNode;
@@ -355,6 +356,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   /** Alterna las guías inteligentes de alineación magnética en el lienzo. */
   toggleSmartGuides(): void { this.toolbarService.toggleSmartGuides(); }
+  toggleGrid(): void { this.toolbarService.toggleGrid(); }
 
   /** Alterna la apertura del menú desplegable de exportación. */
   toggleExportDropdown(event?: MouseEvent): void {

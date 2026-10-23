@@ -289,7 +289,23 @@
               [class.text-blue-600]="smartGuidesEnabled()"
               [class.dark:text-blue-400]="smartGuidesEnabled()"
               [class.text-slate-400]="!smartGuidesEnabled()"
-            ></div>
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3.75 3.75v4.5m0 3v4.5m0 3v1.5M20.25 3.75v4.5m0 3v4.5m0 3v1.5M3.75 12h16.5M12 3.75v16.5"
+                  stroke-dasharray="2 2"
+                />
+              </svg>
+            </div>
             <span
               class="text-[10px] font-sans font-medium leading-tight whitespace-nowrap"
               [class.text-blue-700]="smartGuidesEnabled()"
@@ -305,15 +321,22 @@
             </span>
           </button>
 
-          <!-- Botón Ajustar a Cuadrícula -->
+          <!-- Botón Cuadrícula del Lienzo -->
           <button
-            (click)="snapToGrid.emit()"
-            [disabled]="isReadOnly()"
-            [title]="'toolbar.alignment.snapGrid' | translate"
-            class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent disabled:opacity-30 disabled:cursor-not-allowed"
+            (click)="toggleGrid.emit()"
+            [title]="'toolbar.alignment.toggleGrid' | translate"
+            class="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent"
+            [class.bg-blue-50]="isGridVisible()"
+            [class.dark:bg-blue-950/40]="isGridVisible()"
+            [class.border-blue-200]="isGridVisible()"
+            [class.dark:border-blue-800]="isGridVisible()"
           >
             <div
-              class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform"
+              class="w-6 h-6 flex items-center justify-center group-hover:scale-105 transition-transform"
+              [class.text-blue-600]="isGridVisible()"
+              [class.dark:text-blue-400]="isGridVisible()"
+              [class.text-slate-700]="!isGridVisible()"
+              [class.dark:text-slate-300]="!isGridVisible()"
             >
               <svg
                 width="16"
@@ -327,7 +350,12 @@
               </svg>
             </div>
             <span
-              class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap"
+              class="text-[10px] font-sans font-medium leading-tight whitespace-nowrap"
+              [class.text-blue-700]="isGridVisible()"
+              [class.dark:text-blue-300]="isGridVisible()"
+              [class.font-bold]="isGridVisible()"
+              [class.text-slate-700]="!isGridVisible()"
+              [class.dark:text-slate-300]="!isGridVisible()"
             >
               {{ 'workspace.grid' | translate }}
             </span>

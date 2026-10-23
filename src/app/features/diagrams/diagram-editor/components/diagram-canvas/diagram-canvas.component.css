@@ -8,17 +8,11 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
+  color-scheme: light !important;
 }
 
 .uml-viewport {
   overflow: auto !important;
-  background-color: #FFFFFF !important;
-  background-image: radial-gradient(#CBD5E1 1.2px, transparent 1.2px) !important;
-  background-size: 20px 20px !important;
-}
-
-:host-context(.dark) .uml-viewport,
-.dark .uml-viewport {
   background-color: #FFFFFF !important;
   background-image: radial-gradient(#CBD5E1 1.2px, transparent 1.2px) !important;
   background-size: 20px 20px !important;
@@ -43,31 +37,43 @@
   background: #8993A4;
 }
 
-:host-context(.dark) .uml-viewport::-webkit-scrollbar-track,
-.dark .uml-viewport::-webkit-scrollbar-track {
-  background: #F1F3F5;
-}
-
-:host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb,
-.dark .uml-viewport::-webkit-scrollbar-thumb {
-  background: #C1C7D0;
-  border: 2px solid #F1F3F5;
-}
-
-:host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb:hover,
-.dark .uml-viewport::-webkit-scrollbar-thumb:hover {
-  background: #8993A4;
-}
-
 ::ng-deep f-flow {
   background-color: #FFFFFF !important;
   background-image: none !important;
+  color-scheme: light !important;
+  --ff-canvas-background-color: #FFFFFF !important;
+  --ff-flow-background-color: #FFFFFF !important;
+  --ff-color-surface-canvas: #FFFFFF !important;
+  --ff-color-surface-page: #FFFFFF !important;
+  --ff-background-line-color: #CBD5E1 !important;
+  --ff-background-dot-color: #94A3B8 !important;
+  --ff-color-grid: #CBD5E1 !important;
+  --ff-color-grid-strong: #94A3B8 !important;
+  --ff-node-background-color: transparent !important;
 }
 
-:host-context(.dark) ::ng-deep f-flow,
-.dark ::ng-deep f-flow {
-  background-color: #FFFFFF !important;
-  background-image: none !important;
+/* Cuadrícula interactiva (Grid) de la pizarra UML */
+::ng-deep f-flow .f-background,
+::ng-deep .f-background {
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+::ng-deep f-flow .f-background.canvas-grid-hidden,
+::ng-deep .f-background.canvas-grid-hidden {
+  display: none !important;
+}
+
+::ng-deep f-flow .f-background svg,
+::ng-deep .f-background svg {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+::ng-deep f-flow .f-background line,
+::ng-deep .f-background line {
+  stroke: #CBD5E1 !important;
+  stroke-width: 1px !important;
 }
 
 ::ng-deep f-canvas,
@@ -100,27 +106,7 @@
 ::ng-deep f-flow .f-node.f-node-entity,
 ::ng-deep f-flow .f-node.f-node-lifeline,
 ::ng-deep f-flow .f-node.f-node-component,
-::ng-deep f-flow .f-node.f-node-deployment,
-:host-context(.dark) ::ng-deep f-flow .f-node:not(.f-node-class),
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-package,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-control,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-lifeline,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-component,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-deployment,
-.dark ::ng-deep f-flow .f-node:not(.f-node-class),
-.dark ::ng-deep f-flow .f-node.f-node-actor,
-.dark ::ng-deep f-flow .f-node.f-node-use-case,
-.dark ::ng-deep f-flow .f-node.f-node-package,
-.dark ::ng-deep f-flow .f-node.f-node-boundary,
-.dark ::ng-deep f-flow .f-node.f-node-control,
-.dark ::ng-deep f-flow .f-node.f-node-entity,
-.dark ::ng-deep f-flow .f-node.f-node-lifeline,
-.dark ::ng-deep f-flow .f-node.f-node-component,
-.dark ::ng-deep f-flow .f-node.f-node-deployment {
+::ng-deep f-flow .f-node.f-node-deployment {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -144,27 +130,7 @@
 ::ng-deep f-flow .f-node.f-node-entity.f-selected,
 ::ng-deep f-flow .f-node.f-node-lifeline.f-selected,
 ::ng-deep f-flow .f-node.f-node-component.f-selected,
-::ng-deep f-flow .f-node.f-node-deployment.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node:not(.f-node-class).f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-package.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-control.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-lifeline.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-component.f-selected,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-deployment.f-selected,
-.dark ::ng-deep f-flow .f-node:not(.f-node-class).f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-actor.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-use-case.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-package.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-boundary.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-control.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-entity.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-lifeline.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-component.f-selected,
-.dark ::ng-deep f-flow .f-node.f-node-deployment.f-selected {
+::ng-deep f-flow .f-node.f-node-deployment.f-selected {
   outline: none !important;
   box-shadow: none !important;
   border: none !important;
@@ -192,12 +158,6 @@
   border-radius: 2px !important;
   pointer-events: none !important;
   z-index: 50 !important;
-}
-
-:host-context(.dark) ::ng-deep f-selection-area,
-.dark ::ng-deep f-selection-area {
-  background-color: rgba(59, 130, 246, 0.12) !important;
-  border-color: #2563EB !important;
 }
 
 /* Estilos de Conexiones UML */
@@ -235,18 +195,6 @@
 ::ng-deep .f-connection.uml-connection-hovered path[fConnectionSelection],
 ::ng-deep .f-connection.uml-connection-hovered .f-connection-selection {
   stroke: rgba(16, 185, 129, 0.28) !important;
-  stroke-width: 14px !important;
-}
-
-:host-context(.dark) ::ng-deep .f-connection:not(.f-dragging):hover path[fConnectionSelection],
-:host-context(.dark) ::ng-deep .f-connection:not(.f-dragging):hover .f-connection-selection,
-:host-context(.dark) ::ng-deep .f-connection.uml-connection-hovered path[fConnectionSelection],
-:host-context(.dark) ::ng-deep .f-connection.uml-connection-hovered .f-connection-selection,
-.dark ::ng-deep .f-connection:not(.f-dragging):hover path[fConnectionSelection],
-.dark ::ng-deep .f-connection:not(.f-dragging):hover .f-connection-selection,
-.dark ::ng-deep .f-connection.uml-connection-hovered path[fConnectionSelection],
-.dark ::ng-deep .f-connection.uml-connection-hovered .f-connection-selection {
-  stroke: rgba(52, 211, 153, 0.35) !important;
   stroke-width: 14px !important;
 }
 
@@ -315,57 +263,6 @@
   stroke-width: 10px !important;
 }
 
-/* Modo oscuro para selección de conexiones */
-:host-context(.dark) ::ng-deep .f-connection.f-selected path[f-connection-path],
-:host-context(.dark) ::ng-deep .f-connection.f-connection-selected path[f-connection-path],
-.dark ::ng-deep .f-connection.f-selected path[f-connection-path],
-.dark ::ng-deep .f-connection.f-connection-selected path[f-connection-path] {
-  stroke: #10B981 !important;
-}
-
-:host-context(.dark) ::ng-deep .f-connection.f-selected path[fConnectionSelection],
-:host-context(.dark) ::ng-deep .f-connection.f-connection-selected path[fConnectionSelection],
-.dark ::ng-deep .f-connection.f-selected path[fConnectionSelection],
-.dark ::ng-deep .f-connection.f-connection-selected path[fConnectionSelection] {
-  stroke: rgba(16, 185, 129, 0.4) !important;
-  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6)) !important;
-}
-
-:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] polygon,
-:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] polyline,
-:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] path,
-:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon,
-:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] polyline,
-:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] path,
-.dark ::ng-deep .f-connection.f-selected svg[fMarker] polygon,
-.dark ::ng-deep .f-connection.f-selected svg[fMarker] polyline,
-.dark ::ng-deep .f-connection.f-selected svg[fMarker] path,
-.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon,
-.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] polyline,
-.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] path {
-  stroke: #10B981 !important;
-}
-
-:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-filled,
-:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-filled,
-:host-context(.dark) ::ng-deep .f-connection.f-selected .uml-marker-seq-sync,
-:host-context(.dark) ::ng-deep .f-connection.f-connection-selected .uml-marker-seq-sync,
-.dark ::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-filled,
-.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-filled,
-.dark ::ng-deep .f-connection.f-selected .uml-marker-seq-sync,
-.dark ::ng-deep .f-connection.f-connection-selected .uml-marker-seq-sync {
-  fill: #10B981 !important;
-  stroke: #10B981 !important;
-}
-
-:host-context(.dark) ::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-hollow,
-:host-context(.dark) ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-hollow,
-.dark ::ng-deep .f-connection.f-selected svg[fMarker] polygon.uml-marker-hollow,
-.dark ::ng-deep .f-connection.f-connection-selected svg[fMarker] polygon.uml-marker-hollow {
-  fill: #1E293B !important;
-  stroke: #10B981 !important;
-}
-
 ::ng-deep .uml-relation-dependency .f-connection-drag-handle,
 ::ng-deep .uml-relation-dependency:not(.f-selected):not(.f-connection-selected) path[f-connection-path] {
   stroke-dasharray: 5, 4 !important;
@@ -427,23 +324,6 @@
   stroke-linejoin: round;
 }
 
-:host-context(.dark) .uml-marker-filled,
-.dark .uml-marker-filled {
-  fill: #94A3B8;
-  stroke: #94A3B8;
-}
-
-:host-context(.dark) .uml-marker-hollow,
-.dark .uml-marker-hollow {
-  fill: #0F172A;
-  stroke: #94A3B8;
-}
-
-:host-context(.dark) .uml-marker-open,
-.dark .uml-marker-open {
-  stroke: #94A3B8;
-}
-
 /* Etiquetas de Multiplicidad y Nombre */
 .uml-multiplicity-badge {
   background: rgba(255, 255, 255, 0.95);
@@ -460,13 +340,6 @@
   white-space: nowrap;
 }
 
-:host-context(.dark) .uml-multiplicity-badge,
-.dark .uml-multiplicity-badge {
-  background: rgba(255, 255, 255, 0.95);
-  color: #1A202C;
-  border-color: #CBD5E1;
-}
-
 .uml-relation-name-badge {
   background: rgba(255, 255, 255, 0.95);
   color: #2B6CB0;
@@ -481,13 +354,6 @@
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
-}
-
-:host-context(.dark) .uml-relation-name-badge,
-.dark .uml-relation-name-badge {
-  background: rgba(255, 255, 255, 0.95);
-  color: #2B6CB0;
-  border-color: #90CDF4;
 }
 
 /* Badges de Mensajes en Diagrama de Comunicación (UML 2.5) */
@@ -538,15 +404,6 @@
   z-index: 25;
 }
 
-:host-context(.dark) .uml-communication-messages-badge-above,
-.dark .uml-communication-messages-badge-above,
-:host-context(.dark) .uml-communication-messages-badge-below,
-.dark .uml-communication-messages-badge-below {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
 .uml-comm-msg-item {
   display: flex;
   align-items: center;
@@ -588,25 +445,6 @@
   opacity: 1 !important;
   background-color: #3B82F6 !important;
   box-shadow: 0 0 0 2px #2563EB;
-}
-
-:host-context(.dark) .uml-connector-active,
-.dark .uml-connector-active {
-  background-color: #6366F1;
-  border-color: #1E293B;
-  box-shadow: 0 0 0 2px #4F46E5;
-}
-
-:host-context(.dark) .uml-connector-inactive,
-.dark .uml-connector-inactive {
-  background-color: #475569;
-  border-color: #1E293B;
-}
-
-:host-context(.dark) .uml-connector-inactive:hover,
-.dark .uml-connector-inactive:hover {
-  background-color: #6366F1 !important;
-  box-shadow: 0 0 0 2px #4F46E5;
 }
 
 /* Trazado y uniones de esquinas UML (Miter para Square / Segment, Round para Rounded / Adaptive Curve) */
@@ -825,13 +663,6 @@
   box-shadow: none !important;
   padding: 0 !important;
   white-space: nowrap;
-}
-
-:host-context(.dark) .uml-sequence-message-badge,
-.dark .uml-sequence-message-badge {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
 }
 
 .uml-sequence-slot {

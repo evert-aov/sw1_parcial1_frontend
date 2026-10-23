@@ -3,11 +3,6 @@
   background-color: #FFFFFF !important;
 }
 
-:host-context(.dark) .uml-viewport,
-.dark .uml-viewport {
-  background-color: #FFFFFF !important;
-}
-
 /* Scrollbars clásicos y precisos para el viewport del diagrama estilo EA */
 .uml-viewport::-webkit-scrollbar {
   width: 12px;
@@ -27,31 +22,10 @@
   background: #8993A4;
 }
 
-:host-context(.dark) .uml-viewport::-webkit-scrollbar-track,
-.dark .uml-viewport::-webkit-scrollbar-track {
-  background: #F1F3F5;
-}
-
-:host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb,
-.dark .uml-viewport::-webkit-scrollbar-thumb {
-  background: #C1C7D0;
-  border: 2px solid #F1F3F5;
-}
-
-:host-context(.dark) .uml-viewport::-webkit-scrollbar-thumb:hover,
-.dark .uml-viewport::-webkit-scrollbar-thumb:hover {
-  background: #8993A4;
-}
-
 ::ng-deep f-flow {
   background-color: #FFFFFF !important;
   background-image: none !important;
-}
-
-:host-context(.dark) ::ng-deep f-flow,
-.dark ::ng-deep f-flow {
-  background-color: #FFFFFF !important;
-  background-image: none !important;
+  color-scheme: light !important;
 }
 
 ::ng-deep f-canvas,
@@ -83,29 +57,7 @@
 ::ng-deep f-flow .f-node.f-node-lifeline,
 ::ng-deep f-flow .f-node.f-node-component,
 ::ng-deep f-flow .f-node.f-node-deployment,
-::ng-deep f-flow .f-node.f-node-boundary-box,
-:host-context(.dark) ::ng-deep f-flow .f-node:not(.f-node-class),
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-actor,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-use-case,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-package,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-control,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-entity,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-lifeline,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-component,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-deployment,
-:host-context(.dark) ::ng-deep f-flow .f-node.f-node-boundary-box,
-.dark ::ng-deep f-flow .f-node:not(.f-node-class),
-.dark ::ng-deep f-flow .f-node.f-node-actor,
-.dark ::ng-deep f-flow .f-node.f-node-use-case,
-.dark ::ng-deep f-flow .f-node.f-node-package,
-.dark ::ng-deep f-flow .f-node.f-node-boundary,
-.dark ::ng-deep f-flow .f-node.f-node-control,
-.dark ::ng-deep f-flow .f-node.f-node-entity,
-.dark ::ng-deep f-flow .f-node.f-node-lifeline,
-.dark ::ng-deep f-flow .f-node.f-node-component,
-.dark ::ng-deep f-flow .f-node.f-node-deployment,
-.dark ::ng-deep f-flow .f-node.f-node-boundary-box {
+::ng-deep f-flow .f-node.f-node-boundary-box {
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
@@ -160,13 +112,7 @@
 /* Conexión de Ensamble UML (Assembly / Ball and Socket) */
 ::ng-deep f-flow f-connection.uml-relation-assembly path[f-connection-path],
 ::ng-deep f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
-::ng-deep f-flow .uml-relation-assembly path[f-connection-path],
-:host-context(.dark) ::ng-deep f-flow f-connection.uml-relation-assembly path[f-connection-path],
-:host-context(.dark) ::ng-deep f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
-:host-context(.dark) ::ng-deep f-flow .uml-relation-assembly path[f-connection-path],
-.dark ::ng-deep f-flow f-connection.uml-relation-assembly path[f-connection-path],
-.dark ::ng-deep f-flow f-connection-for-create.uml-relation-assembly path[f-connection-path],
-.dark ::ng-deep f-flow .uml-relation-assembly path[f-connection-path] {
+::ng-deep f-flow .uml-relation-assembly path[f-connection-path] {
   stroke: #94a3b8 !important;
   stroke-width: 2px !important;
   stroke-dasharray: none !important;
@@ -175,13 +121,7 @@
 /* Símbolo de Ensamble (Arco y Círculo) con el mismo grosor (2px) que la línea y círculo blanco */
 ::ng-deep f-flow .uml-relation-assembly .f-connection-content path,
 ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content path,
-::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path,
-:host-context(.dark) ::ng-deep f-flow .uml-relation-assembly .f-connection-content path,
-:host-context(.dark) ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content path,
-:host-context(.dark) ::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path,
-.dark ::ng-deep f-flow .uml-relation-assembly .f-connection-content path,
-.dark ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content path,
-.dark ::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
+::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content path {
   fill: none !important;
   stroke: #94a3b8 !important;
   stroke-width: 2px !important;
@@ -189,13 +129,7 @@
 
 ::ng-deep f-flow .uml-relation-assembly .f-connection-content circle,
 ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content circle,
-::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle,
-:host-context(.dark) ::ng-deep f-flow .uml-relation-assembly .f-connection-content circle,
-:host-context(.dark) ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content circle,
-:host-context(.dark) ::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle,
-.dark ::ng-deep f-flow .uml-relation-assembly .f-connection-content circle,
-.dark ::ng-deep f-flow f-connection.uml-relation-assembly .f-connection-content circle,
-.dark ::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle {
+::ng-deep f-flow f-connection-for-create.uml-relation-assembly .f-connection-content circle {
   fill: #ffffff !important;
   stroke: #94a3b8 !important;
   stroke-width: 2px !important;
@@ -326,12 +260,6 @@
   border-radius: 2px !important;
   pointer-events: none !important;
   z-index: 100 !important;
-}
-
-:host-context(.dark) ::ng-deep .f-selection-area,
-.dark ::ng-deep .f-selection-area {
-  background-color: rgba(59, 130, 246, 0.15) !important;
-  border: 1.5px dashed #2563eb !important;
 }
 
 ::ng-deep f-flow .f-node.f-node-class.f-selected {

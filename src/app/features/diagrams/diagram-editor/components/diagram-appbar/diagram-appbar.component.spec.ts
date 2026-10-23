@@ -180,4 +180,14 @@ describe('Workspace action ownership', () => {
       window.removeEventListener('keydown', windowKey);
     }
   });
+
+  it('emite toggleGrid al hacer clic en el botón de cuadrícula del lienzo', async () => {
+    const toggleGridSpy = vi.fn();
+    fixture.componentInstance.toggleGrid.subscribe(toggleGridSpy);
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const gridBtn = buttons.find((b) => b.title?.includes('Cuadrícula') || b.textContent?.includes('Cuadrícula') || b.title?.includes('Grid') || b.textContent?.includes('Grid'));
+    expect(gridBtn).toBeTruthy();
+    gridBtn!.click();
+    expect(toggleGridSpy).toHaveBeenCalledOnce();
+  });
 });

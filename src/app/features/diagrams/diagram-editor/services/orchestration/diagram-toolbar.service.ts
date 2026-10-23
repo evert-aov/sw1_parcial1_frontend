@@ -50,6 +50,7 @@ export class DiagramToolbarService {
   private readonly nodeOps: DiagramNodeOperationsService;
 
   readonly smartGuidesEnabled = signal<boolean>(true);
+  readonly isGridVisible = signal<boolean>(false);
 
   constructor(
     alignmentService?: DiagramAlignmentService,
@@ -79,6 +80,13 @@ export class DiagramToolbarService {
    */
   toggleSmartGuides(): void {
     this.smartGuidesEnabled.update((val) => !val);
+  }
+
+  /**
+   * Alterna la visibilidad de la cuadrícula interactiva sobre el lienzo.
+   */
+  toggleGrid(): void {
+    this.isGridVisible.update((val) => !val);
   }
 
   // --- COLOR SELECCIONADO ---
