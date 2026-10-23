@@ -16,14 +16,16 @@ import { CommonModule } from '@angular/common';
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      overflow: visible;
+      overflow: hidden;
+      max-width: 100%;
+      max-height: 100%;
     }
   `],
   host: {
     '[style.width]': 'computedWidth',
     '[style.height]': 'computedHeight',
     '[style.display]': "width === '100%' ? 'flex' : 'inline-flex'",
-    'class': 'shrink-0'
+    'class': 'shrink-0 max-w-full max-h-full'
   },
   template: `
     <svg
@@ -33,7 +35,7 @@ import { CommonModule } from '@angular/common';
       [style.width]="computedWidth"
       [style.height]="computedHeight"
       fill="none"
-      [class]="className || (isCustomSize ? '' : 'w-full h-full')"
+      [class]="className || (isCustomSize ? 'max-w-full max-h-full' : 'w-full h-full max-w-full max-h-full')"
       preserveAspectRatio="xMidYMid meet"
       xmlns="http://www.w3.org/2000/svg">
       <!-- Cabeza circular estándar UML 2.5 -->

@@ -139,9 +139,42 @@ describe('Editor microkernel composition', () => {
     expect(metrics.getDefaultColorForNodeType('class', 'UI')).toBe('#DDF4F5');
     const created = nodes.require('actor').create({ nodes: [], diagramType: DiagramType.SEQUENCE });
     expect(created.position.y).toBe(50);
+    expect(created.width).toBe(65);
+    expect(created.height).toBe(65);
+    expect(nodes.require('actor').geometry.width(created)).toBe(65);
+    expect(nodes.require('actor').geometry.height(created)).toBe(65);
     expect(
       nodes.require('actor').create({ nodes: [], diagramType: DiagramType.SEQUENCE }).id,
     ).not.toBe(created.id);
+  });
+
+  it('garantiza que el actor mide 65x65 y sus slots de secuencia alinean en la misma recta Y que la lifeline', () => {
+    TestBed.configureTestingModule({
+      providers: [provideEditorPlugins()],
+    });
+    const nodes = TestBed.inject(NodePluginRegistryService);
+    const actorPluginDef = nodes.require('actor');
+    const lifelinePluginDef = nodes.require('lifeline');
+
+    const actorNode = actorPluginDef.create({ nodes: [], diagramType: DiagramType.SEQUENCE });
+    const lifelineNode = lifelinePluginDef.create({ nodes: [], diagramType: DiagramType.SEQUENCE });
+
+    expect(actorPluginDef.geometry.width(actorNode)).toBe(65);
+    expect(actorPluginDef.geometry.height(actorNode)).toBe(65);
+
+    const actorFixture = TestBed.createComponent(actorPluginDef.renderer as any);
+    const lifelineFixture = TestBed.createComponent(lifelinePluginDef.renderer as any);
+    const actorComp = actorFixture.componentInstance as any;
+    const lifelineComp = lifelineFixture.componentInstance as any;
+
+    expect(actorComp.getSlotTopFn(0)).toBe(150);
+    expect(lifelineComp.getSlotTopFn(0)).toBe(150);
+    for (let slot = 0; slot < 5; slot++) {
+      expect(actorComp.getSlotTopFn(slot)).toBe(lifelineComp.getSlotTopFn(slot));
+    }
+
+    actorFixture.destroy();
+    lifelineFixture.destroy();
   });
 
   it('saves and normalizes documents with AI, XMI and image exporters absent', () => {

@@ -39,7 +39,7 @@ export class UmlActorNodeComponent {
   readonly activations = computed(() => this.sequence?.getNodeActivations(this.node(), this.connections(), this.activeDiagramType()) ?? []);
   readonly sequenceSlots = Array.from({ length: 25 }, (_, index) => index);
   readonly isSequenceSlotOccupiedFn = (slot: number): boolean => this.sequence?.isSequenceSlotOccupied(slot, this.connections(), this.activeDiagramType()) ?? false;
-  readonly getSlotTopFn = (slot: number): number => 160 + slot * 50 - 95;
+  readonly getSlotTopFn = (slot: number): number => 210 + slot * 50 - 60;
 
   readonly node = input.required<UmlClassNode>();
   readonly isSelected = input(false);

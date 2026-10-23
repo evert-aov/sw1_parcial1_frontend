@@ -190,7 +190,7 @@ export class UmlNodeNormalizerUtil {
   ): { defaultWidth: number; defaultHeight: number | undefined } {
     switch (nodeType) {
       case 'actor':
-        return { defaultWidth: 65, defaultHeight: 95 };
+        return { defaultWidth: 65, defaultHeight: 65 };
       case 'use_case':
         return { defaultWidth: 140, defaultHeight: undefined };
       case 'boundary_box':

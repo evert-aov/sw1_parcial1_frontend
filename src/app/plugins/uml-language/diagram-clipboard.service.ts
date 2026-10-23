@@ -283,7 +283,7 @@ export class DiagramClipboardService {
     const isBce = node.nodeType === 'boundary' || node.nodeType === 'control' || node.nodeType === 'entity';
     const isDeploymentNode = node.nodeType === 'device' || node.nodeType === 'node' || node.nodeType === 'executionEnvironment';
     const width = node.width || (node.nodeType === 'actor' ? 65 : (node.nodeType === 'use_case' ? 140 : (node.nodeType === 'package' ? 200 : (node.nodeType === 'component' ? 190 : (isDeploymentNode ? 240 : (isBce ? 90 : 220))))));
-    const height = node.height || (node.nodeType === 'actor' ? 95 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'component' ? 70 : (isDeploymentNode ? 150 : (isBce ? 95 : null))))));
+    const height = node.height || (node.nodeType === 'actor' ? 65 : (node.nodeType === 'use_case' ? 60 : (node.nodeType === 'package' ? 120 : (node.nodeType === 'component' ? 70 : (isDeploymentNode ? 150 : (isBce ? 95 : null))))));
 
     let posX: number;
     let posY: number;

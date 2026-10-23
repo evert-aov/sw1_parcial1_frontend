@@ -55,7 +55,7 @@
             <app-diagram-tool-item-button [label]="tool.labelKey | translate" [disabled]="isReadOnly()" [draggable]="true"
               [dragType]="tool.type" (itemClick)="addPluginNode.emit({ type: tool.type, stereotype: tool.stereotype })"
               (itemDragStart)="onToolboxDragStart(tool.type, $event, tool.stereotype)">
-              <span icon class="text-sm"><ng-container [appPluginOutlet]="tool.icon" [pluginEnvironment]="nodePlugins.environmentFor({ nodeType: tool.type })" /></span>
+              <span icon class="w-full h-full flex items-center justify-center overflow-hidden text-sm"><ng-container [appPluginOutlet]="tool.icon" [pluginEnvironment]="nodePlugins.environmentFor({ nodeType: tool.type })" /></span>
             </app-diagram-tool-item-button>
           }
         </div>

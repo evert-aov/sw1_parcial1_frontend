@@ -146,7 +146,7 @@ export class XmiClassifierParser {
 
         let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
         let width = 65;
-        let height = 95;
+        let height = 65;
 
         if (geometryMap.has(id)) {
           const g = geometryMap.get(id)!;
@@ -397,7 +397,7 @@ export class XmiClassifierParser {
 
           let pos = { x: 80 + (gridIdx % 3) * 280, y: 80 + Math.floor(gridIdx / 3) * 220 };
           let width = 65;
-          let height = 95;
+          let height = 65;
 
           if (geometryMap.has(id)) {
             const g = geometryMap.get(id)!;

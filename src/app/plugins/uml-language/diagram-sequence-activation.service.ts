@@ -74,8 +74,8 @@ export class DiagramSequenceActivationService {
   getLifelineLength(node: UmlClassNode | undefined, connections: UmlConnection[]): number {
     const maxSlot = this.getMaxSequenceSlotUsed(connections);
     const count = Math.max(4, maxSlot + 1 + 3);
-    const nodeHeaderHeight = node?.nodeType === 'actor' ? 95 : 60;
-    const targetBottom = 160 + (count - 1) * 50 + 40;
+    const nodeHeaderHeight = node?.nodeType === 'actor' ? 65 : 60;
+    const targetBottom = 210 + (count - 1) * 50 + 40;
     const minLength = node?.nodeType === 'actor' ? 80 : 120;
     return Math.max(minLength, targetBottom - nodeHeaderHeight);
   }
@@ -92,7 +92,7 @@ export class DiagramSequenceActivationService {
       return [];
     }
 
-    const headerHeight = node.nodeType === 'actor' ? 95 : 60;
+    const headerHeight = node.nodeType === 'actor' ? 65 : 60;
     const allSeqConns: ParsedSeqConn[] = [];
 
     for (const c of connections) {
@@ -290,8 +290,8 @@ export class DiagramSequenceActivationService {
     }
 
     return mergedIntervals.map((inv) => {
-      const slotYStart = 160 + inv.minSlot * 50 - headerHeight;
-      const slotYEnd = 160 + inv.maxSlot * 50 - headerHeight;
+      const slotYStart = 210 + inv.minSlot * 50 - headerHeight;
+      const slotYEnd = 210 + inv.maxSlot * 50 - headerHeight;
       const top = Math.max(0, slotYStart - 4);
       const height = slotYEnd - slotYStart + 22;
       return {
@@ -387,11 +387,11 @@ export class DiagramSequenceActivationService {
         return n;
       }
 
-      const headerHeight = n.nodeType === 'actor' ? 95 : 60;
+      const headerHeight = n.nodeType === 'actor' ? 65 : 60;
       const minSlot = Math.min(...slots);
       const maxSlot = Math.max(...slots);
-      const startY = Math.max(0, 160 + minSlot * 50 - headerHeight - 4);
-      const endY = 160 + maxSlot * 50 - headerHeight;
+      const startY = Math.max(0, 210 + minSlot * 50 - headerHeight - 4);
+      const endY = 210 + maxSlot * 50 - headerHeight;
       const height = Math.max(22, endY - startY + 22);
 
       const nextActivations = [

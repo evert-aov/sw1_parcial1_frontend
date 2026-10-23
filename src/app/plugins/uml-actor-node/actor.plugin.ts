@@ -4,10 +4,9 @@ import { NodePlugin } from '../../core/plugins/node-plugin.contract';
 import { calcPos } from '../../plugin-sdk/node-creation';
 import { UmlActorNodeComponent } from './uml-actor-node.component';
 
-const dynamicWidth = (node: UmlClassNode): number => 65;
-const width = (node: UmlClassNode): number =>
-  Math.max(50, node.customWidth || (node.isCustomSize ? node.width : 0) || 65);
-const height = (node: UmlClassNode): number => node.customHeight || node.height || 95;
+const dynamicWidth = (_node: UmlClassNode): number => 65;
+const width = (_node: UmlClassNode): number => 65;
+const height = (_node: UmlClassNode): number => 65;
 
 export const actorPlugin: NodePlugin = {
   metadata: {
@@ -25,7 +24,7 @@ export const actorPlugin: NodePlugin = {
     width,
     height,
     dynamicWidth,
-    minWidth: 50,
+    minWidth: 65,
     minHeight: 65,
     bottomOffset: -44,
     zIndex: [20, 25],
@@ -83,7 +82,7 @@ export const actorPlugin: NodePlugin = {
       nodeType: 'actor',
       position: pos,
       width: 65,
-      height: 95,
+      height: 65,
       color: '#FEF2DD',
       attributes: [],
       methods: [],
