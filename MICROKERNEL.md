@@ -122,3 +122,10 @@ inputs/outputs dinámicos, creación de una extensión desconocida, geometría y
 IA/XMI/exportadores instalados, además de las regresiones existentes de UML, XMI e imágenes.
 La verificación de DOM en jsdom no sustituye una revisión visual en navegador de arrastre,
 conectores y exportación.
+
+## Capacidad de voz del asistente
+
+`AiAssistantService.speech(diagramId, messageId, voice)` amplía el puerto con una descarga
+binaria autenticada. El núcleo no conoce Edge TTS ni administra audio. Captura y reproducción
+residen en servicios independientes del plug-in `ai-assistant`; la síntesis y su caché pertenecen
+a FastAPI, detrás de NestJS. La voz no aplica propuestas ni modifica el historial del canvas.

@@ -27,6 +27,13 @@ describe('Group conversation API adapter', () => {
     expect(Object.keys(http.post.mock.calls[0][1])).not.toContain('sender');
   });
 
+  it('requests speech by message ID with only a voice choice and receives binary audio', async () => {
+    const blob = new Blob(['mpeg'], { type: 'audio/mpeg' });
+    http.post.mockReturnValue(of(blob));
+    expect(await firstValueFrom(service.speech('diagram', 'message', 'marcelo'))).toBe(blob);
+    expect(http.post).toHaveBeenCalledWith('/api/conversations/diagram/messages/message/speech', { voice: 'marcelo' }, { responseType: 'blob' });
+  });
+
   it('retrieves private attachment bytes using HttpClient', async () => {
     const blob = new Blob(['audio']);
     http.get.mockReturnValue(of(blob));

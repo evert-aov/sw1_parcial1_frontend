@@ -6,16 +6,17 @@ import { AuthService } from '../../../core/services/auth.service';
 import { TranslatePipe } from '../../../core/i18n/index';
 import { ChatMessage, ChatProvider } from '../../../core/plugins/contracts/ai-assistant.service.contract';
 import { ConversationStateService } from '../conversation-state.service';
+import { ChatSpeechService } from '../chat-speech.service';
 import { ChatMediaService } from '../chat-media.service';
 import { AiAssistantService } from '../ai-assistant.service';
 import { ChatMarkdownComponent } from '../chat-markdown.component';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroArrowsPointingIn, heroArrowsPointingOut, heroCamera, heroChatBubbleLeftRight, heroCheck, heroChevronDown, heroChevronLeft, heroChevronRight, heroClipboard, heroMicrophone, heroPaperAirplane, heroPhoto, heroPlus, heroSparkles, heroStop, heroXMark } from '@ng-icons/heroicons/outline';
+import { heroArrowsPointingIn, heroArrowsPointingOut, heroCamera, heroChatBubbleLeftRight, heroCheck, heroChevronDown, heroChevronLeft, heroChevronRight, heroClipboard, heroMicrophone, heroPaperAirplane, heroPhoto, heroPlus, heroSparkles, heroStop, heroSpeakerWave, heroXMark } from '@ng-icons/heroicons/outline';
 
 /** Panel grupal: presenta conversación y propuestas sin ejecutar mutaciones locales del AST. */
 @Component({ selector: 'app-ai-assistant-panel', standalone: true, changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, TranslatePipe, ChatMarkdownComponent, NgIconComponent],
-  providers: [ConversationStateService, ChatMediaService, provideIcons({ heroArrowsPointingIn, heroArrowsPointingOut, heroCamera, heroChatBubbleLeftRight, heroCheck, heroChevronDown, heroChevronLeft, heroChevronRight, heroClipboard, heroMicrophone, heroPaperAirplane, heroPhoto, heroPlus, heroSparkles, heroStop, heroXMark })],
+  providers: [ConversationStateService, ChatMediaService, ChatSpeechService, provideIcons({ heroArrowsPointingIn, heroArrowsPointingOut, heroCamera, heroChatBubbleLeftRight, heroCheck, heroChevronDown, heroChevronLeft, heroChevronRight, heroClipboard, heroMicrophone, heroPaperAirplane, heroPhoto, heroPlus, heroSparkles, heroStop, heroSpeakerWave, heroXMark })],
   templateUrl: './ai-assistant-panel.component.html',
   styleUrl: './ai-assistant-panel.component.css',
   host: { '[class.panel-expanded]': 'expanded()', '[style.--panel-width]': 'panelWidth() + "px"', '(document:pointerdown)': 'dismissMenus($event)', '(keydown.escape)': 'onEscape($event)' },
@@ -23,12 +24,14 @@ import { heroArrowsPointingIn, heroArrowsPointingOut, heroCamera, heroChatBubble
 export class AiAssistantPanelComponent implements OnDestroy {
   readonly state = inject(ConversationStateService);
   readonly media = inject(ChatMediaService);
+  readonly speech = inject(ChatSpeechService);
+  readonly attachmentPlaying = signal(false);
   readonly auth = inject(AuthService);
   private readonly api = inject(AiAssistantService);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly expanded = signal(false);
   readonly panelWidth = signal(420);
-  readonly menu = signal<'attachments' | 'models' | null>(null);
+  readonly menu = signal<'attachments' | 'models' | 'voice' | null>(null);
   private resizeStart: { x: number; width: number } | null = null;
   readonly isOpen = input(false);
   readonly diagramId = input<string | null>(null);
@@ -48,7 +51,7 @@ export class AiAssistantPanelComponent implements OnDestroy {
   private lastSequence = 0;
 
   /** Alterna el menú solicitado y mantiene un solo desplegable abierto. */
-  toggleMenu(menu: 'attachments' | 'models'): void { this.menu.update(current => current === menu ? null : menu); }
+  toggleMenu(menu: 'attachments' | 'models' | 'voice'): void { this.menu.update(current => current === menu ? null : menu); }
 
   /** Selecciona un proveedor disponible sin reiniciar la conversación ni el borrador. */
   selectProvider(provider: ChatProvider): void {
@@ -117,6 +120,8 @@ export class AiAssistantPanelComponent implements OnDestroy {
         this.generation++;
         this.state.connect(diagramId);
         this.media.reset();
+        this.speech.reset(diagramId);
+        this.attachmentPlaying.set(false);
         this.prompt.set('');
         this.error.set('');
         this.applying.set(null);
@@ -137,7 +142,50 @@ export class AiAssistantPanelComponent implements OnDestroy {
       }
       this.lastSequence = latest;
     });
+    effect(() => {
+      const messages = this.state.messages();
+      untracked(() => this.speech.observe(messages));
+    });
+    effect(() => {
+      const blocked = this.media.recording() || this.media.busy() || this.attachmentPlaying();
+      untracked(() => this.speech.setBlocked(blocked));
+    });
+    effect(() => {
+      if (!this.isOpen()) untracked(() => this.speech.reset(this.diagramId()));
+    });
     effect(() => { const models = this.state.models(); if (models) this.provider.set(models.defaultProvider); });
+  }
+
+  /** Activa escucha solo para este participante; no cambia si el mensaje consulta a la IA. */
+  toggleVoice(): void {
+    const room = this.diagramId();
+    if (room && this.state.connected()) this.speech.toggle(room, this.state.messages());
+  }
+
+  /** Lee una respuesta guardada tras detener cualquier clip humano en reproducción. */
+  playSpeech(message: ChatMessage): void {
+    const room = this.diagramId();
+    if (!room || this.media.recording() || this.media.busy()) return;
+    this.pauseAttachments();
+    this.speech.setBlocked(false);
+    this.speech.play(room, message);
+  }
+
+  /** Detiene sonidos antes de abrir el micrófono; el clip conserva la revisión y envío explícitos. */
+  async toggleRecording(): Promise<void> {
+    if (!this.media.recording()) {
+      this.speech.stop();
+      this.pauseAttachments();
+      this.speech.setBlocked(true);
+    }
+    await this.media.toggleRecording();
+    this.speech.setBlocked(this.media.recording() || this.media.busy());
+  }
+
+  /** Pausa clips humanos para que grabación y síntesis no se superpongan. */
+  private pauseAttachments(): void {
+    this.element.nativeElement.querySelectorAll('audio').forEach(audio => audio.pause());
+    this.attachmentPlaying.set(false);
   }
 
   /** Publica una intervención; limpia el borrador únicamente tras aceptación del servidor. */
@@ -231,7 +279,7 @@ export class AiAssistantPanelComponent implements OnDestroy {
   }
 
   /** Revoca todos los recursos locales al cerrar el panel. */
-  ngOnDestroy(): void { this.generation++; this.releaseAssets(); }
+  ngOnDestroy(): void { this.generation++; this.speech.reset(null); this.releaseAssets(); }
 
   /** Evita retener imágenes y audios después de salir de la conversación. */
   private releaseAssets(): void { Object.values(this.assets()).forEach(url => URL.revokeObjectURL(url)); this.assets.set({}); }

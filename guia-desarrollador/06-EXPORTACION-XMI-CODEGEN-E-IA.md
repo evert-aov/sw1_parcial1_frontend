@@ -113,3 +113,49 @@ Los textos nuevos se encuentran en los diccionarios `es.ts` y `en.ts`.
 El sidebar izquierdo permite ocultar toolbox/explorador con su botón de cierre o al pulsar
 la pestaña activa. Una barra estrecha mantiene accesos independientes a ambas secciones.
 El host solo coordina apertura/cierre mediante outputs; no importa la implementación del chat.
+
+## Modo voz por participante
+
+El compositor mantiene su altura y añade un botón de altavoz con menú de escucha automática y
+voces Sofía/Marcelo (Bolivia). La opción se inicia apagada al abrir o cambiar de sala. No altera
+la selección «Chat de equipo / Consultar a la IA»: activar escucha no solicita inferencias.
+Cada respuesta completada ofrece **Escuchar respuesta** y **Detener audio**.
+
+`ChatSpeechService` pertenece al plug-in, consume `AiAssistantService.speech()` y coordina una
+cola local de hasta diez respuestas. Una respuesta recibida por sincronización no se lee de
+nuevo; activar voz no reproduce historial anterior ni mensajes humanos. Una cola saturada o
+un fallo pausa la escucha automática; se puede reintentar individualmente sin reenviar texto.
+No hay temporizadores de sondeo TTS ni llamadas al catálogo al cambiar la voz.
+
+El micrófono sigue funcionando por clips: grabar, detener, revisar y enviar. Antes de grabar
+se pausa el audio; durante captura/procesamiento se bloquea la reproducción de la IA. Cerrar
+el panel, cambiar de sala, detener o cambiar de voz cancela la descarga y revoca la URL Blob.
+La elección de escucha es individual: el resto del equipo conserva texto y participación.
+El navegador puede bloquear reproducción automática; se conserva el audio y se ofrece
+reproducción manual dentro del clic, sin repetir la descarga.
+Las propuestas conservan el proceso de revisión y aplicación explícita.
+
+Detalles de contratos, dependencias y operación: [modo voz](../../ia/docs/voice-mode/README.md).
+
+## Avisos del chat y recuperación
+
+`ConversationRealtimeService` es un adaptador privado del plug-in registrado junto a
+`AiAssistantService`. Abre el namespace `/conversations` en el servidor Socket.IO configurado,
+con el JWT actual en `auth.token`. `watch_conversation` autoriza una sala por conexión. Este
+canal tiene validación propia y no depende de la identidad declarada del canal del lienzo.
+
+`ConversationStateService` carga historial al abrir y después ante `conversation_changed`.
+Agrupa avisos por 150 ms, descarta revisiones antiguas y conserva los recibidos durante una
+consulta activa. Solo inicia otro ciclo cuando termina el anterior. Un alta confirmada tras
+reconexión fuerza recuperación; las páginas intermedias completan huecos del historial visible.
+
+La comprobación HTTP de respaldo ocurre 30 segundos después del ciclo exitoso. Las pestañas
+ocultas suspenden consultas automáticas de historial; al volver se recuperan cambios. Cerrar
+el panel o cambiar de diagrama cancela HTTP, temporizadores y el socket del chat. Los fallos de
+historial y catálogo tienen demoras crecientes de 4 hasta 60 segundos. La apertura del panel
+no solicita inferencias, resúmenes ni captura de micrófono.
+
+El socket solo avisa; la lectura REST vuelve a autorizar los datos. Si falla el canal de avisos,
+el chat sigue recuperando cambios mediante la comprobación de respaldo. No se modifican los
+contratos del Core ni se añaden imports entre plug-ins. Ver el
+[reporte de sincronización](../../ia/docs/chat-notifications/README.md).

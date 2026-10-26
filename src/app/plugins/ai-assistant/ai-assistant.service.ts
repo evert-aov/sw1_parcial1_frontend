@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AiAssistantService as ConversationPort, ChatHistory, ChatMessage, ChatModels, ChatSubmission } from '../../core/plugins/contracts/ai-assistant.service.contract';
+import { AiAssistantService as ConversationPort, ChatHistory, ChatMessage, ChatModels, ChatSubmission, ChatVoice } from '../../core/plugins/contracts/ai-assistant.service.contract';
 
 /** Adaptador del API autorizado de NestJS; nunca se conecta directamente a los modelos. */
 @Injectable({ providedIn: 'root' })
@@ -36,6 +36,11 @@ export class AiAssistantService implements ConversationPort {
   /** Recupera el medio con el interceptor JWT habitual y sin URL pública. */
   attachment(diagramId: string, messageId: string): Observable<Blob> {
     return this.http.get(`${this.baseUrl}/${diagramId}/messages/${messageId}/attachment`, { responseType: 'blob' });
+  }
+
+  /** Recupera voz de texto persistido a través de NestJS y su autorización habitual. */
+  speech(diagramId: string, messageId: string, voice: ChatVoice): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/${diagramId}/messages/${messageId}/speech`, { voice }, { responseType: 'blob' });
   }
 
   /** Desenvuelve la respuesta estándar del backend para consultas. */

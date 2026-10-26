@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { PluginRegistryService } from '../plugin-registry.service';
 
 export type ChatProvider = 'ollama' | 'vertex';
+export type ChatVoice = 'sofia' | 'marcelo';
 export interface ChatAttachment { kind: 'image' | 'audio'; mimeType: string; data: string; name?: string }
 export interface ChatSubmission { clientMessageId: string; content: string; provider: ChatProvider; askAssistant: boolean; attachment?: ChatAttachment }
 export interface ChatProposal { id: string; status: 'pending' | 'applied'; baseRevision: string; summary: string; ast: { nodes: unknown[]; connections: unknown[] } }
@@ -42,6 +43,8 @@ export interface AiAssistantService {
   apply(diagramId: string, proposalId: string): Observable<unknown>;
   /** Descarga un adjunto mediante la sesión autenticada. */
   attachment(diagramId: string, messageId: string): Observable<Blob>;
+  /** Sintetiza una respuesta existente; devuelve audio privado sin crear otro turno. */
+  speech(diagramId: string, messageId: string, voice: ChatVoice): Observable<Blob>;
 }
 export const AiAssistantService: InjectionToken<AiAssistantService> = new InjectionToken<AiAssistantService>('AiAssistantService', {
   providedIn: 'root', factory: () => inject(PluginRegistryService).resolve(AiAssistantService),

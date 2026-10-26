@@ -1,3 +1,4 @@
+import { ConversationRealtimeService } from './conversation-realtime.service';
 import { PluginDefinition } from '../../core/plugins/plugin.contract';
 import { AiAssistantService } from './ai-assistant.service';
 import { AiAssistantService as AiAssistantServiceContract } from '../../core/plugins/contracts/ai-assistant.service.contract';
@@ -10,7 +11,7 @@ export const aiAssistantPlugin: PluginDefinition = {
     category: 'tool',
     labelKey: 'plugins.tools.ai-assistant',
   },
-  providers: [AiAssistantService],
+  providers: [AiAssistantService, ConversationRealtimeService],
   capabilities: [
     { token: AiAssistantServiceContract, create: (injector) => injector.get(AiAssistantService) },
   ],

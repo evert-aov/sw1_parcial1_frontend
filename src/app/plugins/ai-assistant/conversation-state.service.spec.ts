@@ -1,7 +1,8 @@
 import '@angular/compiler';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { of, Subject, throwError } from 'rxjs';
+import { NEVER, of, Subject, throwError } from 'rxjs';
+import { ConversationRealtimeService, ConversationNotice } from './conversation-realtime.service';
 import { ConversationStateService } from './conversation-state.service';
 import { AiAssistantService } from './ai-assistant.service';
 import { ChatHistory, ChatMessage, ChatModels } from '../../core/plugins/contracts/ai-assistant.service.contract';
@@ -14,12 +15,15 @@ function message(id: string, sequence: number): ChatMessage {
 describe('Conversation state recovery', () => {
   const api = { history: vi.fn(), getAvailableModels: vi.fn(), submit: vi.fn(), retry: vi.fn() };
   let state: ConversationStateService;
+  let notices: Subject<ConversationNotice>;
   beforeEach(() => {
     vi.useFakeTimers();
+    notices = new Subject<ConversationNotice>();
     Object.values(api).forEach(mock => mock.mockReset());
     api.history.mockReturnValue(of({ messages: [], revision: 0, hasMore: false }));
     api.getAvailableModels.mockReturnValue(of({ defaultProvider: 'ollama', mediaProvider: 'vertex', models: [] }));
-    TestBed.configureTestingModule({ providers: [ConversationStateService, { provide: AiAssistantService, useValue: api }] });
+    TestBed.configureTestingModule({ providers: [ConversationStateService, { provide: AiAssistantService, useValue: api },
+      { provide: ConversationRealtimeService, useValue: { watch: () => notices } } ] });
     state = TestBed.inject(ConversationStateService);
   });
   afterEach(() => { state.ngOnDestroy(); TestBed.resetTestingModule(); vi.useRealTimers(); });
@@ -36,17 +40,76 @@ describe('Conversation state recovery', () => {
     expect(api.getAvailableModels).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps one slow catalog request while history continues polling', async () => {
+  it('loads the catalog once and waits thirty seconds for the history safety check', async () => {
     const models = new Subject<ChatModels>();
     api.getAvailableModels.mockReturnValue(models);
     state.connect('diagram');
     await vi.advanceTimersByTimeAsync(4500);
-    expect(api.history).toHaveBeenCalledTimes(4);
+    expect(api.history).toHaveBeenCalledTimes(1);
     expect(api.getAvailableModels).toHaveBeenCalledTimes(1);
     expect(state.connected()).toBe(true);
     models.next({ defaultProvider: 'ollama', mediaProvider: 'vertex', models: [] });
     await vi.advanceTimersByTimeAsync(6000);
     expect(api.getAvailableModels).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes on changes and coalesces duplicate or stale revisions', async () => {
+    state.connect('diagram');
+    await Promise.resolve();
+    api.history.mockReturnValue(of({ messages: [message('new', 1)], revision: 5, hasMore: false }));
+    notices.next({ kind: 'changed', revision: 5 });
+    notices.next({ kind: 'changed', revision: 5 });
+    await vi.advanceTimersByTimeAsync(150);
+    expect(api.history).toHaveBeenCalledTimes(2);
+    notices.next({ kind: 'changed', revision: 4 });
+    notices.next({ kind: 'changed', revision: 5 });
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(api.history).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(api.history).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps a single request in flight and recovers a change that arrives during it', async () => {
+    const pending = new Subject<ChatHistory>();
+    api.history.mockReturnValueOnce(pending).mockReturnValue(of({ messages: [], revision: 2, hasMore: false }));
+    state.connect('diagram');
+    notices.next({ kind: 'changed', revision: 2 });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(api.history).toHaveBeenCalledTimes(1);
+    pending.next({ messages: [], revision: 1, hasMore: false });
+    await vi.advanceTimersByTimeAsync(150);
+    expect(api.history).toHaveBeenCalledTimes(2);
+  });
+
+  it('resynchronizes after reconnect and unsubscribes notifications when closed', async () => {
+    state.connect('diagram');
+    await Promise.resolve();
+    notices.next({ kind: 'ready' });
+    await vi.advanceTimersByTimeAsync(150);
+    expect(api.history).toHaveBeenCalledTimes(2);
+    expect(notices.observed).toBe(true);
+    state.connect(null);
+    expect(notices.observed).toBe(false);
+    notices.next({ kind: 'changed', revision: 9 });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(api.history).toHaveBeenCalledTimes(2);
+  });
+
+  it('pauses history in a hidden tab and recovers missed changes when visible', async () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+    try {
+      state.connect('diagram');
+      await Promise.resolve();
+      hidden.mockReturnValue(true);
+      document.dispatchEvent(new Event('visibilitychange'));
+      notices.next({ kind: 'changed', revision: 4 });
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(api.history).toHaveBeenCalledTimes(1);
+      hidden.mockReturnValue(false);
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(150);
+      expect(api.history).toHaveBeenCalledTimes(2);
+    } finally { hidden.mockRestore(); }
   });
 
   it('waits four seconds after a 503 and stops retries on destruction', async () => {
@@ -149,7 +212,7 @@ describe('Conversation state recovery', () => {
     api.history.mockReturnValue(of({ messages: [message('second', 2), message('first', 1)], revision: 1, hasMore: false }));
     state.connect('diagram');
     await Promise.resolve();
-    await vi.advanceTimersByTimeAsync(1500);
+    await vi.advanceTimersByTimeAsync(30_000);
     expect(state.messages().map(item => item.id)).toEqual(['first', 'second']);
   });
 });
@@ -161,12 +224,13 @@ describe('Conversation recovery after a long disconnect', () => {
       .mockReturnValueOnce(of({ revision: 3, messages: [message('third', 3)], hasMore: true }))
       .mockReturnValueOnce(of({ revision: 3, messages: [message('first', 1), message('second', 2)], hasMore: false }));
     vi.useFakeTimers();
-    TestBed.configureTestingModule({ providers: [ConversationStateService, { provide: AiAssistantService, useValue: api }] });
+    TestBed.configureTestingModule({ providers: [ConversationStateService, { provide: AiAssistantService, useValue: api },
+      { provide: ConversationRealtimeService, useValue: { watch: () => NEVER } } ] });
     const state = TestBed.inject(ConversationStateService);
     try {
       state.connect('diagram');
       await Promise.resolve();
-      await vi.advanceTimersByTimeAsync(1500);
+      await vi.advanceTimersByTimeAsync(30_000);
       expect(state.messages().map(item => item.sequence)).toEqual([1, 2, 3]);
       expect(api.history).toHaveBeenLastCalledWith('diagram', 3);
     } finally { state.ngOnDestroy(); TestBed.resetTestingModule(); vi.useRealTimers(); }

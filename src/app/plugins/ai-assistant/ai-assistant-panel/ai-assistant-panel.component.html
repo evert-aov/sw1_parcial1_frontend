@@ -50,10 +50,19 @@
           <p class="mt-2 text-xs">{{ ('chat.source.' + message.source) | translate }}</p>
           @if (assets()[message.id]; as asset) {
             @if (message.source === 'image') { <img [src]="asset" [alt]="'chat.image' | translate" class="mt-2 max-h-64 rounded object-contain" /> }
-            @else { <audio controls [src]="asset" class="mt-2 max-w-full"></audio> }
+            @else { <audio controls (play)="attachmentPlaying.set(true)" (pause)="attachmentPlaying.set(false)" (ended)="attachmentPlaying.set(false)" [src]="asset" class="mt-2 max-w-full"></audio> }
           } @else { <button type="button" class="mt-1 text-xs underline" (click)="openAttachment(message)">{{ 'chat.openMedia' | translate }}</button> }
         }
         <p class="message-meta mt-2">{{ ('chat.status.' + message.status) | translate }}</p>
+        @if (message.source === 'assistant' && message.status === 'completed') {
+          @if (speech.playing() === message.id || speech.loading() === message.id) {
+            <button type="button" class="text-button" (click)="speech.stop()">{{ 'chat.voiceStop' | translate }}</button>
+          } @else {
+            <button type="button" class="text-button" (click)="playSpeech(message)" [disabled]="media.recording() || media.busy()">
+              {{ 'chat.voiceListen' | translate }}
+            </button>
+          }
+        }
         @if (message.model) { <p class="message-meta">{{ message.provider }} · {{ message.model }}</p> }
         @if (message.status === 'failed' && message.sender.userId === auth.currentUser()?.id) {
           <button type="button" class="mt-2 rounded border px-2 py-1 text-sm" (click)="state.retry(message.id)">{{ 'chat.retry' | translate }}</button>
@@ -77,7 +86,7 @@
     }
     </div>
   </div>
-  @if (error() || state.error() || media.error()) { <p role="alert" class="chat-error">{{ (error() || state.error() || media.error()) | translate }}</p> }
+  @if (error() || state.error() || media.error() || speech.error()) { <p role="alert" class="chat-error">{{ (error() || state.error() || media.error() || speech.error()) | translate }}</p> }
   <footer class="composer" (paste)="onPaste($event)" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
     <div class="composer-content">
       <div class="composer-context">
@@ -119,12 +128,32 @@
             </div>
           }
         </div>
-        <button type="button" class="icon-button record-button" [class.recording]="media.recording()" (click)="media.toggleRecording()"
+        <button type="button" class="icon-button record-button" [class.recording]="media.recording()" (click)="toggleRecording()"
           [disabled]="state.sending() || media.busy()" [title]="(media.recording() ? 'chat.stopRecording' : 'chat.record') | translate"
           [attr.aria-label]="(media.recording() ? 'chat.stopRecording' : 'chat.record') | translate" [attr.aria-pressed]="media.recording()">
           <ng-icon [name]="media.recording() ? 'heroStop' : 'heroMicrophone'" aria-hidden="true" />
         </button>
         @if (media.recording()) { <span class="recording-time" role="status">{{ media.seconds() }} / 60 s</span> }
+        <div class="menu-anchor" data-chat-menu>
+          <button type="button" class="icon-button" data-menu-trigger="voice" (click)="toggleMenu('voice')"
+            [attr.aria-expanded]="menu() === 'voice'" [class.recording]="speech.enabled()"
+            [title]="'chat.voiceSettings' | translate" [attr.aria-label]="'chat.voiceSettings' | translate">
+            <ng-icon name="heroSpeakerWave" aria-hidden="true" />
+          </button>
+          @if (menu() === 'voice') {
+            <div class="chat-dropdown voice-menu" role="group" [attr.aria-label]="'chat.voiceSettings' | translate">
+              <button type="button" (click)="toggleVoice()" [attr.aria-pressed]="speech.enabled()" [disabled]="!state.connected()">
+                {{ (speech.enabled() ? 'chat.voiceDisable' : 'chat.voiceEnable') | translate }}
+              </button>
+              <button type="button" (click)="speech.selectVoice('sofia')" [attr.aria-pressed]="speech.voice() === 'sofia'">{{ 'chat.voiceSofia' | translate }}</button>
+              <button type="button" (click)="speech.selectVoice('marcelo')" [attr.aria-pressed]="speech.voice() === 'marcelo'">{{ 'chat.voiceMarcelo' | translate }}</button>
+              <p class="voice-notice">{{ 'chat.voiceNotice' | translate }}</p>
+              @if (speech.playing() || speech.loading()) {
+                <button type="button" (click)="speech.stop()">{{ 'chat.voiceStop' | translate }}</button>
+              }
+            </div>
+          }
+        </div>
         <div class="model-selector menu-anchor" data-chat-menu>
           <button type="button" class="model-trigger" data-menu-trigger="models" (click)="toggleMenu('models')"
             [disabled]="state.sending()" [attr.aria-expanded]="menu() === 'models'" aria-controls="chat-models"
@@ -153,7 +182,7 @@
           <ng-icon name="heroPaperAirplane" aria-hidden="true" />
         </button>
       </div>
-      <p class="composer-shortcuts">{{ 'chat.keyboardHint' | translate }}</p>
+      <p class="composer-shortcuts" role="status">{{ (speech.loading() ? 'chat.voiceLoading' : speech.playing() ? 'chat.voicePlaying' : speech.enabled() ? 'chat.voiceEnabled' : 'chat.keyboardHint') | translate }}</p>
       <div [hidden]="!media.cameraOpen()" class="camera-preview">
         <video #cameraVideo autoplay playsinline muted></video>
         <div><button type="button" class="text-button" (click)="media.capture(cameraVideo)">{{ 'chat.capture' | translate }}</button><button type="button" class="text-button" (click)="media.closeCamera()">{{ 'chat.cancel' | translate }}</button></div>

@@ -96,3 +96,7 @@ ng-icon { flex-shrink: 0; font-size: 17px; }
 }
 .composer-shortcuts { min-height: 32px; padding: 14px 60px 0 4px; color: var(--chat-muted); font-size: 10px; }
 @media (max-width: 700px) { .composer-shortcuts { display: none; } }
+
+.voice-menu { left: 0; right: auto; width: 245px; max-width: calc(100vw - 100px); }
+.voice-menu button[aria-pressed="true"] { color: var(--chat-accent); background: color-mix(in srgb, currentColor 10%, transparent); }
+.voice-notice { font-size: 11px; line-height: 1.5; padding: 8px 10px; white-space: normal; color: var(--chat-muted); }

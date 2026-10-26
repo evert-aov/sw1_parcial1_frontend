@@ -1,12 +1,28 @@
+import { DOCUMENT } from '@angular/common';
 import { Injectable, OnDestroy, inject, signal } from '@angular/core';
-import { firstValueFrom, Observable, Subject, takeUntil, timeout } from 'rxjs';
+import { firstValueFrom, Observable, Subject, Subscription, takeUntil, timeout } from 'rxjs';
+import { ConversationRealtimeService } from './conversation-realtime.service';
 import { AiAssistantService } from './ai-assistant.service';
 import { ChatMessage, ChatModels, ChatSubmission } from '../../core/plugins/contracts/ai-assistant.service.contract';
 
-/** Estado del panel con recuperación periódica, deduplicación y aislamiento entre diagramas. */
+/** Sincroniza por avisos con respaldo periódico, deduplicación y aislamiento entre diagramas. */
 @Injectable()
 export class ConversationStateService implements OnDestroy {
   private readonly api = inject(AiAssistantService);
+  private readonly realtime = inject(ConversationRealtimeService);
+  private readonly document = inject(DOCUMENT);
+  private notices?: Subscription;
+  private inFlight = false;
+  private requestedRevision = -1;
+  private forceRefresh = false;
+  private timerDue = 0;
+  private failures = 0;
+  private modelFailures = 0;
+  /** Suspende consultas en segundo plano y recupera cambios al volver a la pestaña. */
+  private readonly visibilityChanged = () => {
+    if (this.document.hidden) { clearTimeout(this.timer); this.timerDue = 0; }
+    else this.refresh();
+  };
   readonly messages = signal<ChatMessage[]>([]);
   readonly models = signal<ChatModels | null>(null);
   readonly connected = signal(false);
@@ -36,6 +52,11 @@ export class ConversationStateService implements OnDestroy {
     if (!diagramId) return;
     const generation = this.generation;
     void this.loadModels(generation);
+    this.document.addEventListener('visibilitychange', this.visibilityChanged);
+    this.notices = this.realtime.watch(diagramId).subscribe(notice => {
+      if (generation !== this.generation || notice.kind === 'offline') return;
+      this.refresh(notice.kind === 'changed' ? notice.revision : undefined);
+    });
     void this.poll(generation);
   }
 
@@ -55,6 +76,7 @@ export class ConversationStateService implements OnDestroy {
       if (generation !== this.generation) return false;
       this.merge([message]);
       this.pending = undefined;
+      this.refresh();
       return true;
     } catch { if (generation === this.generation) this.error.set('chat.sendFailed'); return false; }
     finally { if (generation === this.generation) this.sending.set(false); }
@@ -78,7 +100,7 @@ export class ConversationStateService implements OnDestroy {
     const generation = this.generation;
     try {
       const message = await this.request(this.api.retry(this.diagramId, messageId));
-      if (generation === this.generation) this.merge([message]);
+      if (generation === this.generation) { this.merge([message]); this.refresh(); }
     } catch { if (generation === this.generation) this.error.set('chat.sendFailed'); }
   }
 
@@ -92,6 +114,15 @@ export class ConversationStateService implements OnDestroy {
   /** Invalida respuestas antes de cancelar las suscripciones HTTP y ambos temporizadores. */
   private disconnect(): void {
     this.generation++;
+    this.notices?.unsubscribe();
+    this.notices = undefined;
+    this.document.removeEventListener('visibilitychange', this.visibilityChanged);
+    this.inFlight = false;
+    this.forceRefresh = false;
+    this.requestedRevision = -1;
+    this.timerDue = 0;
+    this.failures = 0;
+    this.modelFailures = 0;
     clearTimeout(this.timer);
     clearTimeout(this.modelsTimer);
     this.diagramId = null;
@@ -112,17 +143,43 @@ export class ConversationStateService implements OnDestroy {
       const models = await this.request(this.api.getAvailableModels());
       if (generation !== this.generation) return;
       this.models.set(models);
+      this.modelFailures = 0;
       if (this.error() === 'chat.unavailable') this.error.set('');
     } catch {
       if (generation !== this.generation) return;
       this.error.set('chat.unavailable');
-      this.modelsTimer = setTimeout(() => void this.loadModels(generation), 4000);
+      this.modelsTimer = setTimeout(() => void this.loadModels(generation), Math.min(4000 * 2 ** this.modelFailures++, 60_000));
     }
   }
 
-  /** Consulta sin solapamientos; al reconectar recupera el estado durable del servidor. */
+  /** Agrupa revisiones duplicadas y recuerda avisos que llegan durante una consulta activa. */
+  private refresh(revision?: number): void {
+    if (!this.diagramId || this.destroyed) return;
+    if (revision !== undefined) {
+      if (revision <= this.revision) return;
+      this.requestedRevision = Math.max(this.requestedRevision, revision);
+    } else this.forceRefresh = true;
+    if (!this.inFlight) this.schedule(150);
+  }
+
+  /** Programa el próximo acceso sin postergar avisos existentes ni consultar una pestaña oculta. */
+  private schedule(delay: number): void {
+    if (!this.diagramId || this.destroyed || this.document.hidden) return;
+    const due = Date.now() + delay;
+    if (this.timerDue && this.timerDue <= due) return;
+    clearTimeout(this.timer);
+    this.timerDue = due;
+    const generation = this.generation;
+    this.timer = setTimeout(() => { this.timerDue = 0; void this.poll(generation); }, delay);
+  }
+
+  /** Recupera cambios sin solapamientos y comprueba el historial cada treinta segundos como respaldo. */
   private async poll(generation: number): Promise<void> {
-    if (!this.diagramId || generation !== this.generation) return;
+    if (!this.diagramId || generation !== this.generation || this.inFlight || this.document.hidden) return;
+    this.inFlight = true;
+    this.forceRefresh = false;
+    this.requestedRevision = -1;
+    let succeeded = false;
     try {
       const page = await this.request(this.api.history(this.diagramId));
       if (generation !== this.generation) return;
@@ -140,9 +197,17 @@ export class ConversationStateService implements OnDestroy {
         this.revision = page.revision;
       }
       this.connected.set(true);
+      this.failures = 0;
+      succeeded = true;
     } catch { if (generation === this.generation) this.connected.set(false); }
     finally {
-      if (generation === this.generation) this.timer = setTimeout(() => void this.poll(generation), this.connected() ? 1500 : 4000);
+      if (generation === this.generation) {
+        this.inFlight = false;
+        const delay = succeeded
+          ? (this.forceRefresh || this.requestedRevision > this.revision ? 150 : 30_000)
+          : Math.min(4000 * 2 ** this.failures++, 60_000);
+        this.schedule(delay);
+      }
     }
   }
 

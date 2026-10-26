@@ -2,7 +2,8 @@ import '@angular/compiler';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, Subject, throwError } from 'rxjs';
+import { ConversationRealtimeService } from '../conversation-realtime.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ChatMessage } from '../../../core/plugins/contracts/ai-assistant.service.contract';
 import { AiAssistantService } from '../ai-assistant.service';
@@ -14,17 +15,20 @@ describe('Assistant panel reactive lifecycle', () => {
     history: vi.fn(),
     getAvailableModels: vi.fn(),
     apply: vi.fn(),
+    speech: vi.fn(),
   };
 
   beforeEach(() => {
     vi.useFakeTimers();
     api.apply.mockReset();
+    api.speech.mockReset().mockReturnValue(new Subject<Blob>());
     api.history.mockReset().mockReturnValue(of({ messages: [], revision: 0, hasMore: false }));
     api.getAvailableModels.mockReset().mockReturnValue(of({ defaultProvider: 'ollama', mediaProvider: 'vertex', models: [] }));
     TestBed.configureTestingModule({
       imports: [AiAssistantPanelComponent],
       providers: [
         { provide: AiAssistantService, useValue: api },
+        { provide: ConversationRealtimeService, useValue: { watch: () => NEVER } },
         { provide: AuthService, useValue: { currentUser: signal(null) } },
       ],
     });
@@ -208,6 +212,34 @@ describe('Assistant panel reactive lifecycle', () => {
     expect(panel.panelWidth()).toBe(560);
     dock.remove();
     Reflect.deleteProperty(parent, 'clientWidth');
+  });
+
+  it('keeps voice controls local without reconnecting history or changing Ask AI', async () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    const panel = fixture.componentInstance;
+    const connect = vi.spyOn(panel.state, 'connect');
+    const root: HTMLElement = fixture.nativeElement;
+    root.querySelector<HTMLButtonElement>('[data-menu-trigger="voice"]')!.click();
+    fixture.detectChanges();
+    const controls = root.querySelectorAll<HTMLButtonElement>('.voice-menu button');
+    expect(controls).toHaveLength(3);
+    controls[0].click();
+    controls[2].click();
+    expect(panel.speech.enabled()).toBe(true);
+    expect(panel.speech.voice()).toBe('marcelo');
+    expect(panel.askAssistant()).toBe(false);
+    panel.state.messages.set([{ id: 'reply', sequence: 1, content: 'Hello', source: 'assistant', status: 'completed', sender: { displayName: 'AI' }, createdAt: '' }]);
+    fixture.detectChanges();
+    expect(api.speech).toHaveBeenCalledTimes(1);
+    expect(connect).not.toHaveBeenCalled();
+    expect(api.getAvailableModels).toHaveBeenCalledTimes(1);
+    fixture.componentRef.setInput('diagramId', 'another-diagram');
+    fixture.detectChanges();
+    expect(panel.speech.enabled()).toBe(false);
+    expect(panel.speech.loading()).toBeNull();
   });
 
   it('renders an unavailable service without repeatedly initializing the panel', async () => {
