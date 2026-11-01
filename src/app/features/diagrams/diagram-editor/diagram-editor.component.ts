@@ -10,8 +10,10 @@ import {
   OnInit,
   ViewChild,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -45,6 +47,7 @@ import { ProjectService } from '../../../core/services/project.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { XmiService } from '../../../core/plugins/contracts/xmi.service.contract';
+import { AiAssistantCoordinator } from '../../../core/plugins/contracts/ai-assistant.service.contract';
 import { TranslatePipe, TranslationService } from '../../../core/i18n/index';
 import { CreateDiagramModalComponent } from './components/create-diagram-modal/create-diagram-modal.component';
 import { DiagramAppbarComponent } from './components/diagram-appbar/diagram-appbar.component';
@@ -169,6 +172,15 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
 
   /** Obtiene la instancia del servicio XMI si el plugin se encuentra registrado en el sistema. */
   get xmiService(): XmiService | null { return this.plugins.has(XmiService) ? this.plugins.resolve(XmiService) : null; }
+
+  /** Obtiene el coordinador reactivo de Kanon cuando el plugin expone su capacidad real. */
+  get aiCoordinator(): AiAssistantCoordinator | null {
+    if (!this.plugins.has(AiAssistantCoordinator)) return null;
+    const resolved = this.plugins.resolve(AiAssistantCoordinator) as Partial<AiAssistantCoordinator> | null;
+    return typeof resolved?.observeDiagramSnapshot === 'function'
+      ? (resolved as AiAssistantCoordinator)
+      : null;
+  }
   readonly toastService = inject(ToastService, { optional: true });
 
   readonly viewportService = inject(DiagramViewportService);
@@ -282,6 +294,51 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.collabCoordinator?.getNodeLock(nodeId);
 
   private subscriptions: Subscription[] = [];
+  private handledAiOpenRequests = 0;
+
+  /** Sincroniza instantáneas del diagrama con el motor de sugerencias y escucha aperturas del chat. */
+  constructor() {
+    this.handledAiOpenRequests = this.aiCoordinator?.openRequests() ?? 0;
+
+    effect(() => {
+      const diagramId = this.currentDiagramId();
+      const diagramType = this.activeDiagramType();
+      const nodes = this.nodes();
+      const connections = this.connections();
+      untracked(() => {
+        this.aiCoordinator?.observeDiagramSnapshot(diagramId, diagramType, nodes, connections);
+      });
+    });
+
+    effect(() => {
+      const requests = this.aiCoordinator?.openRequests() ?? 0;
+      if (requests <= this.handledAiOpenRequests) return;
+      this.handledAiOpenRequests = requests;
+      untracked(() => {
+        this.isAiPanelOpen.set(true);
+        this.deselectAll();
+      });
+    });
+
+    effect(() => {
+      const project = this.currentProject();
+      if (!project) return;
+      const count = project.memberCount ?? project.members?.length ?? 1;
+      const hasMultiple = count > 1;
+      untracked(() => {
+        this.aiCoordinator?.setHasMultipleCollaborators(hasMultiple);
+      });
+    });
+
+    effect(() => {
+      const suggestion = this.aiCoordinator?.noteInsertionRequest();
+      if (!suggestion) return;
+      untracked(() => {
+        this.addSuggestionAsFloatingNote(suggestion);
+        this.aiCoordinator?.clearNoteInsertionRequest();
+      });
+    });
+  }
 
   /** Inicializa suscripciones reactivas de ruta, auto-guardado y colaboración en tiempo real. */
   ngOnInit(): void {
@@ -291,6 +348,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   /** Libera suscripciones, guarda estado pendiente y desconecta sesión colaborativa al destruir. */
   ngOnDestroy(): void {
     this.onBeforeUnload();
+    this.aiCoordinator?.observeDiagramSnapshot(null, this.activeDiagramType(), [], []);
     this.subscriptions.forEach((s) => s.unsubscribe());
     this.collaborationService.disconnect();
   }
@@ -1102,6 +1160,39 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   addUseCase(customPos?: { x: number; y: number }): void { this.createNodeOfType('use_case', customPos); }
   /** Agrega una nota de comentario UML al lienzo. */
   addNote(customPos?: { x: number; y: number }): void { this.createNodeOfType('class', customPos, 'note'); }
+
+  /** Inserta una sugerencia autónoma de Kanon como nota flotante morada en el lienzo. */
+  addSuggestionAsFloatingNote(suggestion: { title: string; summary: string }): void {
+    if (this.isReadOnly()) return;
+    const scrollEl = this.diagramCanvas?.flowContainerRef?.nativeElement;
+    const scrollLeft = scrollEl?.scrollLeft || 0;
+    const scrollTop = scrollEl?.scrollTop || 0;
+
+    const existingNotes = this.nodes().filter((n) => (n.nodeType || '').toLowerCase() === 'note');
+    const offset = (existingNotes.length * 32) % 240;
+    const baseX = Math.max(80, scrollLeft + 160) + offset;
+    const baseY = Math.max(60, scrollTop + 120) + offset;
+
+    const newNote: UmlClassNode = {
+      id: `note_${crypto.randomUUID()}`,
+      name: `💡 ${suggestion.title}:\n${suggestion.summary}`,
+      nodeType: 'note',
+      position: { x: baseX, y: baseY },
+      width: 275,
+      height: 135,
+      color: '#F3E8FF',
+      attributes: [],
+      methods: [],
+    };
+
+    this.pushSnapshot();
+    this.nodes.set([...this.nodes(), newNote]);
+    this.selectionService?.selectSingleNode(newNote.id);
+    this.markAsUnsaved();
+    this.sendDiagramSync(this.nodes(), this.connections(), 'add_node');
+    const toastMsg = this.translationService.t('chat.noteAddedToast') || 'Nota flotante morada agregada al diagrama.';
+    this.toastService?.success?.(toastMsg);
+  }
   /** Agrega un paquete UML al lienzo. */
   addPackage(customPos?: { x: number; y: number }): void { this.createNodeOfType('package', customPos); }
   /** Agrega un nodo Boundary al lienzo. */

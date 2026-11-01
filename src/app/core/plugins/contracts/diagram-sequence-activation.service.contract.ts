@@ -15,6 +15,8 @@ export interface DiagramSequenceActivationService {
     activeDiagramType?: DiagramType,
   ): boolean;
   getLifelineLength(node: UmlClassNode | undefined, connections: UmlConnection[]): number;
+  getSequenceSlotCount(connections: UmlConnection[]): number;
+  getSequenceSlots(connections: UmlConnection[]): number[];
   getNodeActivations(
     node: UmlClassNode,
     connections: UmlConnection[],

@@ -39,7 +39,7 @@ export const boundaryPlugin: NodePlugin = {
       id: 'boundary',
       labelKey: 'plugins.nodes.boundary',
       icon: BoundarySvgComponent,
-      diagramTypes: [DiagramType.COMMUNICATION],
+      diagramTypes: [],
     },
   ],
   inputs: (context) => ({ ...context }),

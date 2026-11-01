@@ -223,8 +223,12 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
 
   readonly canvasLayers: EFCanvasLayer[] = [EFCanvasLayer.GROUPS, EFCanvasLayer.NODES, EFCanvasLayer.CONNECTIONS];
 
-  readonly scaledBoardWidth = computed(() => Math.round(computeBoardWidth(this.nodes()) * (this.zoomLevel() / 100)));
-  readonly scaledBoardHeight = computed(() => Math.round(computeBoardHeight(this.nodes()) * (this.zoomLevel() / 100)));
+  readonly scaledBoardWidth = computed(() =>
+    Math.round(computeBoardWidth(this.nodes(), this.connections(), this.activeDiagramType()) * (this.zoomLevel() / 100))
+  );
+  readonly scaledBoardHeight = computed(() =>
+    Math.round(computeBoardHeight(this.nodes(), this.connections(), this.activeDiagramType()) * (this.zoomLevel() / 100))
+  );
   readonly hasNoRealNodes = computed(() => !this.nodes().some((n) => !n.isAnchor));
   readonly canvasEmptyStateMessage = computed(() =>
     this.translationService.translate(this.geometryService.getEmptyStateMessageKey(this.activeDiagramType())),

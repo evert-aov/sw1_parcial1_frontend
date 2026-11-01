@@ -6,110 +6,364 @@
       (pointercancel)="stopResize()" (lostpointercapture)="stopResize()" (keydown)="resizeWithKeyboard($event)"></div>
   }
   <header class="panel-header">
-    <div class="panel-heading"><ng-icon name="heroSparkles" aria-hidden="true" />
-      <h2>{{ 'chat.title' | translate }}</h2>
-      <span class="connection-dot" [class.connected]="state.connected()" [title]="(state.connected() ? 'chat.connected' : 'chat.reconnecting') | translate"
-        [attr.aria-label]="(state.connected() ? 'chat.connected' : 'chat.reconnecting') | translate" role="status"></span>
+    <div class="panel-heading">
+      <ng-icon name="heroSparkles" aria-hidden="true" />
+      <div class="heading-copy">
+        <h2>{{ 'chat.title' | translate }}</h2>
+        <span class="heading-subtitle">{{ 'chat.kanonSubtitle' | translate }}</span>
+      </div>
+      <span class="connection-dot" [class.connected]="state.connected()"
+        [title]="(state.connected() ? 'chat.connected' : 'chat.reconnecting') | translate"
+        [attr.aria-label]="(state.connected() ? 'chat.connected' : 'chat.reconnecting') | translate"
+        role="status"></span>
     </div>
     <div class="header-actions">
       @if (!expanded()) {
-        <button type="button" class="icon-button" (click)="toggleWidth()" [title]="(panelWidth() > 500 ? 'chat.compactPanel' : 'chat.widenPanel') | translate"
+        <button type="button" class="icon-button" (click)="toggleWidth()"
+          [title]="(panelWidth() > 500 ? 'chat.compactPanel' : 'chat.widenPanel') | translate"
           [attr.aria-label]="(panelWidth() > 500 ? 'chat.compactPanel' : 'chat.widenPanel') | translate">
           <ng-icon [name]="panelWidth() > 500 ? 'heroChevronRight' : 'heroChevronLeft'" aria-hidden="true" />
         </button>
       }
-      <button type="button" class="icon-button" data-testid="expand-chat" (click)="expanded.set(!expanded())" [attr.aria-pressed]="expanded()"
-        [title]="(expanded() ? 'chat.restorePanel' : 'chat.expandPanel') | translate" [attr.aria-label]="(expanded() ? 'chat.restorePanel' : 'chat.expandPanel') | translate">
+      <button type="button" class="icon-button" data-testid="expand-chat" (click)="expanded.set(!expanded())"
+        [attr.aria-pressed]="expanded()"
+        [title]="(expanded() ? 'chat.restorePanel' : 'chat.expandPanel') | translate"
+        [attr.aria-label]="(expanded() ? 'chat.restorePanel' : 'chat.expandPanel') | translate">
         <ng-icon [name]="expanded() ? 'heroArrowsPointingIn' : 'heroArrowsPointingOut'" aria-hidden="true" />
       </button>
-      <button type="button" class="icon-button" (click)="closePanel.emit()" [title]="'chat.close' | translate" [attr.aria-label]="'chat.close' | translate">
+      <button type="button" class="icon-button" (click)="closePanel.emit()" [title]="'chat.close' | translate"
+        [attr.aria-label]="'chat.close' | translate">
         <ng-icon name="heroXMark" aria-hidden="true" />
       </button>
     </div>
   </header>
-  @if (!diagramId()) { <p class="panel-notice">{{ 'chat.saveFirst' | translate }}</p> }
-  <div #historyContainer class="chat-history" role="log" aria-live="polite" [attr.aria-label]="'chat.history' | translate">
-    <div class="conversation-content">
-    @if (state.hasMore()) { <button type="button" class="text-button earlier-button" (click)="state.loadEarlier()">{{ 'chat.earlier' | translate }}</button> }
-    @if (!state.messages().length) {
-      <div class="empty-conversation">
-        <span class="empty-icon"><ng-icon name="heroChatBubbleLeftRight" aria-hidden="true" /></span>
-        <h3>{{ 'chat.emptyTitle' | translate }}</h3>
-        <p>{{ 'chat.welcome' | translate }}</p>
-        <span class="empty-hint">{{ 'chat.emptyHint' | translate }}</span>
-      </div>
-    }
-    @for (message of state.messages(); track message.id) {
-      <article class="chat-message" [class.assistant-message]="message.source === 'assistant'">
-        <div class="mb-2 flex justify-between gap-2 text-xs">
-          <strong class="message-author">{{ message.source === 'assistant' ? ('chat.assistant' | translate) : message.sender.displayName }}</strong>
-          <time [attr.datetime]="message.createdAt">{{ message.createdAt | date:'shortTime' }}</time>
-        </div>
-        <app-chat-markdown [content]="message.content" />
-        @if (message.attachment) {
-          <p class="mt-2 text-xs">{{ ('chat.source.' + message.source) | translate }}</p>
-          @if (assets()[message.id]; as asset) {
-            @if (message.source === 'image') { <img [src]="asset" [alt]="'chat.image' | translate" class="mt-2 max-h-64 rounded object-contain" /> }
-            @else { <audio controls (play)="attachmentPlaying.set(true)" (pause)="attachmentPlaying.set(false)" (ended)="attachmentPlaying.set(false)" [src]="asset" class="mt-2 max-w-full"></audio> }
-          } @else { <button type="button" class="mt-1 text-xs underline" (click)="openAttachment(message)">{{ 'chat.openMedia' | translate }}</button> }
-        }
-        <p class="message-meta mt-2">{{ ('chat.status.' + message.status) | translate }}</p>
-        @if (message.source === 'assistant' && message.status === 'completed') {
-          @if (speech.playing() === message.id || speech.loading() === message.id) {
-            <button type="button" class="text-button" (click)="speech.stop()">{{ 'chat.voiceStop' | translate }}</button>
+
+  <div class="scope-bar">
+    <div class="scope-tabs" role="tablist" [attr.aria-label]="'chat.title' | translate">
+      <button type="button" role="tab" class="scope-tab" data-testid="tab-personal"
+        [class.active]="state.scope() === 'personal'" [attr.aria-selected]="state.scope() === 'personal'"
+        (click)="switchScope('personal')">
+        <ng-icon name="heroUser" aria-hidden="true" />
+        <span>{{ 'chat.personalTab' | translate }}</span>
+      </button>
+      @if (hasMultipleCollaborators()) {
+        <button type="button" role="tab" class="scope-tab" data-testid="tab-group"
+          [class.active]="state.scope() === 'group'" [attr.aria-selected]="state.scope() === 'group'"
+          (click)="switchScope('group')">
+          <ng-icon name="heroUserGroup" aria-hidden="true" />
+          <span>{{ 'chat.groupTab' | translate }}</span>
+        </button>
+      }
+    </div>
+
+    @if (diagramId() && voiceCall) {
+      @if (!isCallInCurrentDiagram()) {
+        <button type="button" class="call-action-btn" [attr.data-testid]="state.scope() === 'personal' ? 'start-personal-call' : 'start-group-call'" (click)="startOrJoinCall()"
+          [disabled]="voiceCall.joining()">
+          <ng-icon name="heroPhone" aria-hidden="true" />
+          <span>{{ (state.scope() === 'personal' ? 'chat.startPersonalCall' : 'chat.startCall') | translate }}</span>
+        </button>
+      } @else {
+        <div class="inline-call-controls" data-testid="inline-call-bar">
+          @if (voiceCall.callScope() === 'personal') {
+            <span class="call-live-indicator" [class.ai-speaking-glow]="voiceCall.liveAudio.playing() || !!speech.playing()">
+              <span class="live-dot" [class.ai-speaking]="voiceCall.liveAudio.playing() || !!speech.playing()"></span>
+              {{ 'chat.callConnectedWithKanon' | translate }}
+            </span>
           } @else {
-            <button type="button" class="text-button" (click)="playSpeech(message)" [disabled]="media.recording() || media.busy()">
-              {{ 'chat.voiceListen' | translate }}
+            <span class="call-live-indicator">
+              <span class="live-dot"></span>
+              {{ 'chat.callParticipantsCount' | translate:{ count: voiceCall.participants().length || 1 } }}
+            </span>
+          }
+          <button type="button" class="call-mini-btn" [class.muted]="voiceCall.muted()"
+            [attr.aria-pressed]="!voiceCall.muted()" [class.voice-waves]="voiceCall.localSpeaking()"
+            [class.ai-speaking-glow]="voiceCall.liveAudio.playing() || !!speech.playing()"
+            (click)="voiceCall.toggleMute()"
+            [title]="(voiceCall.muted() ? 'chat.unmuteMic' : 'chat.muteMic') | translate"
+            [attr.aria-label]="(voiceCall.muted() ? 'chat.unmuteMic' : 'chat.muteMic') | translate">
+            <ng-icon [name]="voiceCall!.muted() ? 'heroNoSymbol' : 'heroMicrophone'" aria-hidden="true" />
+          </button>
+          @if (voiceCall.callScope() === 'group') {
+            <button type="button" class="call-consent-chip" [class.consent-active]="voiceCall.aiConsent()"
+              (click)="voiceCall.toggleAiConsent()" [attr.aria-pressed]="voiceCall.aiConsent()">
+              <ng-icon name="heroSparkles" aria-hidden="true" />
+              <span>{{ (voiceCall.aiConsent() ? (voiceCall.liveConnected() ? 'chat.kanonListeningOn' : 'chat.liveConnecting') : 'chat.kanonListeningOff') | translate }}</span>
             </button>
           }
-        }
-        @if (message.model) { <p class="message-meta">{{ message.provider }} · {{ message.model }}</p> }
-        @if (message.status === 'failed' && message.sender.userId === auth.currentUser()?.id) {
-          <button type="button" class="mt-2 rounded border px-2 py-1 text-sm" (click)="state.retry(message.id)">{{ 'chat.retry' | translate }}</button>
-        }
-        @if (message.proposal; as proposal) {
-          <section class="proposal-card">
-            <h3 class="font-semibold text-sm">{{ 'chat.proposal' | translate }}</h3>
-            <p class="text-sm whitespace-pre-wrap">{{ proposal.summary }}</p>
-            <p class="text-xs mt-1">{{ 'chat.baseRevision' | translate }}: {{ proposal.baseRevision | date:'medium' }}</p>
-            <details class="my-2 text-xs"><summary class="cursor-pointer">{{ 'chat.review' | translate }} ({{ proposal.ast.nodes.length }} / {{ proposal.ast.connections.length }})</summary>
-              <pre class="max-h-64 overflow-auto whitespace-pre-wrap">{{ proposal.ast | json }}</pre>
-            </details>
-            @if (proposal.status === 'applied') { <p class="text-sm text-emerald-600">{{ 'chat.applied' | translate }}</p> }
-            @else {
-              <button type="button" class="primary-button" [disabled]="!canEdit() || hasUnsavedChanges() || !!applying()" (click)="apply(message)">{{ 'chat.apply' | translate }}</button>
-              @if (hasUnsavedChanges()) { <p class="mt-1 text-xs">{{ 'chat.saveChanges' | translate }}</p> }
-            }
-          </section>
-        }
-      </article>
+          <button type="button" class="call-mini-btn hangup" (click)="voiceCall.leaveCall()"
+            [title]="'chat.leaveCall' | translate" [attr.aria-label]="'chat.leaveCall' | translate">
+            <ng-icon name="heroPhoneXMark" aria-hidden="true" />
+          </button>
+        </div>
+      }
     }
+  </div>
+
+  @if (!diagramId()) {
+    <p class="panel-notice">{{ 'chat.saveFirst' | translate }}</p>
+  }
+
+  <div #historyContainer class="chat-history" role="log" aria-live="polite" [attr.aria-label]="'chat.history' | translate">
+    <div class="conversation-content">
+      @if (state.hasMore()) {
+        <button type="button" class="text-button earlier-button" (click)="state.loadEarlier()">
+          {{ 'chat.earlier' | translate }}
+        </button>
+      }
+
+      @if (!state.messages().length) {
+        <div class="empty-conversation">
+          @if (state.scope() === 'personal') {
+            <span class="empty-icon"><ng-icon name="heroSparkles" aria-hidden="true" /></span>
+            <h3 data-testid="personal-greeting">{{ 'chat.personalEmptyTitle' | translate }}</h3>
+            <p>{{ 'chat.personalWelcome' | translate }}</p>
+            <span class="empty-hint">{{ 'chat.personalHint' | translate }}</span>
+          } @else {
+            <span class="empty-icon"><ng-icon name="heroChatBubbleLeftRight" aria-hidden="true" /></span>
+            <h3 data-testid="group-greeting">{{ 'chat.groupGreeting' | translate:{ name: userDisplayName() } }}</h3>
+            <p>{{ 'chat.groupWelcome' | translate }}</p>
+            <span class="empty-hint">{{ 'chat.groupMentionHint' | translate }}</span>
+          }
+        </div>
+      }
+
+      @for (message of state.messages(); track message.id) {
+        <article class="chat-message" [class.assistant-message]="message.source === 'assistant'"
+          [class.call-message]="message.channel === 'call'">
+          <div class="message-header">
+            <div class="message-author-row">
+              <strong class="message-author">
+                {{ message.source === 'assistant' ? ('chat.assistant' | translate) : message.sender.displayName }}
+              </strong>
+              @if (message.channel === 'call') {
+                <span class="call-badge" data-testid="call-badge">
+                  <ng-icon name="heroPhone" aria-hidden="true" />
+                  {{ 'chat.inCallBadge' | translate }}
+                </span>
+              }
+            </div>
+            <time [attr.datetime]="message.createdAt">{{ message.createdAt | date:'shortTime' }}</time>
+          </div>
+
+          @if (message.source === 'assistant' && message.replyToUser?.displayName) {
+            <div class="reply-recipient-badge" data-testid="reply-recipient">
+              <ng-icon name="heroAtSymbol" aria-hidden="true" />
+              <span>{{ 'chat.replyingTo' | translate:{ name: message.replyToUser!.displayName } }}</span>
+            </div>
+          }
+
+          @if (message.channel === 'call') {
+            <p class="call-transcript" data-testid="call-transcript">
+              {{ message.transcription || message.content }}
+            </p>
+          } @else if (message.source === 'audio') {
+            @if (hasDistinctAudioCaption(message)) {
+              <app-chat-markdown [content]="speech.displayedContent(message)" />
+            }
+            @if (message.attachment) {
+              @if (assets()[message.id]; as asset) {
+                <audio controls (play)="attachmentPlaying.set(true)" (pause)="attachmentPlaying.set(false)"
+                  (ended)="attachmentPlaying.set(false)" [src]="asset" class="audio-player"></audio>
+              } @else {
+                <button type="button" class="mt-1 text-xs underline" (click)="openAttachment(message)">
+                  {{ 'chat.openMedia' | translate }}
+                </button>
+              }
+            }
+            @if (message.transcription || message.content; as spokenText) {
+              <p class="audio-transcription" data-testid="audio-transcription">{{ spokenText }}</p>
+            }
+          } @else {
+            <app-chat-markdown [content]="speech.displayedContent(message)" />
+            @if (message.attachment) {
+              <p class="mt-2 text-xs">{{ ('chat.source.' + message.source) | translate }}</p>
+              @if (assets()[message.id]; as asset) {
+                @if (message.source === 'image') {
+                  <img [src]="asset" [alt]="'chat.image' | translate" class="mt-2 max-h-64 rounded object-contain" />
+                } @else {
+                  <audio controls (play)="attachmentPlaying.set(true)" (pause)="attachmentPlaying.set(false)"
+                    (ended)="attachmentPlaying.set(false)" [src]="asset" class="mt-2 max-w-full"></audio>
+                }
+              } @else {
+                <button type="button" class="mt-1 text-xs underline" (click)="openAttachment(message)">
+                  {{ 'chat.openMedia' | translate }}
+                </button>
+              }
+            }
+          }
+
+          <p class="message-meta mt-2">{{ ('chat.status.' + message.status) | translate }}</p>
+
+          @if (message.source === 'assistant' && message.status === 'completed') {
+            @if (speech.playing() === message.id || speech.loading() === message.id) {
+              <button type="button" class="text-button" (click)="speech.stop()">
+                {{ 'chat.voiceStop' | translate }}
+              </button>
+            } @else if (showReplayControls || speech.ready() === message.id) {
+              <button type="button" class="text-button" (click)="playSpeech(message)"
+                [disabled]="speech.muted() || media.recording() || media.busy()">
+                {{ 'chat.voiceListen' | translate }}
+              </button>
+            }
+          }
+
+          @if (message.model) {
+            <p class="message-meta">{{ message.provider }} · {{ message.model }}</p>
+          }
+
+          @if (message.status === 'failed' && message.sender.userId === auth.currentUser()?.id) {
+            <button type="button" class="mt-2 rounded border px-2 py-1 text-sm" (click)="state.retry(message.id)">
+              {{ 'chat.retry' | translate }}
+            </button>
+          }
+
+          @if (message.proposal; as proposal) {
+            <section class="proposal-card">
+              <h3 class="font-semibold text-sm">{{ 'chat.proposal' | translate }}</h3>
+              <p class="text-sm whitespace-pre-wrap">{{ proposal.summary }}</p>
+              <p class="text-xs mt-1">{{ 'chat.baseRevision' | translate }}: {{ proposal.baseRevision | date:'medium' }}</p>
+              <details class="my-2 text-xs">
+                <summary class="cursor-pointer">
+                  {{ 'chat.review' | translate }} ({{ proposal.ast.nodes.length }} / {{ proposal.ast.connections.length }})
+                </summary>
+                <pre class="max-h-64 overflow-auto whitespace-pre-wrap">{{ proposal.ast | json }}</pre>
+              </details>
+              @if (proposal.status === 'applied') {
+                <p class="text-sm text-emerald-600">{{ 'chat.applied' | translate }}</p>
+              } @else {
+                <button type="button" class="primary-button"
+                  [disabled]="!canEdit() || hasUnsavedChanges() || !!applying()" (click)="apply(message)">
+                  {{ 'chat.apply' | translate }}
+                </button>
+                @if (hasUnsavedChanges()) {
+                  <p class="mt-1 text-xs">{{ 'chat.saveChanges' | translate }}</p>
+                }
+              }
+            </section>
+          }
+        </article>
+      }
     </div>
   </div>
-  @if (error() || state.error() || media.error() || speech.error()) { <p role="alert" class="chat-error">{{ (error() || state.error() || media.error() || speech.error()) | translate }}</p> }
+
+  @if (error() || state.error() || media.error() || speech.error() || voiceCall?.error()) {
+    <p role="alert" class="chat-error">
+      {{ (error() || state.error() || media.error() || speech.error() || voiceCall?.error() || '') | translate }}
+    </p>
+  }
+
   <footer class="composer" (paste)="onPaste($event)" (drop)="onDrop($event)" (dragover)="$event.preventDefault()">
     <div class="composer-content">
       <div class="composer-context">
-        <button type="button" class="assistant-toggle" [class.selected]="askAssistant()" [attr.aria-pressed]="askAssistant()"
-          (click)="askAssistant.set(!askAssistant())" [disabled]="state.sending()">
-          <ng-icon [name]="askAssistant() ? 'heroSparkles' : 'heroChatBubbleLeftRight'" aria-hidden="true" />
-          {{ (askAssistant() ? 'chat.askAssistant' : 'chat.teamChat') | translate }}
-          <span class="toggle-dot"></span>
-        </button>
-        <span class="context-hint">{{ (askAssistant() ? 'chat.savedContext' : 'chat.sharedConversation') | translate }}</span>
+        @if (state.scope() === 'personal') {
+          <span class="scope-pill">
+            <ng-icon name="heroSparkles" aria-hidden="true" />
+            {{ 'chat.personalTab' | translate }}
+          </span>
+          <span class="context-hint">{{ 'chat.personalHint' | translate }}</span>
+        } @else {
+          <button type="button" class="assistant-toggle" data-testid="mention-kanon-chip"
+            [class.selected]="hasKanonMention()" [attr.aria-pressed]="hasKanonMention()"
+            (click)="insertKanonMention()" [disabled]="state.sending()"
+            [title]="'chat.mentionKanonTooltip' | translate">
+            <ng-icon name="heroAtSymbol" aria-hidden="true" />
+            {{ 'chat.mentionKanonChip' | translate }}
+            <span class="toggle-dot"></span>
+          </button>
+          <span class="context-hint">
+            {{ (hasKanonMention() ? 'chat.savedContext' : 'chat.groupMentionHint') | translate }}
+          </span>
+        }
       </div>
+
+      @if (showMentionAutocomplete()) {
+        <button type="button" class="mention-autocomplete" data-testid="mention-autocomplete"
+          (click)="insertKanonMention()">
+          <ng-icon name="heroSparkles" aria-hidden="true" />
+          <strong>@Kanon</strong>
+          <span>· {{ 'chat.kanonSubtitle' | translate }}</span>
+        </button>
+      }
+
+      @if (media.recording()) {
+        <div class="gemini-voice-bar" data-testid="gemini-voice-bar" role="status" aria-live="polite">
+          <div class="gemini-voice-header">
+            <span class="gemini-mic-pulse"></span>
+            <span class="gemini-voice-label">{{ 'chat.recordingLive' | translate }}</span>
+            <span class="recording-time">{{ media.seconds() }} / 60 s</span>
+          </div>
+          <div class="gemini-waveform" aria-hidden="true">
+            @for (bar of media.levels(); track $index) {
+              <span class="waveform-bar" [style.height.%]="bar"></span>
+            }
+          </div>
+          <div class="gemini-voice-actions">
+            <button type="button" class="text-button" data-testid="cancel-voice" (click)="cancelVoiceRecording()">
+              {{ 'chat.cancelRecording' | translate }}
+            </button>
+            <button type="button" class="primary-button send-voice-now" data-testid="send-voice-now"
+              (click)="sendRecordedVoiceNow()" [disabled]="state.sending() || media.busy() || !diagramId()">
+              <ng-icon name="heroPaperAirplane" aria-hidden="true" />
+              {{ 'chat.sendNow' | translate }}
+            </button>
+          </div>
+        </div>
+      }
+
+      @if (isCallInCurrentDiagram() && voiceCall?.callScope() === 'personal') {
+        <div class="gemini-voice-bar call-live-bar" data-testid="personal-call-waveform" role="status" aria-live="polite">
+          <div class="gemini-voice-header">
+            <span class="gemini-mic-pulse" [class.speaking]="voiceCall!.localSpeaking()" [class.ai-speaking]="voiceCall!.liveAudio.playing() || !!speech.playing()"></span>
+            <span class="gemini-voice-label">
+              {{ (voiceCall!.liveAudio.playing() || !!speech.playing() ? 'chat.kanonSpeaking' : (voiceCall!.localSpeaking() ? 'chat.youSpeaking' : 'chat.callConnectedWithKanon')) | translate }}
+            </span>
+            <span class="recording-time" [class.ai-live]="voiceCall!.liveConnected()">LIVE</span>
+          </div>
+          <div class="gemini-waveform" aria-hidden="true">
+            @for (bar of voiceCall!.callLevels(); track $index) {
+              <span class="waveform-bar" [style.height.%]="bar" [class.ai-playing]="voiceCall!.liveAudio.playing() || !!speech.playing()"></span>
+            }
+          </div>
+          <div class="gemini-voice-actions">
+            <button type="button" class="call-live-btn" [class.muted]="voiceCall!.muted()" (click)="voiceCall!.toggleMute()"
+              [attr.aria-pressed]="!voiceCall!.muted()"
+              [title]="(voiceCall!.muted() ? 'chat.unmuteMic' : 'chat.muteMic') | translate"
+              [attr.aria-label]="(voiceCall!.muted() ? 'chat.unmuteMic' : 'chat.muteMic') | translate">
+              <ng-icon [name]="voiceCall!.muted() ? 'heroNoSymbol' : 'heroMicrophone'" aria-hidden="true" />
+              <span>{{ (voiceCall!.muted() ? 'chat.unmuteMic' : 'chat.muteMic') | translate }}</span>
+            </button>
+            <button type="button" class="call-live-btn hangup" (click)="voiceCall!.leaveCall()"
+              [title]="'chat.leaveCall' | translate"
+              [attr.aria-label]="'chat.leaveCall' | translate">
+              <ng-icon name="heroPhoneXMark" aria-hidden="true" />
+              <span>{{ 'chat.leaveCall' | translate }}</span>
+            </button>
+          </div>
+        </div>
+      }
+
       @if (media.attachment(); as attachment) {
         <div class="attachment-preview">
-          @if (media.imagePreview(); as preview) { <img [src]="preview" [alt]="'chat.image' | translate" /> }
-          @else { <ng-icon name="heroMicrophone" aria-hidden="true" /> }
+          @if (media.imagePreview(); as preview) {
+            <img [src]="preview" [alt]="'chat.image' | translate" />
+          } @else {
+            <ng-icon name="heroMicrophone" aria-hidden="true" />
+          }
           <span>{{ attachment.name || ('chat.source.' + attachment.kind | translate) }}</span>
-          <button type="button" class="icon-button" (click)="media.clear()" [disabled]="state.sending()" [attr.aria-label]="'chat.remove' | translate"><ng-icon name="heroXMark" aria-hidden="true" /></button>
+          <button type="button" class="icon-button" (click)="media.clear()" [disabled]="state.sending()"
+            [attr.aria-label]="'chat.remove' | translate">
+            <ng-icon name="heroXMark" aria-hidden="true" />
+          </button>
         </div>
         <p class="media-notice">{{ 'chat.mediaCloud' | translate }}</p>
       }
+
       <textarea rows="3" maxlength="12000" class="message-input" [attr.aria-label]="'chat.message' | translate"
-        [placeholder]="'chat.placeholder' | translate" [ngModel]="prompt()" (ngModelChange)="prompt.set($event)"
-        (keydown)="onKeyDown($event)" [disabled]="state.sending() || !diagramId()"></textarea>
+        [placeholder]="(state.scope() === 'personal' ? 'chat.personalPlaceholder' : 'chat.groupPlaceholder') | translate"
+        [ngModel]="prompt()" (ngModelChange)="prompt.set($event)" (keydown)="onKeyDown($event)"
+        [disabled]="state.sending() || !diagramId()"></textarea>
+
       <div class="composer-toolbar">
         <input #imageInput type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="selectImage($event)" />
         <div class="menu-anchor" data-chat-menu>
@@ -120,72 +374,95 @@
             <ng-icon name="heroPlus" aria-hidden="true" />
           </button>
           @if (menu() === 'attachments') {
-            <div id="chat-attachments" class="chat-dropdown attachment-menu" role="group" [attr.aria-label]="'chat.addAttachment' | translate">
+            <div id="chat-attachments" class="chat-dropdown attachment-menu" role="group"
+              [attr.aria-label]="'chat.addAttachment' | translate">
               <p class="dropdown-label">{{ 'chat.addAttachment' | translate }}</p>
-              <button type="button" (click)="menu.set(null); imageInput.click()"><ng-icon name="heroPhoto" aria-hidden="true" />{{ 'chat.uploadImage' | translate }}</button>
-              <button type="button" (click)="menu.set(null); pasteClipboard()"><ng-icon name="heroClipboard" aria-hidden="true" />{{ 'chat.paste' | translate }}</button>
-              <button type="button" (click)="menu.set(null); media.openCamera(cameraVideo)" [disabled]="media.cameraOpen()"><ng-icon name="heroCamera" aria-hidden="true" />{{ 'chat.camera' | translate }}</button>
-            </div>
-          }
-        </div>
-        <button type="button" class="icon-button record-button" [class.recording]="media.recording()" (click)="toggleRecording()"
-          [disabled]="state.sending() || media.busy()" [title]="(media.recording() ? 'chat.stopRecording' : 'chat.record') | translate"
-          [attr.aria-label]="(media.recording() ? 'chat.stopRecording' : 'chat.record') | translate" [attr.aria-pressed]="media.recording()">
-          <ng-icon [name]="media.recording() ? 'heroStop' : 'heroMicrophone'" aria-hidden="true" />
-        </button>
-        @if (media.recording()) { <span class="recording-time" role="status">{{ media.seconds() }} / 60 s</span> }
-        <div class="menu-anchor" data-chat-menu>
-          <button type="button" class="icon-button" data-menu-trigger="voice" (click)="toggleMenu('voice')"
-            [attr.aria-expanded]="menu() === 'voice'" [class.recording]="speech.enabled()"
-            [title]="'chat.voiceSettings' | translate" [attr.aria-label]="'chat.voiceSettings' | translate">
-            <ng-icon name="heroSpeakerWave" aria-hidden="true" />
-          </button>
-          @if (menu() === 'voice') {
-            <div class="chat-dropdown voice-menu" role="group" [attr.aria-label]="'chat.voiceSettings' | translate">
-              <button type="button" (click)="toggleVoice()" [attr.aria-pressed]="speech.enabled()" [disabled]="!state.connected()">
-                {{ (speech.enabled() ? 'chat.voiceDisable' : 'chat.voiceEnable') | translate }}
+              <button type="button" (click)="menu.set(null); imageInput.click()">
+                <ng-icon name="heroPhoto" aria-hidden="true" />{{ 'chat.uploadImage' | translate }}
               </button>
-              <button type="button" (click)="speech.selectVoice('sofia')" [attr.aria-pressed]="speech.voice() === 'sofia'">{{ 'chat.voiceSofia' | translate }}</button>
-              <button type="button" (click)="speech.selectVoice('marcelo')" [attr.aria-pressed]="speech.voice() === 'marcelo'">{{ 'chat.voiceMarcelo' | translate }}</button>
-              <p class="voice-notice">{{ 'chat.voiceNotice' | translate }}</p>
-              @if (speech.playing() || speech.loading()) {
-                <button type="button" (click)="speech.stop()">{{ 'chat.voiceStop' | translate }}</button>
-              }
+              <button type="button" (click)="menu.set(null); pasteClipboard()">
+                <ng-icon name="heroClipboard" aria-hidden="true" />{{ 'chat.paste' | translate }}
+              </button>
+              <button type="button" (click)="menu.set(null); media.openCamera(cameraVideo)"
+                [disabled]="media.cameraOpen()">
+                <ng-icon name="heroCamera" aria-hidden="true" />{{ 'chat.camera' | translate }}
+              </button>
             </div>
           }
         </div>
+
+        <button type="button" class="icon-button record-button" [class.recording]="media.recording()"
+          [class.voice-waves]="media.recording() || (state.sending() && media.attachment()?.kind === 'audio') || (isCallInCurrentDiagram() && (voiceCall!.localSpeaking() || voiceCall!.sendingAudio()))"
+          [class.ai-speaking-glow]="isCallInCurrentDiagram() && (voiceCall!.liveAudio.playing() || !!speech.playing())"
+          [class.muted]="isCallInCurrentDiagram() && voiceCall!.muted()"
+          (click)="isCallInCurrentDiagram() ? voiceCall!.toggleMute() : toggleRecording()" [disabled]="state.sending() || media.busy() || !diagramId()"
+          [title]="(isCallInCurrentDiagram() ? (voiceCall!.muted() ? 'chat.unmuteMic' : 'chat.muteMic') : (media.recording() ? 'chat.stopRecording' : 'chat.record')) | translate"
+          [attr.aria-label]="(isCallInCurrentDiagram() ? (voiceCall!.muted() ? 'chat.unmuteMic' : 'chat.muteMic') : (media.recording() ? 'chat.stopRecording' : 'chat.record')) | translate"
+          [attr.aria-pressed]="isCallInCurrentDiagram() ? !voiceCall!.muted() : media.recording()">
+          <ng-icon [name]="isCallInCurrentDiagram() && voiceCall!.muted() ? 'heroNoSymbol' : media.recording() ? 'heroStop' : 'heroMicrophone'" aria-hidden="true" />
+        </button>
+
+        <button type="button" class="icon-button" data-testid="speaker-toggle"
+          (click)="speech.toggleMuted()" [class.muted]="speech.muted()"
+          [class.voice-waves]="!!speech.playing() || !!voiceCall?.liveAudio?.playing()"
+          [class.ai-speaking-glow]="isCallInCurrentDiagram() && (voiceCall!.liveAudio.playing() || !!speech.playing())"
+          [attr.aria-pressed]="!speech.muted()"
+          [title]="(speech.muted() ? 'chat.unmuteSpeaker' : 'chat.muteSpeaker') | translate"
+          [attr.aria-label]="(speech.muted() ? 'chat.unmuteSpeaker' : 'chat.muteSpeaker') | translate">
+          <ng-icon [name]="speech.muted() ? 'heroSpeakerXMark' : 'heroSpeakerWave'" aria-hidden="true" />
+        </button>
+
         <div class="model-selector menu-anchor" data-chat-menu>
           <button type="button" class="model-trigger" data-menu-trigger="models" (click)="toggleMenu('models')"
             [disabled]="state.sending()" [attr.aria-expanded]="menu() === 'models'" aria-controls="chat-models"
             [attr.aria-label]="'chat.selectModel' | translate" [title]="'chat.selectModel' | translate">
-            <span>{{ selectedModel()?.id || ('chat.selectModel' | translate) }}</span><ng-icon name="heroChevronDown" aria-hidden="true" />
+            <span>{{ selectedModel()?.id || ('chat.selectModel' | translate) }}</span>
+            <ng-icon name="heroChevronDown" aria-hidden="true" />
           </button>
           @if (menu() === 'models') {
-            <div id="chat-models" class="chat-dropdown model-menu" role="group" [attr.aria-label]="'chat.selectModel' | translate">
+            <div id="chat-models" class="chat-dropdown model-menu" role="group"
+              [attr.aria-label]="'chat.selectModel' | translate">
               <p class="dropdown-label">{{ 'chat.selectModel' | translate }}</p>
               @for (model of state.models()?.models || []; track model.provider) {
-                <button type="button" class="model-option" [class.active]="provider() === model.provider" [disabled]="!model.available"
-                  [attr.aria-pressed]="provider() === model.provider" (click)="selectProvider(model.provider)">
+                <button type="button" class="model-option" [class.active]="provider() === model.provider"
+                  [disabled]="!model.available" [attr.aria-pressed]="provider() === model.provider"
+                  (click)="selectProvider(model.provider)">
                   <ng-icon name="heroSparkles" aria-hidden="true" />
-                  <span class="model-description"><small>{{ model.provider }}</small><span>{{ model.id }}</span>
+                  <span class="model-description">
+                    <small>{{ model.provider }}</small>
+                    <span>{{ model.id }}</span>
                     @if (!model.available) { <small>{{ 'chat.offline' | translate }}</small> }
                   </span>
                   @if (provider() === model.provider) { <ng-icon name="heroCheck" aria-hidden="true" /> }
                 </button>
-              } @empty { <p class="dropdown-empty">{{ 'chat.noModels' | translate }}</p> }
+              } @empty {
+                <p class="dropdown-empty">{{ 'chat.noModels' | translate }}</p>
+              }
             </div>
           }
         </div>
+
         <button type="button" class="send-button icon-button" (click)="send()" [title]="'chat.send' | translate"
           [attr.aria-label]="(state.sending() ? 'chat.sending' : 'chat.send') | translate"
           [disabled]="state.sending() || media.recording() || media.busy() || !diagramId() || (!prompt().trim() && !media.attachment())">
           <ng-icon name="heroPaperAirplane" aria-hidden="true" />
         </button>
       </div>
-      <p class="composer-shortcuts" role="status">{{ (speech.loading() ? 'chat.voiceLoading' : speech.playing() ? 'chat.voicePlaying' : speech.enabled() ? 'chat.voiceEnabled' : 'chat.keyboardHint') | translate }}</p>
+
+      <p class="composer-shortcuts" role="status">
+        {{ (speech.loading() ? 'chat.voiceLoading' : speech.playing() ? 'chat.voicePlaying' : isCallInCurrentDiagram() ? 'chat.voiceEnabled' : 'chat.keyboardHint') | translate }}
+      </p>
+
       <div [hidden]="!media.cameraOpen()" class="camera-preview">
         <video #cameraVideo autoplay playsinline muted></video>
-        <div><button type="button" class="text-button" (click)="media.capture(cameraVideo)">{{ 'chat.capture' | translate }}</button><button type="button" class="text-button" (click)="media.closeCamera()">{{ 'chat.cancel' | translate }}</button></div>
+        <div>
+          <button type="button" class="text-button" (click)="media.capture(cameraVideo)">
+            {{ 'chat.capture' | translate }}
+          </button>
+          <button type="button" class="text-button" (click)="media.closeCamera()">
+            {{ 'chat.cancel' | translate }}
+          </button>
+        </div>
       </div>
     </div>
   </footer>

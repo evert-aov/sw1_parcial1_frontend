@@ -39,7 +39,7 @@ export const controlPlugin: NodePlugin = {
       id: 'control',
       labelKey: 'plugins.nodes.control',
       icon: ControlSvgComponent,
-      diagramTypes: [DiagramType.COMMUNICATION],
+      diagramTypes: [],
     },
   ],
   inputs: (context) => ({ ...context }),

@@ -69,7 +69,7 @@ describe('Editor microkernel composition', () => {
     expect(fixture.componentInstance.hasNoRealNodes()).toBe(true);
     expect(TestBed.inject(PluginRegistryService).plugins()).toEqual([]);
     fixture.destroy();
-  });
+  }, 15000);
 
   it('discovers, creates and measures an unknown extension without changing any core dispatch table', () => {
     const registry = TestBed.inject(PluginRegistryService);

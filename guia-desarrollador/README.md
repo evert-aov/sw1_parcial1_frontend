@@ -76,3 +76,6 @@ la URL y el token del puente interno; FastAPI no lee `backend/.env` ni comparte 
 La documentación por servicio está en la [guía del backend NestJS](../../backend/guia-desarrollador/README.md)
 y la [guía del microservicio FastAPI](../../ia/guia-desarrollador/README.md). Incluyen contratos,
 persistencia, recuperación de propuestas y diagramas de flujo de la integración.
+
+La entrega inmediata del chat, la voz fija de Kanon y los subtítulos alineados se describen en
+[Kanon: sincronización y reporte](../../ia/docs/kanon-realtime/README.md).

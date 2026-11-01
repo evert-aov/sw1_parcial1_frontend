@@ -29,7 +29,7 @@ export class UmlLifelineNodeComponent {
   readonly connections = input<UmlConnection[]>([]);
   readonly lifelineLength = computed(() => this.sequence?.getLifelineLength(this.node(), this.connections()) ?? 300);
   readonly activations = computed(() => this.sequence?.getNodeActivations(this.node(), this.connections(), this.activeDiagramType()) ?? []);
-  readonly sequenceSlots = Array.from({ length: 25 }, (_, index) => index);
+  readonly sequenceSlots = computed(() => this.sequence?.getSequenceSlots(this.connections()) ?? Array.from({ length: 25 }, (_, index) => index));
   readonly isSequenceSlotOccupiedFn = (slot: number): boolean => this.sequence?.isSequenceSlotOccupied(slot, this.connections(), this.activeDiagramType()) ?? false;
   readonly getSlotTopFn = (slot: number): number => 210 + slot * 50 - 60;
 

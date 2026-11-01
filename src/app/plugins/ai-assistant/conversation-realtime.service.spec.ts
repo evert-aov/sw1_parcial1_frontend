@@ -47,6 +47,24 @@ describe('Conversation socket transport', () => {
     expect(socket.disconnect).toHaveBeenCalledOnce();
   });
 
+  it('delivers snapshots unchanged and defers ready until the call handle exists', async () => {
+    const received: ConversationNotice[] = [];
+    const subscription = service.watch('room').subscribe(value => received.push(value));
+    handlers['connect']();
+    socket.emit.mock.calls[0][2](null, { success: true });
+    const onReady = vi.fn();
+    const handle = service.acquireCallTransport('room', { onReady, onParticipants: vi.fn(),
+      onSignal: vi.fn(), onDisconnect: vi.fn() });
+    expect(onReady).not.toHaveBeenCalled();
+    await Promise.resolve();
+    expect(onReady).toHaveBeenCalledOnce();
+    const snapshot = { revision: 3, messages: [], hasMore: false };
+    handlers['conversation_changed']({ diagramId: 'room', scope: 'group', revision: 3, snapshot });
+    expect(received.at(-1)).toEqual({ kind: 'changed', scope: 'group', revision: 3, snapshot });
+    handle.release();
+    subscription.unsubscribe();
+  });
+
   it('filters another room and malformed revisions while accepting reset notices', () => {
     const received: ConversationNotice[] = [];
     const subscription = service.watch('room').subscribe(value => received.push(value));

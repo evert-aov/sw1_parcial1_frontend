@@ -340,7 +340,7 @@ describe('DiagramEditorComponent: persistencia de altura en diagramas de desplie
     (editor as any).collaborationService = { sendDiagramSync: () => {} };
     (editor as any).isReadOnly = signal(false);
 
-    // 1. En Diagrama de Comunicación: NO se permiten clases (ni con estereotipo)
+    // 1. En Diagrama de Comunicación UML 2.5: se usan líneas de vida (rectángulos) y actor; clases y robustez clásica no aplican
     editor.activeDiagramType.set(DiagramType.COMMUNICATION);
     editor.nodes.set([]);
 
@@ -349,20 +349,25 @@ describe('DiagramEditorComponent: persistencia de altura en diagramas de desplie
     expect(alertCount).toBe(1);
     expect(editor.nodes().length).toBe(0);
 
-    // addBoundary, addControl, addEntity deben crear nodos puros (nodeType: boundary/control/entity, 70x70)
-    editor.addBoundary();
+    // addLifeline crea la línea de vida (objeto participante UML 2.5)
+    editor.addLifeline();
     expect(editor.nodes().length).toBe(1);
-    expect(editor.nodes()[0].nodeType).toBe('boundary');
-    expect(editor.nodes()[0].width).toBe(70);
-    expect(editor.nodes()[0].height).toBe(70);
+    expect(editor.nodes()[0].nodeType).toBe('lifeline');
+    expect(editor.nodes()[0].width).toBe(160);
+    expect(editor.nodes()[0].height).toBe(60);
+
+    // addBoundary, addControl, addEntity deben ser rechazados en Comunicación UML 2.5
+    editor.addBoundary();
+    expect(alertCount).toBe(2);
+    expect(editor.nodes().length).toBe(1);
 
     editor.addControl();
-    expect(editor.nodes()[1].nodeType).toBe('control');
-    expect(editor.nodes()[1].width).toBe(70);
+    expect(alertCount).toBe(3);
+    expect(editor.nodes().length).toBe(1);
 
     editor.addEntity();
-    expect(editor.nodes()[2].nodeType).toBe('entity');
-    expect(editor.nodes()[2].width).toBe(70);
+    expect(alertCount).toBe(4);
+    expect(editor.nodes().length).toBe(1);
 
     // 2. En Análisis de Clase: SOLO clases estándar (con/sin estereotipo) y actor. NO nodos puros.
     editor.activeDiagramType.set(DiagramType.CLASS_ANALYSIS);
@@ -370,15 +375,15 @@ describe('DiagramEditorComponent: persistencia de altura en diagramas de desplie
 
     // addBoundary/addControl/addEntity directos deben ser rechazados
     editor.addBoundary();
-    expect(alertCount).toBe(2);
+    expect(alertCount).toBe(5);
     expect(editor.nodes().length).toBe(0);
 
     editor.addControl();
-    expect(alertCount).toBe(3);
+    expect(alertCount).toBe(6);
     expect(editor.nodes().length).toBe(0);
 
     editor.addEntity();
-    expect(alertCount).toBe(4);
+    expect(alertCount).toBe(7);
     expect(editor.nodes().length).toBe(0);
 
     // Creación de clases con estereotipo UI, Controller., Entity. en Análisis de Clase

@@ -127,10 +127,12 @@ describe('DiagramSidebarComponent', () => {
   it('should correctly evaluate node compatibility for COMMUNICATION and CLASS_ANALYSIS', () => {
     const fixture = TestBed.createComponent(DiagramSidebarComponent);
     fixture.componentRef.setInput('activeDiagramType', DiagramType.COMMUNICATION);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('lifeline')).toBe(true);
     expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('actor')).toBe(true);
-    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('boundary')).toBe(true);
-    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('control')).toBe(true);
-    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('entity')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('boundary_box')).toBe(true);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('boundary')).toBe(false);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('control')).toBe(false);
+    expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('entity')).toBe(false);
     expect(fixture.componentInstance.isNodeTypeCompatibleWithCurrent('class')).toBe(false);
 
     fixture.componentRef.setInput('activeDiagramType', DiagramType.CLASS_ANALYSIS);

@@ -43,6 +43,7 @@ export const boundary_boxPlugin: NodePlugin = {
         DiagramType.COMPONENT,
         DiagramType.DEPLOYMENT,
         DiagramType.LAYERED,
+        DiagramType.COMMUNICATION,
       ],
     },
   ],
@@ -61,11 +62,12 @@ export const boundary_boxPlugin: NodePlugin = {
   create(context) {
     const { nodes, diagramType: currentType, position, stereotype, scroll } = context;
 
+    const isCommunication = currentType === DiagramType.COMMUNICATION;
     const isLayered = currentType === DiagramType.LAYERED;
     const isComponent = currentType === DiagramType.COMPONENT;
-    const defaultWidth = isLayered || isComponent ? 420 : 280;
-    const defaultHeight = isLayered || isComponent ? 220 : 200;
-    const defaultName = isLayered ? 'Capa' : isComponent ? 'Agrupación' : '.';
+    const defaultWidth = isCommunication ? 520 : isLayered || isComponent ? 420 : 280;
+    const defaultHeight = isCommunication ? 360 : isLayered || isComponent ? 220 : 200;
+    const defaultName = isCommunication ? 'sd Interacción' : isLayered ? 'Capa' : isComponent ? 'Agrupación' : '.';
     const pos = calcPos(position, defaultWidth / 2, defaultHeight / 2, scroll);
 
     return {

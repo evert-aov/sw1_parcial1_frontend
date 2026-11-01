@@ -101,6 +101,7 @@ export enum UmlNodeType {
   DEVICE = 'device',
   EXECUTION_ENVIRONMENT = 'executionEnvironment',
   BOUNDARY_BOX = 'boundary_box',
+  NOTE = 'note',
 }
 
 export const UML_NODE_DEFAULT_COLORS: Record<string, string> = {
@@ -117,6 +118,7 @@ export const UML_NODE_DEFAULT_COLORS: Record<string, string> = {
   [UmlNodeType.DEVICE]: '#F3FAF7',
   [UmlNodeType.NODE]: '#F3FAF7',
   [UmlNodeType.EXECUTION_ENVIRONMENT]: '#CDE5F5',
+  [UmlNodeType.NOTE]: '#FEF9C3',
 };
 
 export type UmlRelationshipType =

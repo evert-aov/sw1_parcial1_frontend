@@ -449,6 +449,19 @@
       }
       @if (activeTab() === 'collaborate') {
         <div class="workspace-action-group">
+          @if (aiCoordinator) {
+            <button
+              type="button"
+              class="primary-action"
+              data-action="voice-call"
+              (click)="joinGroupCall()"
+              [disabled]="!diagramId()"
+              [attr.aria-pressed]="aiCoordinator.inCall()"
+            >
+              <ng-icon name="heroPhone" />
+              {{ (aiCoordinator.inCall() ? 'chat.inCallBadge' : 'chat.startCall') | translate }}
+            </button>
+          }
           <button
             type="button"
             class="secondary-action"
@@ -498,6 +511,7 @@
             data-menu-trigger="export"
             aria-haspopup="menu"
             [attr.aria-expanded]="menu() === 'export'"
+            [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
             (click)="toggleMenu('export')"
           >
             <ng-icon name="heroArrowDownTray" /> {{ 'appbar.export' | translate }}
@@ -507,6 +521,15 @@
             <strong>{{ 'workspace.deliverables' | translate }}</strong>
             <span>{{ 'workspace.exportHint' | translate }}</span>
           </div>
+          @if (multiUserBlocked()) {
+            <div class="integrity-lock-banner" data-integrity-banner="publish" role="status">
+              <ng-icon name="heroLockClosed" />
+              <div>
+                <strong>{{ 'appbar.multiUserLockTitle' | translate }}</strong>
+                <span>{{ 'appbar.multiUserLockReason' | translate }}</span>
+              </div>
+            </div>
+          }
         </div>
       }
     </div>
@@ -546,12 +569,24 @@
       </button>
       @if (importExpanded()) {
         <div class="submenu" role="group" [attr.aria-label]="'workspace.importModel' | translate">
+          @if (multiUserBlocked()) {
+            <div class="integrity-lock-banner menu-lock-banner" data-integrity-banner="import" role="status">
+              <ng-icon name="heroLockClosed" />
+              <div>
+                <strong>{{ 'appbar.multiUserLockTitle' | translate }}</strong>
+                <span>{{ 'appbar.multiUserLockReason' | translate }}</span>
+              </div>
+            </div>
+          }
           @if (plugins.find('xmi')) {
             <button
               type="button"
               role="menuitem"
               (click)="triggerFileInput()"
-              [disabled]="isReadOnly() || multiUserBlocked()"
+              [disabled]="isReadOnly()"
+              [class.unavailable]="isReadOnly() || multiUserBlocked()"
+              [attr.aria-disabled]="isReadOnly() || multiUserBlocked()"
+              [title]="multiUserBlocked() ? ('appbar.multiUserImportBlocked' | translate) : ''"
             >
               XML / XMI / JSON
             </button>
@@ -561,7 +596,10 @@
               type="button"
               role="menuitem"
               (click)="handleOpenImportJson()"
-              [disabled]="isReadOnly() || multiUserBlocked()"
+              [disabled]="isReadOnly()"
+              [class.unavailable]="isReadOnly() || multiUserBlocked()"
+              [attr.aria-disabled]="isReadOnly() || multiUserBlocked()"
+              [title]="multiUserBlocked() ? ('appbar.multiUserImportBlocked' | translate) : ''"
             >
               {{ 'workspace.pasteJson' | translate }}
             </button>
@@ -597,13 +635,25 @@
       [attr.aria-label]="'appbar.export' | translate"
       (keydown)="onMenuKeyDown($event)"
     >
+      @if (multiUserBlocked()) {
+        <div class="integrity-lock-banner menu-lock-banner" data-integrity-banner="export" role="status">
+          <ng-icon name="heroLockClosed" />
+          <div>
+            <strong>{{ 'appbar.multiUserLockTitle' | translate }}</strong>
+            <span>{{ 'appbar.multiUserLockReason' | translate }}</span>
+          </div>
+        </div>
+      }
       <div class="menu-title">{{ 'workspace.images' | translate }}</div>
       @if (plugins.find('image-export')) {
         <button
           type="button"
           role="menuitem"
+          data-export-action="png"
           (click)="handleExportPng()"
-          [disabled]="multiUserBlocked()"
+          [class.unavailable]="multiUserBlocked()"
+          [attr.aria-disabled]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
         >
           <ng-icon name="heroPhoto" /> {{ 'appbar.exportPng' | translate }}
         </button>
@@ -611,8 +661,11 @@
           <button
             type="button"
             role="menuitem"
+            data-export-action="bmp"
             (click)="handleExportBmp()"
-            [disabled]="multiUserBlocked()"
+            [class.unavailable]="multiUserBlocked()"
+            [attr.aria-disabled]="multiUserBlocked()"
+            [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
           >
             <ng-icon name="heroPhoto" /> {{ 'appbar.exportBmp' | translate }}
           </button>
@@ -623,8 +676,11 @@
         <button
           type="button"
           role="menuitem"
+          data-export-action="xmi"
           (click)="handleExportXmi()"
-          [disabled]="multiUserBlocked()"
+          [class.unavailable]="multiUserBlocked()"
+          [attr.aria-disabled]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
         >
           <ng-icon name="heroDocumentText" /> XML / XMI 2.1
         </button>
@@ -633,8 +689,11 @@
         <button
           type="button"
           role="menuitem"
+          data-export-action="json"
           (click)="handleExportJson()"
-          [disabled]="multiUserBlocked()"
+          [class.unavailable]="multiUserBlocked()"
+          [attr.aria-disabled]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
         >
           <ng-icon name="heroDocumentText" /> {{ 'appbar.exportJson' | translate }}
         </button>
@@ -644,8 +703,11 @@
         <button
           type="button"
           role="menuitem"
+          data-export-action="ast"
           (click)="handleViewJson()"
-          [disabled]="multiUserBlocked()"
+          [class.unavailable]="multiUserBlocked()"
+          [attr.aria-disabled]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
         >
           <ng-icon name="heroDocumentChartBar" /> JSON AST
         </button>

@@ -39,7 +39,7 @@ export const entityPlugin: NodePlugin = {
       id: 'entity',
       labelKey: 'plugins.nodes.entity',
       icon: EntitySvgComponent,
-      diagramTypes: [DiagramType.COMMUNICATION],
+      diagramTypes: [],
     },
   ],
   inputs: (context) => ({ ...context }),

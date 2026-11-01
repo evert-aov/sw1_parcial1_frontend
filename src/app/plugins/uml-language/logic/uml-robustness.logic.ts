@@ -20,6 +20,9 @@ export function validateRobustnessConnection(
   sourceNodeType: string,
   targetNodeType: string,
 ): { isValid: boolean; warning?: string } {
+  if (sourceNodeType === 'note' || targetNodeType === 'note') {
+    return { isValid: true };
+  }
   if (sourceNodeType === 'actor') {
     if (targetNodeType !== 'boundary') {
       return {

@@ -32,7 +32,7 @@ export const lifelinePlugin: NodePlugin = {
     zIndex: [20, 25],
     cssClass: 'f-node-lifeline',
     transparent: true,
-    lockY: true,
+    lockY: false,
     externalLabel: false,
     fixedHeaderHeight: 60,
   },
@@ -41,7 +41,7 @@ export const lifelinePlugin: NodePlugin = {
       id: 'lifeline',
       labelKey: 'plugins.nodes.lifeline',
       icon: LifelineSvgComponent,
-      diagramTypes: [DiagramType.SEQUENCE],
+      diagramTypes: [DiagramType.SEQUENCE, DiagramType.COMMUNICATION],
     },
   ],
   inputs: (context) => ({ ...context }),
@@ -74,7 +74,7 @@ export const lifelinePlugin: NodePlugin = {
     }
 
     const count = nodes.filter((n) => n.nodeType === 'lifeline').length + 1;
-    const defaultName = isSequence ? `lifeline_${count}` : `Objeto_${count}`;
+    const defaultName = isSequence ? `lifeline_${count}` : `:Objeto_${count}`;
 
     return {
       id: `lifeline_${crypto.randomUUID()}`,

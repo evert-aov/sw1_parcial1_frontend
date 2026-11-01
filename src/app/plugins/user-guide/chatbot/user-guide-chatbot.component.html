@@ -1,11 +1,119 @@
-<!-- BOTÓN FLOTANTE ACTIVADOR (LAUNCHER) -->
+<!-- BOTÓN FLOTANTE ACTIVADOR (LAUNCHER) + SUGERENCIAS AUTÓNOMAS DE KANON -->
 @if (!isOpen() && !guideService.isLauncherHidden()) {
   <div
     [style.left.px]="launcherPosX()"
     [style.top.px]="launcherPosY()"
     [class.bottom-5]="launcherPosX() === null"
     [class.right-5]="launcherPosX() === null"
-    class="fixed z-50 flex items-center select-none group/launcher transition-shadow">
+    [class.flex-row-reverse]="launcherPosX() !== null && launcherPosX()! < 340"
+    class="fixed z-50 flex items-end gap-3 select-none group/launcher transition-shadow">
+
+    @if (aiCoordinator?.activeSuggestion(); as suggestion) {
+      <section
+        data-testid="kanon-suggestion-card"
+        role="status"
+        aria-live="polite"
+        class="w-[290px] sm:w-[325px] bg-white/95 dark:bg-[#0D1124]/95 backdrop-blur-md border border-indigo-200/90 dark:border-indigo-500/35 shadow-2xl rounded-2xl p-3.5 text-left select-text">
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <ng-icon name="heroSparkles" class="text-sm text-white"></ng-icon>
+            </div>
+            <div class="min-w-0">
+              <span class="block text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                {{ 'chat.suggestionBadge' | translate }}
+              </span>
+              <h4 class="font-bold text-xs text-slate-900 dark:text-slate-100 leading-snug truncate">
+                {{ suggestion.title }}
+              </h4>
+            </div>
+          </div>
+          <div class="flex items-center gap-0.5 shrink-0">
+            <button
+              type="button"
+              (click)="muteKanonSuggestions($event)"
+              [title]="'chat.muteSuggestions' | translate"
+              [attr.aria-label]="'chat.muteSuggestions' | translate"
+              class="p-1 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-[#1E2548] rounded-lg transition-colors cursor-pointer">
+              <ng-icon name="heroBellSlash" class="text-xs"></ng-icon>
+            </button>
+            <button
+              type="button"
+              (click)="dismissKanonSuggestion($event)"
+              [title]="'chat.dismissSuggestion' | translate"
+              [attr.aria-label]="'chat.dismissSuggestion' | translate"
+              class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#1E2548] rounded-lg transition-colors cursor-pointer">
+              <ng-icon name="heroXMark" class="text-xs"></ng-icon>
+            </button>
+          </div>
+        </div>
+        <p class="text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-300 mb-3">
+          {{ suggestion.summary }}
+        </p>
+        @if (isChoosingScope()) {
+          <div class="flex flex-col gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+            <span class="text-[10.5px] font-medium text-slate-600 dark:text-slate-300">
+              {{ 'chat.chooseChatScope' | translate }}
+            </span>
+            <div class="flex items-center justify-end gap-1.5">
+              <button
+                type="button"
+                (click)="cancelChoosingScope($event)"
+                class="px-2 py-1 rounded-md text-[10.5px] text-slate-500 hover:bg-slate-100 dark:hover:bg-[#1E2548] transition-colors cursor-pointer">
+                {{ 'chat.cancelRecording' | translate }}
+              </button>
+              <button
+                type="button"
+                data-testid="continue-personal-chat"
+                [disabled]="acceptingSuggestion()"
+                (click)="continueKanonSuggestionInScope('personal', $event)"
+                class="px-2.5 py-1 rounded-md text-[10.5px] font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50">
+                <ng-icon name="heroUser" class="text-xs"></ng-icon>
+                <span>{{ 'chat.continueInPersonalChat' | translate }}</span>
+              </button>
+              <button
+                type="button"
+                data-testid="continue-group-chat"
+                [disabled]="acceptingSuggestion()"
+                (click)="continueKanonSuggestionInScope('group', $event)"
+                class="px-2.5 py-1 rounded-md text-[10.5px] font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50">
+                <ng-icon name="heroUserGroup" class="text-xs"></ng-icon>
+                <span>{{ 'chat.continueInGroupChat' | translate }}</span>
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="flex items-center justify-between gap-1.5">
+            <button
+              type="button"
+              data-testid="add-suggestion-note-btn"
+              (click)="addKanonSuggestionAsNote(suggestion, $event)"
+              [title]="'chat.addAsNoteTooltip' | translate"
+              class="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800/60 shadow-xs flex items-center gap-1 transition-colors cursor-pointer">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
+              <span>{{ 'chat.addAsNote' | translate }}</span>
+            </button>
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                (click)="dismissKanonSuggestion($event)"
+                class="px-2 py-1.5 rounded-lg text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1E2548] transition-colors cursor-pointer">
+                {{ 'chat.dismissSuggestion' | translate }}
+              </button>
+              <button
+                type="button"
+                data-testid="continue-suggestion-chat"
+                [disabled]="acceptingSuggestion()"
+                (click)="continueKanonSuggestion($event)"
+                class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 hover:from-blue-500 hover:to-indigo-500 text-white shadow-sm flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50">
+                <span>{{ 'chat.continueInChat' | translate }}</span>
+                <ng-icon name="heroArrowRight" class="text-xs"></ng-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </section>
+    }
 
     <!-- Botón Circular Principal del Manual (Draggable y sin mensaje de texto) -->
     <button
@@ -14,10 +122,16 @@
       (touchstart)="onLauncherTouchStart($event)"
       (click)="onLauncherClick()"
       title="Manual Interactivo • Arrastra para mover de posición"
-      class="relative bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-500 hover:from-blue-500 hover:to-indigo-500 text-white p-3.5 rounded-full shadow-2xl transition-transform duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center border-2 border-white/20 cursor-grab active:cursor-grabbing">
+      class="relative bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-500 hover:from-blue-500 hover:to-indigo-500 text-white p-3.5 rounded-full shadow-2xl transition-transform duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center border-2 border-white/20 cursor-grab active:cursor-grabbing shrink-0">
       <ng-icon name="heroAcademicCap" class="text-2xl pointer-events-none"></ng-icon>
-      <!-- Indicador online -->
-      <span class="absolute top-0 right-0 block h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-[#0D1124] bg-emerald-400 pointer-events-none"></span>
+      <!-- Indicador online o destello de sugerencia activa -->
+      @if (aiCoordinator?.activeSuggestion()) {
+        <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full ring-2 ring-white dark:ring-[#0D1124] bg-amber-400 text-slate-900 pointer-events-none animate-bounce">
+          <ng-icon name="heroSparkles" class="text-[11px]"></ng-icon>
+        </span>
+      } @else {
+        <span class="absolute top-0 right-0 block h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-[#0D1124] bg-emerald-400 pointer-events-none"></span>
+      }
 
       <!-- Botón Ocultar en esquina (visible en hover del botón) -->
       <span
@@ -32,6 +146,81 @@
 
 <!-- Acceso discreto para restaurar el icono cuando está oculto -->
 @if (!isOpen() && guideService.isLauncherHidden()) {
+  @if (aiCoordinator?.activeSuggestion(); as hiddenSuggestion) {
+    <section
+      data-testid="kanon-suggestion-card"
+      role="status"
+      aria-live="polite"
+      class="fixed bottom-11 right-3 z-50 w-[290px] sm:w-[325px] bg-white/95 dark:bg-[#0D1124]/95 backdrop-blur-md border border-indigo-200/90 dark:border-indigo-500/35 shadow-2xl rounded-2xl p-3.5 text-left">
+      <div class="flex items-center justify-between gap-2 mb-1.5">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-500 text-white flex items-center justify-center shrink-0">
+            <ng-icon name="heroSparkles" class="text-xs text-white"></ng-icon>
+          </div>
+          <h4 class="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{{ hiddenSuggestion.title }}</h4>
+        </div>
+        <button type="button" (click)="dismissKanonSuggestion($event)" class="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer">
+          <ng-icon name="heroXMark" class="text-xs"></ng-icon>
+        </button>
+      </div>
+      <p class="text-[11.5px] leading-relaxed text-slate-600 dark:text-slate-300 mb-2.5">{{ hiddenSuggestion.summary }}</p>
+      @if (isChoosingScope()) {
+        <div class="flex flex-col gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+          <span class="text-[10.5px] font-medium text-slate-600 dark:text-slate-300">
+            {{ 'chat.chooseChatScope' | translate }}
+          </span>
+          <div class="flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              (click)="cancelChoosingScope($event)"
+              class="px-2 py-1 rounded-md text-[10.5px] text-slate-500 hover:bg-slate-100 dark:hover:bg-[#1E2548] transition-colors cursor-pointer">
+              {{ 'chat.cancelRecording' | translate }}
+            </button>
+            <button
+              type="button"
+              data-testid="continue-personal-chat"
+              [disabled]="acceptingSuggestion()"
+              (click)="continueKanonSuggestionInScope('personal', $event)"
+              class="px-2 py-1 rounded-md text-[10.5px] font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50">
+              <ng-icon name="heroUser" class="text-xs"></ng-icon>
+              <span>{{ 'chat.continueInPersonalChat' | translate }}</span>
+            </button>
+            <button
+              type="button"
+              data-testid="continue-group-chat"
+              [disabled]="acceptingSuggestion()"
+              (click)="continueKanonSuggestionInScope('group', $event)"
+              class="px-2 py-1 rounded-md text-[10.5px] font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50">
+              <ng-icon name="heroUserGroup" class="text-xs"></ng-icon>
+              <span>{{ 'chat.continueInGroupChat' | translate }}</span>
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="flex items-center justify-between gap-1.5">
+          <button
+            type="button"
+            data-testid="add-suggestion-note-btn"
+            (click)="addKanonSuggestionAsNote(hiddenSuggestion, $event)"
+            [title]="'chat.addAsNoteTooltip' | translate"
+            class="px-2 py-1 rounded-md text-[11px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800/60 shadow-xs flex items-center gap-1 transition-colors cursor-pointer">
+            <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
+            <span>{{ 'chat.addAsNote' | translate }}</span>
+          </button>
+          <div class="flex items-center gap-1.5">
+            <button type="button" (click)="dismissKanonSuggestion($event)" class="px-2 py-1 text-[11px] text-slate-500 hover:bg-slate-100 rounded cursor-pointer">
+              {{ 'chat.dismissSuggestion' | translate }}
+            </button>
+            <button type="button" data-testid="continue-suggestion-chat" [disabled]="acceptingSuggestion()" (click)="continueKanonSuggestion($event)"
+              class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 text-white flex items-center gap-1 cursor-pointer disabled:opacity-50">
+              <span>{{ 'chat.continueInChat' | translate }}</span>
+              <ng-icon name="heroArrowRight" class="text-xs"></ng-icon>
+            </button>
+          </div>
+        </div>
+      }
+    </section>
+  }
   <button
     type="button"
     (click)="showLauncher($event)"

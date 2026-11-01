@@ -355,8 +355,19 @@ export class DiagramNodeOperationsService {
       return { allowed: true };
     }
 
+    if (nodeType === 'lifeline') {
+      if (currentType === DiagramType.SEQUENCE || currentType === DiagramType.COMMUNICATION) {
+        return { allowed: true };
+      }
+      return { allowed: false };
+    }
+
     if (nodeType === 'boundary' || nodeType === 'control' || nodeType === 'entity') {
-      if (currentType === DiagramType.CLASS_ANALYSIS || currentType === DiagramType.CLASS) {
+      if (
+        currentType === DiagramType.CLASS_ANALYSIS ||
+        currentType === DiagramType.CLASS ||
+        currentType === DiagramType.COMMUNICATION
+      ) {
         return { allowed: false };
       }
       return { allowed: true };

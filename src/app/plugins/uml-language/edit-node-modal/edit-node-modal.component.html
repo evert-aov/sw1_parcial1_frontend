@@ -55,7 +55,9 @@
                                 ? 'Editar Componente'
                                 : editingNode()!.nodeType === 'deployment'
                                   ? 'Editar Nodo Despliegue'
-                                  : ('editor.nodeModal.title' | translate)
+                                  : editingNode()!.nodeType === 'note'
+                                    ? ('editor.nodeModal.editNoteTitle' | translate)
+                                    : ('editor.nodeModal.title' | translate)
               }}
             </h3>
             <span class="text-[10px] text-slate-400 font-mono">ID: {{ editingNode()!.id }}</span>
@@ -119,52 +121,74 @@
         <!-- ================================================================= -->
         @if (activeTab() === 'general') {
           <div class="space-y-4 animate-in fade-in duration-100">
-            <!-- Nombre del Elemento / Clase -->
-            <div>
-              <label
-                class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5"
-              >
-                {{
-                  editingNode()!.nodeType === 'actor'
-                    ? 'Nombre del Actor'
-                    : editingNode()!.nodeType === 'use_case'
-                      ? 'Nombre del Caso de Uso'
-                      : editingNode()!.nodeType === 'package'
-                        ? 'Nombre del Paquete (Pestaña)'
-                        : editingNode()!.nodeType === 'boundary'
-                          ? 'Nombre del Boundary / Pantalla'
-                          : editingNode()!.nodeType === 'control'
-                            ? 'Nombre del Control / Gestor'
-                            : editingNode()!.nodeType === 'entity'
-                              ? 'Nombre de la Entidad'
-                              : editingNode()!.nodeType === 'lifeline'
-                                ? 'Nombre de la Línea de Vida'
-                                : ('editor.nodeModal.className' | translate)
-                }}
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="editingNode()!.name"
-                [placeholder]="
-                  editingNode()!.nodeType === 'actor'
-                    ? 'e.g. Cliente, Administrador'
-                    : editingNode()!.nodeType === 'use_case'
-                      ? 'e.g. Realizar Pedido, Iniciar Sesión'
-                      : editingNode()!.nodeType === 'package'
-                        ? 'e.g. AI-assistant, Auth, Billing'
-                        : editingNode()!.nodeType === 'boundary'
-                          ? 'e.g. FormVenta, VistaLogin'
-                          : editingNode()!.nodeType === 'control'
-                            ? 'e.g. GestorVenta, Validador'
-                            : editingNode()!.nodeType === 'entity'
-                              ? 'e.g. Producto, Factura'
-                              : editingNode()!.nodeType === 'lifeline'
-                                ? 'e.g. ServicioAutenticacion'
-                                : 'e.g. Usuario, Pedido'
-                "
-                class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all font-mono"
-              />
-            </div>
+            <!-- Nombre del Elemento / Clase o Contenido de Nota Flotante -->
+            @if (editingNode()!.nodeType === 'note') {
+              <div class="space-y-2.5">
+                <label
+                  class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]"
+                >
+                  {{ 'editor.nodeModal.noteContentLabel' | translate }}
+                </label>
+                <textarea
+                  rows="5"
+                  maxlength="2000"
+                  [(ngModel)]="editingNode()!.name"
+                  [placeholder]="'editor.canvas.nodes.notePlaceholder' | translate"
+                  class="w-full px-3.5 py-2.5 bg-amber-50/70 dark:bg-[#181B2C] border border-amber-300 dark:border-amber-800/70 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-500 font-medium text-xs transition-all resize-y"
+                ></textarea>
+                <p
+                  class="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/35 border border-amber-200/80 dark:border-amber-800/50 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed"
+                >
+                  {{ 'editor.nodeModal.noteCodegenNotice' | translate }}
+                </p>
+              </div>
+            } @else {
+              <div>
+                <label
+                  class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5"
+                >
+                  {{
+                    editingNode()!.nodeType === 'actor'
+                      ? 'Nombre del Actor'
+                      : editingNode()!.nodeType === 'use_case'
+                        ? 'Nombre del Caso de Uso'
+                        : editingNode()!.nodeType === 'package'
+                          ? 'Nombre del Paquete (Pestaña)'
+                          : editingNode()!.nodeType === 'boundary'
+                            ? 'Nombre del Boundary / Pantalla'
+                            : editingNode()!.nodeType === 'control'
+                              ? 'Nombre del Control / Gestor'
+                              : editingNode()!.nodeType === 'entity'
+                                ? 'Nombre de la Entidad'
+                                : editingNode()!.nodeType === 'lifeline'
+                                  ? 'Nombre de la Línea de Vida'
+                                  : ('editor.nodeModal.className' | translate)
+                  }}
+                </label>
+                <input
+                  type="text"
+                  [(ngModel)]="editingNode()!.name"
+                  [placeholder]="
+                    editingNode()!.nodeType === 'actor'
+                      ? 'e.g. Cliente, Administrador'
+                      : editingNode()!.nodeType === 'use_case'
+                        ? 'e.g. Realizar Pedido, Iniciar Sesión'
+                        : editingNode()!.nodeType === 'package'
+                          ? 'e.g. AI-assistant, Auth, Billing'
+                          : editingNode()!.nodeType === 'boundary'
+                            ? 'e.g. FormVenta, VistaLogin'
+                            : editingNode()!.nodeType === 'control'
+                              ? 'e.g. GestorVenta, Validador'
+                              : editingNode()!.nodeType === 'entity'
+                                ? 'e.g. Producto, Factura'
+                                : editingNode()!.nodeType === 'lifeline'
+                                  ? 'e.g. ServicioAutenticacion'
+                                  : 'e.g. Usuario, Pedido'
+                  "
+                  class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-xs transition-all font-mono"
+                />
+              </div>
+            }
 
             <!-- Estereotipo UML -->
             @if (canHaveStereotype()) {
@@ -393,6 +417,7 @@
                       <input
                         type="text"
                         [(ngModel)]="m.name"
+                        (blur)="onMethodNameBlur(m)"
                         placeholder="método"
                         class="flex-1 px-2.5 py-1.5 bg-white dark:bg-[#0E1225] border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />

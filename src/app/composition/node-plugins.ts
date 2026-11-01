@@ -11,6 +11,7 @@ import { lifelinePlugin } from '../plugins/uml-lifeline-node/lifeline.plugin';
 import { componentPlugin } from '../plugins/uml-component-node/component.plugin';
 import { devicePlugin } from '../plugins/uml-deployment-node/device.plugin';
 import { executionEnvironmentPlugin } from '../plugins/uml-deployment-node/executionEnvironment.plugin';
+import { notePlugin } from '../plugins/uml-note-node/note.plugin';
 export const NODE_PLUGINS = [
   nodePlugin,
   classPlugin,
@@ -25,4 +26,5 @@ export const NODE_PLUGINS = [
   componentPlugin,
   devicePlugin,
   executionEnvironmentPlugin,
+  notePlugin,
 ];

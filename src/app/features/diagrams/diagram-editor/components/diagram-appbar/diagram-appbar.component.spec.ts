@@ -190,4 +190,30 @@ describe('Workspace action ownership', () => {
     gridBtn!.click();
     expect(toggleGridSpy).toHaveBeenCalledOnce();
   });
+
+  it('displays integrity protection banners and fires toast warnings on click when 2+ users edit concurrently', async () => {
+    const toast = TestBed.inject(ToastService);
+    const png = vi.fn();
+    fixture.componentInstance.exportPng.subscribe(png);
+    fixture.componentRef.setInput('isMultiUserEditing', true);
+    fixture.componentInstance.showPublish();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('[data-integrity-banner="publish"]')).not.toBeNull();
+    expect(root.querySelector('[data-integrity-banner="export"]')).not.toBeNull();
+
+    const pngButton = root.querySelector<HTMLButtonElement>('[data-export-action="png"]')!;
+    expect(pngButton.getAttribute('aria-disabled')).toBe('true');
+    pngButton.click();
+    expect(png).not.toHaveBeenCalled();
+    expect(toast.warning).toHaveBeenCalledOnce();
+
+    fixture.componentInstance.toggleMenu('file');
+    fixture.componentInstance.toggleImport();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(root.querySelector('[data-integrity-banner="import"]')).not.toBeNull();
+  });
 });

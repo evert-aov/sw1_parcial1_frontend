@@ -19,6 +19,7 @@ const NON_CLASS_COLORED_NODE_TYPES = [
   'actor',
   'use_case',
   'package',
+  'note',
 ] as const;
 
 export const EXPLICIT_SIZE_NODE_TYPES = [
@@ -28,6 +29,7 @@ export const EXPLICIT_SIZE_NODE_TYPES = [
   'executionEnvironment',
   'boundary_box',
   'package',
+  'note',
 ] as const;
 
 /**
@@ -53,9 +55,16 @@ export class UmlNodeNormalizerUtil {
     diagramType: DiagramType | string
   ): boolean {
     const type = nodeType || 'class';
+    if (type === 'note') {
+      return true;
+    }
 
     if (diagramType === DiagramType.COMMUNICATION) {
-      return type === 'actor' || type === 'boundary' || type === 'control' || type === 'entity';
+      return (
+        type === 'lifeline' ||
+        type === 'actor' ||
+        type === 'boundary_box'
+      );
     }
     if (diagramType === DiagramType.CLASS_ANALYSIS) {
       return type === 'class' || type === 'actor';
@@ -124,6 +133,9 @@ export class UmlNodeNormalizerUtil {
       (/^cu[-_ \d]/i.test(n.name || '') || (typeof n.name === 'string' && /caso\s+de\s+uso/i.test(n.name)))
     ) {
       return 'use_case';
+    }
+    if (nodeType === 'note' || n.id?.startsWith('note_')) {
+      return 'note';
     }
     if (nodeType === 'boundary_box' || n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) {
       return 'boundary_box';
@@ -197,6 +209,8 @@ export class UmlNodeNormalizerUtil {
         return { defaultWidth: 280, defaultHeight: 200 };
       case 'package':
         return { defaultWidth: 200, defaultHeight: 120 };
+      case 'note':
+        return { defaultWidth: 195, defaultHeight: 115 };
       case 'component':
         return { defaultWidth: 190, defaultHeight: 70 };
       case 'device':
@@ -313,6 +327,47 @@ export class UmlNodeNormalizerUtil {
       color: m.color || undefined,
     };
   }
+  /**
+   * Normaliza una operación o método UML separando el nombre de los parámetros y el retorno
+   * si vienen agrupados en la firma (p. ej. "actualizarStock(cantidad)").
+   *
+   * @param m Objeto bruto del método.
+   * @param normalizeReturnType Función opcional para validar/normalizar el tipo de retorno.
+   * @returns Método UML normalizado con campos separados.
+   */
+  static normalizeMethod(
+    m: any,
+    normalizeReturnType?: (type: string) => string,
+  ): { name: string; parameters: string; returnType: string; orderIndex?: number; visibility?: string } {
+    let name = String(m?.name || '').trim();
+    let parameters =
+      m?.parameters !== undefined && m?.parameters !== null ? String(m.parameters).trim() : '';
+    let returnType = m?.returnType ? String(m.returnType).trim() : 'void';
+
+    const match = name.match(/^([a-zA-Z0-9_]+)\s*\((.*?)\)(?:\s*:\s*(.+))?$/);
+    if (match) {
+      name = match[1].trim();
+      if (!parameters && match[2] !== undefined) {
+        parameters = match[2].trim();
+      }
+      if (match[3] && (!returnType || returnType === 'void')) {
+        returnType = match[3].trim();
+      }
+    }
+
+    if (parameters.startsWith('(') && parameters.endsWith(')')) {
+      parameters = parameters.slice(1, -1).trim();
+    }
+
+    return {
+      name,
+      parameters,
+      returnType: normalizeReturnType ? normalizeReturnType(returnType) : returnType,
+      orderIndex: typeof m?.orderIndex === 'number' ? m.orderIndex : undefined,
+      visibility: m?.visibility || '+',
+    };
+  }
+
   static mapServerDiagramToLocal(
     diagram: any,
     getDefaultColor?: (nodeType?: string, stereotype?: string | null) => string,
@@ -387,11 +442,9 @@ export class UmlNodeNormalizerUtil {
           defaultValue: a.defaultValue ?? a.default ?? null,
           default: a.default ?? a.defaultValue ?? null,
         })),
-        methods: (n.methods || []).map((m: any) => ({
-          name: m.name,
-          parameters: m.parameters,
-          returnType: normalizeReturnType ? normalizeReturnType(m.returnType) : m.returnType,
-        })),
+        methods: (n.methods || []).map((m: any) =>
+          UmlNodeNormalizerUtil.normalizeMethod(m, normalizeReturnType),
+        ),
       };
     });
 
@@ -456,6 +509,9 @@ export class UmlNodeNormalizerUtil {
             color: nodeColor,
             stereotype: n.stereotype || null,
             labelOffset: undefined,
+            methods: n.methods
+              ? n.methods.map((m: any) => UmlNodeNormalizerUtil.normalizeMethod(m))
+              : n.methods,
           };
   }
 }

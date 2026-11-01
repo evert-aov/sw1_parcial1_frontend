@@ -116,7 +116,13 @@ export class DiagramClipboardService {
     } else if (currentType === DiagramType.PACKAGE) {
       return !clip.nodes.some((n) => n.nodeType !== 'package' && n.nodeType !== 'use_case' && n.nodeType !== 'actor');
     } else if (currentType === DiagramType.COMMUNICATION) {
-      return !clip.nodes.some((n) => n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity' && n.nodeType !== 'actor');
+      return !clip.nodes.some(
+        (n) =>
+          n.nodeType !== 'lifeline' &&
+          n.nodeType !== 'actor' &&
+          n.nodeType !== 'boundary_box' &&
+          n.nodeType !== 'note',
+      );
     } else if (currentType === DiagramType.SEQUENCE) {
       return !clip.nodes.some((n) => n.nodeType !== 'actor' && n.nodeType !== 'lifeline' && n.nodeType !== 'class' && n.nodeType !== 'boundary' && n.nodeType !== 'control' && n.nodeType !== 'entity');
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
@@ -243,7 +249,12 @@ export class DiagramClipboardService {
     } else if (currentType === DiagramType.PACKAGE) {
       return node.nodeType === 'package' || node.nodeType === 'use_case' || node.nodeType === 'actor';
     } else if (currentType === DiagramType.COMMUNICATION) {
-      return !isClassNode && (isPureBceNode || node.nodeType === 'actor');
+      return (
+        node.nodeType === 'lifeline' ||
+        node.nodeType === 'actor' ||
+        node.nodeType === 'boundary_box' ||
+        node.nodeType === 'note'
+      );
     } else if (currentType === DiagramType.SEQUENCE) {
       return node.nodeType === 'actor' || node.nodeType === 'lifeline' || isClassNode || isPureBceNode;
     } else if (currentType === DiagramType.CLASS_ANALYSIS) {
@@ -321,7 +332,7 @@ export class DiagramClipboardService {
 
     const newNodeId = `${node.nodeType || 'node'}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    const resolvedNodeType = node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : (currentType === DiagramType.PACKAGE ? 'package' : (currentType === DiagramType.COMMUNICATION ? 'boundary' : 'class')));
+    const resolvedNodeType = node.nodeType || (currentType === DiagramType.USE_CASE ? 'use_case' : (currentType === DiagramType.PACKAGE ? 'package' : (currentType === DiagramType.COMMUNICATION ? 'lifeline' : 'class')));
     const resolvedStereotype = node.stereotype || null;
     const resolvedWidth = width;
     const resolvedHeight = height;

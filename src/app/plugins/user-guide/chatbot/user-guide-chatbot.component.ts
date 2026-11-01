@@ -5,8 +5,11 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { UserGuideService } from '../user-guide.service';
 import { TranslationService, TranslatePipe } from '../../../core/i18n/index';
+import { PluginRegistryService } from '../../../core/plugins/plugin-registry.service';
+import { AiAssistantCoordinator, ChatScope } from '../../../core/plugins/contracts/ai-assistant.service.contract';
 import {
   heroAcademicCap,
+  heroBellSlash,
   heroBookOpen,
   heroChatBubbleLeftRight,
   heroCommandLine,
@@ -15,6 +18,8 @@ import {
   heroQuestionMarkCircle,
   heroServerStack,
   heroSparkles,
+  heroUser,
+  heroUserGroup,
   heroXMark,
   heroChevronDown,
   heroChevronUp,
@@ -63,6 +68,7 @@ export interface TourStep {
   providers: [
     provideIcons({
       heroAcademicCap,
+      heroBellSlash,
       heroBookOpen,
       heroChatBubbleLeftRight,
       heroCommandLine,
@@ -71,6 +77,8 @@ export interface TourStep {
       heroQuestionMarkCircle,
       heroServerStack,
       heroSparkles,
+      heroUser,
+      heroUserGroup,
       heroXMark,
       heroChevronDown,
       heroChevronUp,
@@ -97,8 +105,77 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
 
   guideService = inject(UserGuideService);
   translationService = inject(TranslationService);
+  private readonly plugins = inject(PluginRegistryService, { optional: true });
   private readonly sanitizer = inject(DomSanitizer);
   private readonly initialTimestamp = new Date();
+  readonly acceptingSuggestion = signal(false);
+  readonly isChoosingScope = signal(false);
+
+  /** Resuelve de forma desacoplada el coordinador reactivo de Kanon si está registrado. */
+  get aiCoordinator(): AiAssistantCoordinator | undefined {
+    if (!this.plugins?.has(AiAssistantCoordinator)) return undefined;
+    const resolved = this.plugins.resolve(AiAssistantCoordinator) as Partial<AiAssistantCoordinator> | null;
+    return typeof resolved?.activeSuggestion === 'function'
+      ? (resolved as AiAssistantCoordinator)
+      : undefined;
+  }
+
+  /** Al hacer clic en "Continuar en el chat", consulta si el proyecto tiene varios colaboradores. */
+  onContinueClick(event?: MouseEvent): void {
+    event?.stopPropagation();
+    const hasMultiple = this.aiCoordinator?.hasMultipleCollaborators() ?? false;
+    if (hasMultiple) {
+      this.isChoosingScope.set(true);
+    } else {
+      void this.continueKanonSuggestionInScope('personal');
+    }
+  }
+
+  /** Cancela la selección de ámbito y regresa a los botones de la tarjeta. */
+  cancelChoosingScope(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.isChoosingScope.set(false);
+  }
+
+  /** Traslada la sugerencia autónoma de Kanon al chat indicado (personal o grupal) y abre el panel. */
+  async continueKanonSuggestionInScope(scope: ChatScope, event?: MouseEvent): Promise<void> {
+    event?.stopPropagation();
+    this.isChoosingScope.set(false);
+    const coord = this.aiCoordinator;
+    if (!coord || this.acceptingSuggestion()) return;
+    this.acceptingSuggestion.set(true);
+    try {
+      await coord.continueSuggestionInChat(scope);
+    } finally {
+      this.acceptingSuggestion.set(false);
+    }
+  }
+
+  /** Mantiene compatibilidad hacia atrás delegando a la selección o envío personal. */
+  async continueKanonSuggestion(event?: MouseEvent): Promise<void> {
+    this.onContinueClick(event);
+  }
+
+  /** Inserta la sugerencia activa como una nota flotante morada colaborativa en el lienzo. */
+  addKanonSuggestionAsNote(suggestion: any, event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.isChoosingScope.set(false);
+    this.aiCoordinator?.requestAddSuggestionAsNote(suggestion);
+  }
+
+  /** Descarta la tarjeta flotante de sugerencia activa. */
+  dismissKanonSuggestion(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.isChoosingScope.set(false);
+    this.aiCoordinator?.dismissSuggestion();
+  }
+
+  /** Silencia nuevas sugerencias autónomas durante la sesión actual. */
+  muteKanonSuggestions(event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.isChoosingScope.set(false);
+    this.aiCoordinator?.setSuggestionsMuted(true);
+  }
 
   // Posición arrastrable (Draggable) del icono del manual
   readonly launcherPosX = signal<number | null>(null);

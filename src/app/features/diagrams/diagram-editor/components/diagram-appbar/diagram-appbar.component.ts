@@ -32,10 +32,13 @@ import {
   heroArrowUturnLeft,
   heroArrowUturnRight,
   heroCog6Tooth,
+  heroLockClosed,
+  heroPhone,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
 import { UserGuideService } from '../../../../../core/plugins/contracts/user-guide.contract';
+import { AiAssistantCoordinator } from '../../../../../core/plugins/contracts/ai-assistant.service.contract';
 import { TranslatePipe, LanguageSelectorComponent, TranslationService } from '../../../../../core/i18n/index';
 import { ThemeToggleComponent } from '../../../../../core/components/theme-toggle/theme-toggle.component';
 import { ToastService } from '../../../../../core/services/toast.service';
@@ -79,6 +82,8 @@ type WorkspaceMenu = 'file' | 'export' | 'preferences';
       heroArrowUturnLeft,
       heroArrowUturnRight,
       heroCog6Tooth,
+      heroLockClosed,
+      heroPhone,
     }),
   ],
   templateUrl: './diagram-appbar.component.html',
@@ -172,6 +177,24 @@ export class DiagramAppbarComponent implements AfterViewInit {
    * Obtiene la instancia del servicio de guía de usuario si el plugin está registrado.
    */
   get guideService(): UserGuideService | undefined { return this.plugins.has(UserGuideService) ? this.plugins.resolve(UserGuideService) : undefined; }
+  /**
+   * Obtiene el coordinador reactivo de Kanon (llamada grupal y sugerencias) si está registrado.
+   */
+  get aiCoordinator(): AiAssistantCoordinator | undefined {
+    if (!this.plugins.has(AiAssistantCoordinator)) return undefined;
+    const resolved = this.plugins.resolve(AiAssistantCoordinator);
+    return resolved && typeof resolved.inCall === 'function' ? resolved : undefined;
+  }
+
+  /**
+   * Inicia o se une a la llamada grupal del diagrama activo a través del coordinador de Kanon.
+   */
+  joinGroupCall(): void {
+    const id = this.diagramId();
+    if (!id) return;
+    this.closeMenu();
+    this.aiCoordinator?.requestJoinCall(id);
+  }
   readonly translationService = inject(TranslationService);
   readonly toastService = inject(ToastService);
 

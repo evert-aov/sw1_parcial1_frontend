@@ -145,12 +145,34 @@ export class SpringBootModalComponent implements OnInit {
     return all.filter((f) => f.layer === cat);
   });
 
+  /** Filtra nodos excluyendo anclas y notas flotantes colaborativas para la generación de código. */
+  readonly codegenNodes = computed(() => {
+    return this.nodes().filter(
+      (n) => !n.isAnchor && (n.nodeType || '').toLowerCase().trim() !== 'note',
+    );
+  });
+
+  /** Filtra relaciones excluyendo enlaces conectados a notas flotantes colaborativas. */
+  readonly codegenConnections = computed(() => {
+    const noteIds = new Set(
+      this.nodes()
+        .filter((n) => (n.nodeType || '').toLowerCase().trim() === 'note')
+        .map((n) => n.id),
+    );
+    if (!noteIds.size) return this.connections();
+    return this.connections().filter((c) => {
+      const src = c.sourceNodeId || c.sourceId.split('_')[0];
+      const tgt = c.targetNodeId || c.targetId.split('_')[0];
+      return !noteIds.has(src) && !noteIds.has(tgt) && !noteIds.has(c.sourceId) && !noteIds.has(c.targetId);
+    });
+  });
+
   readonly totalClasses = computed(() => {
-    return this.nodes().filter((n) => !n.isAnchor).length;
+    return this.codegenNodes().length;
   });
 
   readonly totalRelations = computed(() => {
-    return this.connections().length;
+    return this.codegenConnections().length;
   });
 
   readonly highlightedCode = computed<SafeHtml>(() => {
@@ -304,8 +326,8 @@ export class SpringBootModalComponent implements OnInit {
       databasePassword: this.databasePassword(),
       serverPort: this.serverPort(),
       databasePort: this.databasePort(),
-      nodes: this.nodes(),
-      connections: this.connections(),
+      nodes: this.codegenNodes(),
+      connections: this.codegenConnections(),
     };
 
     this.codegenService.previewFromDiagramId(diagId, payload).subscribe({
@@ -370,8 +392,8 @@ export class SpringBootModalComponent implements OnInit {
       databasePassword: this.databasePassword(),
       serverPort: this.serverPort(),
       databasePort: this.databasePort(),
-      nodes: this.nodes(),
-      connections: this.connections(),
+      nodes: this.codegenNodes(),
+      connections: this.codegenConnections(),
     };
 
     this.codegenService.downloadZipFromDiagramId(diagId, payload).subscribe({

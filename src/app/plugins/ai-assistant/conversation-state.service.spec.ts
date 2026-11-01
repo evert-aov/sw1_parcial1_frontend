@@ -28,6 +28,48 @@ describe('Conversation state recovery', () => {
   });
   afterEach(() => { state.ngOnDestroy(); TestBed.resetTestingModule(); vi.useRealTimers(); });
 
+  it('applies pushed snapshots immediately in a hidden tab without another HTTP read', async () => {
+    state.connect('diagram');
+    await Promise.resolve();
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    try {
+      document.dispatchEvent(new Event('visibilitychange'));
+      notices.next({ kind: 'changed', scope: 'group', revision: 3,
+        snapshot: { revision: 3, messages: [message('instant', 1)], hasMore: false } });
+      expect(state.messages()[0].id).toBe('instant');
+      expect(api.history).toHaveBeenCalledTimes(1);
+    } finally { hidden.mockRestore(); }
+  });
+
+  it('keeps a newer socket snapshot when an older HTTP response arrives', async () => {
+    const pending = new Subject<ChatHistory>();
+    api.history.mockReturnValueOnce(pending);
+    state.connect('diagram');
+    notices.next({ kind: 'changed', scope: 'group', revision: 5,
+      snapshot: { revision: 5, messages: [message('new', 1)], hasMore: false } });
+    pending.next({ revision: 1, messages: [message('old', 1)], hasMore: false });
+    await Promise.resolve();
+    expect(state.messages().map(item => item.id)).toEqual(['new']);
+    notices.next({ kind: 'changed', scope: 'personal', revision: 8,
+      snapshot: { revision: 8, messages: [message('private', 1)], hasMore: false } });
+    expect(state.messages().map(item => item.id)).toEqual(['new']);
+    state.setScope('personal');
+    expect(state.messages().map(item => item.id)).toEqual(['private']);
+  });
+
+  it('does not downgrade a pushed message when the submit acknowledgement arrives late', async () => {
+    state.connect('diagram');
+    await Promise.resolve();
+    const pending = new Subject<ChatMessage>();
+    api.submit.mockReturnValue(pending);
+    const sending = state.send({ content: 'hello', provider: 'vertex' });
+    notices.next({ kind: 'changed', scope: 'group', revision: 5,
+      snapshot: { revision: 5, messages: [message('same', 1)], hasMore: false } });
+    pending.next({ ...message('same', 1), status: 'queued' });
+    await sending;
+    expect(state.messages()[0].status).toBe('completed');
+  });
+
   it('does not query an unsaved diagram or reconnect the same active room', async () => {
     state.connect(null);
     expect(api.history).not.toHaveBeenCalled();
@@ -215,6 +257,46 @@ describe('Conversation state recovery', () => {
     await vi.advanceTimersByTimeAsync(30_000);
     expect(state.messages().map(item => item.id)).toEqual(['first', 'second']);
   });
+  it('arms history only after a confirmed page and resets readiness on scope changes', async () => {
+    const pending = new Subject<ChatHistory>();
+    api.history.mockReturnValueOnce(pending);
+    state.connect('diagram');
+    expect(state.historyLoaded()).toBe(false);
+    notices.next({ kind: 'changed', scope: 'group', revision: 5,
+      snapshot: { revision: 5, messages: [], hasMore: false } });
+    expect(state.historyLoaded()).toBe(true);
+    pending.next({ revision: 1, messages: [], hasMore: false });
+    await Promise.resolve();
+    state.setScope('personal');
+    expect(state.historyLoaded()).toBe(false);
+    await Promise.resolve();
+    expect(state.historyLoaded()).toBe(true);
+    state.setScope('group');
+    expect(state.historyLoaded()).toBe(false);
+    await Promise.resolve();
+    expect(state.historyLoaded()).toBe(true);
+    state.connect(null);
+    expect(state.historyLoaded()).toBe(false);
+  });
+
+  it('keeps live text over intermediate snapshots and accepts the durable final reply', async () => {
+    state.connect('diagram');
+    await Promise.resolve();
+    const live = { ...message('native', 2), source: 'assistant' as const, speechMode: 'live' as const, streaming: true, content: 'Hola Ada' };
+    notices.next({ kind: 'live', message: live });
+    notices.next({ kind: 'live', message: { ...live, content: 'Hola' } });
+    expect(state.messages()[0].content).toBe('Hola Ada');
+    notices.next({ kind: 'changed', scope: 'group', revision: 2,
+      snapshot: { revision: 2, messages: [{ ...live, content: '' }], hasMore: false } });
+    expect(state.messages()[0].content).toBe('Hola Ada');
+    notices.next({ kind: 'changed', scope: 'group', revision: 3,
+      snapshot: { revision: 3, messages: [{ ...live, content: 'Hola Ada, listo.', streaming: false }], hasMore: false } });
+    expect(state.messages()[0].content).toBe('Hola Ada, listo.');
+    notices.next({ kind: 'live', message: live });
+    expect(state.messages()[0].content).toBe('Hola Ada, listo.');
+    expect(state.messages()[0].streaming).toBe(false);
+  });
+
 });
 
 describe('Conversation recovery after a long disconnect', () => {
@@ -235,4 +317,6 @@ describe('Conversation recovery after a long disconnect', () => {
       expect(api.history).toHaveBeenLastCalledWith('diagram', 3);
     } finally { state.ngOnDestroy(); TestBed.resetTestingModule(); vi.useRealTimers(); }
   });
+
+
 });

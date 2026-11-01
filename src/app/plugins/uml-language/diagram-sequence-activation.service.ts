@@ -69,26 +69,49 @@ export class DiagramSequenceActivationService {
   }
 
   /**
-   * Calcula la longitud dinámica de la línea de vida para asegurar que abarque todos los mensajes más holgura.
+   * Determina la cantidad dinámica de slots de secuencia disponibles en la línea de vida.
+   * Ofrece los slots ocupados y el siguiente slot libre disponible para nuevos mensajes.
+   */
+  getSequenceSlotCount(connections: UmlConnection[]): number {
+    const maxSlot = this.getMaxSequenceSlotUsed(connections);
+    return maxSlot < 0 ? 1 : maxSlot + 2;
+  }
+
+  /**
+   * Retorna el arreglo de índices de slots numéricos disponibles para la línea de vida.
+   */
+  getSequenceSlots(connections: UmlConnection[]): number[] {
+    const count = this.getSequenceSlotCount(connections);
+    return Array.from({ length: count }, (_, index) => index);
+  }
+
+  /**
+   * Calcula la longitud dinámica de la línea de vida.
+   * La línea sobresale exactamente 20px por debajo del último mensaje existente.
    */
   getLifelineLength(node: UmlClassNode | undefined, connections: UmlConnection[]): number {
     const maxSlot = this.getMaxSequenceSlotUsed(connections);
-    const count = Math.max(4, maxSlot + 1 + 3);
     const nodeHeaderHeight = node?.nodeType === 'actor' ? 65 : 60;
-    const targetBottom = 210 + (count - 1) * 50 + 40;
     const minLength = node?.nodeType === 'actor' ? 80 : 120;
+
+    if (maxSlot < 0) {
+      return minLength;
+    }
+
+    const targetBottom = 210 + maxSlot * 50 + 20;
     return Math.max(minLength, targetBottom - nodeHeaderHeight);
   }
 
   /**
-   * Calcula las cajas de activación rectangulares de una línea de vida según las interacciones y respuestas.
+   * Calcula las cajas de activación rectangulares de una línea de vida o actor según las interacciones y respuestas.
    */
   getNodeActivations(
     node: UmlClassNode,
     connections: UmlConnection[],
     activeDiagramType?: DiagramType,
   ): SequenceActivationInterval[] {
-    if (activeDiagramType !== DiagramType.SEQUENCE && node.nodeType !== 'lifeline') {
+    const isSeq = activeDiagramType === DiagramType.SEQUENCE || node.nodeType === 'lifeline';
+    if (!isSeq && node.nodeType !== 'actor') {
       return [];
     }
 
@@ -115,9 +138,9 @@ export class DiagramSequenceActivationService {
       }
 
       let groupKey = '';
-      const dotMatch = seqNum.match(/^(\d+)(?:\.|$)/);
-      if (dotMatch) {
-        groupKey = dotMatch[1];
+      const match = seqNum.match(/^(\d+)(?:[.:\s]|$)/);
+      if (match) {
+        groupKey = match[1];
       }
 
       allSeqConns.push({
@@ -208,17 +231,18 @@ export class DiagramSequenceActivationService {
 
     for (const inter of interactions) {
       const conns = inter.conns;
-      const interMinSlot = Math.min(...conns.map((c) => c.slot));
-      const interMaxSlot = Math.max(...conns.map((c) => c.slot));
-
-      const isActorInitiator = node.nodeType === 'actor' && node.id === inter.initiatorId;
+      const isActorInitiator =
+        (node.nodeType === 'actor' || node.id === inter.initiatorId) && node.id === inter.initiatorId;
 
       if (isActorInitiator) {
-        const startSlot = interMinSlot;
+        const myOutgoingCalls = conns.filter((c) => c.sourceId === node.id && !c.isReply);
+        if (myOutgoingCalls.length === 0) continue;
+
+        const startSlot = Math.min(...myOutgoingCalls.map((c) => c.slot));
         const replyToInitiator = conns.find(
           (c) => c.isReply && c.targetId === node.id && c.slot > startSlot,
         );
-        const endSlot = replyToInitiator ? replyToInitiator.slot : interMaxSlot;
+        const endSlot = replyToInitiator ? replyToInitiator.slot : startSlot;
 
         intervals.push({
           id: `act_${node.id}_${inter.id}_${startSlot}_${endSlot}`,
@@ -232,7 +256,8 @@ export class DiagramSequenceActivationService {
         }
 
         const incomingCalls = conns.filter((c) => c.targetId === node.id && !c.isReply);
-        const effectiveIncoming = incomingCalls.length > 0 ? incomingCalls : conns.filter((c) => c.targetId === node.id);
+        const effectiveIncoming =
+          incomingCalls.length > 0 ? incomingCalls : conns.filter((c) => c.targetId === node.id);
 
         if (effectiveIncoming.length > 0) {
           const sortedIncoming = [...effectiveIncoming].sort((a, b) => a.slot - b.slot);
@@ -242,13 +267,16 @@ export class DiagramSequenceActivationService {
             const incSlot = inc.slot;
             const nextIncSlot = i + 1 < sortedIncoming.length ? sortedIncoming[i + 1].slot : Infinity;
 
-            const myOutgoing = conns.filter(
-              (c) => c.sourceId === node.id && c.slot >= incSlot && c.slot < nextIncSlot,
+            const relevantConns = conns.filter(
+              (c) =>
+                (c.sourceId === node.id || (c.targetId === node.id && c.isReply)) &&
+                c.slot >= incSlot &&
+                c.slot < nextIncSlot,
             );
 
             let endSlot = incSlot;
-            if (myOutgoing.length > 0) {
-              endSlot = Math.max(...myOutgoing.map((c) => c.slot));
+            if (relevantConns.length > 0) {
+              endSlot = Math.max(...relevantConns.map((c) => c.slot));
             }
 
             intervals.push({
@@ -290,10 +318,23 @@ export class DiagramSequenceActivationService {
     }
 
     return mergedIntervals.map((inv) => {
-      const slotYStart = 210 + inv.minSlot * 50 - headerHeight;
-      const slotYEnd = 210 + inv.maxSlot * 50 - headerHeight;
-      const top = Math.max(0, slotYStart - 4);
-      const height = slotYEnd - slotYStart + 22;
+      // Posición del centro de la flecha del mensaje en la línea discontinua vertical
+      const startArrow = 157 + inv.minSlot * 50 - headerHeight;
+      const endArrow = 157 + inv.maxSlot * 50 - headerHeight;
+
+      let top: number;
+      let height: number;
+
+      if (inv.minSlot === inv.maxSlot) {
+        // Mensaje puntual: la flecha incide exactamente en el centro de la barra
+        top = Math.max(0, startArrow - 12);
+        height = 24;
+      } else {
+        // Intervalo continuo: inicia 10px antes de la llamada inicial y termina 10px después del retorno/último mensaje
+        top = Math.max(0, startArrow - 10);
+        height = endArrow - startArrow + 20;
+      }
+
       return {
         id: inv.id,
         top,
@@ -355,55 +396,27 @@ export class DiagramSequenceActivationService {
       return { changed: false, updatedNodes: nodes };
     }
 
-    const nodeSlotsMap = new Map<string, number[]>();
-    for (const c of seqConns) {
-      const sNodeId = c.sourceNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.sourceId);
-      const tNodeId = c.targetNodeId || ConnectionCascadeUtil.extractBaseNodeId(c.targetId);
-      const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
-      const tMatch = c.targetId?.match(/_slot_(\d+)$/);
-      const slot = sMatch ? parseInt(sMatch[1], 10) : tMatch ? parseInt(tMatch[1], 10) : 0;
-
-      if (sNodeId) {
-        if (!nodeSlotsMap.has(sNodeId)) nodeSlotsMap.set(sNodeId, []);
-        nodeSlotsMap.get(sNodeId)!.push(slot);
-      }
-      if (tNodeId) {
-        if (!nodeSlotsMap.has(tNodeId)) nodeSlotsMap.set(tNodeId, []);
-        nodeSlotsMap.get(tNodeId)!.push(slot);
-      }
-    }
-
     let changed = false;
     const updatedNodes = nodes.map((n) => {
       if ((n.nodeType !== 'lifeline' && n.nodeType !== 'actor') || n.isAnchor) {
         return n;
       }
-      const slots = nodeSlotsMap.get(n.id);
-      if (!slots || slots.length === 0) {
-        if (n.activations && n.activations.length > 0) {
-          changed = true;
-          return { ...n, activations: [] };
-        }
-        return n;
-      }
 
-      const headerHeight = n.nodeType === 'actor' ? 65 : 60;
-      const minSlot = Math.min(...slots);
-      const maxSlot = Math.max(...slots);
-      const startY = Math.max(0, 210 + minSlot * 50 - headerHeight - 4);
-      const endY = 210 + maxSlot * 50 - headerHeight;
-      const height = Math.max(22, endY - startY + 22);
+      const acts = this.getNodeActivations(n, connections, activeDiagramType);
+      const nextActivations = acts.map((a) => ({
+        id: a.id,
+        startY: a.top,
+        height: a.height,
+      }));
 
-      const nextActivations = [
-        {
-          id: `act_${n.id}_${minSlot}_${maxSlot}`,
-          startY,
-          height,
-        },
-      ];
-
-      const prevAct = n.activations?.[0];
-      if (!prevAct || n.activations?.length !== 1 || prevAct.startY !== startY || prevAct.height !== height) {
+      const prev = n.activations || [];
+      if (
+        prev.length !== nextActivations.length ||
+        prev.some(
+          (p, idx) =>
+            p.startY !== nextActivations[idx].startY || p.height !== nextActivations[idx].height,
+        )
+      ) {
         changed = true;
         return { ...n, activations: nextActivations };
       }

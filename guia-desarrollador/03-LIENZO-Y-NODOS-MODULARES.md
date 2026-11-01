@@ -21,7 +21,7 @@ selección y bloqueos. Los componentes usan OnPush y `input()`/`output()`.
 
 ## Catálogo actual
 
-Hay 13 definiciones registrables agrupadas en ocho paquetes de renderizadores. Varias
+Hay 14 definiciones registrables agrupadas en nueve paquetes de renderizadores. Varias
 definiciones pueden compartir componentes **dentro del mismo paquete**.
 
 | Paquete en `src/app/plugins/` | Tipos registrados | Representación |
@@ -34,6 +34,7 @@ definiciones pueden compartir componentes **dentro del mismo paquete**.
 | `uml-lifeline-node/` | `lifeline` | Cabecera, línea de vida y activaciones. |
 | `uml-component-node/` | `component` | Componente y puertos. |
 | `uml-deployment-node/` | `node`, `device`, `executionEnvironment` | Despliegue con perspectiva SVG. |
+| `uml-note-node/` | `note` | Nota flotante colaborativa tipo Post-it disponible en todos los diagramas; excluida de codegen, XMI y heurísticas IA. |
 
 El catálogo fuente está en [node-plugins.ts](../src/app/composition/node-plugins.ts).
 No hay componentes WebGL. La perspectiva de despliegue se conserva mediante SVG.

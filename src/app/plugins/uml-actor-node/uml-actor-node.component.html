@@ -68,7 +68,7 @@
           class="absolute left-1/2 -translate-x-1/2 w-3.5 border shadow-2xs pointer-events-none z-20 rounded-none"
           [style.top.px]="act.top"
           [style.height.px]="act.height"
-          [style.backgroundColor]="node().color || '#DDF4F5'"
+          [style.backgroundColor]="node().color || '#FEF2DD'"
           style="border-color: #796354"
           [title]="'editor.canvas.nodes.focusActivation' | translate"
         ></div>
@@ -76,7 +76,7 @@
     </div>
 
     <!-- SLOTS DE CONEXIÓN A LO LARGO DE LA LÍNEA DE VIDA (ZONA AMPLIA DE DESTINO) -->
-    @for (slot of sequenceSlots; track slot) {
+    @for (slot of sequenceSlots(); track slot) {
       <div
         fConnector
         fConnectorType="source-target"

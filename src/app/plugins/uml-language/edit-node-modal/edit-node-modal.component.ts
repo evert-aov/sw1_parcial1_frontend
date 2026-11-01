@@ -88,6 +88,7 @@ export class EditNodeModalComponent {
     { hex: '#F5EBF7', name: 'Lavanda' },
     { hex: '#FFFFFF', name: 'Blanco' },
     { hex: '#FEF3C7', name: 'Ámbar Suave' },
+    { hex: '#FEF9C3', name: 'Nota Amarilla' },
     { hex: '#E0F2FE', name: 'Celeste' },
     { hex: '#FCE7F3', name: 'Rosa Pálido' },
     { hex: '#F1F5F9', name: 'Pizarra Claro' },
@@ -104,7 +105,7 @@ export class EditNodeModalComponent {
     const n = this.editingNode();
     if (!n) return false;
     const nt = (n.nodeType || '').toLowerCase().trim();
-    if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline') return false;
+    if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline' || nt === 'note') return false;
 
     // En diagramas de clase estándar (class / logical), no se permite estereotipo a las clases
     const dt = (this.activeDiagramType() || '').toLowerCase().trim();
@@ -201,6 +202,7 @@ export class EditNodeModalComponent {
     if (nt === 'actor') return '#FEF2DD';
     if (nt === 'use_case') return '#E5F2FE';
     if (nt === 'package') return '#FFFFFF';
+    if (nt === 'note') return '#FEF9C3';
     return '#FDFAF3';
   }
 
@@ -221,10 +223,33 @@ export class EditNodeModalComponent {
             }));
           }
 
+          if (cloned.methods) {
+            cloned.methods = cloned.methods.map((m) => {
+              let name = String(m.name || '').trim();
+              let parameters =
+                m.parameters !== undefined && m.parameters !== null ? String(m.parameters).trim() : '';
+              let returnType = m.returnType ? String(m.returnType).trim() : 'void';
+              const match = name.match(/^([a-zA-Z0-9_]+)\s*\((.*?)\)(?:\s*:\s*(.+))?$/);
+              if (match) {
+                name = match[1].trim();
+                if (!parameters && match[2] !== undefined) {
+                  parameters = match[2].trim();
+                }
+                if (match[3] && (!returnType || returnType === 'void')) {
+                  returnType = match[3].trim();
+                }
+              }
+              if (parameters.startsWith('(') && parameters.endsWith(')')) {
+                parameters = parameters.slice(1, -1).trim();
+              }
+              return { ...m, name, parameters, returnType };
+            });
+          }
+
           // Normalización estricta de estereotipos según tipo de nodo y diagrama
           const nt = (cloned.nodeType || '').toLowerCase().trim();
           const dt = (this.activeDiagramType() || '').toLowerCase().trim();
-          if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline') {
+          if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline' || nt === 'note') {
             cloned.stereotype = null;
           } else if (dt === 'communication' || dt === 'collaboration') {
             if (nt === 'boundary' || nt === 'ui') cloned.stereotype = 'boundary';
@@ -491,6 +516,32 @@ export class EditNodeModalComponent {
   }
 
   /**
+   * Sanea el campo del nombre del método cuando pierde el foco, separando parámetros
+   * y tipo de retorno si fueron introducidos juntos dentro del nombre (p. ej. "actualizarStock(cantidad)").
+   * @param m Objeto de método en edición.
+   */
+  onMethodNameBlur(m: any): void {
+    if (!m || typeof m.name !== 'string') return;
+    const match = m.name.trim().match(/^([a-zA-Z0-9_]+)\s*\((.*?)\)(?:\s*:\s*(.+))?$/);
+    if (match) {
+      m.name = match[1].trim();
+      if (!m.parameters && match[2] !== undefined) {
+        m.parameters = match[2].trim();
+      }
+      if (match[3] && (!m.returnType || m.returnType === 'void')) {
+        m.returnType = match[3].trim();
+      }
+      if (typeof m.parameters === 'string' && m.parameters.startsWith('(') && m.parameters.endsWith(')')) {
+        m.parameters = m.parameters.slice(1, -1).trim();
+      }
+      const curr = this.editingNode();
+      if (curr) {
+        this.editingNode.set({ ...curr });
+      }
+    }
+  }
+
+  /**
    * Obtiene el texto descriptivo del paquete almacenado en sus atributos de metadatos.
    */
   getPackageDescription(): string {
@@ -533,6 +584,29 @@ export class EditNodeModalComponent {
         defaultValue: a.defaultValue && String(a.defaultValue).trim() ? String(a.defaultValue).trim() : null,
         default: a.defaultValue && String(a.defaultValue).trim() ? String(a.defaultValue).trim() : null,
       }));
+    }
+
+    if (curr.methods) {
+      curr.methods = curr.methods.map((m) => {
+        let name = String(m.name || '').trim();
+        let parameters =
+          m.parameters !== undefined && m.parameters !== null ? String(m.parameters).trim() : '';
+        let returnType = m.returnType ? String(m.returnType).trim() : 'void';
+        const match = name.match(/^([a-zA-Z0-9_]+)\s*\((.*?)\)(?:\s*:\s*(.+))?$/);
+        if (match) {
+          name = match[1].trim();
+          if (!parameters && match[2] !== undefined) {
+            parameters = match[2].trim();
+          }
+          if (match[3] && (!returnType || returnType === 'void')) {
+            returnType = match[3].trim();
+          }
+        }
+        if (parameters.startsWith('(') && parameters.endsWith(')')) {
+          parameters = parameters.slice(1, -1).trim();
+        }
+        return { ...m, name, parameters, returnType };
+      });
     }
 
     // Configuración técnica y estética de dimensiones
