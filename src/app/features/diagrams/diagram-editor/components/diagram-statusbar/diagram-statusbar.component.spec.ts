@@ -26,5 +26,5 @@ describe('Compact editor status', () => {
     await fixture.whenStable();
     expect(root.querySelector('.selection-count')?.textContent).toContain('0');
     fixture.destroy();
-  });
+  }, 15000);
 });

@@ -424,11 +424,11 @@ export class UserGuideChatbotComponent implements AfterViewChecked {
       badge: 'Paso 4 de 7',
       description: 'Trabaja concurrentemente con tu equipo sin pisar cambios ajenos.',
       details: [
-        'En la tarjeta del proyecto en el Dashboard, haz clic en "Miembros".',
-        'Invita a tus compañeros mediante su correo electrónico y asígnales rol: OWNER, EDITOR o VIEWER.',
-        'Al entrar al diagrama verán los cursores de cada usuario con su color en vivo.',
-        'Sistema de Bloqueo Exclusivo (NodeLock): Cuando un usuario edita una clase, esta se bloquea temporalmente para los demás, evitando conflictos.',
-        'Usa el chat integrado en vivo de la sala para coordinar el trabajo en equipo.',
+        'En la tarjeta del proyecto en el Dashboard, haz clic en "Miembros" para invitar compañeros (OWNER, EDITOR, VIEWER).',
+        'Al entrar al diagrama verán los cursores de cada usuario con su color en vivo y exclusión mutua de edición (NodeLock).',
+        'Chat Colaborativo Dual: Alterna entre sala "Personal" (con Kanon) y sala "Grupal" (con tu equipo). En el chat grupal, menciona @Kanon para consultar a la IA.',
+        'Llamadas de Voz WebRTC: Inicia sesiones de voz en vivo con tu equipo y voten con consentimiento unánime para invitar a Kanon.',
+        'Notas Flotantes Colaborativas: Agrega Post-Its amarillos o notas moradas de sugerencias de Kanon en el lienzo.',
       ],
       tips: '💡 Los usuarios con rol VIEWER pueden inspeccionar el diagrama y generar código, pero no pueden mutar el modelo.',
     },
@@ -527,11 +527,11 @@ flutter run`,
       badge: 'Step 4 of 7',
       description: 'Work concurrently with your team without overwriting changes.',
       details: [
-        'On the project card in the Dashboard, click "Members".',
-        'Invite teammates via email and assign roles: OWNER, EDITOR, or VIEWER.',
-        'Upon entering the diagram, you will see real-time colored cursors for every active user.',
-        'Exclusive Lock System (NodeLock): When a user edits a class, it is temporarily locked for others to prevent conflicts.',
-        'Use the built-in room chat to coordinate development and modeling in real time.',
+        'On the project card in the Dashboard, click "Members" to invite teammates (OWNER, EDITOR, VIEWER).',
+        'Upon entering the diagram, you will see real-time colored cursors for every active user and node locking (NodeLock).',
+        'Dual Collaborative Chat: Switch between "Personal" room (with Kanon) and "Group" room (with your team). Mention @Kanon in group chat to consult the AI.',
+        'WebRTC Voice Calls: Connect with teammates via live audio and invite Kanon if all participants give unanimous consent.',
+        'Floating Sticky Notes: Add yellow Post-Its or purple notes (Kanon suggestions) to document agreements without affecting generated code.',
       ],
       tips: '💡 Users with VIEWER role can inspect the canvas and generate code, but cannot modify the model.',
     },
@@ -592,6 +592,12 @@ flutter run`,
   // Píldoras de sugerencias rápidas en Español
   readonly quickPillsEs = [
     { label: '🚀 Guía Rápida (Paso a Paso)', query: 'iniciar tour' },
+    { label: '📞 Llamadas WebRTC y Voz con Kanon', query: 'llamadas webrtc y voz' },
+    { label: '💬 Chat Dual y Mención @Kanon', query: 'chat colaborativo dual' },
+    { label: '📝 Notas Adhesivas en el Lienzo', query: 'notas flotantes colaborativas' },
+    { label: '🔗 Clases de Asociación (N:M)', query: 'clases de asociacion' },
+    { label: '💡 Mentoría y Sugerencias Proactivas', query: 'mentoria y sugerencias' },
+    { label: '🗣️ Síntesis de Voz y Subtítulos', query: 'sintesis de voz y subtitulos' },
     { label: '📊 Tipos de Diagramas soportados', query: 'tipos de diagramas' },
     { label: '👤 Casos de Uso (Actores e Includes)', query: 'diagrama de casos de uso' },
     { label: '⏱️ Secuencia (Lifelines y Mensajes)', query: 'diagrama de secuencia' },
@@ -609,6 +615,12 @@ flutter run`,
   // Píldoras de sugerencias rápidas en Inglés
   readonly quickPillsEn = [
     { label: '🚀 Quick Guide (Step by Step)', query: 'start tour' },
+    { label: '📞 WebRTC Calls & Voice with Kanon', query: 'webrtc calls and voice' },
+    { label: '💬 Dual Chat & @Kanon Mention', query: 'dual collaborative chat' },
+    { label: '📝 Floating Sticky Notes on Canvas', query: 'floating sticky notes' },
+    { label: '🔗 Association Classes (N:M)', query: 'association classes' },
+    { label: '💡 Proactive Mentoring & Suggestions', query: 'proactive mentoring' },
+    { label: '🗣️ Speech Synthesis & Subtitles', query: 'speech synthesis and subtitles' },
     { label: '📊 Supported Diagram Types', query: 'diagram types' },
     { label: '👤 Use Cases (Actors & Includes)', query: 'use case diagram' },
     { label: '⏱️ Sequence (Lifelines & Messages)', query: 'sequence diagram' },
@@ -1455,7 +1467,220 @@ flutter run`,
       return;
     }
 
-    // 17. Respuesta por Defecto (Fallback Inteligente con Recomendaciones)
+    // 17. Llamadas de Voz WebRTC y Asistente en Llamada (CU-12)
+    if (
+      text.includes('llamada') ||
+      text.includes('call') ||
+      text.includes('webrtc') ||
+      text.includes('consentimiento') ||
+      text.includes('consent') ||
+      text.includes('unanim') ||
+      text.includes('votacion') ||
+      text.includes('votación') ||
+      text.includes('live audio') ||
+      text.includes('gemini live') ||
+      text.includes('teleconferencia')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 📞 WebRTC Live Voice Calls & AI Participation (CU-12)\n\nCollaborate in real time through voice conferencing with your team and Kanon:\n\n**1. Start or Join a Call:**\n• Click the phone icon **"Start Call"** on the chat header.\n• Teammates in the diagram receive an incoming call prompt to join the WebRTC audio room.\n\n**2. Unanimous AI Consent:**\n• When a participant requests to bring **Kanon** into the live call, a democratic vote triggers for everyone.\n• **Every connected member must vote YES** (`ai_consent_approved`). If any single user rejects, Kanon remains outside to safeguard team privacy.\n\n**3. Talking with Kanon:**\n• Speak his name (**"Kanon"**) to address him. When he replies, his voice plays for everyone and a purple halo (`.ai-speaking-glow`) pulses on the call bar.\n\n**4. 1-on-1 Personal Voice Call:**\n• In your private chat, tap the call button for an immediate 1-on-1 voice session with Kanon featuring a real-time reactive waveform visualizer.'
+          : '### 📞 Llamadas de Voz WebRTC y Asistente en Llamada (CU-12)\n\nComunícate en tiempo real por voz con tus compañeros y con el mentor Kanon:\n\n**1. Iniciar o Unirse a una Llamada:**\n• Haz clic en el icono de teléfono **"Iniciar llamada"** en la barra superior del chat.\n• Los colaboradores conectados al diagrama recibirán la notificación para unirse a la sala de audio WebRTC.\n\n**2. Consentimiento Democrático Unánime:**\n• Si un miembro desea que **Kanon** ingrese a la llamada, se abre una votación para todos los participantes.\n• **Todos los miembros conectados deben aprobar** (`ai_consent_approved`). Si al menos uno vota en contra, la IA no ingresa a la sesión protegiendo la privacidad del equipo.\n\n**3. Intervención de Kanon en Vivo:**\n• Kanon permanece a la escucha pasiva y solo responde cuando se le llama por su nombre (**"Kanon"**). Al hablar, su voz suena para todos y un halo violeta (`.ai-speaking-glow`) se ilumina en la barra de llamada.\n\n**4. Llamada Privada 1 a 1:**\n• En tu chat personal puedes iniciar una llamada individual directa con Kanon con animación reactiva de ondas de audio (*waveform meter*).',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '💬 Dual Chat & @Kanon Mention', query: 'dual collaborative chat' },
+              { label: '📝 Floating Sticky Notes', query: 'floating sticky notes' },
+              { label: '🚀 Start Guided Tour', query: 'start tour' },
+            ]
+          : [
+              { label: '💬 Chat Dual y Mención @Kanon', query: 'chat colaborativo dual' },
+              { label: '📝 Notas Adhesivas en el Lienzo', query: 'notas flotantes colaborativas' },
+              { label: '🚀 Iniciar Tour Guiado', query: 'iniciar tour' },
+            ],
+      );
+      return;
+    }
+
+    // 18. Chat Colaborativo Dual y Mención @Kanon (CU-09)
+    if (
+      text.includes('chat dual') ||
+      text.includes('chat grupal') ||
+      text.includes('chat personal') ||
+      text.includes('chat privado') ||
+      text.includes('dual chat') ||
+      text.includes('group chat') ||
+      text.includes('private chat') ||
+      text.includes('@kanon') ||
+      text.includes('mencion') ||
+      text.includes('mención') ||
+      text.includes('mention') ||
+      text.includes('sala') ||
+      text.includes('room')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 💬 Dual Collaborative Chat & @Kanon Mentions (CU-09)\n\nThe conversation panel provides two distinct scopes designed for productive teamwork:\n\n**1. Group Chat Room ("Grupal"):**\n• Shared room visible to all project collaborators in real time via Socket.IO.\n• Messages between developers are shared instantly without invoking the AI.\n• **Mention `@Kanon`:** Include `@Kanon` anywhere in your message (e.g. *"@Kanon, should we normalize the Order-Product relation?"*) to consult the mentor. Kanon will address you by your display name and reply to the entire room.\n• If you are working alone on a project, the group tab is automatically hidden.\n\n**2. Personal Chat Room ("Personal"):**\n• Private 1-on-1 conversation with Kanon.\n• You can ask questions, send audio clips, or upload images without needing `@Kanon`.\n• Messages in this channel remain strictly confidential to you.'
+          : '### 💬 Chat Colaborativo Dual y Mención @Kanon (CU-09)\n\nEl panel lateral de conversación ofrece dos salas diferenciadas para trabajar en equipo sin saturación:\n\n**1. Chat Grupal ("Grupal"):**\n• Sala compartida visible para todos los colaboradores del proyecto en tiempo real vía Socket.IO.\n• Los mensajes entre compañeros se transmiten al instante sin activar a la IA.\n• **Mención `@Kanon`:** Escribe `@Kanon` en tu mensaje (ej: *"@Kanon, ¿cómo normalizamos la relación Pedido y Producto?"*) para consultar al mentor. Kanon responderá dirigiéndose a ti por tu nombre y publicará la respuesta para todo el equipo.\n• Si trabajas en solitario en un proyecto individual, la pestaña grupal se oculta automáticamente.\n\n**2. Chat Privado ("Personal"):**\n• Canal 1 a 1 confidencial y exclusivo con Kanon.\n• Puedes enviar consultas, audios o imágenes sin necesidad de escribir `@Kanon`.\n• Tus preguntas y respuestas en esta sala son privadas y solo tú puedes verlas.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '📞 WebRTC Voice Calls', query: 'webrtc calls and voice' },
+              { label: '💡 Proactive Mentoring', query: 'proactive mentoring' },
+              { label: '📝 Floating Sticky Notes', query: 'floating sticky notes' },
+            ]
+          : [
+              { label: '📞 Llamadas de Voz WebRTC', query: 'llamadas webrtc y voz' },
+              { label: '💡 Mentoría Proactiva', query: 'mentoria y sugerencias' },
+              { label: '📝 Notas Adhesivas en el Lienzo', query: 'notas flotantes colaborativas' },
+            ],
+      );
+      return;
+    }
+
+    // 19. Notas Flotantes Colaborativas en el Lienzo (CU-13)
+    if (
+      text.includes('nota') ||
+      text.includes('notas') ||
+      text.includes('note') ||
+      text.includes('notes') ||
+      text.includes('post-it') ||
+      text.includes('postit') ||
+      text.includes('adhesiva') ||
+      text.includes('adhesivas') ||
+      text.includes('sticky')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 📝 Collaborative Floating Sticky Notes (CU-13)\n\nDocument agreements, architecture decisions, and reminders directly on the canvas without cluttering the model:\n\n**1. Creating a Note:**\n• Click the **Sticky Note** tool in the Toolbox or accept a Kanon proactive suggestion.\n• The note renders with a folded corner and multi-line text support.\n\n**2. Color Coding:**\n• **Yellow Post-It (`#FEF9C3`):** Manual notes created by team members for sprint tasks and ideas.\n• **Purple Post-It (`#F3E8FF`):** Automated architectural suggestions generated by Kanon.\n\n**3. Editing & Multi-line:**\n• Double-click to edit. Use `Shift + Enter` for new lines, and press `Enter` or click outside to save.\n\n**4. Code Generation Isolation:**\n• Notes are strictly visual/informative. The Spring Boot, Flutter, and SQL generators automatically ignore notes, keeping your production codebase clean.'
+          : '### 📝 Notas Flotantes Colaborativas en el Lienzo (CU-13)\n\nRegistra acuerdos, recordatorios y recomendaciones directamente sobre el lienzo sin alterar el modelo técnico:\n\n**1. Crear una Nota:**\n• Selecciona la herramienta de **Nota Adhesiva** en el Toolbox lateral o pulsa *"Agregar como nota"* en una sugerencia de Kanon.\n• Se posiciona un nodo estilo Post-It con esquina doblada superior derecha.\n\n**2. Diferenciación por Colores:**\n• **Amarillo clásico (`#FEF9C3`):** Notas creadas manualmente por los desarrolladores para tareas o recordatorios.\n• **Violeta / Morado (`#F3E8FF`):** Sugerencias arquitectónicas generadas automáticamente por el mentor Kanon.\n\n**3. Edición Multilínea:**\n• Haz doble clic para editar. Usa `Shift + Enter` para saltos de línea y `Enter` o clic fuera para guardar.\n\n**4. Aislamiento en Generación de Código:**\n• Las notas son puramente documentales. Los generadores de Spring Boot, Flutter y DDL SQL las filtran automáticamente, garantizando que no generen tablas ni entidades.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '💡 Proactive Mentoring', query: 'proactive mentoring' },
+              { label: '🔗 Association Classes (N:M)', query: 'association classes' },
+              { label: '🎨 UML Classes & Relations', query: 'how to model classes' },
+            ]
+          : [
+              { label: '💡 Mentoría Proactiva', query: 'mentoria y sugerencias' },
+              { label: '🔗 Clases de Asociación (N:M)', query: 'clases de asociacion' },
+              { label: '🎨 Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
+            ],
+      );
+      return;
+    }
+
+    // 20. Clases de Asociación UML N:M (CU-14)
+    if (
+      text.includes('clase de asociacion') ||
+      text.includes('clase de asociación') ||
+      text.includes('asociacion de clase') ||
+      text.includes('association class') ||
+      text.includes('n:m') ||
+      text.includes('muchos a muchos') ||
+      text.includes('many to many') ||
+      text.includes('ancla') ||
+      text.includes('anchor') ||
+      text.includes('tabla puente') ||
+      text.includes('tabla intermedia')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 🔗 UML Association Classes & N:M Normalization (CU-14)\n\nResolve Many-to-Many (`*..*`) relationships formally according to UML 2.5 standards:\n\n**1. What is an Association Class?**\n• When a relationship between two classes carries its own attributes (e.g. `quantity`, `discount` between `Order` and `Product`), UML models it as an Association Class (`association_class`).\n\n**2. Canvas Modeling:**\n• Connect the two main classes with an N:M association.\n• An anchor node (`isAnchor`) is projected dynamically at the midpoint of the link.\n• The association class connects to the anchor via a dashed line that moves adaptively when dragging either entity.\n\n**3. Fullstack Code Generation:**\n• Spring Boot: Generates an intermediate `@Entity` with composite key `@EmbeddedId` or foreign references.\n• Flyway SQL: Generates the join table with composite primary key and foreign constraints.'
+          : '### 🔗 Clases de Asociación UML y Normalización N:M (CU-14)\n\nResuelve formalmente relaciones Muchos a Muchos (`*..*`) cumpliendo el estándar normativo UML 2.5:\n\n**1. ¿Qué es una Clase de Asociación?**\n• Cuando una relación entre dos entidades posee datos propios (ej: `cantidad` y `precioUnitario` entre `Pedido` y `Producto`), se modela una Clase de Asociación vinculada a la relación.\n\n**2. Modelado en el Lienzo:**\n• Conecta las clases maestras con relación N:M.\n• El sistema proyecta un nodo ancla invisible en el punto medio del conector principal.\n• La clase intermedia se vincula al ancla con una línea discontinua perpendicular que recalcula su trayectoria automáticamente al mover cualquiera de las clases.\n\n**3. Generación de Código Fullstack:**\n• Spring Boot: Genera la entidad intermedia `@Entity` JPA con claves foráneas cruzadas y mapeadores DTO.\n• Flyway SQL: Genera la tabla puente con clave primaria compuesta y restricciones referenciales `ON DELETE CASCADE`.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '📝 Floating Sticky Notes', query: 'floating sticky notes' },
+              { label: '⚡ Generate Spring Boot code', query: 'how to generate code' },
+              { label: '🎨 UML Classes & Relations', query: 'how to model classes' },
+            ]
+          : [
+              { label: '📝 Notas Adhesivas en el Lienzo', query: 'notas flotantes colaborativas' },
+              { label: '⚡ Generar código Spring Boot', query: 'como generar codigo' },
+              { label: '🎨 Clases y Relaciones UML', query: 'como modelar clases y relaciones' },
+            ],
+      );
+      return;
+    }
+
+    // 21. Mentoría Proactiva y Propuestas AST de Kanon (CU-10 y CU-11)
+    if (
+      text.includes('mentoria') ||
+      text.includes('mentoría') ||
+      text.includes('sugerencia') ||
+      text.includes('suggestion') ||
+      text.includes('proactiv') ||
+      text.includes('advisor') ||
+      text.includes('kanon') ||
+      text.includes('propuesta') ||
+      text.includes('proposal') ||
+      text.includes('human in the loop') ||
+      text.includes('human-in-the-loop')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 💡 Proactive Mentoring & AST Proposals (CU-10 & CU-11)\n\nKanon actively monitors diagram design in the background to detect anti-patterns and suggest improvements:\n\n**1. Autonomous Background Detection:**\n• When you finish editing, Kanon inspects the diagram (e.g. unnormalized Many-to-Many relationships, missing primary keys, or isolated entities).\n• A friendly floating notification appears next to the manual icon with a quick summary.\n\n**2. Action Options:**\n• **"Add as Note":** Places a purple sticky note on the canvas so the team can review it visually.\n• **"Continue in Chat":** Shifts the suggestion into the chat (prompts you to choose Personal or Group room if multiple collaborators are present).\n\n**3. Human-in-the-Loop Governance:**\n• Kanon **never mutates your diagram directly**. He produces structured AST proposals with `status: pending`.\n• Engineers inspect the diff and click **"Apply Proposal"**, executing an audited, transactional SQL commit in PostgreSQL (`diagram_proposals`).'
+          : '### 💡 Mentoría Proactiva y Propuestas AST de Kanon (CU-10 y CU-11)\n\nKanon actúa como un desarrollador senior que supervisa en segundo plano el diseño para guiar al equipo:\n\n**1. Detección Autónoma en Segundo Plano:**\n• Tras unos segundos de inactividad, Kanon inspecciona la estructura (detectando antipatrones como relaciones N:M directas, atributos faltantes o inconsistencias).\n• Se despliega una tarjeta flotante no intrusiva junto al icono del manual con el consejo.\n\n**2. Opciones de Acción:**\n• **"Agregar como nota":** Inserta un Post-It violeta en el lienzo para que el equipo lo evalúe gráficamente.\n• **"Continuar en el chat":** Traslada el debate a la sala de conversación (preguntando si deseas sala personal o grupal si hay varios colaboradores).\n\n**3. Gobernanza Human-in-the-Loop:**\n• La IA **jamás aplica cambios directamente** al modelo. Emite propuestas estructuradas en estado `pending`.\n• Los ingenieros revisan el diff y pulsan **"Aplicar propuesta"**, ejecutando una transacción SQL segura y auditable en PostgreSQL (`diagram_proposals`).',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '💬 Dual Collaborative Chat', query: 'dual collaborative chat' },
+              { label: '📝 Floating Sticky Notes', query: 'floating sticky notes' },
+              { label: '📞 WebRTC Voice Calls', query: 'webrtc calls and voice' },
+            ]
+          : [
+              { label: '💬 Chat Colaborativo Dual', query: 'chat colaborativo dual' },
+              { label: '📝 Notas Adhesivas en el Lienzo', query: 'notas flotantes colaborativas' },
+              { label: '📞 Llamadas de Voz WebRTC', query: 'llamadas webrtc y voz' },
+            ],
+      );
+      return;
+    }
+
+    // 22. Síntesis de Voz Selectiva y Subtitulado Temporal (CU-15)
+    if (
+      text.includes('sintesis') ||
+      text.includes('síntesis') ||
+      text.includes('synthesis') ||
+      text.includes('subtitulo') ||
+      text.includes('subtítulo') ||
+      text.includes('subtitle') ||
+      text.includes('karaoke') ||
+      text.includes('marcelo') ||
+      text.includes('tts') ||
+      text.includes('cue') ||
+      text.includes('cues') ||
+      text.includes('altavoz') ||
+      text.includes('reproducir') ||
+      text.includes('playback')
+    ) {
+      this.addBotMessage(
+        isEn
+          ? '### 🗣️ Selective Speech Synthesis & Karaoke Subtitles (CU-15)\n\nListen to Kanon with natural male voice synthesis and word-by-word synchronized subtitles:\n\n**1. On-Demand Voice Playback:**\n• Tap the speaker icon on any message from Kanon, or send a voice audio clip via microphone.\n• Audio is streamed via Edge-TTS using the distinctive "marcelo" male voice.\n\n**2. Synchronized Karaoke Subtitles:**\n• As audio plays, the text highlights progressively word by word using precise millisecond timestamps (`startMs`, `endMs`), allowing you to follow along visually.\n\n**3. Local Playback Controls:**\n• Pause, resume, or mute playback at any time without disturbing other collaborators in the project.'
+          : '### 🗣️ Síntesis de Voz Selectiva y Subtitulado Karaoke (CU-15)\n\nEscucha las explicaciones de Kanon con voz masculina natural y subtítulos sincronizados palabra por palabra:\n\n**1. Reproducción Bajo Demanda:**\n• Pulsa el icono de altavoz en cualquier respuesta de Kanon o envía una consulta grabada por micrófono.\n• La síntesis se ejecuta con Edge-TTS utilizando la voz natural masculina "marcelo".\n\n**2. Subtitulado Sincronizado Tipo Karaoke:**\n• Mientras el audio suena, el componente `SpeechTextProgress` resalta progresivamente las frases habladas con marcas temporales en milisegundos (`startMs`, `endMs`), permitiendo seguir la explicación visualmente.\n\n**3. Controles Locales:**\n• Puedes pausar, reanudar o silenciar la reproducción en cualquier momento sin afectar a los demás usuarios conectados.',
+        undefined,
+        undefined,
+        isEn
+          ? [
+              { label: '📞 WebRTC Voice Calls', query: 'webrtc calls and voice' },
+              { label: '💬 Dual Chat & @Kanon', query: 'dual collaborative chat' },
+              { label: '🚀 Start Guided Tour', query: 'start tour' },
+            ]
+          : [
+              { label: '📞 Llamadas de Voz WebRTC', query: 'llamadas webrtc y voz' },
+              { label: '💬 Chat Dual y @Kanon', query: 'chat colaborativo dual' },
+              { label: '🚀 Iniciar Tour Guiado', query: 'iniciar tour' },
+            ],
+      );
+      return;
+    }
+
+    // 23. Respuesta por Defecto (Fallback Inteligente con Recomendaciones)
     this.addBotMessage(
       isEn
         ? `I understand your query regarding: "${rawInput}".\n\nHere are the primary topics from the **Interactive Manual** to assist you right away. Select any quick option below:`
@@ -1465,19 +1690,21 @@ flutter run`,
       isEn
         ? [
             { label: '🚀 Start Step-by-Step Tour', query: 'start tour' },
+            { label: '📞 WebRTC Calls & Live AI', query: 'webrtc calls and voice' },
+            { label: '💬 Dual Chat & @Kanon', query: 'dual collaborative chat' },
+            { label: '📝 Floating Sticky Notes', query: 'floating sticky notes' },
+            { label: '🔗 Association Classes (N:M)', query: 'association classes' },
             { label: '📊 Supported Diagram Types', query: 'diagram types' },
-            { label: '👤 Use Case Diagrams', query: 'use case diagram' },
-            { label: '⏱️ Sequence Diagrams', query: 'sequence diagram' },
-            { label: '🔬 Robustness Class Analysis', query: 'class analysis diagram' },
             { label: '🐳 Docker & Gradle Run Commands', query: 'run commands' },
             { label: '⚡ Generate Spring Boot & Flutter', query: 'how to generate code' },
           ]
         : [
             { label: '🚀 Iniciar Tour Guiado Paso a Paso', query: 'iniciar tour' },
+            { label: '📞 Llamadas WebRTC y Voz con Kanon', query: 'llamadas webrtc y voz' },
+            { label: '💬 Chat Dual y Mención @Kanon', query: 'chat colaborativo dual' },
+            { label: '📝 Notas Adhesivas en el Lienzo', query: 'notas flotantes colaborativas' },
+            { label: '🔗 Clases de Asociación (N:M)', query: 'clases de asociacion' },
             { label: '📊 Tipos de Diagramas Soportados', query: 'tipos de diagramas' },
-            { label: '👤 Diagramas de Casos de Uso', query: 'diagrama de casos de uso' },
-            { label: '⏱️ Diagramas de Secuencia', query: 'diagrama de secuencia' },
-            { label: '🔬 Análisis de Clases (Robustez)', query: 'diagrama de analisis de clases' },
             { label: '🐳 Comandos para Correr Docker y Gradle', query: 'comandos de ejecucion' },
             { label: '⚡ Generar Código Spring Boot y Flutter', query: 'como generar codigo' },
           ],
