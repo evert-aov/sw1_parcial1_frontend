@@ -1,3 +1,4 @@
+import { XmiDiagramLayoutParser } from './parsers/xmi-diagram-layout-parser';
 import { describe, expect, it } from 'vitest';
 import { XmiClientParser } from './xmi-client-parser';
 
@@ -401,3 +402,23 @@ describe('XmiClientParser: paquete EA', () => {
   });
 });
 
+
+describe('EA diagram routing styles', () => {
+  it.each([
+    ['OS', 'orthogonal_square'], ['OR', 'orthogonal_rounded'],
+    ['V', 'tree_vertical'], ['H', 'tree_horizontal'],
+    ['LV', 'lateral_vertical'], ['LH', 'lateral_horizontal'],
+  ])('reads TREE=%s independently of the Custom base mode', (tree, expected) => {
+    const styles = new Map();
+    XmiDiagramLayoutParser.extractGeometry({
+      'xmi:Extension': { diagrams: { diagram: { elements: { element: {
+        '@_subject': 'link', '@_style': `Mode=3;TREE=${tree};EOID=b;SOID=a;`,
+      } } } } },
+    }, new Map(), new Map(), styles);
+    expect(styles.get('link')).toBe(expected);
+  });
+  it('keeps plain Custom and Direct styles without a TREE qualifier', () => {
+    expect(XmiDiagramLayoutParser.mapEaModeToLineStyle('3')).toBe('segment');
+    expect(XmiDiagramLayoutParser.mapEaModeToLineStyle('1')).toBe('straight');
+  });
+});

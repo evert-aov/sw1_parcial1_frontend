@@ -80,6 +80,8 @@
 
     <!-- FOBLEX FLOW INTERACTIVE CANVAS -->
     <f-flow
+      [style.width.px]="exportSize()?.width"
+      [style.height.px]="exportSize()?.height"
       fDraggable
       [style.--uml-hairline]="nodeHairlineWidth()"
       [fDraggableDisabled]="interactionDisabled()"
@@ -240,8 +242,8 @@
 
                     @if (conn.messages && conn.messages.length > 0) {
                       @for (msg of conn.messages; track msg.id || $index) {
-                        <div class="uml-seq-msg-item flex items-center gap-1 font-mono text-[11px] font-semibold" [style.color]="getSequenceConnColor(conn)">
-                          <span class="font-bold">{{ msg.sequenceNumber }}{{ msg.functionName ? ':' : '' }}</span>
+                        <div class="uml-seq-msg-item flex items-center gap-1 font-mono text-[11px] font-normal" [style.color]="getSequenceConnColor(conn)">
+                          <span class="font-normal">{{ msg.sequenceNumber }}{{ msg.functionName ? ':' : '' }}</span>
                           @if (msg.functionName) {
                             @if (conn.type === 'reply' || msg.isReturn || msg.type === 'reply') {
                               <span>{{ msg.functionName }}{{ msg.parameters ? '(' + msg.parameters + ')' : '' }}</span>
@@ -258,7 +260,7 @@
                         </div>
                       }
                     } @else if (conn.name) {
-                      <div class="font-mono text-[11px] font-semibold text-slate-800">
+                      <div class="font-mono text-[11px] font-normal text-slate-800">
                         {{ conn.name }}
                       </div>
                     } @else {

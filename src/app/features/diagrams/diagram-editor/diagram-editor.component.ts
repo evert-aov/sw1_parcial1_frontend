@@ -3,6 +3,10 @@ import { PluginRegistryService } from '../../../core/plugins/plugin-registry.ser
 import { PluginOutletDirective, PluginOutputEvent } from '../../../core/plugins/plugin-outlet.directive';
 import {
   ChangeDetectionStrategy,
+  ApplicationRef,
+  EnvironmentInjector,
+  Injector,
+  createComponent,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -18,7 +22,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import {
   FCanvasComponent,
   FCreateConnectionEvent,
@@ -35,6 +39,7 @@ import {
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
+  sanitizeLineStyle,
   UmlMessage,
   UmlRelationshipType,
 } from '../../../core/models/diagram.model';
@@ -88,7 +93,7 @@ import {
   DiagramViewportService,
   DistributionDirection,
 } from './services/index';
-import { NodeMetricsService } from './utils/node-metrics.util';
+import { NodeMetricsService, computeBoardWidth, computeBoardHeight } from './utils/node-metrics.util';
 import { resolveUserRoleInProject } from './utils/project-role.util';
 import { UmlNodeNormalizerUtil } from '../../../core/plugins/contracts/uml-node-normalizer.util.contract';
 
@@ -198,6 +203,9 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   readonly sequenceActivationService = inject(DiagramSequenceActivationService);
   readonly connectionLayoutService = inject(DiagramConnectionLayoutService);
   readonly documentSyncService = inject(DiagramDocumentSyncService);
+  private readonly exportEnvironment = inject(EnvironmentInjector);
+  private readonly exportInjector = inject(Injector);
+  private readonly exportApplication = inject(ApplicationRef);
   readonly persistenceService = inject(DiagramPersistenceService);
   readonly exportService = inject(DiagramExportService);
   readonly importService = inject(DiagramImportService);
@@ -1699,9 +1707,209 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.exportAsBmp();
   }
 
-  /** Exporta el diagrama actual como imagen. */
+  /** Exporta el diagrama actual como imagen vectorial SVG. */
   exportAsSvg(): void {
-    this.exportAsImage();
+    this.closeExportDropdown();
+    this.exportService.exportDiagramSvg(
+      this.diagramCanvas,
+      this.currentDiagramName(),
+      this.activeDiagramType(),
+      this.nodes(),
+      this.connections(),
+    );
+  }
+
+  /** Alias para descargar archivo SVG desde el Appbar. */
+  downloadSvgFile(): void {
+    this.exportAsSvg();
+  }
+
+  /**
+   * Exporta todos los diagramas del proyecto en un archivo comprimido .ZIP (PNG o SVG).
+   */
+  readonly zipExportError = signal<string | null>(null);
+  readonly zipExportProgress = signal<{ current: number; total: number; name?: string; stage: 'loading' | 'rendering' | 'packing' } | null>(null);
+
+  /** Genera un solo ZIP a la vez y publica avances reales de preparación y empaquetado. */
+  async downloadProjectZip(format: 'png' | 'svg'): Promise<void> {
+    if (this.zipExportProgress()) return;
+    this.closeExportDropdown();
+    const projId = this.currentProjectId();
+    if (!projId) {
+      this.toastService?.warning('No hay un proyecto activo seleccionado.');
+      return;
+    }
+
+    this.zipExportError.set(null);
+    this.zipExportProgress.set({ current: 0, total: 0, stage: 'loading' });
+    try {
+      this.toastService?.info(this.translationService.translate('appbar.exportZipLoading'));
+      let rawDiagrams = this.projectDiagrams();
+      try {
+        const fetched = await firstValueFrom(this.diagramService.loadDiagramsByProject(projId));
+        if (fetched && fetched.length > 0) {
+          rawDiagrams = fetched;
+        }
+      } catch (loadErr) {
+        console.warn('No se pudo refrescar diagramas desde backend, usando lista en memoria:', loadErr);
+      }
+
+      const activeId = this.currentDiagramId();
+      const diagrams = (rawDiagrams || []).map((d) => {
+        const mapped = this.persistenceService.mapServerDiagramToLocal(d);
+        const mappedConnections = mapped.connections.map((connection, index) => ({
+          ...connection,
+          lineStyle: sanitizeLineStyle(d.connections?.[index]?.lineStyle, d.defaultLineStyle ?? connection.lineStyle ?? 'segment'),
+        }));
+        if (d.id === activeId) {
+          const localNodes = this.nodes();
+          const serverIds = new Set(mapped.nodes.map(node => node.id));
+          const localIds = new Set(localNodes.map(node => node.id));
+          const isLoaded = serverIds.size === localIds.size &&
+            [...serverIds].every(id => localIds.has(id));
+          const useLocal = isLoaded || this.hasUnsavedChanges();
+          return {
+            id: d.id,
+            name: this.currentDiagramName() || d.name,
+            type: this.activeDiagramType() || d.type,
+            defaultLineStyle: this.defaultLineStyle(),
+            nodes: useLocal ? localNodes : mapped.nodes,
+            connections: useLocal ? this.connections() : mappedConnections,
+            captureCanvas: useLocal,
+          };
+        }
+        return {
+          id: d.id,
+          name: d.name,
+          type: d.type,
+          defaultLineStyle: d.defaultLineStyle,
+          nodes: mapped.nodes,
+          connections: mappedConnections,
+        };
+      });
+
+      if (diagrams.length === 0) {
+        this.toastService?.warning('El proyecto no contiene diagramas para exportar.');
+        return;
+      }
+
+      await this.exportService.exportProjectDiagramsZip(
+        diagrams,
+        format,
+        this.currentProject()?.name || this.currentDiagramName() || 'proyecto',
+        undefined,
+        undefined,
+        async index => {
+          this.zipExportProgress.set({ current: index + 1, total: diagrams.length, name: diagrams[index].name, stage: 'rendering' });
+          const capture = await this.createExportCanvas(diagrams[index]);
+          return {
+            element: capture.element,
+            dispose: () => {
+              capture.dispose();
+              if (index === diagrams.length - 1) {
+                this.zipExportProgress.set({ current: diagrams.length, total: diagrams.length, stage: 'packing' });
+              }
+            },
+          };
+        },
+      );
+    } catch (err) {
+      const progress = this.zipExportProgress();
+      const stageKey = { loading: 'appbar.zipPreparing', rendering: 'appbar.zipRendering', packing: 'appbar.zipPacking' }[progress?.stage ?? 'loading'];
+      const detail = `${this.translationService.translate(stageKey)} (${progress?.current ?? 0}/${progress?.total ?? 0}) ${progress?.name ?? ''}`;
+      this.zipExportError.set(`${detail}${err instanceof Error && err.message ? ` — ${err.message}` : ''}`);
+      const reason = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err);
+      console.error('[ZIP export failed]', reason, { projectId: projId, format, progress, error: err });
+      this.toastService?.error(this.translationService.translate('appbar.zipFailed'));
+    } finally {
+      this.zipExportProgress.set(null);
+    }
+  }
+
+  /** Renderiza una copia aislada con los mismos plug-ins, estilos y rutas Foblex del editor. */
+  private async createExportCanvas(diagram: {
+    nodes: UmlClassNode[]; connections: UmlConnection[]; type?: string; defaultLineStyle?: UmlLineStyle;
+  }): Promise<{ element: HTMLElement; dispose: () => void }> {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-100000px;top:0;width:2400px;height:1600px;pointer-events:none;background:white';
+    host.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(host);
+    const ref = createComponent(DiagramCanvasComponent, {
+      hostElement: host, environmentInjector: this.exportEnvironment, elementInjector: this.exportInjector,
+    });
+    this.exportApplication.attachView(ref.hostView);
+    let restore: (() => void) | undefined;
+    let readyTimer: ReturnType<typeof setTimeout> | undefined;
+    const dispose = () => {
+      clearTimeout(readyTimer);
+      restore?.();
+      this.exportApplication.detachView(ref.hostView);
+      ref.destroy();
+      host.remove();
+    };
+    try {
+      const loaded = new Promise<void>((resolve, reject) => {
+        readyTimer = setTimeout(() => reject(new Error('Export canvas did not finish rendering within 15 seconds')), 15000);
+        ref.instance.flowLoaded.subscribe(() => { clearTimeout(readyTimer); resolve(); });
+      });
+      // Evita rechazos sin manejar si detectChanges falla antes de esperar el renderizado.
+      void loaded.catch(() => undefined);
+      ref.setInput('exportSize', {
+        width: computeBoardWidth(diagram.nodes, diagram.connections, diagram.type as DiagramType),
+        height: computeBoardHeight(diagram.nodes, diagram.connections, diagram.type as DiagramType),
+      });
+      ref.setInput('nodes', structuredClone(diagram.nodes));
+      ref.setInput('connections', structuredClone(diagram.connections));
+      ref.setInput('activeDiagramType', diagram.type || DiagramType.CLASS);
+      ref.setInput('defaultLineStyle', diagram.defaultLineStyle || 'segment');
+      ref.setInput('interactionDisabled', true);
+      ref.setInput('isGridVisible', false);
+      ref.changeDetectorRef.detectChanges();
+      await loaded;
+      await document.fonts?.ready;
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      restore = ref.instance.prepareForExport();
+      ref.changeDetectorRef.detectChanges();
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      const element = ref.instance.getExportElement();
+      if (!element) throw new Error('Export canvas is unavailable');
+      if (element.clientWidth <= 0 || element.clientHeight <= 0) {
+        throw new Error(`Export canvas has invalid dimensions: ${element.clientWidth}x${element.clientHeight}`);
+      }
+      return { element, dispose };
+    } catch (error) {
+      dispose();
+      throw error;
+    }
+  }
+
+  readonly showRepositoryImport = signal(false);
+  readonly isExportingQea = signal(false);
+
+  /** Guarda el documento activo antes de solicitar el QEA y evita descargas simultáneas. */
+  async downloadQea(project: boolean): Promise<void> {
+    const id = project ? this.currentProjectId() : this.currentDiagramId();
+    if (!id || !this.xmiService || this.isExportingQea()) return;
+    this.isExportingQea.set(true);
+    this.toastService?.info(this.translationService.translate('appbar.qeaPreparing'));
+    try {
+      const diagramId = this.currentDiagramId();
+      if (this.hasUnsavedChanges() && !this.isReadOnly() && diagramId) {
+        await firstValueFrom(this.diagramService.saveAst(diagramId, this.buildSaveAstPayload()));
+        this.persistenceService.markAsSaved(diagramId);
+      }
+      const blob = await firstValueFrom(this.xmiService.exportQea(id, project));
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${project ? 'project' : this.currentDiagramName()}.qea`;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.toastService?.success(this.translationService.translate('appbar.qeaReady'));
+    } catch (error) {
+      console.error('[QEA export failed]', error);
+      this.toastService?.error(this.translationService.translate('appbar.qeaFailed'));
+    } finally { this.isExportingQea.set(false); }
   }
 
   /** Descarga el diagrama actual en estándar OMG XMI 2.1. */

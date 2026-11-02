@@ -1,6 +1,6 @@
 import { By } from '@angular/platform-browser';
 import { FFlowModule, FConnectorDirective } from '@foblex/flow';
-import { Component, ChangeDetectionStrategy, input, inject, InjectionToken } from '@angular/core';
+import { ApplicationRef, EnvironmentInjector, createComponent, Component, ChangeDetectionStrategy, input, inject, InjectionToken } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { DiagramType, UmlClassNode } from '../core/models/diagram.model';
 import { PluginRegistryService } from '../core/plugins/plugin-registry.service';
@@ -63,6 +63,42 @@ const extension: NodePlugin = {
 };
 
 describe('Editor microkernel composition', () => {
+  it('mounts consecutive export canvases with every installed node renderer', () => {
+    vi.stubGlobal('ResizeObserver', class { observe(): void {} unobserve(): void {} disconnect(): void {} });
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 2400, 1600));
+    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(1600);
+    const registry = TestBed.inject(PluginRegistryService);
+    NODE_PLUGINS.forEach(plugin => registry.register(plugin));
+    const app = TestBed.inject(ApplicationRef);
+    for (const plugin of NODE_PLUGINS) {
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const ref = createComponent(DiagramCanvasComponent, {
+        hostElement: host, environmentInjector: TestBed.inject(EnvironmentInjector),
+      });
+      app.attachView(ref.hostView);
+      try {
+        ref.setInput('exportSize', { width: 2400, height: 1600 });
+        ref.setInput('nodes', [{ ...structuredClone(node), nodeType: plugin.nodeTypes[0] }]);
+        ref.setInput('interactionDisabled', true);
+        expect(() => ref.changeDetectorRef.detectChanges(), plugin.metadata.id).not.toThrow();
+        expect(() => ref.changeDetectorRef.detectChanges(), plugin.metadata.id).not.toThrow();
+        const originalNode = ref.instance.nodes()[0];
+        const initialInputs = ref.instance.nodePluginInputs(originalNode);
+        expect(ref.instance.nodePluginInputs(originalNode)).toBe(initialInputs);
+        const updatedNode = { ...originalNode, color: '#123456', name: 'Updated' };
+        ref.setInput('nodes', [updatedNode]);
+        expect(() => ref.changeDetectorRef.detectChanges(), plugin.metadata.id).not.toThrow();
+        expect(ref.instance.nodePluginInputs(updatedNode)).not.toBe(initialInputs);
+        expect(ref.instance.nodePluginInputs(updatedNode)['node']).toBe(updatedNode);
+      } finally {
+        app.detachView(ref.hostView);
+        ref.destroy();
+        host.remove();
+      }
+    }
+  });
+
   it('constructs an empty canvas with no UML or utility plug-ins installed', async () => {
     const fixture = TestBed.createComponent(DiagramCanvasComponent);
     await fixture.whenStable();

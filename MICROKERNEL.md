@@ -129,3 +129,10 @@ conectores y exportación.
 binaria autenticada. El núcleo no conoce Edge TTS ni administra audio. Captura y reproducción
 residen en servicios independientes del plug-in `ai-assistant`; la síntesis y su caché pertenecen
 a FastAPI, detrás de NestJS. La voz no aplica propuestas ni modifica el historial del canvas.
+
+## Importación de repositorios EA
+
+El plug-in `xmi` publica el slot `importDialog` y los métodos `previewQea`/`importQea`
+del contrato `XmiService`. El modal administra archivo, selección y estado HTTP. El host
+abre el slot por registro; SQLite, traducción QEA y persistencia residen en NestJS.
+El explorador recibe la colección actualizada mediante el servicio de documentos del Core.

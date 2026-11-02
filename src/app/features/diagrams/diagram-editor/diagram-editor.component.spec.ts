@@ -1,3 +1,4 @@
+import { Subject } from 'rxjs';
 import { DiagramNodeOperationsService } from '../../../core/plugins/contracts/diagram-node-operations.service.contract';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -402,5 +403,50 @@ describe('DiagramEditorComponent: persistencia de altura en diagramas de desplie
     expect(editor.nodes().length).toBe(3);
     expect(editor.nodes()[2].nodeType).toBe('class');
     expect(editor.nodes()[2].stereotype).toBe('Entity.');
+  });
+});
+
+
+describe('ZIP export progress', () => {
+  it('blocks duplicate requests while loading and clears progress on an empty project', async () => {
+    const response = new Subject<never[]>();
+    const load = vi.fn(() => response);
+    const editor = Object.assign(Object.create(DiagramEditorComponent.prototype), {
+      zipExportProgress: signal(null), zipExportError: signal(null),
+      closeExportDropdown: vi.fn(), currentProjectId: () => 'project',
+      projectDiagrams: () => [], currentDiagramId: () => 'diagram',
+      diagramService: { loadDiagramsByProject: load },
+      translationService: { translate: (key: string) => key },
+      toastService: { info: vi.fn(), warning: vi.fn(), error: vi.fn() },
+    }) as DiagramEditorComponent;
+    const first = editor.downloadProjectZip('png');
+    expect(editor.zipExportProgress()?.stage).toBe('loading');
+    await editor.downloadProjectZip('svg');
+    expect(load).toHaveBeenCalledOnce();
+    response.next([]);
+    response.complete();
+    await first;
+    expect(editor.zipExportProgress()).toBeNull();
+  });
+});
+
+describe('QEA export orchestration', () => {
+  it('aborts export when saving the pending document fails', async () => {
+    const request = vi.fn();
+    const editor = Object.assign(Object.create(DiagramEditorComponent.prototype), {
+      currentProjectId: () => 'project', currentDiagramId: () => 'diagram',
+      isExportingQea: signal(false),
+      hasUnsavedChanges: () => true, isReadOnly: () => false,
+      translationService: { translate: (key: string) => key },
+      toastService: { info: vi.fn(), error: vi.fn() },
+      buildSaveAstPayload: () => ({}),
+      diagramService: { saveAst: () => { throw new Error('Save failed'); } },
+    }) as DiagramEditorComponent;
+    Object.defineProperty(editor, 'xmiService', { value: { exportQea: request } });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await editor.downloadQea(true);
+    expect(request).not.toHaveBeenCalled();
+    expect(editor.isExportingQea()).toBe(false);
+    log.mockRestore();
   });
 });

@@ -34,6 +34,9 @@ import {
   heroCog6Tooth,
   heroLockClosed,
   heroPhone,
+  heroCodeBracket,
+  heroArchiveBoxArrowDown,
+  heroCircleStack,
 } from '@ng-icons/heroicons/outline';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CollaborationService } from '../../../../../core/services/collaboration.service';
@@ -84,6 +87,9 @@ type WorkspaceMenu = 'file' | 'export' | 'preferences';
       heroCog6Tooth,
       heroLockClosed,
       heroPhone,
+      heroCodeBracket,
+      heroArchiveBoxArrowDown,
+      heroCircleStack,
     }),
   ],
   templateUrl: './diagram-appbar.component.html',
@@ -289,10 +295,17 @@ export class DiagramAppbarComponent implements AfterViewInit {
   readonly changeNodeColor = output<string | null>();
   readonly exportBmp = output<void>();
   readonly exportPng = output<void>();
+  readonly exportSvg = output<void>();
+  readonly isExportingZip = input(false);
+  readonly exportZipPng = output<void>();
+  readonly exportZipSvg = output<void>();
   readonly exportXmi = output<void>();
+  readonly exportQea = output<boolean>();
+  readonly isExportingQea = input(false);
   readonly exportJson = output<void>();
   readonly viewJson = output<void>();
   readonly fileSelected = output<Event>();
+  readonly openRepositoryImport = output<void>();
   readonly openImportJson = output<void>();
   readonly openSpringBoot = output<void>();
   readonly openProfile = output<void>();
@@ -333,6 +346,55 @@ export class DiagramAppbarComponent implements AfterViewInit {
   }
 
   /**
+   * Emite el evento de exportación en formato vectorial SVG si no está bloqueado por concurrencia multiusuario.
+   */
+  handleExportSvg(): void {
+    this.closeMenu();
+    if (this.multiUserBlocked()) {
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
+    this.exportSvg.emit();
+  }
+
+  /**
+   * Emite el evento de exportación de todos los diagramas del proyecto en un .ZIP con imágenes PNG.
+   */
+  handleExportZipPng(): void {
+    if (this.isExportingZip()) return;
+    this.closeMenu();
+    if (this.multiUserBlocked()) {
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
+    this.exportZipPng.emit();
+  }
+
+  /**
+   * Emite el evento de exportación de todos los diagramas del proyecto en un .ZIP con archivos vectoriales SVG.
+   */
+  handleExportZipSvg(): void {
+    if (this.isExportingZip()) return;
+    this.closeMenu();
+    if (this.multiUserBlocked()) {
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
+    this.exportZipSvg.emit();
+  }
+
+  /** Solicita QEA y respeta el bloqueo colaborativo y la exportación en curso. */
+  handleExportQea(project: boolean): void {
+    if (this.isExportingQea()) return;
+    this.closeMenu();
+    if (this.multiUserBlocked()) {
+      this.toastService.warning(this.translationService.translate('appbar.multiUserExportBlocked'));
+      return;
+    }
+    this.exportQea.emit(project);
+  }
+
+  /**
    * Emite el evento de exportación en formato XMI (Enterprise Architect) si está permitido.
    */
   handleExportXmi(): void {
@@ -366,6 +428,19 @@ export class DiagramAppbarComponent implements AfterViewInit {
       return;
     }
     this.viewJson.emit();
+  }
+
+  /**
+   * Abre el diálogo de importación QEA (Enterprise Architect).
+   */
+  handleOpenQeaImport(): void {
+    if (this.isReadOnly() || !this.projectId()) return;
+    this.closeMenu();
+    if (this.multiUserBlocked()) {
+      this.toastService.warning(this.translationService.translate('appbar.multiUserImportBlocked'));
+      return;
+    }
+    this.openRepositoryImport.emit();
   }
 
   /**

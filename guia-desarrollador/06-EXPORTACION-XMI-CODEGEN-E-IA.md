@@ -44,6 +44,32 @@ alternativa desde nodos/conexiones; la exportación BMP asíncrona se espera ant
 contrato. `bmp-encoder` mantiene el worker y su fallback; no importar su servicio directamente
 desde `image-export` ni trasladar el worker a Core.
 
+La exportación ZIP solicita al host una copia temporal de `DiagramCanvasComponent` por diagrama,
+fuera de pantalla y sin interacción. La copia usa los mismos plug-ins de nodos, CSS, rutas Foblex,
+anclajes, tamaños y colores que el lienzo. Se esperan fuentes y renderizado, se normaliza el área
+al 100 % y se captura. Cada copia se destruye en `finally` antes de procesar la siguiente.
+
+El contrato recibe una función de captura por índice y devuelve elemento DOM y función de limpieza;
+los plug-ins no importan componentes del host. Si esta captura falla, el ZIP falla explícitamente:
+no reemplaza la imagen con un dibujante de estilos aproximados. El renderizador antiguo permanece
+para consumidores sin host, pero el botón de ZIP del editor ya no lo utiliza. SVG conserva una
+imagen PNG incrustada, igual que la exportación individual; no es SVG vectorial editable.
+
+Los datos del servidor se normalizan como al abrir el diagrama. El activo conserva sus cambios
+locales pendientes. El estilo de cada conexión prevalece sobre el predeterminado del diagrama.
+Se expanden temporalmente las dimensiones del flujo para incluir nodos fuera de pantalla.
+
+El ZIP muestra un aviso flotante persistente con animación: preparación, diagrama actual/total
+y compresión. No reduce el área del lienzo. `zipExportProgress` bloquea solicitudes repetidas y
+se limpia en `finally`, tanto en éxito como en error. PNG y SVG quedan deshabilitados mientras
+se prepara el ZIP. El fin de este estado significa que se entregó el archivo al navegador;
+no permite conocer cuándo el navegador terminó de guardarlo en disco.
+
+Un fallo conserva un aviso visible con etapa y nombre del diagrama, que puede cerrarse o se
+limpia al reintentar. La consola del navegador registra `[ZIP export failed]` y, cuando falla
+la captura/codificación, `[ZIP diagram failed]`, con contexto del proyecto y error original.
+Esta generación es local al navegador y no produce registros de exportación en NestJS.
+
 Las regresiones están en
 [diagram-export.service.spec.ts](../src/app/plugins/document-io/diagram-export.service.spec.ts),
 [diagram-canvas-export.spec.ts](../src/app/features/diagrams/diagram-editor/components/diagram-canvas/diagram-canvas-export.spec.ts)
@@ -183,3 +209,95 @@ volver a habilitar su permiso para iniciar otra sesión. El texto del chat y las
 continúan disponibles. La llamada requiere HTTPS o localhost y soporte AudioWorklet.
 
 Ver [reporte de integración, configuración y limitaciones](../../ia/docs/gemini-live/README.md).
+
+### Inicialización del lienzo temporal de exportación
+
+`exportSize` define ancho y alto en píxeles sobre `f-flow` antes del primer render, calculados
+con las mismas métricas del tablero. La captura espera `flowLoaded` (máximo 15 segundos) y
+comprueba que las dimensiones no sean cero. Esto evita depender de alturas porcentuales de
+un componente creado fuera del árbol visual habitual. El aviso FF1002 puede aparecer también
+si Foblex revisa un elemento ya destruido tras otro fallo; consultar primero el mensaje y la
+traza textual de `[ZIP export failed]`, no atribuir automáticamente todos los fallos a altura cero.
+
+### Estabilidad de las entradas durante la exportación ZIP
+
+El lienzo mantiene las entradas de los renderizadores en un `computed`, indexado por ID
+de nodo. No se deben invocar adaptadores que creen objetos anidados nuevos en cada
+comprobación de la plantilla: entradas como `colors` provocarían actualizaciones sucesivas
+del componente dinámico y el error `NG0103` durante `createExportCanvas`.
+El cálculo conserva las referencias hasta que cambian los nodos o el estado utilizado
+(selección, conexiones, permisos, tipo de diagrama o registro de plug-ins).
+
+La prueba de composición monta y destruye lienzos de exportación consecutivos con todos
+los renderizadores registrados, ejecuta detección de cambios y verifica que una edición
+invalida las entradas. Esta prueba reproduce el ciclo de Angular; no sustituye la revisión
+visual de los PNG/SVG en un navegador, pues el entorno de pruebas simula las dimensiones.
+
+## Estilos de línea en Enterprise Architect
+
+La exportación resuelve primero `connection.lineStyle` y, si falta, `defaultLineStyle`.
+Acepta los nombres canónicos con guiones bajos y los alias históricos con guiones.
+El estilo gráfico pertenece a la extensión de EA, no al tipo semántico de relación UML.
+
+| Editor | Estilo del elemento del diagrama EA |
+| --- | --- |
+| `straight` | `Mode=1` |
+| `bezier` | `Mode=4` |
+| `segment` | `Mode=3` (Custom) |
+| `tree_vertical` / `tree_horizontal` | `Mode=3;TREE=V` / `TREE=H` |
+| `lateral_vertical` / `lateral_horizontal` | `Mode=3;TREE=LV` / `TREE=LH` |
+| `orthogonal_square` | `Mode=3;TREE=OS` |
+| `orthogonal_rounded` / `adaptive-curve` | `Mode=3;TREE=OR` |
+
+No confundir `Mode` del XMI con la enumeración `DiagramLink.LineStyle` de la API de EA.
+El importador del frontend interpreta `TREE` antes que el modo base para conservar estos
+estilos al abrir nuevamente el XMI. Los estilos de mensajes de secuencia mantienen su
+tratamiento específico. EA calcula el trazado: conservar el tipo de ruta no garantiza
+que los puntos de giro coincidan píxel por píxel con Foblex.
+
+Referencias: [estilos de EA](https://sparxsystems.com/enterprise_architect_user_guide/17.0/modeling_fundamentals/stylemenusection.html)
+y [ejemplo de Mode y TREE en el foro de Sparx](https://sparxsystems.com/forums/smf/index.php?topic=5428.0).
+La verificación automatizada cubre el XML generado y el mapeo de importación; la apariencia
+final debe comprobarse importando el archivo en Enterprise Architect.
+
+### Orientación lateral alineada con EA
+
+`lateral_vertical` sale horizontalmente del origen y termina verticalmente en el destino.
+`lateral_horizontal` sale verticalmente y termina horizontalmente. Se conserva la defensa
+contra cruces cuando ambos nodos comparten eje. El XMI mantiene `TREE=LV` y `TREE=LH`,
+respectivamente. La corrección cambia el trazado de los estilos laterales ya guardados;
+no modifica IDs ni reescribe documentos. La captura de imágenes utiliza este mismo lienzo.
+
+La ubicación de mensajes de comunicación en EA usa `privatedata5` y geometría de sus
+conectores auxiliares. El backend genera un codo explícito para rutas laterales y distribuye
+sus mensajes en filas con flechas cortas, usando el mismo valor geométrico en ambos campos.
+El formato se contrastó con el XMI de ejemplo de EA. Es una distribución inicial automática;
+no garantiza eliminar superposiciones de etiquetas en diagramas densos.
+
+## Descarga QEA
+
+Publish → Export → Modelos contiene **QEA · Diagrama actual** y **QEA · Proyecto completo**.
+El host guarda el documento activo si tiene cambios, solicita el archivo mediante el
+contrato `XmiService.exportQea` y muestra inicio, éxito o error. Durante la solicitud
+se deshabilitan ambas acciones; un guardado fallido cancela la exportación.
+El plug-in de interoperabilidad consume `/qea/export/:id` o `/qea/project/:id` en NestJS.
+La plantilla y la escritura SQLite viven exclusivamente en el backend. Se conserva
+el bloqueo de exportación colaborativa. El archivo es descargable sin EA instalado;
+su validación visual en EA sigue pendiente.
+
+## Importación QEA
+
+Archivo / Proyecto → Importar modelo → Importar QEA abre el slot `xmi.importDialog`.
+El componente del plug-in usa `XmiService.previewQea` e `importQea`; el host solo controla
+su apertura y cierre. No lee SQLite ni importa implementaciones del plug-in.
+El diálogo modal nativo aísla foco y teclado del lienzo, muestra actividad y advertencias,
+requiere selección explícita y bloquea envíos duplicados. Después de importar actualiza
+`DiagramService.projectDiagrams` sin cambiar el documento activo ni sus modificaciones.
+No se bloquea por presencia de otros editores: la operación crea documentos nuevos y no
+reemplaza el diagrama compartido. NestJS sigue comprobando permiso de escritura del proyecto.
+Ver [contrato, límites y reporte](../../backend/src/modules/code-generator/services/qea/README.md#importación-qea-lector-y-reporte-de-implementación).
+
+El selector QEA ofrece **Seleccionar todo / Deseleccionar todo** para los diagramas
+compatibles. Si hay más de 100, el botón indica explícitamente **Seleccionar los primeros
+100 compatibles**, respetando el límite por lote. Se deshabilita durante el procesamiento
+y después de importar correctamente.

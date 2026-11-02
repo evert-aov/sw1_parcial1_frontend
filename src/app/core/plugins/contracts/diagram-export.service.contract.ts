@@ -35,6 +35,27 @@ export interface DiagramExportService {
     nodes: UmlClassNode[],
     connections: UmlConnection[],
   ): Promise<void>;
+  exportDiagramSvg(
+    diagramCanvas: DiagramExportCanvasTarget | undefined,
+    diagramName: string,
+    diagramType: DiagramType,
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+  ): Promise<void>;
+  exportProjectDiagramsZip(
+    diagrams: Array<{
+      id?: string;
+      name: string;
+      type?: string;
+      nodes: UmlClassNode[];
+      connections: UmlConnection[];
+    }>,
+    format: 'png' | 'svg',
+    projectName: string,
+    activeDiagramCanvas?: DiagramExportCanvasTarget,
+    activeDiagramId?: string,
+    captureDiagram?: (index: number) => Promise<{ element: HTMLElement; dispose: () => void }>,
+  ): Promise<void>;
   buildProjectJson(
     diagramName: string,
     defaultLineStyle: UmlLineStyle,

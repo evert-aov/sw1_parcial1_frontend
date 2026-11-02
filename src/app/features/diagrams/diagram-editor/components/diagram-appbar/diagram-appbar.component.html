@@ -504,33 +504,309 @@
         </div>
       }
       @if (activeTab() === 'publish') {
-        <div class="workspace-action-group">
-          <button
-            type="button"
-            class="primary-action"
-            data-menu-trigger="export"
-            aria-haspopup="menu"
-            [attr.aria-expanded]="menu() === 'export'"
-            [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
-            (click)="toggleMenu('export')"
-          >
-            <ng-icon name="heroArrowDownTray" /> {{ 'appbar.export' | translate }}
-            <ng-icon name="heroChevronDown" />
-          </button>
-          <div class="group-description">
-            <strong>{{ 'workspace.deliverables' | translate }}</strong>
-            <span>{{ 'workspace.exportHint' | translate }}</span>
+        <!-- GRUPO 1: IMPORTAR MODELOS -->
+        <div class="flex flex-col items-center justify-between h-[58px] px-1 shrink-0">
+          <div class="flex items-center gap-0.5">
+            @if (plugins.find('xmi')) {
+              <button
+                type="button"
+                data-import-action="qea"
+                (click)="handleOpenQeaImport()"
+                [disabled]="isReadOnly() || !projectId()"
+                [class.unavailable]="isReadOnly() || multiUserBlocked()"
+                [attr.aria-disabled]="isReadOnly() || multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserImportBlocked' | translate) : ('qeaImport.title' | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-13 group border border-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroCircleStack" class="text-lg text-blue-600 dark:text-blue-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  QEA
+                </span>
+              </button>
+
+              <button
+                type="button"
+                data-import-action="file"
+                (click)="triggerFileInput()"
+                [disabled]="isReadOnly()"
+                [class.unavailable]="isReadOnly() || multiUserBlocked()"
+                [attr.aria-disabled]="isReadOnly() || multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserImportBlocked' | translate) : 'XML / XMI / JSON'"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroDocumentText" class="text-lg text-emerald-600 dark:text-emerald-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  XML / XMI
+                </span>
+              </button>
+            }
+
+            @if (plugins.find('document-io')) {
+              <button
+                type="button"
+                data-import-action="json"
+                (click)="handleOpenImportJson()"
+                [disabled]="isReadOnly()"
+                [class.unavailable]="isReadOnly() || multiUserBlocked()"
+                [attr.aria-disabled]="isReadOnly() || multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserImportBlocked' | translate) : ('workspace.pasteJson' | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroClipboardDocument" class="text-lg text-purple-600 dark:text-purple-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  {{ 'workspace.pasteJson' | translate }}
+                </span>
+              </button>
+            }
           </div>
-          @if (multiUserBlocked()) {
-            <div class="integrity-lock-banner" data-integrity-banner="publish" role="status">
-              <ng-icon name="heroLockClosed" />
-              <div>
-                <strong>{{ 'appbar.multiUserLockTitle' | translate }}</strong>
-                <span>{{ 'appbar.multiUserLockReason' | translate }}</span>
-              </div>
-            </div>
-          }
+          <span class="text-[9px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider select-none leading-none pb-0.5">
+            {{ 'workspace.importSection' | translate }}
+          </span>
         </div>
+
+        <!-- Hairline divider -->
+        <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1 shrink-0"></div>
+
+        <!-- GRUPO 2: IMÁGENES -->
+        @if (plugins.find('image-export')) {
+          <div class="flex flex-col items-center justify-between h-[58px] px-1 shrink-0">
+            <div class="flex items-center gap-0.5">
+              <button
+                type="button"
+                data-export-action="png"
+                (click)="handleExportPng()"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ('appbar.exportPng' | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-11 group border border-transparent"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroPhoto" class="text-lg text-sky-600 dark:text-sky-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  PNG
+                </span>
+              </button>
+
+              <button
+                type="button"
+                data-export-action="svg"
+                (click)="handleExportSvg()"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ('appbar.exportSvg' | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-11 group border border-transparent"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroCodeBracket" class="text-lg text-indigo-600 dark:text-indigo-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  SVG
+                </span>
+              </button>
+
+              @if (plugins.find('bmp-encoder')) {
+                <button
+                  type="button"
+                  data-export-action="bmp"
+                  (click)="handleExportBmp()"
+                  [class.unavailable]="multiUserBlocked()"
+                  [attr.aria-disabled]="multiUserBlocked()"
+                  [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ('appbar.exportBmp' | translate)"
+                  class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-11 group border border-transparent"
+                >
+                  <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                    <ng-icon name="heroPhoto" class="text-lg text-teal-600 dark:text-teal-400"></ng-icon>
+                  </div>
+                  <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                    BMP
+                  </span>
+                </button>
+              }
+            </div>
+            <span class="text-[9px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider select-none leading-none pb-0.5">
+              {{ 'workspace.imagesSection' | translate }}
+            </span>
+          </div>
+
+          <!-- Hairline divider -->
+          <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1 shrink-0"></div>
+
+          <!-- GRUPO 3: PROYECTO COMPLETO (.ZIP) -->
+          <div class="flex flex-col items-center justify-between h-[58px] px-1 shrink-0">
+            <div class="flex items-center gap-0.5">
+              <button
+                type="button"
+                data-export-action="zip-png"
+                [disabled]="isExportingZip()"
+                (click)="handleExportZipPng()"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ('appbar.exportZipPng' | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-15 group border border-transparent disabled:opacity-40"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroArchiveBoxArrowDown" class="text-lg text-amber-600 dark:text-amber-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  PNG (.zip)
+                </span>
+              </button>
+
+              <button
+                type="button"
+                data-export-action="zip-svg"
+                [disabled]="isExportingZip()"
+                (click)="handleExportZipSvg()"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ('appbar.exportZipSvg' | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-15 group border border-transparent disabled:opacity-40"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroArchiveBoxArrowDown" class="text-lg text-orange-600 dark:text-orange-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  SVG (.zip)
+                </span>
+              </button>
+            </div>
+            <span class="text-[9px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider select-none leading-none pb-0.5">
+              {{ 'workspace.zipSection' | translate }}
+            </span>
+          </div>
+
+          <!-- Hairline divider -->
+          <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1 shrink-0"></div>
+        }
+
+        <!-- GRUPO 4: MODELOS -->
+        <div class="flex flex-col items-center justify-between h-[58px] px-1 shrink-0">
+          <div class="flex items-center gap-0.5">
+            @if (plugins.find('xmi')) {
+              <button
+                type="button"
+                data-export-action="xmi"
+                (click)="handleExportXmi()"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : 'XML / XMI 2.1'"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-13 group border border-transparent"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroDocumentText" class="text-lg text-emerald-600 dark:text-emerald-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  XMI 2.1
+                </span>
+              </button>
+
+              <button
+                type="button"
+                data-export-action="qea"
+                [disabled]="isExportingQea()"
+                (click)="handleExportQea(false)"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ((isExportingQea() ? 'appbar.qeaPreparing' : 'appbar.qeaDiagram') | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-16 group border border-transparent disabled:opacity-40"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroCircleStack" class="text-lg text-blue-600 dark:text-blue-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  QEA Actual
+                </span>
+              </button>
+
+              <button
+                type="button"
+                data-export-action="qea-project"
+                [disabled]="isExportingQea()"
+                (click)="handleExportQea(true)"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ('appbar.qeaProject' | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-16 group border border-transparent disabled:opacity-40"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroCircleStack" class="text-lg text-indigo-600 dark:text-indigo-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  QEA Todo
+                </span>
+              </button>
+            }
+
+            @if (plugins.find('document-io')) {
+              <button
+                type="button"
+                data-export-action="json"
+                (click)="handleExportJson()"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ('appbar.exportJson' | translate)"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-11 group border border-transparent"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroDocumentText" class="text-lg text-violet-600 dark:text-violet-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  JSON
+                </span>
+              </button>
+            }
+          </div>
+          <span class="text-[9px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider select-none leading-none pb-0.5">
+            {{ 'workspace.modelsSection' | translate }}
+          </span>
+        </div>
+
+        <!-- Hairline divider -->
+        <div class="h-9 w-px bg-slate-200 dark:bg-slate-800 mx-1 shrink-0"></div>
+
+        <!-- GRUPO 5: REPORTES / AST -->
+        @if (plugins.find('document-io')) {
+          <div class="flex flex-col items-center justify-between h-[58px] px-1 shrink-0">
+            <div class="flex items-center gap-0.5">
+              <button
+                type="button"
+                data-export-action="ast"
+                (click)="handleViewJson()"
+                [class.unavailable]="multiUserBlocked()"
+                [attr.aria-disabled]="multiUserBlocked()"
+                [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : 'JSON AST'"
+                class="flex flex-col items-center justify-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1A2246] transition-colors text-center cursor-pointer min-w-14 group border border-transparent"
+              >
+                <div class="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:scale-105 transition-transform">
+                  <ng-icon name="heroDocumentChartBar" class="text-lg text-amber-600 dark:text-amber-400"></ng-icon>
+                </div>
+                <span class="text-[10px] font-sans font-medium text-slate-700 dark:text-slate-300 leading-tight whitespace-nowrap">
+                  JSON AST
+                </span>
+              </button>
+            </div>
+            <span class="text-[9px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider select-none leading-none pb-0.5">
+              {{ 'workspace.reportsSection' | translate }}
+            </span>
+          </div>
+        }
+
+        @if (multiUserBlocked()) {
+          <div class="integrity-lock-banner ml-2" data-integrity-banner="publish" role="status">
+            <ng-icon name="heroLockClosed" />
+            <div>
+              <strong>{{ 'appbar.multiUserLockTitle' | translate }}</strong>
+              <span>{{ 'appbar.multiUserLockReason' | translate }}</span>
+            </div>
+          </div>
+        }
       }
     </div>
   }
@@ -579,6 +855,7 @@
             </div>
           }
           @if (plugins.find('xmi')) {
+            <button type="button" role="menuitem" [disabled]="isReadOnly() || !projectId()" (click)="handleOpenQeaImport()">{{ 'qeaImport.title' | translate }}</button>
             <button
               type="button"
               role="menuitem"
@@ -657,6 +934,17 @@
         >
           <ng-icon name="heroPhoto" /> {{ 'appbar.exportPng' | translate }}
         </button>
+        <button
+          type="button"
+          role="menuitem"
+          data-export-action="svg"
+          (click)="handleExportSvg()"
+          [class.unavailable]="multiUserBlocked()"
+          [attr.aria-disabled]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
+        >
+          <ng-icon name="heroCodeBracket" /> {{ 'appbar.exportSvg' | translate }}
+        </button>
         @if (plugins.find('bmp-encoder')) {
           <button
             type="button"
@@ -671,6 +959,33 @@
           </button>
         }
       }
+      <div class="menu-title">{{ 'appbar.batchExportTitle' | translate }}</div>
+      @if (plugins.find('image-export')) {
+        <button
+          type="button"
+          role="menuitem"
+          data-export-action="zip-png"
+          [disabled]="isExportingZip()"
+          (click)="handleExportZipPng()"
+          [class.unavailable]="multiUserBlocked()"
+          [attr.aria-disabled]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
+        >
+          <ng-icon name="heroArchiveBoxArrowDown" /> {{ 'appbar.exportZipPng' | translate }}
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          data-export-action="zip-svg"
+          [disabled]="isExportingZip()"
+          (click)="handleExportZipSvg()"
+          [class.unavailable]="multiUserBlocked()"
+          [attr.aria-disabled]="multiUserBlocked()"
+          [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
+        >
+          <ng-icon name="heroArchiveBoxArrowDown" /> {{ 'appbar.exportZipSvg' | translate }}
+        </button>
+      }
       <div class="menu-title">{{ 'workspace.models' | translate }}</div>
       @if (plugins.find('xmi')) {
         <button
@@ -683,6 +998,12 @@
           [title]="multiUserBlocked() ? ('appbar.multiUserExportBlocked' | translate) : ''"
         >
           <ng-icon name="heroDocumentText" /> XML / XMI 2.1
+        </button>
+        <button type="button" role="menuitem" data-export-action="qea" [disabled]="isExportingQea()" (click)="handleExportQea(false)">
+          <ng-icon name="heroDocumentText" /> {{ (isExportingQea() ? 'appbar.qeaPreparing' : 'appbar.qeaDiagram') | translate }}
+        </button>
+        <button type="button" role="menuitem" data-export-action="qea-project" [disabled]="isExportingQea()" (click)="handleExportQea(true)">
+          <ng-icon name="heroDocumentText" /> {{ 'appbar.qeaProject' | translate }}
         </button>
       }
       @if (plugins.find('document-io')) {

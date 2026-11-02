@@ -32,6 +32,25 @@ describe('DiagramCanvasComponent export viewport adapter', () => {
     expect(canvas.transform).toEqual(original);
   });
 
+  it('expands the capture surface to include offscreen nodes and restores its dimensions', () => {
+    const { component } = host();
+    const flow = document.createElement('f-flow');
+    flow.style.width = '800px';
+    flow.style.height = '500px';
+    Object.defineProperty(flow, 'clientWidth', { value: 800 });
+    Object.defineProperty(flow, 'clientHeight', { value: 500 });
+    (component as any).boardElementRef = { nativeElement: { querySelector: () => flow } };
+    (component as any).nodes = () => [];
+    (component as any).connections = () => [];
+    (component as any).activeDiagramType = () => 'class';
+    const restore = component.prepareForExport();
+    expect(flow.style.width).toBe('2400px');
+    expect(flow.style.height).toBe('1600px');
+    restore();
+    expect(flow.style.width).toBe('800px');
+    expect(flow.style.height).toBe('500px');
+  });
+
   it('provides a no-op restoration callback before the canvas is initialized', () => {
     const { component } = host();
     component.canvas = undefined;

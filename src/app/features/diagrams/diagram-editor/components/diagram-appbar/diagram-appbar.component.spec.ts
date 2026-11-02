@@ -216,4 +216,43 @@ describe('Workspace action ownership', () => {
     fixture.detectChanges();
     expect(root.querySelector('[data-integrity-banner="import"]')).not.toBeNull();
   });
+
+  it('renders deployed import and export actions directly in the Publish ribbon tab', async () => {
+    const root: HTMLElement = fixture.nativeElement;
+    const qeaSpy = vi.fn();
+    const importJsonSpy = vi.fn();
+    fixture.componentInstance.openRepositoryImport.subscribe(qeaSpy);
+    fixture.componentInstance.openImportJson.subscribe(importJsonSpy);
+
+    fixture.componentInstance.onTabClick('publish');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Verify import actions deployed in ribbon
+    const qeaImportBtn = root.querySelector<HTMLButtonElement>('[data-import-action="qea"]');
+    const fileImportBtn = root.querySelector<HTMLButtonElement>('[data-import-action="file"]');
+    const jsonImportBtn = root.querySelector<HTMLButtonElement>('[data-import-action="json"]');
+    expect(qeaImportBtn).not.toBeNull();
+    expect(fileImportBtn).not.toBeNull();
+    expect(jsonImportBtn).not.toBeNull();
+
+    // Verify export actions deployed in ribbon
+    expect(root.querySelector('[data-export-action="png"]')).not.toBeNull();
+    expect(root.querySelector('[data-export-action="svg"]')).not.toBeNull();
+    expect(root.querySelector('[data-export-action="zip-png"]')).not.toBeNull();
+    expect(root.querySelector('[data-export-action="zip-svg"]')).not.toBeNull();
+    expect(root.querySelector('[data-export-action="xmi"]')).not.toBeNull();
+    expect(root.querySelector('[data-export-action="qea"]')).not.toBeNull();
+    expect(root.querySelector('[data-export-action="qea-project"]')).not.toBeNull();
+    expect(root.querySelector('[data-export-action="json"]')).not.toBeNull();
+    expect(root.querySelector('[data-export-action="ast"]')).not.toBeNull();
+
+    // Trigger QEA import from ribbon
+    qeaImportBtn!.click();
+    expect(qeaSpy).toHaveBeenCalledOnce();
+
+    // Trigger JSON import from ribbon
+    jsonImportBtn!.click();
+    expect(importJsonSpy).toHaveBeenCalledOnce();
+  });
 });

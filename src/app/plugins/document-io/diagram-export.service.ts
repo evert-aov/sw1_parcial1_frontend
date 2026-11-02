@@ -84,6 +84,76 @@ export class DiagramExportService {
   }
 
   /**
+   * Exporta el diagrama a formato vectorial SVG con marco UML 2.5 escalable.
+   */
+  async exportDiagramSvg(
+    diagramCanvas: DiagramExportCanvasTarget | undefined,
+    diagramName: string,
+    diagramType: DiagramType,
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+  ): Promise<void> {
+    diagramCanvas?.clearSelection();
+    const restoreViewport = diagramCanvas?.prepareForExport();
+
+    try {
+      await new Promise<void>((resolve) => {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        } else {
+          setTimeout(resolve, 0);
+        }
+      });
+
+      const containerEl = diagramCanvas?.getExportElement();
+      if (containerEl) {
+        await this.bmpExportService.exportElementToSvg(containerEl, diagramName, diagramType);
+      } else {
+        this.bmpExportService.exportToSvg(nodes, connections, diagramName, diagramType);
+      }
+    } finally {
+      restoreViewport?.();
+    }
+  }
+
+  /**
+   * Exporta todos los diagramas de un proyecto en un archivo comprimido .ZIP (PNG o SVG).
+   */
+  async exportProjectDiagramsZip(
+    diagrams: Array<{
+      id?: string;
+      name: string;
+      type?: string;
+      defaultLineStyle?: UmlLineStyle;
+      captureCanvas?: boolean;
+      nodes: UmlClassNode[];
+      connections: UmlConnection[];
+    }>,
+    format: 'png' | 'svg',
+    projectName: string,
+    activeDiagramCanvas?: DiagramExportCanvasTarget,
+    activeDiagramId?: string,
+    captureDiagram?: (index: number) => Promise<{ element: HTMLElement; dispose: () => void }>,
+  ): Promise<void> {
+    activeDiagramCanvas?.clearSelection();
+    const restoreViewport = activeDiagramCanvas?.prepareForExport();
+    try {
+      await new Promise<void>(resolve => {
+        if (typeof requestAnimationFrame !== 'undefined') {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        } else {
+          setTimeout(resolve, 0);
+        }
+      });
+      await this.bmpExportService.exportProjectImagesToZip(
+        diagrams, format, projectName, activeDiagramCanvas?.getExportElement(), activeDiagramId, ...(captureDiagram ? [captureDiagram] as const : []),
+      );
+    } finally {
+      restoreViewport?.();
+    }
+  }
+
+  /**
    * Construye el objeto JSON exportable del proyecto de diagrama.
    */
   buildProjectJson(

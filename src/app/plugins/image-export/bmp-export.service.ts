@@ -1,6 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { toCanvas } from 'html-to-image';
-import { UmlClassNode, UmlConnection } from '../../core/models/diagram.model';
+import JSZip from 'jszip';
+import { DiagramType, UmlClassNode, UmlConnection, UmlLineStyle, UmlMessage } from '../../core/models/diagram.model';
+import { DiagramSequenceActivationService } from '../../core/plugins/contracts/diagram-sequence-activation.service.contract';
 import { ToastService } from '../../core/services/toast.service';
 import { BmpEncoder } from '../../core/plugins/contracts/bmp-encoder.contract';
 
@@ -9,6 +11,7 @@ import { BmpEncoder } from '../../core/plugins/contracts/bmp-encoder.contract';
 })
 export class BmpExportService {
   private readonly encoder = inject(BmpEncoder);
+  private readonly injector = inject(Injector);
   private readonly toastService?: ToastService | null;
 
   constructor(toastService?: ToastService) {
@@ -82,6 +85,34 @@ export class BmpExportService {
     } catch (err) {
       console.error('Error al capturar imagen PNG del editor:', err);
       this.toastService?.error('Error al generar la captura PNG del diagrama.');
+    }
+  }
+
+  /**
+   * Exporta una captura visual exacta del DOM a formato SVG con marco UML 2.5 de alta resolución.
+   */
+  async exportElementToSvg(
+    element: HTMLElement,
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+  ): Promise<void> {
+    try {
+      const finalCanvas = await this.generateFramedCanvas(element, diagramName, diagramType);
+      const dataUrl = finalCanvas.toDataURL('image/png');
+      const totalW = finalCanvas.width;
+      const totalH = finalCanvas.height;
+
+      const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">
+  <image width="${totalW}" height="${totalH}" href="${dataUrl}" xlink:href="${dataUrl}" />
+</svg>`;
+
+      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+      const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+      this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.svg`);
+    } catch (err) {
+      console.error('Error al capturar imagen SVG del editor:', err);
+      this.toastService?.error('Error al generar la captura SVG del diagrama.');
     }
   }
 
@@ -270,6 +301,32 @@ export class BmpExportService {
         else poly.removeAttribute('fill');
         if (origStroke !== null) poly.setAttribute('stroke', origStroke);
         else poly.removeAttribute('stroke');
+      });
+    });
+
+    // Asegurar fill="none" en todos los trazados de conexión para evitar que adopten el relleno negro por defecto de SVG en navegadores/html-to-image
+    const allConnectionPaths = element.querySelectorAll<SVGPathElement>(
+      'f-connection path, f-connection-for-create path, .f-connection-path, path[f-connection-path], path[fConnectionPath]'
+    );
+    allConnectionPaths.forEach((path) => {
+      if (
+        path.closest('f-marker') ||
+        path.closest('svg[fMarker]') ||
+        path.closest('.uml-marker-filled') ||
+        path.classList.contains('uml-marker-filled')
+      ) {
+        return;
+      }
+      const origFill = path.getAttribute('fill');
+      const origStyleFill = path.style.fill;
+
+      path.setAttribute('fill', 'none');
+      path.style.fill = 'none';
+
+      cleanupFns.push(() => {
+        if (origFill !== null) path.setAttribute('fill', origFill);
+        else path.removeAttribute('fill');
+        path.style.fill = origStyleFill;
       });
     });
 
@@ -640,6 +697,997 @@ export class BmpExportService {
   }
 
   /**
+   * Exporta el diagrama UML a formato vectorial SVG con marco UML 2.5 escalable.
+   */
+  exportToSvg(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+  ): void {
+    const svgString = this.generateSvgString(nodes, connections, diagramName, diagramType);
+    if (!svgString) return;
+
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const cleanFileName = diagramName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+    this.triggerDownload(blob, `${cleanFileName || 'diagrama'}.svg`);
+  }
+
+  /**
+   * Genera el código XML del archivo SVG vectorial para el diagrama UML, incluyendo el marco UML 2.5.
+   */
+  generateSvgString(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+  ): string {
+    const validNodes = (nodes || []).filter((n) => !n.isAnchor);
+    if (validNodes.length === 0) {
+      this.toastService?.warning('No hay elementos en el diagrama para exportar.');
+      return '';
+    }
+
+    const prefix = this.getDiagramPrefix(diagramType);
+    const isCommunication =
+      prefix === 'comm' ||
+      (diagramType || '').toLowerCase().includes('comm');
+
+    const isSequence =
+      !isCommunication &&
+      (prefix === 'sd' ||
+        (diagramType || '').toLowerCase().includes('seq') ||
+        (diagramType || '').toLowerCase().includes('sequence') ||
+        (!diagramType && validNodes.some((n) => n.nodeType === 'lifeline')));
+
+    let maxSlot = -1;
+    if (isSequence) {
+      for (const c of connections || []) {
+        const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+        const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+        if (sMatch) maxSlot = Math.max(maxSlot, parseInt(sMatch[1], 10));
+        if (tMatch) maxSlot = Math.max(maxSlot, parseInt(tMatch[1], 10));
+      }
+      if (maxSlot < 0 && (connections || []).length > 0) {
+        maxSlot = connections.length - 1;
+      }
+      if (maxSlot < 0) maxSlot = 2;
+    }
+    const seqLifelineLength = isSequence ? Math.max(120, 170 + maxSlot * 50) : 0;
+
+    // 1. Calcular Bounding Box del contenido
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const node of validNodes) {
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      const w =
+        isSequence && isActor
+          ? (node.width || 90)
+          : isCommunication
+            ? (node.width || 180)
+            : (node.width || (isSequence ? 160 : 220));
+      const h = this.calculateNodeHeight(node, isSequence, seqLifelineLength, isCommunication);
+      minX = Math.min(minX, node.position.x);
+      minY = Math.min(minY, node.position.y);
+      maxX = Math.max(maxX, node.position.x + w);
+      maxY = Math.max(maxY, node.position.y + h);
+    }
+
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+
+    // 2. Parámetros del marco UML 2.5
+    const outerMargin = 24;
+    const innerPadLeft = 48;
+    const innerPadRight = 48;
+    const innerPadBottom = 36;
+    const innerPadTop = 84;
+    const tabHeight = 54;
+    const chamfer = 20;
+
+    let cleanName = diagramName.trim().replace(new RegExp(`^${prefix}\\s*[:\\-]?\\s*`, 'i'), '');
+    cleanName = cleanName.replace(/^(uc|class|cd|sd|comm|pkg|cmp|dep|layered|arch|analysis)\s*[:\\-]?\s*/i, '');
+    const fullTitle = `${prefix} ${cleanName || diagramName.trim() || 'Diagram'}`;
+
+    const charWidth = 11.5;
+    const textWidth = fullTitle.length * charWidth;
+    const tabWidth = Math.max(220, Math.ceil(textWidth + 36 + chamfer));
+
+    const frameW = Math.max(contentW + innerPadLeft + innerPadRight, tabWidth + 60);
+    const frameH = contentH + innerPadTop + innerPadBottom;
+
+    const totalW = frameW + outerMargin * 2;
+    const totalH = frameH + outerMargin * 2;
+
+    const frameX = outerMargin;
+    const frameY = outerMargin;
+
+    const offsetX = frameX + innerPadLeft - minX;
+    const offsetY = frameY + innerPadTop - minY;
+
+    const nodeMap = new Map<string, { x: number; y: number; w: number; h: number; name: string }>();
+    for (const node of validNodes) {
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      const w =
+        isSequence && isActor
+          ? (node.width || 90)
+          : isCommunication
+            ? (node.width || 180)
+            : (node.width || (isSequence ? 160 : 220));
+      const h = this.calculateNodeHeight(node, isSequence, seqLifelineLength, isCommunication);
+      nodeMap.set(node.id, {
+        x: node.position.x + offsetX,
+        y: node.position.y + offsetY,
+        w,
+        h,
+        name: node.name,
+      });
+    }
+
+    const svgParts: string[] = [];
+    svgParts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+    svgParts.push(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">`,
+    );
+    svgParts.push(`<style>
+      .uml-text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+      .uml-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    </style>`);
+
+    // Fondo blanco
+    svgParts.push(`<rect width="${totalW}" height="${totalH}" fill="#FFFFFF" />`);
+
+    // Marco exterior UML 2.5
+    svgParts.push(
+      `<rect x="${frameX}" y="${frameY}" width="${frameW}" height="${frameH}" fill="#FFFFFF" stroke="#000000" stroke-width="1.5" />`,
+    );
+
+    // Pestaña con chaflán UML 2.5
+    const tabPath = `M ${frameX} ${frameY} L ${frameX + tabWidth} ${frameY} L ${frameX + tabWidth} ${frameY + tabHeight - chamfer} L ${frameX + tabWidth - chamfer} ${frameY + tabHeight} L ${frameX} ${frameY + tabHeight} Z`;
+    svgParts.push(
+      `<path d="${tabPath}" fill="#FFFFFF" stroke="#000000" stroke-width="1.5" />`,
+    );
+
+    // Título en la pestaña
+    svgParts.push(
+      `<text x="${frameX + 16}" y="${frameY + tabHeight / 2 + 7}" class="uml-text" font-size="20" font-weight="bold" fill="#000000">${this.escapeXml(fullTitle)}</text>`,
+    );
+
+    if (isSequence) {
+      this.renderSvgSequenceDiagram(svgParts, validNodes, connections || [], nodeMap, seqLifelineLength);
+    } else if (isCommunication) {
+      this.renderSvgCommunicationDiagram(svgParts, validNodes, connections || [], nodeMap);
+    } else {
+      // Conexiones estándar
+      svgParts.push('<g id="connections">');
+      for (const conn of connections || []) {
+        const source = this.resolveConnectionNode(conn.sourceNodeId || conn.sourceId, nodeMap);
+        const target = this.resolveConnectionNode(conn.targetNodeId || conn.targetId, nodeMap);
+        if (source && target && source !== target) {
+          svgParts.push(this.renderSvgConnection(source, target, conn));
+        }
+      }
+      svgParts.push('</g>');
+
+      // Nodos estándar
+      svgParts.push('<g id="nodes">');
+      for (const node of validNodes) {
+        const nInfo = nodeMap.get(node.id);
+        if (nInfo) {
+          svgParts.push(this.renderSvgNode(node, nInfo.x, nInfo.y, nInfo.w, nInfo.h));
+        }
+      }
+      svgParts.push('</g>');
+    }
+
+    svgParts.push('</svg>');
+    return svgParts.join('\n');
+  }
+
+  /**
+   * Genera un Blob PNG para un diagrama dado, priorizando la captura del elemento DOM si se provee,
+   * o utilizando el renderizado en canvas 2D si no está disponible.
+   */
+  async generatePngBlob(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    diagramName = 'diagrama-uml',
+    diagramType?: string,
+    element?: HTMLElement,
+  ): Promise<Blob | null> {
+    if (element) {
+      try {
+        const finalCanvas = await this.generateFramedCanvas(element, diagramName, diagramType);
+        return new Promise<Blob | null>((resolve) => {
+          finalCanvas.toBlob((blob) => resolve(blob), 'image/png');
+        });
+      } catch (err) {
+        console.warn('Fallback a canvas offscreen para generación de PNG:', err);
+      }
+    }
+
+    const canvas = this.drawFallbackCanvas(nodes, connections, diagramName, diagramType);
+    if (!canvas) return null;
+
+    return new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), 'image/png');
+    });
+  }
+
+  /**
+   * Empaqueta todas las imágenes de los diagramas del proyecto en un archivo comprimido .ZIP (PNG o SVG).
+   */
+  async exportProjectImagesToZip(
+    diagrams: Array<{
+      id?: string;
+      name: string;
+      type?: string;
+      defaultLineStyle?: UmlLineStyle;
+      captureCanvas?: boolean;
+      nodes: UmlClassNode[];
+      connections: UmlConnection[];
+    }>,
+    format: 'png' | 'svg',
+    projectName = 'proyecto',
+    activeDiagramCanvas?: HTMLElement,
+    activeDiagramId?: string,
+    captureDiagram?: (index: number) => Promise<{ element: HTMLElement; dispose: () => void }>,
+  ): Promise<void> {
+    if (!diagrams || diagrams.length === 0) {
+      this.toastService?.warning('No hay diagramas en el proyecto para exportar.');
+      return;
+    }
+
+    const zip = new JSZip();
+    let exportedCount = 0;
+
+    for (let i = 0; i < diagrams.length; i++) {
+      const capture = await captureDiagram?.(i);
+      try {
+      const diag = diagrams[i];
+      const connections = diag.connections.map(connection => ({
+        ...connection,
+        lineStyle: connection.lineStyle ?? diag.defaultLineStyle,
+      }));
+      const cleanName = diag.name.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || `diagrama_${i + 1}`;
+      const filename = `${cleanName}.${format}`;
+
+      if (format === 'svg') {
+        const isCurrentActive = diag.captureCanvas !== false && activeDiagramId && diag.id === activeDiagramId;
+        const elToUse = capture?.element ?? (isCurrentActive ? activeDiagramCanvas : undefined);
+        let svgString: string | null = null;
+        if (elToUse) {
+          try {
+            const finalCanvas = await this.generateFramedCanvas(elToUse, diag.name, diag.type);
+            const dataUrl = finalCanvas.toDataURL('image/png');
+            svgString = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${finalCanvas.width}" height="${finalCanvas.height}" viewBox="0 0 ${finalCanvas.width} ${finalCanvas.height}">
+  <image width="${finalCanvas.width}" height="${finalCanvas.height}" href="${dataUrl}" xlink:href="${dataUrl}" />
+</svg>`;
+          } catch (e) {
+            if (capture) throw e;
+            console.warn('Fallback a generador SVG vectorial:', e);
+          }
+        }
+        if (!svgString) {
+          svgString = this.generateSvgString(diag.nodes, connections, diag.name, diag.type);
+        }
+        if (svgString) {
+          zip.file(filename, svgString);
+          exportedCount++;
+        }
+      } else {
+        const isCurrentActive = diag.captureCanvas !== false && activeDiagramId && diag.id === activeDiagramId;
+        const elToUse = capture?.element ?? (isCurrentActive ? activeDiagramCanvas : undefined);
+        let pngBlob: Blob | null;
+        if (capture) {
+          const canvas = await this.generateFramedCanvas(capture.element, diag.name, diag.type);
+          pngBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+          if (!pngBlob) throw new Error('PNG capture failed');
+        } else {
+          pngBlob = await this.generatePngBlob(diag.nodes, connections, diag.name, diag.type, elToUse);
+        }
+        if (pngBlob) {
+          const arrayBuffer = await pngBlob.arrayBuffer();
+          zip.file(filename, arrayBuffer);
+          exportedCount++;
+        }
+      }
+      } catch (error) {
+        console.error('[ZIP diagram failed]', { index: i + 1, id: diagrams[i].id, name: diagrams[i].name, format, error });
+        throw error;
+      } finally { capture?.dispose(); }
+    }
+
+    if (exportedCount === 0) {
+      this.toastService?.error('No se pudo exportar ningún diagrama.');
+      return;
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const cleanProjectName = projectName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || 'proyecto';
+    this.triggerDownload(zipBlob, `${cleanProjectName}_diagramas_${format}.zip`);
+    this.toastService?.success(`Se exportaron ${exportedCount} diagramas en ${cleanProjectName}_diagramas_${format}.zip`);
+  }
+
+  /**
+   * Renderiza una conexión UML en formato SVG.
+   */
+  private renderSvgConnection(
+    source: { x: number; y: number; w: number; h: number },
+    target: { x: number; y: number; w: number; h: number },
+    conn: UmlConnection,
+  ): string {
+    const points = this.calculateConnectionPoints(source, target, conn);
+    const start = points[0];
+    const end = points[points.length - 1];
+
+    let dashAttr = '';
+    if (
+      conn.type === 'dependency' ||
+      conn.type === 'realization' ||
+      conn.type === 'include' ||
+      conn.type === 'extend'
+    ) {
+      dashAttr = 'stroke-dasharray="6,4"';
+    } else if (conn.type === 'association_class') {
+      dashAttr = 'stroke-dasharray="4,4"';
+    }
+
+    const elements: string[] = [];
+    if (points.length === 2) {
+      elements.push(
+        `<line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="#2A201B" stroke-width="1.6" ${dashAttr} />`,
+      );
+    } else {
+      const pathD = 'M ' + points.map((p) => `${p.x} ${p.y}`).join(' L ');
+      elements.push(
+        `<path d="${pathD}" fill="none" stroke="#2A201B" stroke-width="1.6" ${dashAttr} />`,
+      );
+    }
+
+    // Marcador en el extremo final
+    const prevPoint = points[points.length - 2];
+    elements.push(this.renderSvgRelationshipMarker(start, end, conn.type, points[1], prevPoint));
+
+    // Si tiene mensajes de comunicación (ej. diagrama de comunicación)
+    if (conn.messages && conn.messages.length > 0) {
+      elements.push(this.renderSvgCommMessages(points, conn.messages));
+    } else {
+      elements.push(this.renderSvgMultiplicityAndLabels(start, end, conn, points));
+    }
+
+    return elements.filter(Boolean).join('\n');
+  }
+
+
+  /**
+   * Renderiza los mensajes de un enlace de comunicación a lo largo de la arista en SVG
+   * (peso normal; el tipo de retorno con opacidad reducida, igual que la plataforma).
+   */
+  private renderSvgCommMessages(
+    points: { x: number; y: number }[],
+    messages: UmlMessage[],
+  ): string {
+    const mid = this.getPolylineMidpoint(points);
+    const forwardMsgs = messages.filter((m) => (m.direction || 'forward') !== 'reverse');
+    const reverseMsgs = messages.filter((m) => m.direction === 'reverse');
+    const lines: string[] = [];
+
+    forwardMsgs.forEach((msg, i) => {
+      const color = msg.color || this.getSequenceMessageColor(msg.sequenceNumber);
+      const parts = this.buildCommMessageParts(msg, false);
+      const y = mid.y - 8 - (forwardMsgs.length - 1 - i) * 16;
+      lines.push(this.renderSvgTextParts(mid.x, y, parts, color));
+    });
+    reverseMsgs.forEach((msg, i) => {
+      const color = msg.color || this.getSequenceMessageColor(msg.sequenceNumber);
+      const parts = this.buildCommMessageParts(msg, true);
+      lines.push(this.renderSvgTextParts(mid.x, mid.y + 18 + i * 16, parts, color));
+    });
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Construye los tramos de texto de un mensaje de comunicación con su flecha direccional.
+   */
+  private buildCommMessageParts(msg: UmlMessage, reverse: boolean): { text: string; opacity: number }[] {
+    const num = msg.sequenceNumber ? `${msg.sequenceNumber}: ` : '';
+    const main = `${num}${msg.functionName || 'message'}(${msg.parameters || ''})`;
+    const parts: { text: string; opacity: number }[] = [];
+    if (reverse) parts.push({ text: '← ', opacity: 1 });
+    parts.push({ text: main, opacity: 1 });
+    if (msg.returnType) parts.push({ text: ` : ${msg.returnType}`, opacity: 0.75 });
+    if (!reverse) parts.push({ text: ' →', opacity: 1 });
+    return parts;
+  }
+
+  /**
+   * Renderiza el extremo o punta de flecha de la relación en SVG.
+   */
+  private renderSvgRelationshipMarker(
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    type: string,
+    second: { x: number; y: number } = end,
+    penultimate: { x: number; y: number } = start,
+  ): string {
+    const angle = Math.atan2(end.y - penultimate.y, end.x - penultimate.x);
+    const startAngle = Math.atan2(second.y - start.y, second.x - start.x);
+
+    if (type === 'generalization' || type === 'realization') {
+      const arrowLength = 14;
+      const arrowWidth = 9;
+
+      const p1 = { x: end.x, y: end.y };
+      const p2 = {
+        x: end.x - arrowLength * Math.cos(angle) + arrowWidth * Math.sin(angle),
+        y: end.y - arrowLength * Math.sin(angle) - arrowWidth * Math.cos(angle),
+      };
+      const p3 = {
+        x: end.x - arrowLength * Math.cos(angle) - arrowWidth * Math.sin(angle),
+        y: end.y - arrowLength * Math.sin(angle) + arrowWidth * Math.cos(angle),
+      };
+
+      return `<polygon points="${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}" fill="#FFFFFF" stroke="#2A201B" stroke-width="1.6" />`;
+    }
+
+    if (type === 'composition' || type === 'aggregation') {
+      const diamondLen = 14;
+      const diamondWidth = 7;
+      const oppAngle = startAngle + Math.PI;
+
+      const p1 = { x: start.x, y: start.y };
+      const p2 = {
+        x: start.x + (diamondLen / 2) * Math.cos(oppAngle) + diamondWidth * Math.sin(oppAngle),
+        y: start.y + (diamondLen / 2) * Math.sin(oppAngle) - diamondWidth * Math.cos(oppAngle),
+      };
+      const p3 = {
+        x: start.x + diamondLen * Math.cos(oppAngle),
+        y: start.y + diamondLen * Math.sin(oppAngle),
+      };
+      const p4 = {
+        x: start.x + (diamondLen / 2) * Math.cos(oppAngle) - diamondWidth * Math.sin(oppAngle),
+        y: start.y + (diamondLen / 2) * Math.sin(oppAngle) + diamondWidth * Math.cos(oppAngle),
+      };
+
+      const fill = type === 'composition' ? '#2A201B' : '#FFFFFF';
+      return `<polygon points="${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}" fill="${fill}" stroke="#2A201B" stroke-width="1.6" />`;
+    }
+
+    if (type === 'dependency' || type === 'include' || type === 'extend') {
+      const arrowLength = 10;
+      const arrowAngle = Math.PI / 6;
+      const p1 = {
+        x: end.x - arrowLength * Math.cos(angle - arrowAngle),
+        y: end.y - arrowLength * Math.sin(angle - arrowAngle),
+      };
+      const p2 = {
+        x: end.x - arrowLength * Math.cos(angle + arrowAngle),
+        y: end.y - arrowLength * Math.sin(angle + arrowAngle),
+      };
+
+      return `<polyline points="${p1.x},${p1.y} ${end.x},${end.y} ${p2.x},${p2.y}" fill="none" stroke="#2A201B" stroke-width="1.6" />`;
+    }
+
+    if (type === 'assembly') {
+      const mid = this.interpolatePoint(start, end, 0.5);
+      const normalAngle = angle + Math.PI / 2;
+      const p1 = {
+        x: mid.x + 11 * Math.cos(normalAngle),
+        y: mid.y + 11 * Math.sin(normalAngle),
+      };
+      const p2 = {
+        x: mid.x + 11 * Math.cos(normalAngle + Math.PI),
+        y: mid.y + 11 * Math.sin(normalAngle + Math.PI),
+      };
+
+      return `<circle cx="${mid.x}" cy="${mid.y}" r="8" fill="#FFFFFF" stroke="#94A3B8" stroke-width="2" />
+        <path d="M ${p1.x} ${p1.y} A 11 11 0 0 1 ${p2.x} ${p2.y}" fill="none" stroke="#94A3B8" stroke-width="2" />`;
+    }
+
+    return '';
+  }
+
+  /**
+   * Renderiza multiplicidades y etiquetas de conexión en SVG como texto limpio (sin recuadros ni píldoras).
+   */
+  private renderSvgMultiplicityAndLabels(
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    conn: UmlConnection,
+    points?: { x: number; y: number }[],
+  ): string {
+    const isInheritance = conn.type === 'generalization' || conn.type === 'realization';
+    const badges: string[] = [];
+
+    if (conn.sourceMultiplicity && !isInheritance) {
+      const pos = points && points.length > 1
+        ? this.interpolatePoint(points[0], points[1], 0.25)
+        : this.interpolatePoint(start, end, 0.18);
+      badges.push(this.renderSvgBadge(pos.x, pos.y - 8, conn.sourceMultiplicity, '#0284C7'));
+    }
+
+    if (conn.name) {
+      const mid = points && points.length > 1
+        ? this.getPolylineMidpoint(points)
+        : this.interpolatePoint(start, end, 0.5);
+      badges.push(this.renderSvgBadge(mid.x, mid.y - 10, conn.name, '#475569'));
+    }
+
+    if (conn.targetMultiplicity && !isInheritance) {
+      const lastIdx = points && points.length > 1 ? points.length - 1 : 1;
+      const pA = points && points.length > 1 ? points[lastIdx - 1] : start;
+      const pB = points && points.length > 1 ? points[lastIdx] : end;
+      const pos = this.interpolatePoint(pA, pB, 0.75);
+      badges.push(this.renderSvgBadge(pos.x, pos.y - 8, conn.targetMultiplicity, '#0284C7'));
+    }
+
+    return badges.join('\n');
+  }
+
+  /**
+   * Renderiza una etiqueta de texto nítida en SVG sin fondo ni bordes de recuadro.
+   */
+  private renderSvgBadge(
+    x: number,
+    y: number,
+    text: string,
+    textColor: string,
+  ): string {
+    return `<text x="${x}" y="${y + 3.5}" class="uml-code" font-size="11" font-weight="normal" fill="${textColor}" text-anchor="middle" paint-order="stroke" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round">${this.escapeXml(text)}</text>`;
+  }
+
+  /**
+   * Renderiza un nodo de clase UML en formato SVG.
+   * Si la clase no contiene atributos, el compartimiento de métodos sigue inmediatamente
+   * a la cabecera sin dejar espacios vacíos ni líneas divisorias redundantes.
+   */
+  private renderSvgClassNode(
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): string {
+    const parts: string[] = [];
+    parts.push(`<g id="class-${node.id}">`);
+
+    // Caja principal con estilo EA suave
+    parts.push(
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#FAF6F0" stroke="#796354" stroke-width="1.4" />`,
+    );
+
+    const hasStereotype = !!node.stereotype;
+    const headerH = hasStereotype ? 36 : 30;
+
+    // Cabecera
+    parts.push(
+      `<rect x="${x}" y="${y}" width="${w}" height="${headerH}" rx="2" fill="#EFE8DD" />`,
+    );
+    parts.push(
+      `<line x1="${x}" y1="${y + headerH}" x2="${x + w}" y2="${y + headerH}" stroke="#796354" stroke-width="1" />`,
+    );
+
+    if (hasStereotype) {
+      parts.push(
+        `<text x="${x + w / 2}" y="${y + 13}" class="uml-text" font-size="10" font-style="italic" fill="#5C4D42" text-anchor="middle">&lt;&lt;${this.escapeXml(node.stereotype || '')}&gt;&gt;</text>`,
+      );
+      parts.push(
+        `<text x="${x + w / 2}" y="${y + 27}" class="uml-text" font-size="12" font-weight="bold" fill="#241C18" text-anchor="middle">${this.escapeXml(node.name)}</text>`,
+      );
+    } else {
+      parts.push(
+        `<text x="${x + w / 2}" y="${y + 19}" class="uml-text" font-size="13" font-weight="bold" fill="#241C18" text-anchor="middle">${this.escapeXml(node.name)}</text>`,
+      );
+    }
+
+    const attrs = node.attributes || [];
+    const methods = node.methods || [];
+    let currentY = y + headerH;
+
+    // Atributos (sólo si existen)
+    if (attrs.length > 0) {
+      currentY += 14;
+      for (const attr of attrs) {
+        parts.push(
+          `<text x="${x + 10}" y="${currentY}" class="uml-code" font-size="11" fill="#241C18">- ${this.escapeXml(attr.name)}: ${this.escapeXml(attr.type)}</text>`,
+        );
+        currentY += 18;
+      }
+    }
+
+    // Métodos (sólo si existen)
+    if (methods.length > 0) {
+      if (attrs.length > 0) {
+        currentY += 4;
+        parts.push(
+          `<line x1="${x}" y1="${currentY}" x2="${x + w}" y2="${currentY}" stroke="#796354" stroke-width="1" />`,
+        );
+        currentY += 14;
+      } else {
+        currentY += 14;
+      }
+
+      for (const m of methods) {
+        const params = m.parameters ? `(${m.parameters})` : '()';
+        const ret = m.returnType ? `: ${m.returnType}` : ': void';
+        parts.push(
+          `<text x="${x + 10}" y="${currentY}" class="uml-code" font-size="11" fill="#241C18">+ ${this.escapeXml(m.name)}${this.escapeXml(params)}${this.escapeXml(ret)}</text>`,
+        );
+        currentY += 18;
+      }
+    }
+
+    parts.push('</g>');
+    return parts.join('\n');
+  }
+
+  /**
+   * Renderiza todos los elementos de un diagrama de comunicación en SVG:
+   * nodos rectangulares subrayados y conexiones ortogonales con mensajes secuenciales y flechas direccionales.
+   */
+  private renderSvgCommunicationDiagram(
+    svgParts: string[],
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    nodeMap: Map<string, { x: number; y: number; w: number; h: number; name: string }>,
+  ): void {
+    // 1. Conexiones y mensajes
+    svgParts.push('<g id="comm-connections">');
+    for (const conn of connections || []) {
+      const source = this.resolveConnectionNode(conn.sourceNodeId || conn.sourceId, nodeMap);
+      const target = this.resolveConnectionNode(conn.targetNodeId || conn.targetId, nodeMap);
+      if (source && target && source !== target) {
+        svgParts.push(this.renderSvgConnection(source, target, conn));
+      }
+    }
+    svgParts.push('</g>');
+
+    // 2. Nodos de comunicación (objetos con nombre subrayado)
+    svgParts.push('<g id="comm-nodes">');
+    for (const node of nodes) {
+      const nInfo = nodeMap.get(node.id);
+      if (!nInfo) continue;
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      if (isActor) {
+        svgParts.push(this.renderSvgActorNode(node, nInfo.x, nInfo.y, nInfo.w));
+      } else {
+        svgParts.push(this.renderSvgCommNode(node, nInfo.x, nInfo.y, nInfo.w, nInfo.h));
+      }
+    }
+    svgParts.push('</g>');
+  }
+
+  /**
+   * Renderiza un nodo de objeto de comunicación UML en SVG (caja con nombre subrayado).
+   */
+  private renderSvgCommNode(
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): string {
+    const parts: string[] = [];
+    parts.push(`<g id="comm-node-${node.id}">`);
+    parts.push(
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${node.color || '#DDF4F5'}" stroke="#796354" stroke-width="1.4" />`,
+    );
+    parts.push(
+      `<text x="${x + w / 2}" y="${y + h / 2 + 4}" class="uml-text" font-size="12" font-weight="bold" text-decoration="underline" fill="#241C18" text-anchor="middle">${this.escapeXml(node.name)}</text>`,
+    );
+    parts.push('</g>');
+    return parts.join('\n');
+  }
+
+  /**
+   * Escapa caracteres especiales en strings para su inclusión segura en XML/SVG.
+   */
+  private escapeXml(unsafe: string): string {
+    return (unsafe || '').replace(/[<>&'"]/g, (c) => {
+      switch (c) {
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '&': return '&amp;';
+        case '\'': return '&apos;';
+        case '"': return '&quot;';
+        default: return c;
+      }
+    });
+  }
+
+  /**
+   * Renderiza un nodo en SVG adaptándolo a su tipo (Actor, Caso de Uso o Clase).
+   */
+  private renderSvgNode(
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): string {
+    const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+    if (isActor) {
+      return this.renderSvgActorNode(node, x, y, w);
+    }
+    if (node.nodeType === 'use_case') {
+      return this.renderSvgUseCaseNode(node, x, y, w, h);
+    }
+    return this.renderSvgClassNode(node, x, y, w, h);
+  }
+
+  /**
+   * Renderiza un Actor UML (figura humana stick figure) en SVG.
+   */
+  private renderSvgActorNode(node: UmlClassNode, x: number, y: number, w: number): string {
+    const cx = x + w / 2;
+    const parts: string[] = [];
+    parts.push(`<g id="actor-${node.id}">`);
+    parts.push(
+      `<circle cx="${cx}" cy="${y + 12}" r="10" fill="${node.color || '#FEF2DD'}" stroke="#241C18" stroke-width="1.5" />`,
+    );
+    parts.push(
+      `<line x1="${cx}" y1="${y + 22}" x2="${cx}" y2="${y + 42}" stroke="#241C18" stroke-width="1.5" />`,
+    );
+    parts.push(
+      `<line x1="${cx - 16}" y1="${y + 30}" x2="${cx + 16}" y2="${y + 30}" stroke="#241C18" stroke-width="1.5" stroke-linecap="round" />`,
+    );
+    parts.push(
+      `<line x1="${cx}" y1="${y + 42}" x2="${cx - 12}" y2="${y + 60}" stroke="#241C18" stroke-width="1.5" stroke-linecap="round" />`,
+    );
+    parts.push(
+      `<line x1="${cx}" y1="${y + 42}" x2="${cx + 12}" y2="${y + 60}" stroke="#241C18" stroke-width="1.5" stroke-linecap="round" />`,
+    );
+    parts.push(
+      `<text x="${cx}" y="${y + 74}" class="uml-text" font-size="12" font-weight="bold" fill="#241C18" text-anchor="middle">${this.escapeXml(node.name)}</text>`,
+    );
+    parts.push(`</g>`);
+    return parts.join('\n');
+  }
+
+  /**
+   * Renderiza una cabecera de línea de vida en SVG (con nombre subrayado estilo Enterprise Architect).
+   */
+  private renderSvgLifelineHeader(node: UmlClassNode, x: number, y: number, w: number): string {
+    const parts: string[] = [];
+    parts.push(`<g id="lifeline-${node.id}">`);
+    parts.push(
+      `<rect x="${x}" y="${y}" width="${w}" height="60" fill="${node.color || '#DDF4F5'}" stroke="#796354" stroke-width="1.4" />`,
+    );
+    parts.push(
+      `<text x="${x + w / 2}" y="${y + 34}" class="uml-text" font-size="12" font-weight="bold" text-decoration="underline" fill="#241C18" text-anchor="middle">${this.escapeXml(node.name)}</text>`,
+    );
+    parts.push(`</g>`);
+    return parts.join('\n');
+  }
+
+  /**
+   * Renderiza un caso de uso (elipse UML) en SVG.
+   */
+  private renderSvgUseCaseNode(
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): string {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const rx = w / 2;
+    const ry = h / 2;
+    const parts: string[] = [];
+    parts.push(`<g id="usecase-${node.id}">`);
+    parts.push(
+      `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${node.color || '#E5F2FE'}" stroke="#2563EB" stroke-width="1.5" />`,
+    );
+    parts.push(
+      `<text x="${cx}" y="${cy + 4}" class="uml-text" font-size="12" font-weight="bold" fill="#1E293B" text-anchor="middle">${this.escapeXml(node.name)}</text>`,
+    );
+    parts.push(`</g>`);
+    return parts.join('\n');
+  }
+
+
+  /**
+   * Calcula la geometría de un diagrama de secuencia con las mismas constantes que la plataforma:
+   * cabeceras de 60px (65px para actores), mensaje del slot N en `y + 157 + N * 50` y barras de
+   * activación continuas obtenidas del servicio de secuencia (o de `node.activations` si no existe).
+   */
+  private buildSequenceLayout(
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    nodeMap: Map<string, { x: number; y: number; w: number; h: number; name: string }>,
+  ): {
+    lifelines: { cx: number; topY: number; bottomY: number }[];
+    activations: { x: number; y: number; h: number; fill: string }[];
+    messages: {
+      startX: number;
+      endX: number;
+      y: number;
+      isForward: boolean;
+      isReply: boolean;
+      color: string;
+      parts: { text: string; opacity: number }[];
+    }[];
+  } {
+    const lifelines: { cx: number; topY: number; bottomY: number }[] = [];
+    const activations: { x: number; y: number; h: number; fill: string }[] = [];
+    const messages: {
+      startX: number;
+      endX: number;
+      y: number;
+      isForward: boolean;
+      isReply: boolean;
+      color: string;
+      parts: { text: string; opacity: number }[];
+    }[] = [];
+
+    let sequenceService: DiagramSequenceActivationService | null = null;
+    try {
+      sequenceService = this.injector.get(DiagramSequenceActivationService);
+    } catch {
+      sequenceService = null;
+    }
+
+    for (const node of nodes) {
+      const nInfo = nodeMap.get(node.id);
+      if (!nInfo) continue;
+      const cx = nInfo.x + nInfo.w / 2;
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      const headerH = isActor ? 65 : 60;
+      lifelines.push({ cx, topY: nInfo.y + headerH, bottomY: nInfo.y + nInfo.h });
+
+      let intervals: { top: number; height: number }[] = [];
+      if (sequenceService) {
+        try {
+          intervals = sequenceService
+            .getNodeActivations(node, connections, DiagramType.SEQUENCE)
+            .map((a) => ({ top: a.top, height: a.height }));
+        } catch {
+          intervals = [];
+        }
+      }
+      if (intervals.length === 0 && node.activations?.length) {
+        intervals = node.activations.map((a) => ({ top: a.startY, height: a.height }));
+      }
+      const fill = node.color || (isActor ? '#FEF2DD' : '#DDF4F5');
+      for (const iv of intervals) {
+        activations.push({ x: cx - 7, y: nInfo.y + headerH + iv.top, h: iv.height, fill });
+      }
+    }
+
+    for (let idx = 0; idx < connections.length; idx++) {
+      const conn = connections[idx];
+      const source = this.resolveConnectionNode(conn.sourceNodeId || conn.sourceId, nodeMap);
+      const target = this.resolveConnectionNode(conn.targetNodeId || conn.targetId, nodeMap);
+      if (!source || !target) continue;
+
+      const sMatch = conn.sourceId?.match(/_slot_(\d+)$/);
+      const tMatch = conn.targetId?.match(/_slot_(\d+)$/);
+      const slot = sMatch ? parseInt(sMatch[1], 10) : tMatch ? parseInt(tMatch[1], 10) : idx;
+      const y = source.y + 157 + slot * 50;
+
+      const srcX = source.x + source.w / 2;
+      const tgtX = target.x + target.w / 2;
+      const isForward = tgtX >= srcX;
+      const startX = isForward ? srcX + 7 : srcX - 7;
+      const endX = isForward ? tgtX - 7 : tgtX + 7;
+
+      const isReply = conn.type === 'reply' || !!conn.messages?.some((m) => m.isReturn);
+      const color = conn.messages?.[0]?.color || (isReply ? '#2563EB' : '#059669');
+
+      const msg = conn.messages?.[0];
+      const parts: { text: string; opacity: number }[] = [];
+      if (msg) {
+        const num = msg.sequenceNumber ? `${msg.sequenceNumber}: ` : `${idx + 1}: `;
+        const fn = msg.functionName || '';
+        const params = isReply ? (msg.parameters ? `(${msg.parameters})` : '') : `(${msg.parameters || ''})`;
+        parts.push({ text: `${num}${fn}${params}`, opacity: 1 });
+        if (msg.returnType) parts.push({ text: ` : ${msg.returnType}`, opacity: 0.75 });
+      } else {
+        parts.push({ text: conn.name || `${idx + 1}: message()`, opacity: 1 });
+      }
+
+      messages.push({ startX, endX, y, isForward, isReply, color, parts });
+    }
+
+    return { lifelines, activations, messages };
+  }
+
+  /**
+   * Renderiza todos los elementos de un diagrama de secuencia en SVG:
+   * líneas de vida, activaciones, cabeceras y mensajes horizontales.
+   */
+  private renderSvgSequenceDiagram(
+    svgParts: string[],
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    nodeMap: Map<string, { x: number; y: number; w: number; h: number; name: string }>,
+    seqLifelineLength: number,
+  ): void {
+    void seqLifelineLength;
+    const layout = this.buildSequenceLayout(nodes, connections, nodeMap);
+
+    svgParts.push('<g id="sequence-lifelines">');
+    for (const l of layout.lifelines) {
+      svgParts.push(
+        `<line x1="${l.cx}" y1="${l.topY}" x2="${l.cx}" y2="${l.bottomY}" stroke="#796354" stroke-width="1.5" stroke-dasharray="6,4" />`,
+      );
+    }
+    svgParts.push('</g>');
+
+    svgParts.push('<g id="sequence-activations">');
+    for (const a of layout.activations) {
+      svgParts.push(
+        `<rect x="${a.x}" y="${a.y}" width="14" height="${a.h}" fill="${a.fill}" stroke="#796354" stroke-width="1" />`,
+      );
+    }
+    svgParts.push('</g>');
+
+    svgParts.push('<g id="sequence-messages">');
+    for (const m of layout.messages) {
+      const dash = m.isReply ? 'stroke-dasharray="6,4"' : '';
+      svgParts.push(
+        `<line x1="${m.startX}" y1="${m.y}" x2="${m.endX}" y2="${m.y}" stroke="${m.color}" stroke-width="1.8" ${dash} />`,
+      );
+      if (m.isReply) {
+        const arrowAngle = m.isForward ? Math.PI : 0;
+        const p1x = m.endX + 8 * Math.cos(arrowAngle - 0.5);
+        const p1y = m.y + 8 * Math.sin(arrowAngle - 0.5);
+        const p2x = m.endX + 8 * Math.cos(arrowAngle + 0.5);
+        const p2y = m.y + 8 * Math.sin(arrowAngle + 0.5);
+        svgParts.push(
+          `<polyline points="${p1x},${p1y} ${m.endX},${m.y} ${p2x},${p2y}" fill="none" stroke="${m.color}" stroke-width="1.8" stroke-linecap="round" />`,
+        );
+      } else {
+        const arrowDir = m.isForward ? -8 : 8;
+        svgParts.push(
+          `<polygon points="${m.endX},${m.y} ${m.endX + arrowDir},${m.y - 5} ${m.endX + arrowDir},${m.y + 5}" fill="${m.color}" stroke="${m.color}" stroke-width="1" />`,
+        );
+      }
+      svgParts.push(this.renderSvgTextParts((m.startX + m.endX) / 2, m.y - 6, m.parts, m.color));
+    }
+    svgParts.push('</g>');
+
+    svgParts.push('<g id="sequence-headers">');
+    for (const node of nodes) {
+      const nInfo = nodeMap.get(node.id);
+      if (!nInfo) continue;
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      if (isActor) {
+        svgParts.push(this.renderSvgActorNode(node, nInfo.x, nInfo.y, nInfo.w));
+      } else {
+        svgParts.push(this.renderSvgLifelineHeader(node, nInfo.x, nInfo.y, nInfo.w));
+      }
+    }
+    svgParts.push('</g>');
+  }
+
+  /**
+   * Renderiza texto monoespaciado de peso normal (como la plataforma) compuesto por tramos con opacidad propia.
+   */
+  private renderSvgTextParts(
+    x: number,
+    y: number,
+    parts: { text: string; opacity: number }[],
+    color: string,
+  ): string {
+    const spans = parts
+      .map((p) =>
+        p.opacity < 1
+          ? `<tspan fill-opacity="${p.opacity}">${this.escapeXml(p.text)}</tspan>`
+          : this.escapeXml(p.text),
+      )
+      .join('');
+    return `<text x="${x}" y="${y}" class="uml-code" font-size="11" font-weight="normal" fill="${color}" text-anchor="middle" xml:space="preserve">${spans}</text>`;
+  }
+
+  /**
    * Dibuja los nodos y conexiones con marco UML 2.5 en un Canvas 2D como fallback.
    */
   private drawFallbackCanvas(
@@ -655,6 +1703,33 @@ export class BmpExportService {
       return null;
     }
 
+    const prefix = this.getDiagramPrefix(diagramType);
+    const isCommunication =
+      prefix === 'comm' ||
+      (diagramType || '').toLowerCase().includes('comm');
+
+    const isSequence =
+      !isCommunication &&
+      (prefix === 'sd' ||
+        (diagramType || '').toLowerCase().includes('seq') ||
+        (diagramType || '').toLowerCase().includes('sequence') ||
+        (!diagramType && validNodes.some((n) => n.nodeType === 'lifeline')));
+
+    let maxSlot = -1;
+    if (isSequence) {
+      for (const c of connections || []) {
+        const sMatch = c.sourceId?.match(/_slot_(\d+)$/);
+        const tMatch = c.targetId?.match(/_slot_(\d+)$/);
+        if (sMatch) maxSlot = Math.max(maxSlot, parseInt(sMatch[1], 10));
+        if (tMatch) maxSlot = Math.max(maxSlot, parseInt(tMatch[1], 10));
+      }
+      if (maxSlot < 0 && (connections || []).length > 0) {
+        maxSlot = connections.length - 1;
+      }
+      if (maxSlot < 0) maxSlot = 2;
+    }
+    const seqLifelineLength = isSequence ? Math.max(120, 170 + maxSlot * 50) : 0;
+
     // 1. Calcular Bounding Box del contenido
     let minX = Infinity;
     let minY = Infinity;
@@ -662,8 +1737,14 @@ export class BmpExportService {
     let maxY = -Infinity;
 
     for (const node of validNodes) {
-      const w = node.width || 220;
-      const h = this.calculateNodeHeight(node);
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      const w =
+        isSequence && isActor
+          ? (node.width || 90)
+          : isCommunication
+            ? (node.width || 180)
+            : (node.width || (isSequence ? 160 : 220));
+      const h = this.calculateNodeHeight(node, isSequence, seqLifelineLength, isCommunication);
       minX = Math.min(minX, node.position.x);
       minY = Math.min(minY, node.position.y);
       maxX = Math.max(maxX, node.position.x + w);
@@ -682,7 +1763,6 @@ export class BmpExportService {
     const tabHeight = 54;
     const chamfer = 20;
 
-    const prefix = this.getDiagramPrefix(diagramType);
     let cleanName = diagramName.trim().replace(new RegExp(`^${prefix}\\s*[:\\-]?\\s*`, 'i'), '');
     cleanName = cleanName.replace(/^(uc|class|cd|sd|comm|pkg|cmp|dep|layered|arch|analysis)\s*[:\-]?\s*/i, '');
     const fullTitle = `${prefix} ${cleanName || diagramName.trim() || 'Diagram'}`;
@@ -754,8 +1834,14 @@ export class BmpExportService {
     // Mapa de posiciones de nodos
     const nodeMap = new Map<string, { x: number; y: number; w: number; h: number; name: string }>();
     for (const node of validNodes) {
-      const w = node.width || 220;
-      const h = this.calculateNodeHeight(node);
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      const w =
+        isSequence && isActor
+          ? (node.width || 90)
+          : isCommunication
+            ? (node.width || 180)
+            : (node.width || (isSequence ? 160 : 220));
+      const h = this.calculateNodeHeight(node, isSequence, seqLifelineLength, isCommunication);
       nodeMap.set(node.id, {
         x: node.position.x + offsetX,
         y: node.position.y + offsetY,
@@ -765,8 +1851,44 @@ export class BmpExportService {
       });
     }
 
-    // Dibujar conexiones
-    for (const conn of connections) {
+    if (isSequence) {
+      this.drawFallbackSequenceDiagram(ctx, validNodes, connections || [], nodeMap, seqLifelineLength);
+    } else if (isCommunication) {
+      this.drawFallbackCommunicationDiagram(ctx, validNodes, connections || [], nodeMap);
+    } else {
+      // Dibujar conexiones
+      for (const conn of connections || []) {
+        const source = this.resolveConnectionNode(conn.sourceNodeId || conn.sourceId, nodeMap);
+        const target = this.resolveConnectionNode(conn.targetNodeId || conn.targetId, nodeMap);
+
+        if (source && target && source !== target) {
+          this.drawConnection(ctx, source, target, conn);
+        }
+      }
+
+      // Dibujar nodos
+      for (const node of validNodes) {
+        const nInfo = nodeMap.get(node.id);
+        if (nInfo) {
+          this.drawNode(ctx, node, nInfo.x, nInfo.y, nInfo.w, nInfo.h);
+        }
+      }
+    }
+
+    return canvas;
+  }
+
+  /**
+   * Dibuja un diagrama de comunicación en el contexto 2D de canvas (fallback para PNG/BMP).
+   */
+  private drawFallbackCommunicationDiagram(
+    ctx: CanvasRenderingContext2D,
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    nodeMap: Map<string, { x: number; y: number; w: number; h: number; name: string }>,
+  ): void {
+    // 1. Conexiones
+    for (const conn of connections || []) {
       const source = this.resolveConnectionNode(conn.sourceNodeId || conn.sourceId, nodeMap);
       const target = this.resolveConnectionNode(conn.targetNodeId || conn.targetId, nodeMap);
 
@@ -775,29 +1897,444 @@ export class BmpExportService {
       }
     }
 
-    // Dibujar nodos
-    for (const node of validNodes) {
+    // 2. Nodos
+    for (const node of nodes) {
       const nInfo = nodeMap.get(node.id);
-      if (nInfo) {
-        this.drawClassNode(ctx, node, nInfo.x, nInfo.y, nInfo.w, nInfo.h);
+      if (!nInfo) continue;
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      if (isActor) {
+        this.drawActorNode(ctx, node, nInfo.x, nInfo.y, nInfo.w);
+      } else {
+        this.drawCommNode(ctx, node, nInfo.x, nInfo.y, nInfo.w, nInfo.h);
+      }
+    }
+  }
+
+  /**
+   * Dibuja un nodo objeto de comunicación en Canvas 2D (caja con nombre subrayado).
+   */
+  private drawCommNode(
+    ctx: CanvasRenderingContext2D,
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): void {
+    ctx.save();
+    ctx.fillStyle = node.color || '#DDF4F5';
+    ctx.strokeStyle = '#796354';
+    ctx.lineWidth = 1.4;
+
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h);
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#241C18';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.name, x + w / 2, y + h / 2);
+
+    // Subrayado
+    const textWidth = ctx.measureText(node.name).width;
+    ctx.strokeStyle = '#241C18';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2 - textWidth / 2, y + h / 2 + 8);
+    ctx.lineTo(x + w / 2 + textWidth / 2, y + h / 2 + 8);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+
+  /**
+   * Dibuja texto monoespaciado de peso normal centrado, compuesto por tramos con opacidad propia.
+   */
+  private drawTextParts(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    parts: { text: string; opacity: number }[],
+    color: string,
+    baseline: CanvasTextBaseline = 'alphabetic',
+  ): void {
+    ctx.save();
+    ctx.font = 'normal 11px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = baseline;
+    const widths = parts.map((p) => ctx.measureText(p.text).width);
+    let cursor = x - widths.reduce((a, b) => a + b, 0) / 2;
+    parts.forEach((p, i) => {
+      ctx.globalAlpha = p.opacity;
+      ctx.fillStyle = color;
+      ctx.fillText(p.text, cursor, y);
+      cursor += widths[i];
+    });
+    ctx.restore();
+  }
+
+  /**
+   * Dibuja un diagrama de secuencia en el contexto 2D de canvas (fallback para PNG/BMP).
+   */
+  private drawFallbackSequenceDiagram(
+    ctx: CanvasRenderingContext2D,
+    nodes: UmlClassNode[],
+    connections: UmlConnection[],
+    nodeMap: Map<string, { x: number; y: number; w: number; h: number; name: string }>,
+    seqLifelineLength: number,
+  ): void {
+    void seqLifelineLength;
+    const layout = this.buildSequenceLayout(nodes, connections, nodeMap);
+    ctx.save();
+
+    ctx.strokeStyle = '#796354';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    for (const l of layout.lifelines) {
+      ctx.beginPath();
+      ctx.moveTo(l.cx, l.topY);
+      ctx.lineTo(l.cx, l.bottomY);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    ctx.lineWidth = 1;
+    for (const a of layout.activations) {
+      ctx.fillStyle = a.fill;
+      ctx.strokeStyle = '#796354';
+      ctx.fillRect(a.x, a.y, 14, a.h);
+      ctx.strokeRect(a.x, a.y, 14, a.h);
+    }
+
+    for (const m of layout.messages) {
+      ctx.strokeStyle = m.color;
+      ctx.fillStyle = m.color;
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash(m.isReply ? [6, 4] : []);
+      ctx.beginPath();
+      ctx.moveTo(m.startX, m.y);
+      ctx.lineTo(m.endX, m.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (m.isReply) {
+        const arrowAngle = m.isForward ? Math.PI : 0;
+        ctx.beginPath();
+        ctx.moveTo(m.endX + 8 * Math.cos(arrowAngle - 0.5), m.y + 8 * Math.sin(arrowAngle - 0.5));
+        ctx.lineTo(m.endX, m.y);
+        ctx.lineTo(m.endX + 8 * Math.cos(arrowAngle + 0.5), m.y + 8 * Math.sin(arrowAngle + 0.5));
+        ctx.stroke();
+      } else {
+        const arrowDir = m.isForward ? -8 : 8;
+        ctx.beginPath();
+        ctx.moveTo(m.endX, m.y);
+        ctx.lineTo(m.endX + arrowDir, m.y - 5);
+        ctx.lineTo(m.endX + arrowDir, m.y + 5);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      this.drawTextParts(ctx, (m.startX + m.endX) / 2, m.y - 6, m.parts, m.color);
+    }
+
+    for (const node of nodes) {
+      const nInfo = nodeMap.get(node.id);
+      if (!nInfo) continue;
+      const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+      if (isActor) {
+        this.drawActorNode(ctx, node, nInfo.x, nInfo.y, nInfo.w);
+      } else {
+        this.drawLifelineHeader(ctx, node, nInfo.x, nInfo.y, nInfo.w);
       }
     }
 
-    return canvas;
+    ctx.restore();
+  }
+
+  /**
+   * Dibuja un nodo en Canvas adaptándolo a su tipo (Actor, Caso de Uso o Clase).
+   */
+  private drawNode(
+    ctx: CanvasRenderingContext2D,
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): void {
+    const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+    if (isActor) {
+      this.drawActorNode(ctx, node, x, y, w);
+      return;
+    }
+    if (node.nodeType === 'use_case') {
+      this.drawUseCaseNode(ctx, node, x, y, w, h);
+      return;
+    }
+    this.drawClassNode(ctx, node, x, y, w, h);
+  }
+
+  /**
+   * Dibuja un Actor en Canvas 2D.
+   */
+  private drawActorNode(
+    ctx: CanvasRenderingContext2D,
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+  ): void {
+    const cx = x + w / 2;
+    ctx.save();
+    ctx.strokeStyle = '#241C18';
+    ctx.lineWidth = 1.5;
+
+    // Cabeza
+    ctx.beginPath();
+    ctx.arc(cx, y + 12, 10, 0, Math.PI * 2);
+    ctx.fillStyle = node.color || '#FEF2DD';
+    ctx.fill();
+    ctx.stroke();
+
+    // Tronco
+    ctx.beginPath();
+    ctx.moveTo(cx, y + 22);
+    ctx.lineTo(cx, y + 42);
+    ctx.stroke();
+
+    // Brazos
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, y + 30);
+    ctx.lineTo(cx + 16, y + 30);
+    ctx.stroke();
+
+    // Piernas
+    ctx.beginPath();
+    ctx.moveTo(cx, y + 42);
+    ctx.lineTo(cx - 12, y + 60);
+    ctx.moveTo(cx, y + 42);
+    ctx.lineTo(cx + 12, y + 60);
+    ctx.stroke();
+
+    // Etiqueta
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillStyle = '#241C18';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(node.name, cx, y + 68);
+
+    ctx.restore();
+  }
+
+  /**
+   * Dibuja una cabecera de línea de vida en Canvas 2D.
+   */
+  private drawLifelineHeader(
+    ctx: CanvasRenderingContext2D,
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+  ): void {
+    ctx.save();
+    ctx.fillStyle = node.color || '#DDF4F5';
+    ctx.strokeStyle = '#796354';
+    ctx.lineWidth = 1.4;
+
+    ctx.fillRect(x, y, w, 60);
+    ctx.strokeRect(x, y, w, 60);
+
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillStyle = '#241C18';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.name, x + w / 2, y + 30);
+
+    ctx.restore();
+  }
+
+  /**
+   * Dibuja un caso de uso (elipse) en Canvas 2D.
+   */
+  private drawUseCaseNode(
+    ctx: CanvasRenderingContext2D,
+    node: UmlClassNode,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): void {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const rx = w / 2;
+    const ry = h / 2;
+
+    ctx.save();
+    ctx.fillStyle = node.color || '#E5F2FE';
+    ctx.strokeStyle = '#2563EB';
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillStyle = '#1E293B';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.name, cx, cy);
+
+    ctx.restore();
+  }
+
+  /**
+   * Obtiene el color de la paleta para un número de secuencia en diagramas de comunicación/secuencia.
+   */
+  private getSequenceMessageColor(sequenceNumber?: string | null): string {
+    const palette = ['#0284C7', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0891B2', '#4F46E5', '#C026D3'];
+    const match = (sequenceNumber || '').trim().match(/^(\d+)(?:\.|$)/);
+    if (match) {
+      const g = parseInt(match[1], 10);
+      return palette[(Math.max(1, g) - 1) % palette.length];
+    }
+    return palette[0];
+  }
+
+
+  /**
+   * Calcula los vértices de una conexión replicando el trazado de la plataforma:
+   * anclaje en el centro del lado indicado por el puerto (`_top`, `_right`, `_bottom`, `_left`),
+   * o en la intersección con el borde si no hay puerto, y codo en L / tramo en Z (estilo lateral).
+   */
+  private calculateConnectionPoints(
+    source: { x: number; y: number; w: number; h: number },
+    target: { x: number; y: number; w: number; h: number },
+    conn: UmlConnection,
+  ): { x: number; y: number }[] {
+    type Side = 'top' | 'right' | 'bottom' | 'left';
+    const sCenter = { x: source.x + source.w / 2, y: source.y + source.h / 2 };
+    const tCenter = { x: target.x + target.w / 2, y: target.y + target.h / 2 };
+
+    const getPortSide = (portId?: string): Side | null => {
+      if (!portId) return null;
+      if (portId.includes('_top')) return 'top';
+      if (portId.includes('_right')) return 'right';
+      if (portId.includes('_bottom')) return 'bottom';
+      if (portId.includes('_left')) return 'left';
+      return null;
+    };
+    const anchor = (box: { x: number; y: number; w: number; h: number }, side: Side) => {
+      switch (side) {
+        case 'top': return { x: box.x + box.w / 2, y: box.y };
+        case 'bottom': return { x: box.x + box.w / 2, y: box.y + box.h };
+        case 'left': return { x: box.x, y: box.y + box.h / 2 };
+        default: return { x: box.x + box.w, y: box.y + box.h / 2 };
+      }
+    };
+    const inferSide = (p: { x: number; y: number }, box: { x: number; y: number; w: number; h: number }): Side => {
+      const d: [Side, number][] = [
+        ['top', Math.abs(p.y - box.y)],
+        ['bottom', Math.abs(p.y - (box.y + box.h))],
+        ['left', Math.abs(p.x - box.x)],
+        ['right', Math.abs(p.x - (box.x + box.w))],
+      ];
+      return d.sort((a, b) => a[1] - b[1])[0][0];
+    };
+
+    const sPort = getPortSide(conn.sourceId);
+    const tPort = getPortSide(conn.targetId);
+    const start = sPort ? anchor(source, sPort) : this.getRectIntersection(sCenter, tCenter, source);
+    const end = tPort ? anchor(target, tPort) : this.getRectIntersection(tCenter, sCenter, target);
+
+    const style = conn.lineStyle || 'orthogonal_square';
+    if (style === 'straight' || style === 'bezier') {
+      return [start, end];
+    }
+
+    const sSide = sPort ?? inferSide(start, source);
+    const tSide = tPort ?? inferSide(end, target);
+    const sV = sSide === 'top' || sSide === 'bottom';
+    const tV = tSide === 'top' || tSide === 'bottom';
+
+    let corners: { x: number; y: number }[];
+    if (sV !== tV) {
+      corners = [sV ? { x: start.x, y: end.y } : { x: end.x, y: start.y }];
+    } else if (sV) {
+      const midY = (start.y + end.y) / 2;
+      corners = [{ x: start.x, y: midY }, { x: end.x, y: midY }];
+    } else {
+      const midX = (start.x + end.x) / 2;
+      corners = [{ x: midX, y: start.y }, { x: midX, y: end.y }];
+    }
+
+    const raw = [start, ...corners, end];
+    const points = raw.filter(
+      (p, i) => i === 0 || Math.abs(p.x - raw[i - 1].x) > 0.5 || Math.abs(p.y - raw[i - 1].y) > 0.5,
+    );
+    return points.length >= 2 ? points : [start, end];
+  }
+
+  /**
+   * Obtiene el punto medio de una línea poligonal ortogonal.
+   */
+  private getPolylineMidpoint(points: { x: number; y: number }[]): { x: number; y: number } {
+    if (points.length <= 2) {
+      return this.interpolatePoint(points[0], points[points.length - 1], 0.5);
+    }
+    let totalLen = 0;
+    const lens: number[] = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const segLen = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+      lens.push(segLen);
+      totalLen += segLen;
+    }
+    let targetDist = totalLen * 0.5;
+    for (let i = 0; i < points.length - 1; i++) {
+      if (targetDist <= lens[i]) {
+        const t = lens[i] > 0 ? targetDist / lens[i] : 0;
+        return this.interpolatePoint(points[i], points[i + 1], t);
+      }
+      targetDist -= lens[i];
+    }
+    return points[Math.floor(points.length / 2)];
   }
 
   /**
    * Calcula la altura estimada requerida para renderizar una clase UML en el canvas de fallback.
+   * Si la clase no tiene atributos, no se reserva espacio de atributos.
    * @param node Nodo de clase UML a calcular.
+   * @param isSequence Indica si el diagrama es de secuencia.
+   * @param seqLifelineLength Longitud calculada de las líneas de vida en secuencia.
+   * @param isCommunication Indica si el diagrama es de comunicación.
    * @returns Altura calculada en píxeles.
    */
-  private calculateNodeHeight(node: UmlClassNode): number {
-    const headerHeight = 32;
+  private calculateNodeHeight(
+    node: UmlClassNode,
+    isSequence = false,
+    seqLifelineLength = 0,
+    isCommunication = false,
+  ): number {
+    if (isSequence) {
+      return 60 + seqLifelineLength;
+    }
+    const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
+    if (isActor) {
+      return 85;
+    }
+    if (isCommunication) {
+      return node.height || 44;
+    }
+    if (node.nodeType === 'use_case') {
+      return 50;
+    }
+    const headerHeight = node.stereotype ? 38 : 32;
     const attrCount = (node.attributes || []).length;
-    const attrHeight = attrCount > 0 ? (attrCount * 18 + 12) : 24;
+    const attrHeight = attrCount > 0 ? attrCount * 18 + 12 : 0;
     const methodCount = (node.methods || []).length;
-    const methodHeight = methodCount > 0 ? (methodCount * 18 + 14) : 0;
-    return headerHeight + attrHeight + methodHeight;
+    const methodHeight = methodCount > 0 ? methodCount * 18 + 14 : 0;
+    return Math.max(headerHeight + attrHeight + methodHeight, node.height || 44);
   }
 
   /**
@@ -817,6 +2354,7 @@ export class BmpExportService {
 
   /**
    * Dibuja una línea de relación entre dos nodos en el contexto 2D del canvas.
+   * Soporta trazados ortogonales con quiebres y mensajes direccionales de comunicación.
    * @param ctx Contexto 2D del canvas.
    * @param source Bounding box del nodo de origen.
    * @param target Bounding box del nodo de destino.
@@ -828,11 +2366,9 @@ export class BmpExportService {
     target: { x: number; y: number; w: number; h: number },
     conn: UmlConnection,
   ): void {
-    const sCenter = { x: source.x + source.w / 2, y: source.y + source.h / 2 };
-    const tCenter = { x: target.x + target.w / 2, y: target.y + target.h / 2 };
-
-    const start = this.getRectIntersection(sCenter, tCenter, source);
-    const end = this.getRectIntersection(tCenter, sCenter, target);
+    const points = this.calculateConnectionPoints(source, target, conn);
+    const start = points[0];
+    const end = points[points.length - 1];
 
     ctx.save();
     ctx.strokeStyle = '#2A201B';
@@ -851,15 +2387,47 @@ export class BmpExportService {
     }
 
     ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
     ctx.stroke();
 
     ctx.setLineDash([]);
-    this.drawRelationshipMarker(ctx, start, end, conn.type);
-    this.drawMultiplicityAndLabels(ctx, start, end, conn);
+    const prevPoint = points[points.length - 2];
+    this.drawRelationshipMarker(ctx, start, end, conn.type, points[1], prevPoint);
+
+    if (conn.messages && conn.messages.length > 0) {
+      this.drawCommMessages(ctx, points, conn.messages);
+    } else {
+      this.drawMultiplicityAndLabels(ctx, start, end, conn, points);
+    }
 
     ctx.restore();
+  }
+
+
+  /**
+   * Dibuja los mensajes secuenciales de comunicación a lo largo de la arista en Canvas 2D (peso normal).
+   */
+  private drawCommMessages(
+    ctx: CanvasRenderingContext2D,
+    points: { x: number; y: number }[],
+    messages: UmlMessage[],
+  ): void {
+    const mid = this.getPolylineMidpoint(points);
+    const forwardMsgs = messages.filter((m) => (m.direction || 'forward') !== 'reverse');
+    const reverseMsgs = messages.filter((m) => m.direction === 'reverse');
+
+    forwardMsgs.forEach((msg, i) => {
+      const color = msg.color || this.getSequenceMessageColor(msg.sequenceNumber);
+      const y = mid.y - 8 - (forwardMsgs.length - 1 - i) * 16;
+      this.drawTextParts(ctx, mid.x, y, this.buildCommMessageParts(msg, false), color, 'middle');
+    });
+    reverseMsgs.forEach((msg, i) => {
+      const color = msg.color || this.getSequenceMessageColor(msg.sequenceNumber);
+      this.drawTextParts(ctx, mid.x, mid.y + 18 + i * 16, this.buildCommMessageParts(msg, true), color, 'middle');
+    });
   }
 
   /**
@@ -874,8 +2442,11 @@ export class BmpExportService {
     start: { x: number; y: number },
     end: { x: number; y: number },
     type: string,
+    second: { x: number; y: number } = end,
+    penultimate: { x: number; y: number } = start,
   ): void {
-    const angle = Math.atan2(end.y - start.y, end.x - start.x);
+    const angle = Math.atan2(end.y - penultimate.y, end.x - penultimate.x);
+    const startAngle = Math.atan2(second.y - start.y, second.x - start.x);
 
     if (type === 'generalization' || type === 'realization') {
       const arrowLength = 14;
@@ -902,7 +2473,7 @@ export class BmpExportService {
     } else if (type === 'composition' || type === 'aggregation') {
       const diamondLen = 14;
       const diamondWidth = 7;
-      const oppAngle = angle + Math.PI;
+      const oppAngle = startAngle + Math.PI;
 
       const p1 = { x: start.x, y: start.y };
       const p2 = {
@@ -968,48 +2539,52 @@ export class BmpExportService {
   }
 
   /**
-   * Renderiza multiplicidades y etiquetas textuales adyacentes a la línea de conexión.
+   * Renderiza multiplicidades y etiquetas textuales adyacentes a la línea de conexión como texto limpio (sin recuadro).
    * @param ctx Contexto 2D del canvas.
    * @param start Punto de inicio de la línea.
    * @param end Punto final de la línea.
    * @param conn Datos de la conexión que contiene multiplicidades y etiquetas.
+   * @param points Vértices calculados de la conexión.
    */
   private drawMultiplicityAndLabels(
     ctx: CanvasRenderingContext2D,
     start: { x: number; y: number },
     end: { x: number; y: number },
     conn: UmlConnection,
+    points?: { x: number; y: number }[],
   ): void {
-    ctx.font = 'bold 10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
     const isInheritance = conn.type === 'generalization' || conn.type === 'realization';
 
     if (conn.sourceMultiplicity && !isInheritance) {
-      const pos = this.interpolatePoint(start, end, 0.18);
-      this.drawBadge(ctx, pos.x, pos.y - 10, conn.sourceMultiplicity, '#0284C7', '#E0F2FE');
+      const pos = points && points.length > 1
+        ? this.interpolatePoint(points[0], points[1], 0.25)
+        : this.interpolatePoint(start, end, 0.18);
+      this.drawBadge(ctx, pos.x, pos.y - 8, conn.sourceMultiplicity, '#0284C7');
     }
 
     if (conn.name) {
-      const mid = this.interpolatePoint(start, end, 0.5);
-      this.drawBadge(ctx, mid.x, mid.y - 12, conn.name, '#475569', '#F8FAFC');
+      const mid = points && points.length > 1
+        ? this.getPolylineMidpoint(points)
+        : this.interpolatePoint(start, end, 0.5);
+      this.drawBadge(ctx, mid.x, mid.y - 10, conn.name, '#475569');
     }
 
     if (conn.targetMultiplicity && !isInheritance) {
-      const pos = this.interpolatePoint(start, end, 0.82);
-      this.drawBadge(ctx, pos.x, pos.y - 10, conn.targetMultiplicity, '#0284C7', '#E0F2FE');
+      const lastIdx = points && points.length > 1 ? points.length - 1 : 1;
+      const pA = points && points.length > 1 ? points[lastIdx - 1] : start;
+      const pB = points && points.length > 1 ? points[lastIdx] : end;
+      const pos = this.interpolatePoint(pA, pB, 0.75);
+      this.drawBadge(ctx, pos.x, pos.y - 8, conn.targetMultiplicity, '#0284C7');
     }
   }
 
   /**
-   * Dibuja una píldora o placa estilizada con fondo y borde para alojar texto sobre el lienzo.
+   * Dibuja una etiqueta de texto nítida directamente sobre el lienzo sin recuadro ni fondo de píldora.
    * @param ctx Contexto 2D del canvas.
    * @param x Coordenada X central.
    * @param y Coordenada Y central.
    * @param text Texto a mostrar.
    * @param textColor Color de la tipografía.
-   * @param bgColor Color del fondo de la píldora.
    */
   private drawBadge(
     ctx: CanvasRenderingContext2D,
@@ -1017,23 +2592,16 @@ export class BmpExportService {
     y: number,
     text: string,
     textColor: string,
-    bgColor: string,
   ): void {
-    const textWidth = ctx.measureText(text).width;
-    const padX = 4;
-    const padY = 2;
-    const rectW = textWidth + padX * 2;
-    const rectH = 14;
-
     ctx.save();
-    ctx.fillStyle = bgColor;
-    ctx.strokeStyle = textColor;
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.roundRect(x - rectW / 2, y - rectH / 2, rectW, rectH, 3);
-    ctx.fill();
-    ctx.stroke();
-
+    ctx.font = 'normal 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 3;
+    if (typeof ctx.strokeText === 'function') {
+      ctx.strokeText(text, x, y);
+    }
     ctx.fillStyle = textColor;
     ctx.fillText(text, x, y);
     ctx.restore();
@@ -1041,6 +2609,7 @@ export class BmpExportService {
 
   /**
    * Dibuja una caja de clase UML con su cabecera, atributos y métodos en el canvas 2D de fallback.
+   * Si no posee atributos, los métodos se dibujan inmediatamente debajo de la cabecera sin espacio vacío.
    * @param ctx Contexto 2D del canvas.
    * @param node Nodo de clase UML.
    * @param x Posición horizontal.
@@ -1073,8 +2642,10 @@ export class BmpExportService {
 
     ctx.shadowColor = 'transparent';
 
-    const headerHeight = 30;
-    ctx.fillStyle = '#FFFDF9';
+    const hasStereotype = !!node.stereotype;
+    const headerHeight = hasStereotype ? 36 : 30;
+
+    ctx.fillStyle = '#EFE8DD';
     ctx.beginPath();
     ctx.rect(x, y, w, headerHeight);
     ctx.fill();
@@ -1084,35 +2655,55 @@ export class BmpExportService {
     ctx.lineTo(x + w, y + headerHeight);
     ctx.stroke();
 
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = '#241C18';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(node.name, x + w / 2, y + headerHeight / 2);
+    if (hasStereotype) {
+      ctx.font = 'italic 10px sans-serif';
+      ctx.fillStyle = '#5C4D42';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`<<${node.stereotype}>>`, x + w / 2, y + 12);
 
-    let currentY = y + headerHeight + 12;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#241C18';
+      ctx.fillText(node.name, x + w / 2, y + 26);
+    } else {
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#241C18';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.name, x + w / 2, y + headerHeight / 2);
+    }
+
+    const attributes = node.attributes || [];
+    const methods = node.methods || [];
+    let currentY = y + headerHeight;
+
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
-    const attributes = node.attributes || [];
-    for (const attr of attributes) {
-      ctx.fillStyle = '#241C18';
-      ctx.fillText(`- ${attr.name}: ${attr.type}`, x + 10, currentY);
-      currentY += 18;
+    if (attributes.length > 0) {
+      currentY += 12;
+      for (const attr of attributes) {
+        ctx.fillStyle = '#241C18';
+        ctx.fillText(`- ${attr.name}: ${attr.type}`, x + 10, currentY);
+        currentY += 18;
+      }
     }
 
-    const methods = node.methods || [];
     if (methods.length > 0) {
-      currentY += 2;
-      ctx.strokeStyle = '#796354';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, currentY);
-      ctx.lineTo(x + w, currentY);
-      ctx.stroke();
+      if (attributes.length > 0) {
+        currentY += 2;
+        ctx.strokeStyle = '#796354';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, currentY);
+        ctx.lineTo(x + w, currentY);
+        ctx.stroke();
+        currentY += 12;
+      } else {
+        currentY += 12;
+      }
 
-      currentY += 12;
       for (const m of methods) {
         ctx.fillStyle = '#241C18';
         const params = m.parameters ? `(${m.parameters})` : '()';

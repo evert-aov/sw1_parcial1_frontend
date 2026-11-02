@@ -13,8 +13,11 @@ describe('DiagramExportService host contract', () => {
   const images = {
     exportElementToBmp: vi.fn(),
     exportElementToPng: vi.fn(),
+    exportElementToSvg: vi.fn(),
     exportToBmp: vi.fn(),
     exportToPng: vi.fn(),
+    exportToSvg: vi.fn(),
+    exportProjectImagesToZip: vi.fn(),
   };
   let service: DiagramExportService;
   let target: DiagramExportCanvasTarget;
@@ -85,5 +88,32 @@ describe('DiagramExportService host contract', () => {
     await service.exportDiagramImage(undefined, 'png', 'sample', DiagramType.CLASS, [], []);
     expect(images.exportToPng).toHaveBeenCalledWith([], [], 'sample', DiagramType.CLASS);
     expect(restore).not.toHaveBeenCalled();
+  });
+
+  it('delegates exportDiagramSvg to bmpExportService.exportElementToSvg when canvas is present', async () => {
+    await service.exportDiagramSvg(target, 'sample', DiagramType.CLASS, [], []);
+    expect(images.exportElementToSvg).toHaveBeenCalledWith(element, 'sample', DiagramType.CLASS);
+    expect(restore).toHaveBeenCalledOnce();
+  });
+
+  it('delegates exportDiagramSvg to bmpExportService.exportToSvg without an installed canvas', async () => {
+    await service.exportDiagramSvg(undefined, 'sample', DiagramType.CLASS, [], []);
+    expect(images.exportToSvg).toHaveBeenCalledWith([], [], 'sample', DiagramType.CLASS);
+    expect(restore).not.toHaveBeenCalled();
+  });
+
+  it('delegates exportProjectDiagramsZip to bmpExportService.exportProjectImagesToZip', async () => {
+    const diagrams = [{ id: '1', name: 'Diagram 1', nodes: [], connections: [] }];
+    await service.exportProjectDiagramsZip(diagrams, 'svg', 'MyProject', target, '1');
+    expect(images.exportProjectImagesToZip).toHaveBeenCalledWith(
+      diagrams,
+      'svg',
+      'MyProject',
+      element,
+      '1',
+    );
+    expect(target.clearSelection).toHaveBeenCalledOnce();
+    expect(target.prepareForExport).toHaveBeenCalledOnce();
+    expect(restore).toHaveBeenCalledOnce();
   });
 });

@@ -11,6 +11,7 @@
         [projectTitle]="currentProject()?.name || ''"
         [diagramId]="currentDiagramId()"
         [isSaving]="diagramService.isSaving()"
+        [isExportingZip]="zipExportProgress() !== null"
         [saveSuccessMessage]="saveSuccessMessage()"
         [hasUnsavedChanges]="hasUnsavedChanges()"
         [isReadOnly]="isReadOnly()"
@@ -36,11 +37,17 @@
         (toggleSmartGuides)="toggleSmartGuides()"
         (exportBmp)="downloadBmpFile()"
         (exportPng)="downloadPngFile()"
+        (exportSvg)="downloadSvgFile()"
+        (exportZipPng)="downloadProjectZip('png')"
+        (exportZipSvg)="downloadProjectZip('svg')"
         (exportXmi)="downloadXmiFile()"
+        (exportQea)="downloadQea($event)"
+        [isExportingQea]="isExportingQea()"
         (exportJson)="downloadJsonFile()"
         (viewJson)="openExportModal()"
         (fileSelected)="onFileSelected($event)"
         (openImportJson)="openImportModal()"
+        (openRepositoryImport)="showRepositoryImport.set(true)"
         (openSpringBoot)="showSpringBootModal.set(true)"
         (openProfile)="openProfileModal()"
         (toggleToolbox)="isSidebarOpen.set(!isSidebarOpen())"
@@ -269,3 +276,30 @@
   >
   </app-diagram-context-menu>
 </div>
+
+@if (zipExportProgress(); as progress) {
+  <div role="status" aria-live="polite" aria-atomic="true"
+    class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-4 py-3 shadow-lg text-sm pointer-events-none">
+    <span aria-hidden="true" class="h-5 w-5 shrink-0 rounded-full border-2 border-slate-300 border-t-blue-600 animate-spin motion-reduce:animate-none"></span>
+    <span>
+      @switch (progress.stage) {
+        @case ('loading') { {{ 'appbar.zipPreparing' | translate }} }
+        @case ('rendering') { {{ 'appbar.zipRendering' | translate }} {{ progress.current }} / {{ progress.total }} }
+        @case ('packing') { {{ 'appbar.zipPacking' | translate }} }
+      }
+    </span>
+  </div>
+}
+
+@if (zipExportError(); as error) {
+  <div role="alert" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] max-w-md rounded-lg border border-red-400 bg-white dark:bg-slate-900 px-4 py-3 shadow-lg text-sm text-red-700 dark:text-red-300">
+    <p>{{ 'appbar.zipFailed' | translate }}</p>
+    <p class="mt-1 text-xs">{{ error }}</p>
+    <button type="button" class="mt-2 underline" (click)="zipExportError.set(null)">{{ 'appbar.zipDismiss' | translate }}</button>
+  </div>
+}
+
+@if (showRepositoryImport() && currentProjectId() && !isReadOnly()) {
+  <ng-container [appPluginOutlet]="plugins.component('xmi', 'importDialog')" [pluginEnvironment]="plugins.environmentFor('xmi')"
+    [pluginInputs]="{ projectId: currentProjectId() }" (pluginEvent)="showRepositoryImport.set(false)" />
+}

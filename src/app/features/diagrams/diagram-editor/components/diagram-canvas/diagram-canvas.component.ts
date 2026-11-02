@@ -167,6 +167,8 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
   @ViewChild(FZoomDirective) zoomDirective?: FZoomDirective;
 
   readonly nodes = input<UmlClassNode[]>([]);
+  /** Dimensiones explícitas del flujo temporal; evitan depender de porcentajes fuera del editor. */
+  readonly exportSize = input<{ width: number; height: number } | null>(null);
   readonly connections = input<UmlConnection[]>([]);
   readonly selectedRelationType = input<UmlRelationshipType | null>(null);
   readonly selectedSourceNodeId = input<string | null>(null);
@@ -285,14 +287,23 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
    * @returns Diccionario de entradas para el componente plug-in.
    */
   nodePluginInputs(node: UmlClassNode): Record<string, unknown> {
+    return this.nodeRendererInputs().get(node.id) ?? {};
+  }
+
+  /**
+   * Conserva la identidad de las entradas del renderer mientras sus dependencias no cambian.
+   * Los adaptadores pueden producir objetos anidados (colores, dimensiones); recrearlos
+   * durante cada comprobación vuelve a ensuciar las vistas dinámicas indefinidamente.
+   */
+  private readonly nodeRendererInputs = computed(() => new Map(this.nodes().map(node => {
     const context = {
       node, connections: this.connections(), isSelected: this.isNodeSelected(node.id),
       isNeighbor: this.isNeighborNode(node.id), isLocked: this.isNodeLockedByOther(node.id),
       isReadOnly: this.isReadOnly(), activeDiagramType: this.activeDiagramType(),
       selectedRelationType: this.selectedRelationType(), renamingNodeId: this.renamingNodeId(),
     };
-    return this.nodePlugins.forNode(node)?.inputs(context) ?? context;
-  }
+    return [node.id, this.nodePlugins.forNode(node)?.inputs(context) ?? context];
+  })));
 
   /**
    * Despacha eventos de salida originados desde los componentes plug-in hacia los manejadores del canvas.
@@ -1281,6 +1292,14 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
   prepareForExport(): () => void {
     const canvas = this.canvas;
     if (!canvas?.transform) return () => {};
+    const flow = this.getExportElement();
+    const previousWidth = flow?.style.width;
+    const previousHeight = flow?.style.height;
+    if (flow) {
+      // resetScale() coloca Foblex al 100 %, así que el área exportable usa medidas sin zoom.
+      flow.style.width = `${Math.max(flow.clientWidth, computeBoardWidth(this.nodes(), this.connections(), this.activeDiagramType()))}px`;
+      flow.style.height = `${Math.max(flow.clientHeight, computeBoardHeight(this.nodes(), this.connections(), this.activeDiagramType()))}px`;
+    }
 
     const scale = canvas.transform.scale;
     const position = { ...canvas.transform.position };
@@ -1289,6 +1308,10 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
       canvas.transform.scale = scale;
       canvas.transform.position = position;
       canvas.transform.scaledPosition = scaledPosition;
+      if (flow) {
+        flow.style.width = previousWidth || '';
+        flow.style.height = previousHeight || '';
+      }
       canvas.redraw();
     };
 

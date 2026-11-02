@@ -139,19 +139,19 @@ export class DiagramCanvasGeometryService {
   }
 
   /**
-   * Determina el lado de salida para un estilo de enrutamiento 'lateral_vertical'.
+   * Determina el lado de salida para un estilo de enrutamiento 'lateral_horizontal'.
    * El conector sale verticalmente (arriba/abajo) hacia la altura del destino.
    */
-  getLateralVerticalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
+  getLateralHorizontalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
     return this.getTreeVerticalSourceSide(conn, nodes);
   }
 
   /**
-   * Determina el lado de entrada para un estilo de enrutamiento 'lateral_vertical'.
+   * Determina el lado de entrada para un estilo de enrutamiento 'lateral_horizontal'.
    * Entra lateralmente (izquierda/derecha) formando un único codo; si el eje vertical del
    * origen atraviesa el destino, entra por el lado vertical opuesto para no cruzarlo.
    */
-  getLateralVerticalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' | 'left' | 'right' {
+  getLateralHorizontalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' | 'left' | 'right' {
     const pair = this.resolveConnectionNodes(conn, nodes);
     if (pair) {
       const sCx = (pair.source.position?.x ?? 0) + this.metrics.getNodeWidth(pair.source) / 2;
@@ -164,19 +164,19 @@ export class DiagramCanvasGeometryService {
   }
 
   /**
-   * Determina el lado de salida para un estilo de enrutamiento 'lateral_horizontal'.
+   * Determina el lado de salida para un estilo de enrutamiento 'lateral_vertical'.
    * El conector sale horizontalmente (izquierda/derecha) hacia el eje del destino.
    */
-  getLateralHorizontalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
+  getLateralVerticalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
     return this.getTreeHorizontalSourceSide(conn, nodes);
   }
 
   /**
-   * Determina el lado de entrada para un estilo de enrutamiento 'lateral_horizontal'.
+   * Determina el lado de entrada para un estilo de enrutamiento 'lateral_vertical'.
    * Entra por arriba/abajo formando un único codo; si el eje horizontal del origen
    * atraviesa el destino, entra por el lado horizontal opuesto para no cruzarlo.
    */
-  getLateralHorizontalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' | 'left' | 'right' {
+  getLateralVerticalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' | 'left' | 'right' {
     const pair = this.resolveConnectionNodes(conn, nodes);
     if (pair) {
       const sCy = (pair.source.position?.y ?? 0) + this.metrics.getNodeHeight(pair.source) / 2;

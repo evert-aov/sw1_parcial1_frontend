@@ -1,3 +1,4 @@
+import { QeaImportDialogComponent } from './qea-import-dialog.component';
 import { PluginDefinition } from '../../core/plugins/plugin.contract';
 import { XmiService } from './xmi.service';
 import { XmiService as XmiServiceContract } from '../../core/plugins/contracts/xmi.service.contract';
@@ -12,6 +13,7 @@ export const xmiPlugin: PluginDefinition = {
     labelKey: 'plugins.tools.xmi',
   },
   providers: [XmiService],
+  components: { importDialog: QeaImportDialogComponent },
   capabilities: [
     { token: XmiServiceContract, create: (injector) => injector.get(XmiService) },
     { token: XmiClientParserContract, create: () => XmiClientParser },

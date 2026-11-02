@@ -26,7 +26,13 @@ export class XmiDiagramLayoutParser {
   /**
    * Mapea el valor numérico o textual de linemode de Enterprise Architect al estilo de línea del editor.
    */
-  public static mapEaModeToLineStyle(mode: string | number | undefined): UmlLineStyle {
+  public static mapEaModeToLineStyle(mode: string | number | undefined, tree?: string): UmlLineStyle {
+    const treeStyles: Record<string, UmlLineStyle> = {
+      V: 'tree_vertical', H: 'tree_horizontal',
+      LV: 'lateral_vertical', LH: 'lateral_horizontal',
+      OS: 'orthogonal_square', OR: 'orthogonal_rounded',
+    };
+    if (tree && treeStyles[tree]) return treeStyles[tree];
     const m = String(mode || '3');
     switch (m) {
       case '1':
@@ -184,7 +190,7 @@ export class XmiDiagramLayoutParser {
       if (subject && style && connLineStyleMap) {
         const modeMatch = style.match(/Mode=(\d+)/);
         if (modeMatch) {
-          connLineStyleMap.set(subject, this.mapEaModeToLineStyle(modeMatch[1]));
+          connLineStyleMap.set(subject, this.mapEaModeToLineStyle(modeMatch[1], style.match(/(?:^|;)TREE=([^;]+)/)?.[1]));
         }
       }
 

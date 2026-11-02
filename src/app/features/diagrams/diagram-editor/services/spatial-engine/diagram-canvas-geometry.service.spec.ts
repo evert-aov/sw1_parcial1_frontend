@@ -2,7 +2,7 @@ import { provideEditorPlugins } from '../../../../../composition/editor-plugins'
 import { TestBed } from '@angular/core/testing';
 import { DiagramCanvasGeometryService } from './diagram-canvas-geometry.service';
 import { DiagramAssemblyConnectionService } from './diagram-assembly-connection.service';
-import { UmlClassNode } from '../../../../../core/models/diagram.model';
+import { UmlClassNode, UmlConnection } from '../../../../../core/models/diagram.model';
 
 describe('DiagramCanvasGeometryService - Z-Index Hierarchy', () => {
   let service: DiagramCanvasGeometryService;
@@ -23,6 +23,18 @@ describe('DiagramCanvasGeometryService - Z-Index Hierarchy', () => {
     attributes: [],
     methods: [],
     ...partial,
+  });
+
+  it.each([
+    [400, 400, 'right', 'top', 'bottom', 'left'],
+    [-400, -400, 'left', 'bottom', 'top', 'right'],
+  ])('aligns lateral routing with EA at (%s, %s)', (x, y, verticalSource, verticalTarget, horizontalSource, horizontalTarget) => {
+    const nodes = [createDummyNode({ id: 'source' }), createDummyNode({ id: 'target', position: { x: Number(x), y: Number(y) } })];
+    const connection = { sourceNodeId: 'source', targetNodeId: 'target' } as UmlConnection;
+    expect(service.getLateralVerticalSourceSide(connection, nodes)).toBe(verticalSource);
+    expect(service.getLateralVerticalTargetSide(connection, nodes)).toBe(verticalTarget);
+    expect(service.getLateralHorizontalSourceSide(connection, nodes)).toBe(horizontalSource);
+    expect(service.getLateralHorizontalTargetSide(connection, nodes)).toBe(horizontalTarget);
   });
 
   it('debe ordenar el z-index de menor a mayor: boundary_box < device < executionEnvironment < component < class', () => {

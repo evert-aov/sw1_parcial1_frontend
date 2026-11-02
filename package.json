@@ -53,6 +53,7 @@
     "fast-xml-parser": "^5.11.1",
     "highlight.js": "^11.12.0",
     "html-to-image": "^1.11.13",
+    "jszip": "^3.10.2",
     "rxjs": "~7.8.0",
     "socket.io-client": "^4.8.3",
     "tslib": "^2.3.0"
@@ -62,6 +63,7 @@
     "@angular/cli": "^22.1.5",
     "@angular/compiler-cli": "^22.1.0",
     "@tailwindcss/postcss": "^4.1.12",
+    "@types/jszip": "^3.4.0",
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "jsdom": "^28.0.0",
