@@ -74,6 +74,7 @@ import {
   DiagramNodeResizeService,
   DiagramSequenceActivationService,
 } from '../../services/index';
+import { CalculateLateralLineData, LATERAL_CONNECTION_TYPE } from '../../services/spatial-engine/lateral-connection.builder';
 import { NodeMetricsService, computeBoardHeight, computeBoardWidth } from '../../utils/node-metrics.util';
 import { ConnectionCascadeUtil } from '../../../../../core/plugins/contracts/connection-cascade.util.contract';
 
@@ -110,6 +111,7 @@ export interface DiagramCanvasViewState {
       useValue: {
         'tree_horizontal': new CalculateSegmentLineData(),
         'tree_vertical': new CalculateSegmentLineData(),
+        [LATERAL_CONNECTION_TYPE]: new CalculateLateralLineData(),
         'orthogonal': new CalculateSegmentLineData(),
         'curved': new CalculateBezierCurveData(),
         'smooth': new CalculateAdaptiveCurveData(),
@@ -209,6 +211,15 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
   readonly canvasContextMenu = output<{ event: MouseEvent; canvasPos: { x: number; y: number } }>();
 
   readonly zoomLevel = signal<number>(100);
+  /**
+   * Grosor (en px del lienzo) de los bordes finos de los nodos. Al alejar el zoom, un borde de
+   * 1px se escala por debajo de un píxel de pantalla y el navegador lo omite en algunos lados;
+   * compensarlo con la escala inversa mantiene siempre al menos 1px visible (máx. 4px).
+   */
+  readonly nodeHairlineWidth = computed(() => {
+    const scale = Math.max(this.zoomLevel(), 1) / 100;
+    return `${Math.min(4, Math.max(1, 1 / scale)).toFixed(3)}px`;
+  });
   readonly isDragOverCanvas = signal<boolean>(false);
   readonly hoveredNodeId = signal<string | null>(null);
   readonly hoveredConnectionId = signal<string | null>(null);
@@ -303,13 +314,57 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
   // --- DELEGACIÓN GEOMÉTRICA Y VISUAL ---
 
   /** Obtiene el ancho calculado o configurado de un nodo. */
-  getNodeWidth(node: UmlClassNode): number { return this.metrics.getNodeWidth(node); }
+  getNodeWidth(node: UmlClassNode): number {
+    const diagType = typeof this.activeDiagramType === 'function' ? this.activeDiagramType() : undefined;
+    return this.metrics.getNodeWidth(node, diagType);
+  }
 
   /** Obtiene la altura calculada o configurada de un nodo. */
-  getNodeHeight(node: UmlClassNode): number { return this.metrics.getNodeHeight(node); }
+  getNodeHeight(node: UmlClassNode): number {
+    const diagType = typeof this.activeDiagramType === 'function' ? this.activeDiagramType() : undefined;
+    return this.metrics.getNodeHeight(node, diagType);
+  }
 
   /** Obtiene las dimensiones compuestas (ancho y alto) de un nodo. */
-  getNodeSize(node: UmlClassNode): { width: number; height: number } { return this.geometryService.getNodeSize(node); }
+  getNodeSize(node: UmlClassNode): { width: number; height: number } {
+    const diagType = typeof this.activeDiagramType === 'function' ? this.activeDiagramType() : undefined;
+    return this.geometryService.getNodeSize(node, diagType);
+  }
+
+  /**
+   * Determina si un nodo admite redimensión manual interactiva en el diagrama actual.
+   * Delega en el plugin del nodo si define `isResizable`, o permite redimensión por defecto.
+   */
+  isNodeResizable(node: UmlClassNode): boolean {
+    if (node.isAnchor) return false;
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return false;
+    const diagType = typeof this.activeDiagramType === 'function' ? this.activeDiagramType() : undefined;
+    const geometry = this.nodePlugins?.forNode(node)?.geometry;
+    if (geometry?.isResizable) {
+      return geometry.isResizable(node, diagType);
+    }
+    return true;
+  }
+
+  /** Obtiene el ancho mínimo permitido de un nodo en el contexto actual. */
+  getNodeMinWidth(node: UmlClassNode): number {
+    const diagType = typeof this.activeDiagramType === 'function' ? this.activeDiagramType() : undefined;
+    const geometry = this.nodePlugins?.forNode(node)?.geometry;
+    if (geometry?.isResizable && !geometry.isResizable(node, diagType)) {
+      return this.getNodeWidth(node);
+    }
+    return geometry?.minWidth ?? 50;
+  }
+
+  /** Obtiene la altura mínima permitida de un nodo en el contexto actual. */
+  getNodeMinHeight(node: UmlClassNode): number {
+    const diagType = typeof this.activeDiagramType === 'function' ? this.activeDiagramType() : undefined;
+    const geometry = this.nodePlugins?.forNode(node)?.geometry;
+    if (geometry?.isResizable && !geometry.isResizable(node, diagType)) {
+      return this.getNodeHeight(node);
+    }
+    return geometry?.minHeight ?? 50;
+  }
 
   /** Calcula el índice de apilamiento visual (z-index) según el tipo de nodo y estado de selección. */
   getNodeZIndex(node: UmlClassNode): number { return this.geometryService.getNodeZIndex(node, this.isNodeSelected(node.id)); }
@@ -347,7 +402,7 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
    * @param conn Conexión evaluada.
    * @returns Tipo de renderizado de la arista.
    */
-  getConnectionType(conn: UmlConnection): 'segment' | 'straight' | 'bezier' | 'adaptive-curve' {
+  getConnectionType(conn: UmlConnection): 'segment' | 'straight' | 'bezier' | 'adaptive-curve' | typeof LATERAL_CONNECTION_TYPE {
     if (this.isSequenceConnection(conn) && !this.isRecursiveConn(conn)) {
       return 'straight';
     }
@@ -363,9 +418,10 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
       case 'orthogonal_square':
       case 'segment':
       case 'tree_vertical':
-      case 'tree_horizontal':
       case 'lateral_vertical':
       case 'lateral_horizontal':
+        return LATERAL_CONNECTION_TYPE;
+      case 'tree_horizontal':
       default:
         return 'segment';
     }
@@ -388,7 +444,7 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
    * Determina el tipo de trazado de Foblex a utilizar durante el proceso de creación interactiva de una arista.
    * @returns Tipo de línea para la conexión en curso.
    */
-  getConnectionTypeForCreate(): 'segment' | 'straight' | 'bezier' | 'adaptive-curve' {
+  getConnectionTypeForCreate(): 'segment' | 'straight' | 'bezier' | 'adaptive-curve' | typeof LATERAL_CONNECTION_TYPE {
     const style = sanitizeLineStyle(this.defaultLineStyle() || 'orthogonal_square');
     switch (style) {
       case 'straight':
@@ -401,9 +457,10 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
       case 'orthogonal_square':
       case 'segment':
       case 'tree_vertical':
-      case 'tree_horizontal':
       case 'lateral_vertical':
       case 'lateral_horizontal':
+        return LATERAL_CONNECTION_TYPE;
+      case 'tree_horizontal':
       default:
         return 'segment';
     }
@@ -422,12 +479,48 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
   }
 
   /**
+   * Conector de origen usado para renderizar la arista. En los estilos laterales se ancla al
+   * puerto central del lado calculado (p. ej. `_bottom`) para que el codo salga del centro
+   * de ese lado y no del puerto lateral guardado en la conexión.
+   */
+  getConnectionOutputId(conn: UmlConnection): string {
+    if (!this.usesWholeNodeAnchor(conn)) return conn.sourceId;
+    const base = conn.sourceNodeId || this.stripSidePort(conn.sourceId);
+    return `${base}_${this.getConnectionOutputSide(conn)}`;
+  }
+
+  /** Conector de destino usado para renderizar la arista (ver {@link getConnectionOutputId}). */
+  getConnectionInputId(conn: UmlConnection): string {
+    if (!this.usesWholeNodeAnchor(conn)) return conn.targetId;
+    const base = conn.targetNodeId || this.stripSidePort(conn.targetId);
+    return `${base}_${this.getConnectionInputSide(conn)}`;
+  }
+
+  /** Indica si la arista lateral debe anclarse a los puertos centrales de los lados calculados. */
+  private usesWholeNodeAnchor(conn: UmlConnection): boolean {
+    if (!conn || this.isRecursiveConn(conn) || this.isSequenceConnection(conn)) return false;
+    const style = sanitizeLineStyle(conn.lineStyle, this.defaultLineStyle() || 'orthogonal_square');
+    if (style !== 'lateral_vertical' && style !== 'lateral_horizontal') return false;
+    const isSlot = (id: string | undefined) => !id || /_slot_\d+$/.test(id);
+    return !isSlot(conn.sourceId) && !isSlot(conn.targetId);
+  }
+
+  /** Elimina el sufijo de puerto lateral (`_bottom`, `_right_start`, …) de un identificador de conector. */
+  private stripSidePort(connectorId: string): string {
+    return connectorId.replace(/_(top|right|bottom|left)(_start|_end)?$/, '');
+  }
+
+  /**
    * Determina si la conexión debe comportarse como flotante (magnética al centro) o anclada fijamente a un puerto.
    * @param conn Conexión a evaluar.
    * @returns Comportamiento 'floating' o 'fixed'.
    */
   getConnectionBehavior(conn: UmlConnection): 'floating' | 'fixed' {
     if (this.isRecursiveConn(conn)) return 'fixed';
+    // Los estilos laterales necesitan anclar en el centro del lado calculado (codo en L);
+    // el modo flotante ignora los lados y recorta sobre la línea entre centros.
+    const style = sanitizeLineStyle(conn?.lineStyle, this.defaultLineStyle() || 'orthogonal_square');
+    if (style === 'lateral_vertical' || style === 'lateral_horizontal') return 'fixed';
     return this.isFloatingConn(conn) ? 'floating' : 'fixed';
   }
 
@@ -970,15 +1063,15 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
    * @param event Evento PointerEvent inicial.
    */
   onResizeHandlePointerDown(node: UmlClassNode, handleType: string, event: PointerEvent): void {
-    if (this.isReadOnly() || this.isNodeLockedByOther(node.id)) return;
+    if (this.isReadOnly() || this.isNodeLockedByOther(node.id) || !this.isNodeResizable(node)) return;
     const scale = this.canvas?.transform?.scale || this.zoomLevel() / 100 || 1;
     this.nodeResizeService.startResize({
       event,
       node,
       handleType,
       scale,
-      initialWidth: this.metrics.getNodeWidth(node),
-      initialHeight: this.metrics.getNodeHeight(node),
+      initialWidth: this.getNodeWidth(node),
+      initialHeight: this.getNodeHeight(node),
       dynamicNodeWidthFn: (n) => this.metrics.getDynamicNodeWidth(n),
       cdr: this.cdr,
       onRedraw: () => this.flow?.redraw(),

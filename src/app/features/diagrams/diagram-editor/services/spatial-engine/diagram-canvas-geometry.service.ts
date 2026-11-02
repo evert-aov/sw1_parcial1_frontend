@@ -140,6 +140,7 @@ export class DiagramCanvasGeometryService {
 
   /**
    * Determina el lado de salida para un estilo de enrutamiento 'lateral_vertical'.
+   * El conector sale verticalmente (arriba/abajo) hacia la altura del destino.
    */
   getLateralVerticalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
     return this.getTreeVerticalSourceSide(conn, nodes);
@@ -147,13 +148,24 @@ export class DiagramCanvasGeometryService {
 
   /**
    * Determina el lado de entrada para un estilo de enrutamiento 'lateral_vertical'.
+   * Entra lateralmente (izquierda/derecha) formando un único codo; si el eje vertical del
+   * origen atraviesa el destino, entra por el lado vertical opuesto para no cruzarlo.
    */
-  getLateralVerticalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
+  getLateralVerticalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' | 'left' | 'right' {
+    const pair = this.resolveConnectionNodes(conn, nodes);
+    if (pair) {
+      const sCx = (pair.source.position?.x ?? 0) + this.metrics.getNodeWidth(pair.source) / 2;
+      const tLeft = pair.target.position?.x ?? 0;
+      if (sCx >= tLeft && sCx <= tLeft + this.metrics.getNodeWidth(pair.target)) {
+        return this.getTreeVerticalTargetSide(conn, nodes);
+      }
+    }
     return this.getTreeHorizontalTargetSide(conn, nodes);
   }
 
   /**
    * Determina el lado de salida para un estilo de enrutamiento 'lateral_horizontal'.
+   * El conector sale horizontalmente (izquierda/derecha) hacia el eje del destino.
    */
   getLateralHorizontalSourceSide(conn: UmlConnection, nodes: UmlClassNode[]): 'left' | 'right' {
     return this.getTreeHorizontalSourceSide(conn, nodes);
@@ -161,9 +173,31 @@ export class DiagramCanvasGeometryService {
 
   /**
    * Determina el lado de entrada para un estilo de enrutamiento 'lateral_horizontal'.
+   * Entra por arriba/abajo formando un único codo; si el eje horizontal del origen
+   * atraviesa el destino, entra por el lado horizontal opuesto para no cruzarlo.
    */
-  getLateralHorizontalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' {
+  getLateralHorizontalTargetSide(conn: UmlConnection, nodes: UmlClassNode[]): 'top' | 'bottom' | 'left' | 'right' {
+    const pair = this.resolveConnectionNodes(conn, nodes);
+    if (pair) {
+      const sCy = (pair.source.position?.y ?? 0) + this.metrics.getNodeHeight(pair.source) / 2;
+      const tTop = pair.target.position?.y ?? 0;
+      if (sCy >= tTop && sCy <= tTop + this.metrics.getNodeHeight(pair.target)) {
+        return this.getTreeHorizontalTargetSide(conn, nodes);
+      }
+    }
     return this.getTreeVerticalTargetSide(conn, nodes);
+  }
+
+  /** Localiza los nodos origen y destino de una conexión. */
+  private resolveConnectionNodes(
+    conn: UmlConnection,
+    nodes: UmlClassNode[],
+  ): { source: UmlClassNode; target: UmlClassNode } | null {
+    const sId = conn.sourceNodeId || this.cascadeRules.extractBaseNodeId(conn.sourceId);
+    const tId = conn.targetNodeId || this.cascadeRules.extractBaseNodeId(conn.targetId);
+    const source = nodes.find((n) => n.id === sId);
+    const target = nodes.find((n) => n.id === tId);
+    return source && target ? { source, target } : null;
   }
 
   /**
@@ -343,13 +377,14 @@ export class DiagramCanvasGeometryService {
    * Calcula las dimensiones `{ width, height }` de un nodo para el enlace `[fNodeSize]`.
    *
    * @param node Nodo UML.
+   * @param activeDiagramType Tipo de diagrama activo (opcional).
    * @returns Objeto con ancho y alto en píxeles.
    */
-  getNodeSize(node: UmlClassNode): { width: number; height: number } {
+  getNodeSize(node: UmlClassNode, activeDiagramType?: DiagramType): { width: number; height: number } {
     if (node.isAnchor) return { width: 0, height: 0 };
     return {
-      width: this.metrics.getNodeWidth(node),
-      height: this.metrics.getNodeHeight(node),
+      width: this.metrics.getNodeWidth(node, activeDiagramType),
+      height: this.metrics.getNodeHeight(node, activeDiagramType),
     };
   }
 

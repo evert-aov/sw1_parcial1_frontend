@@ -81,6 +81,7 @@
     <!-- FOBLEX FLOW INTERACTIVE CANVAS -->
     <f-flow
       fDraggable
+      [style.--uml-hairline]="nodeHairlineWidth()"
       [fDraggableDisabled]="interactionDisabled()"
       [fCanvasMoveTrigger]="canvasMoveTrigger"
       [fMultiSelectTrigger]="multiSelectTrigger"
@@ -115,8 +116,8 @@
             <f-connection
               [fConnectionId]="conn.id"
               [attr.data-connection-id]="conn.id"
-              [fOutputId]="conn.sourceId"
-              [fInputId]="conn.targetId"
+              [fOutputId]="getConnectionOutputId(conn)"
+              [fInputId]="getConnectionInputId(conn)"
               [fType]="getConnectionType(conn)"
               [fRadius]="getConnectionRadius(conn)"
               [fBehavior]="getConnectionBehavior(conn)"
@@ -429,8 +430,8 @@
               (mouseenter)="hoveredNodeId.set(node.id)"
               (mouseleave)="onNodeMouseLeave(node.id)"
               [style.width.px]="node.isAnchor ? 0 : getNodeWidth(node)"
-              [style.minWidth.px]="node.isAnchor ? 0 : nodePlugins.forNode(node)?.geometry?.minWidth"
-              [style.minHeight.px]="node.isAnchor ? 0 : nodePlugins.forNode(node)?.geometry?.minHeight"
+              [style.minWidth.px]="node.isAnchor ? 0 : getNodeMinWidth(node)"
+              [style.minHeight.px]="node.isAnchor ? 0 : getNodeMinHeight(node)"
               [style.height.px]="getNodeHeight(node)"
               [style.zIndex]="getNodeZIndex(node)"
               [style.--node-bg]="node.color || null"
@@ -698,7 +699,7 @@
                 </div>
 
                 <!-- 8 MANEJADORES MANUALES DE CAMBIO DE TAMAÑO (RESIZE HANDLES) -->
-                @if (!node.isAnchor && isNodeSelected(node.id) && selectedRelationType() === null && !isReadOnly() && !isNodeLockedByOther(node.id)) {
+                @if (!node.isAnchor && isNodeSelected(node.id) && selectedRelationType() === null && !isReadOnly() && !isNodeLockedByOther(node.id) && isNodeResizable(node)) {
                   <div class="uml-resize-handle uml-handle-left-top" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'left-top', $event)"></div>
                   <div class="uml-resize-handle uml-handle-top" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'top', $event)"></div>
                   <div class="uml-resize-handle uml-handle-right-top" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()" (pointerdown)="onResizeHandlePointerDown(node, 'right-top', $event)"></div>

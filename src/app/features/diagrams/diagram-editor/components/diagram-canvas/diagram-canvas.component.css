@@ -85,7 +85,7 @@
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: var(--node-bg, #FDFAF3) !important;
-  border: 1px solid #796354 !important;
+  border: var(--uml-hairline, 1px) solid #796354 !important;
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15) !important;
   box-sizing: border-box !important;
 }

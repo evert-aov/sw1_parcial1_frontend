@@ -971,10 +971,16 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
   }
 
   /** Calcula el ancho visual estimado de un nodo UML. */
-  getNodeWidth(node: UmlClassNode): number { return this.metrics.getNodeWidth(node); }
+  getNodeWidth(node: UmlClassNode): number {
+    const diagType = typeof this.activeDiagramType === 'function' ? this.activeDiagramType() : undefined;
+    return this.metrics.getNodeWidth(node, diagType);
+  }
 
   /** Calcula el alto visual estimado de un nodo UML. */
-  getNodeHeight(node: UmlClassNode): number { return this.metrics.getNodeHeight(node); }
+  getNodeHeight(node: UmlClassNode): number {
+    const diagType = typeof this.activeDiagramType === 'function' ? this.activeDiagramType() : undefined;
+    return this.metrics.getNodeHeight(node, diagType);
+  }
 
   /** Obtiene el nombre legible de un nodo por su ID. */
   getNodeName(nodeId: string): string {

@@ -8,12 +8,13 @@ export class NodeMetricsService {
   /**
    * Obtiene el ancho geométrico de un nodo consultando su plugin o valores custom/default.
    * @param node Nodo UML.
+   * @param activeDiagramType Tipo de diagrama activo (opcional).
    * @returns Ancho en píxeles.
    */
-  getNodeWidth(node: UmlClassNode): number {
+  getNodeWidth(node: UmlClassNode, activeDiagramType?: DiagramType): number {
     return node.isAnchor
       ? 0
-      : (this.registry.forNode(node)?.geometry.width(node) ??
+      : (this.registry.forNode(node)?.geometry.width(node, activeDiagramType) ??
           node.customWidth ??
           node.width ??
           120);
@@ -22,12 +23,13 @@ export class NodeMetricsService {
   /**
    * Obtiene la altura geométrica de un nodo consultando su plugin o valores custom/default.
    * @param node Nodo UML.
+   * @param activeDiagramType Tipo de diagrama activo (opcional).
    * @returns Altura en píxeles.
    */
-  getNodeHeight(node: UmlClassNode): number {
+  getNodeHeight(node: UmlClassNode, activeDiagramType?: DiagramType): number {
     return node.isAnchor
       ? 0
-      : (this.registry.forNode(node)?.geometry.height(node) ??
+      : (this.registry.forNode(node)?.geometry.height(node, activeDiagramType) ??
           node.customHeight ??
           node.height ??
           60);

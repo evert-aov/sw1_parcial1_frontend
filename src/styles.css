@@ -111,7 +111,7 @@ f-flow .f-node.f-node-class:not(.w-0):not(.opacity-0) {
   padding: 0 !important;
   border-radius: 0 !important;
   background-color: var(--node-bg, #FDFAF3) !important;
-  border: 1px solid #796354 !important;
+  border: var(--uml-hairline, 1px) solid #796354 !important;
   box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15) !important;
   box-sizing: border-box !important;
 }
@@ -513,3 +513,11 @@ path.uml-marker-open {
   background: #475569;
 }
 
+
+/* Bordes finos de los nodos legibles al alejar el zoom: el lienzo define --uml-hairline
+   con la escala inversa para que un borde de 1px nunca quede por debajo de un píxel de pantalla. */
+f-flow .f-node .border { border-width: var(--uml-hairline, 1px); }
+f-flow .f-node .border-t { border-top-width: var(--uml-hairline, 1px); }
+f-flow .f-node .border-b { border-bottom-width: var(--uml-hairline, 1px); }
+f-flow .f-node .border-l { border-left-width: var(--uml-hairline, 1px); }
+f-flow .f-node .border-r { border-right-width: var(--uml-hairline, 1px); }
