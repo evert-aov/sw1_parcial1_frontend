@@ -4,9 +4,21 @@ import { NodePlugin } from '../../core/plugins/node-plugin.contract';
 import { calcPos } from '../../plugin-sdk/node-creation';
 import { UmlActorNodeComponent } from './uml-actor-node.component';
 
-const dynamicWidth = (_node: UmlClassNode): number => 65;
-const width = (_node: UmlClassNode): number => 65;
-const height = (_node: UmlClassNode): number => 65;
+const dynamicWidth = (node: UmlClassNode, activeDiagramType?: DiagramType): number => {
+  if (activeDiagramType === DiagramType.SEQUENCE) return 65;
+  return Math.max(50, node.customWidth || (node.isCustomSize ? node.width : 0) || 65);
+};
+const width = (node: UmlClassNode, activeDiagramType?: DiagramType): number => {
+  if (activeDiagramType === DiagramType.SEQUENCE) return 65;
+  return Math.max(50, node.customWidth || (node.isCustomSize ? node.width : 0) || 65);
+};
+const height = (node: UmlClassNode, activeDiagramType?: DiagramType): number => {
+  if (activeDiagramType === DiagramType.SEQUENCE) return 65;
+  return Math.max(50, node.customHeight || (node.isCustomSize ? node.height : 0) || 65);
+};
+const isResizable = (_node: UmlClassNode, activeDiagramType?: DiagramType): boolean => {
+  return activeDiagramType !== DiagramType.SEQUENCE;
+};
 
 export const actorPlugin: NodePlugin = {
   metadata: {
@@ -24,8 +36,9 @@ export const actorPlugin: NodePlugin = {
     width,
     height,
     dynamicWidth,
-    minWidth: 65,
-    minHeight: 65,
+    isResizable,
+    minWidth: 50,
+    minHeight: 50,
     bottomOffset: -44,
     zIndex: [20, 25],
     cssClass: 'f-node-actor',

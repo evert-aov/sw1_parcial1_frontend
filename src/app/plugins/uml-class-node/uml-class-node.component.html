@@ -2,13 +2,18 @@
 <div
   (click)="onHeaderClick($event)"
   [ngClass]="{
-    'bg-blue-600 text-white border-b border-blue-700': isSelected(),
-    'bg-indigo-100 text-indigo-950 border-b border-indigo-300': !isSelected() && isNeighbor(),
-    'border-b border-[#796354] text-[#241C18]': !isSelected() && !isNeighbor(),
+    'bg-blue-600 text-white': isSelected(),
+    'border-b border-blue-700': isSelected() && hasMembers,
+    'bg-indigo-100 text-indigo-950': !isSelected() && isNeighbor(),
+    'border-b border-indigo-300': !isSelected() && isNeighbor() && hasMembers,
+    'text-[#241C18]': !isSelected() && !isNeighbor(),
+    'border-b border-[#796354]': !isSelected() && !isNeighbor() && hasMembers,
     'bg-[#FDFAF3]': !isSelected() && !isNeighbor() && !node().color,
+    'flex-1': !hasMembers,
+    'shrink-0': hasMembers
   }"
   [style.backgroundColor]="!isSelected() && !isNeighbor() ? node().color || '#FDFAF3' : null"
-  class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors shrink-0"
+  class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer transition-colors"
 >
   @if (isRenaming) {
     <input
@@ -56,12 +61,12 @@
   </button>
 </div>
 
-<!-- CUERPO: ATRIBUTOS TIPADOS ESTILO EA -->
-<div
-  [style.backgroundColor]="node().color || '#FDFAF3'"
-  class="px-2.5 py-1.5 space-y-0.5 min-h-7 flex-1"
->
-  @if (node().attributes && node().attributes.length > 0) {
+<!-- CUERPO: ATRIBUTOS TIPADOS ESTILO EA (SOLO SI TIENE ATRIBUTOS) -->
+@if (hasAttributes) {
+  <div
+    [style.backgroundColor]="node().color || '#FDFAF3'"
+    class="px-2.5 py-1.5 space-y-0.5 flex-1"
+  >
     @for (attr of node().attributes; track attr.name) {
       <div
         class="flex items-center text-[11px] font-sans leading-snug text-[#241C18] whitespace-nowrap"
@@ -71,14 +76,19 @@
         <span class="text-[#5A4537] ml-0.5 font-normal whitespace-nowrap">: {{ attr.type }}</span>
       </div>
     }
-  }
-</div>
+  </div>
+}
 
 <!-- CUERPO: MÉTODOS / OPERACIONES CON RETORNO ESTILO EA (SOLO SI TIENE MÉTODOS) -->
-@if (node().methods && node().methods.length > 0) {
+@if (hasMethods) {
   <div
     [style.backgroundColor]="node().color || '#FDFAF3'"
-    class="px-2.5 py-1.5 space-y-0.5 border-t border-[#796354] shrink-0"
+    [ngClass]="{
+      'border-t border-[#796354]': hasAttributes,
+      'flex-1': !hasAttributes,
+      'shrink-0': hasAttributes
+    }"
+    class="px-2.5 py-1.5 space-y-0.5"
   >
     @for (m of node().methods; track m.name) {
       <div

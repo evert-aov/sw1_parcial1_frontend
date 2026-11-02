@@ -38,6 +38,29 @@ export class UmlClassNodeComponent {
   }
 
   /**
+   * Determina si la clase tiene atributos definidos.
+   */
+  get hasAttributes(): boolean {
+    const attrs = this.node()?.attributes;
+    return Boolean(attrs && attrs.length > 0);
+  }
+
+  /**
+   * Determina si la clase tiene operaciones/métodos definidos.
+   */
+  get hasMethods(): boolean {
+    const methods = this.node()?.methods;
+    return Boolean(methods && methods.length > 0);
+  }
+
+  /**
+   * Determina si la clase tiene algún miembro visible (atributos u operaciones).
+   */
+  get hasMembers(): boolean {
+    return this.hasAttributes || this.hasMethods;
+  }
+
+  /**
    * Maneja el clic en la cabecera de la clase y emite el evento de selección de nodo.
    * @param event Evento de ratón (MouseEvent).
    */

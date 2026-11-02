@@ -33,8 +33,8 @@ export interface NodeTool {
   readonly icon?: Type<unknown>;
 }
 export interface NodeGeometry {
-  width(node: UmlClassNode): number;
-  height(node: UmlClassNode): number;
+  width(node: UmlClassNode, activeDiagramType?: DiagramType): number;
+  height(node: UmlClassNode, activeDiagramType?: DiagramType): number;
   dynamicWidth(node: UmlClassNode): number;
   readonly minWidth: number;
   readonly minHeight: number;
@@ -45,6 +45,7 @@ export interface NodeGeometry {
   readonly fixedHeaderHeight?: number;
   readonly lockY?: boolean;
   readonly externalLabel?: boolean;
+  readonly isResizable?: (node: UmlClassNode, activeDiagramType?: DiagramType) => boolean;
 }
 export interface NodeRenderer {
   readonly node: InputSignal<UmlClassNode>;

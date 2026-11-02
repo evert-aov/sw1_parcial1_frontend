@@ -11,8 +11,8 @@ const width = (node: UmlClassNode): number =>
 const height = (node: UmlClassNode): number =>
   node.customHeight ||
   (node.isCustomSize ? node.height : 0) ||
-  34 +
-    (node.attributes?.length ? node.attributes.length * 22 + 12 : 28) +
+  (node.stereotype ? 44 : 34) +
+    (node.attributes?.length ? node.attributes.length * 22 + 12 : 0) +
     (node.methods?.length ? node.methods.length * 22 + 12 : 0);
 
 export const classPlugin: NodePlugin = {
@@ -38,7 +38,7 @@ export const classPlugin: NodePlugin = {
     height,
     dynamicWidth,
     minWidth: 90,
-    minHeight: 60,
+    minHeight: 34,
     bottomOffset: -6,
     zIndex: [20, 25],
     cssClass: 'f-node-class',
