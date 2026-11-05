@@ -8,6 +8,7 @@ import {
   UML_DIAGRAM_TYPES,
   UmlClassNode,
   UmlConnection,
+  UmlLineStyle,
 } from '../../../../../core/models/diagram.model';
 
 /**
@@ -51,6 +52,7 @@ export class DiagramEditorContextUtil {
         const node = editor.nodes().find((n) => n.id === nodeId);
         if (node) editor.openEditNodeModal(node);
       },
+      setAllLineStyle: (style: UmlLineStyle) => editor.setAllConnectionsLineStyle(style),
     };
   }
 

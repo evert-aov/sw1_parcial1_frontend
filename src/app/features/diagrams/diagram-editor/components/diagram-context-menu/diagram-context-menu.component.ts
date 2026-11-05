@@ -16,8 +16,15 @@ import {
   heroCursorArrowRays,
   heroMagnifyingGlassPlus,
   heroArrowsPointingOut,
+  heroArrowPath,
 } from '@ng-icons/heroicons/outline';
-import { UmlClassNode, UmlConnection, UmlLineStyle } from '../../../../../core/models/diagram.model';
+import {
+  UmlClassNode,
+  UmlConnection,
+  UmlLineStyle,
+  UML_LINE_STYLES,
+  UmlLineStyleItem,
+} from '../../../../../core/models/diagram.model';
 
 export interface DiagramContextMenuState {
   visible: boolean;
@@ -49,6 +56,7 @@ export interface DiagramContextMenuState {
       heroCursorArrowRays,
       heroMagnifyingGlassPlus,
       heroArrowsPointingOut,
+      heroArrowPath,
     }),
   ],
   templateUrl: './diagram-context-menu.component.html',
@@ -60,6 +68,8 @@ export class DiagramContextMenuComponent {
   @Input() activeDiagramType = 'class';
   @Input() hasClipboard = false;
   @Input() zoomLevel = 100;
+
+  readonly lineStyles: UmlLineStyleItem[] = UML_LINE_STYLES;
 
   @Output() close = new EventEmitter<void>();
   @Output() copyNodes = new EventEmitter<void>();
@@ -73,6 +83,7 @@ export class DiagramContextMenuComponent {
   @Output() editConnection = new EventEmitter<UmlConnection>();
   @Output() reverseConnection = new EventEmitter<UmlConnection>();
   @Output() setConnectionLineStyle = new EventEmitter<{ connection: UmlConnection; lineStyle: UmlLineStyle }>();
+  @Output() setAllConnectionsLineStyle = new EventEmitter<UmlLineStyle>();
   @Output() selectAll = new EventEmitter<void>();
   @Output() deselectAll = new EventEmitter<void>();
   @Output() resetView = new EventEmitter<void>();
@@ -175,6 +186,32 @@ export class DiagramContextMenuComponent {
    */
   onSetLineStyle(conn: UmlConnection, lineStyle: UmlLineStyle): void {
     this.setConnectionLineStyle.emit({ connection: conn, lineStyle });
+  }
+
+  /**
+   * Cambia el estilo de todas las líneas del diagrama al estilo indicado a la vez.
+   * @param lineStyle Nuevo estilo para todas las conexiones.
+   */
+  onSetAllLineStyle(lineStyle: UmlLineStyle): void {
+    this.setAllConnectionsLineStyle.emit(lineStyle);
+    this.close.emit();
+  }
+
+  /**
+   * Determina si la conexión actual tiene activo el estilo evaluado.
+   * @param conn Conexión evaluada.
+   * @param styleId Identificador de estilo a cotejar.
+   */
+  isActiveLineStyle(conn: UmlConnection | undefined, styleId: UmlLineStyle): boolean {
+    if (!conn) return false;
+    const current = conn.lineStyle || 'orthogonal_square';
+    if (styleId === 'orthogonal_square') {
+      return current === 'orthogonal_square' || current === 'segment' || !conn.lineStyle;
+    }
+    if (styleId === 'orthogonal_rounded') {
+      return current === 'orthogonal_rounded' || current === 'adaptive-curve';
+    }
+    return current === styleId;
   }
 
   /**

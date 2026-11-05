@@ -450,3 +450,36 @@ describe('QEA export orchestration', () => {
     log.mockRestore();
   });
 });
+
+describe('DiagramEditorComponent: cambio masivo de estilos de línea', () => {
+  it('cambia el estilo de todas las líneas al estilo indicado a la vez (ejemplo: direct)', () => {
+    const conns: UmlConnection[] = [
+      { id: 'c1', sourceNodeId: 'n1', targetNodeId: 'n2', sourceId: 'n1_right', targetId: 'n2_left', type: 'association', lineStyle: 'orthogonal_square' },
+      { id: 'c2', sourceNodeId: 'n2', targetNodeId: 'n3', sourceId: 'n2_bottom', targetId: 'n3_top', type: 'dependency', lineStyle: 'bezier' },
+    ];
+    const editor = Object.assign(Object.create(DiagramEditorComponent.prototype), {
+      isReadOnly: () => false,
+      pushSnapshot: vi.fn(),
+      defaultLineStyle: signal('orthogonal_square'),
+      connections: signal(conns),
+      nodes: signal([]),
+      activeDiagramType: signal(DiagramType.CLASS),
+      relationshipRules: { isSequenceConnection: () => false },
+      markAsUnsaved: vi.fn(),
+      sendDiagramSync: vi.fn(),
+      closeContextMenu: vi.fn(),
+      translationService: { translate: (key: string) => key },
+      toastService: { success: vi.fn() },
+    }) as DiagramEditorComponent;
+
+    editor.setAllConnectionsLineStyle('straight');
+
+    expect(editor.defaultLineStyle()).toBe('straight');
+    expect(editor.connections()[0].lineStyle).toBe('straight');
+    expect(editor.connections()[1].lineStyle).toBe('straight');
+    expect(editor.pushSnapshot).toHaveBeenCalledOnce();
+    expect(editor.markAsUnsaved).toHaveBeenCalledOnce();
+    expect(editor.sendDiagramSync).toHaveBeenCalledWith([], editor.connections(), 'change_default_line_style');
+    expect(editor.toastService?.success).toHaveBeenCalled();
+  });
+});

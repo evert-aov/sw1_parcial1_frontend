@@ -510,6 +510,10 @@ export const es = {
     step2: 'Paso 2: Haz clic o suelta en cualquier parte del nodo destino',
     cancelEsc: 'Cancelar (Esc)',
     lineStylesTitle: 'Estilo de Línea (Routing)',
+    applyAllLines: 'Aplicar a todas',
+    applyAllLinesTooltip: 'Aplica este estilo de enrutamiento a todas las líneas del diagrama',
+    allLinesStyleChanged: 'Estilo de todas las líneas actualizado a: {{style}}',
+    allLinesCount: '{{count}} conexiones actualizadas',
     relationships: {
       title: 'Relaciones de Clases',
       deselect: '(deseleccionar)',
@@ -887,6 +891,7 @@ export const es = {
       title: 'Propiedades de la Relación',
       type: 'Tipo de Relación',
       lineStyle: 'Estilo de Línea (Routing)',
+      applyToAll: 'Aplicar a todas las líneas',
       sourceMult: 'Multiplicidad Origen',
       targetMult: 'Multiplicidad Destino',
       name: 'Etiqueta / Verbo',

@@ -66,7 +66,11 @@
           }
         </div>
         <div class="p-2">
-          <app-diagram-line-routing-selector [selectedStyle]="defaultLineStyle()" (styleChange)="setDefaultLineStyle.emit($event)" />
+          <app-diagram-line-routing-selector
+            [selectedStyle]="defaultLineStyle()"
+            (styleChange)="onSetLineStyle($event)"
+            (applyToAll)="onSetLineStyle($event)"
+          />
         </div>
       </div>
     } @else {

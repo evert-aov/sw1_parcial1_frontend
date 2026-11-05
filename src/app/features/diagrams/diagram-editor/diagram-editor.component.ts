@@ -39,6 +39,7 @@ import {
   UmlClassNode,
   UmlConnection,
   UmlLineStyle,
+  UML_LINE_STYLES,
   sanitizeLineStyle,
   UmlMessage,
   UmlRelationshipType,
@@ -152,6 +153,7 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     if (event.name === 'close') this.closeEditConnModal();
     if (event.name === 'save') this.onSaveEditedConnection(event.value as UmlConnection);
     if (event.name === 'delete') this.removeConnection(event.value as string);
+    if (event.name === 'applyStyleToAll') this.setAllConnectionsLineStyle(event.value as UmlLineStyle);
   }
 
   /**
@@ -1076,6 +1078,14 @@ export class DiagramEditorComponent implements OnInit, OnDestroy {
     this.connections.set(updated);
     this.markAsUnsaved();
     this.sendDiagramSync(this.nodes(), this.connections(), 'change_default_line_style');
+    this.closeContextMenu();
+
+    const styleItem = UML_LINE_STYLES.find((s) => s.id === style);
+    const styleLabel = styleItem?.label || style;
+    const count = updated.filter((c) => !this.relationshipRules.isSequenceConnection(c.type, this.activeDiagramType())).length;
+    const baseMsg = this.translationService.translate('editor.allLinesStyleChanged', { style: styleLabel });
+    const countMsg = count > 0 ? ` (${this.translationService.translate('editor.allLinesCount', { count })})` : '';
+    this.toastService?.success?.(`${baseMsg}${countMsg}`);
   }
 
   /** Alias para cambiar el estilo de línea predeterminado desde la barra lateral. */

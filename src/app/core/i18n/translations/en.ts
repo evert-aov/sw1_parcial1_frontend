@@ -508,6 +508,10 @@ export const en = {
     step2: 'Step 2: Click or drop on any part of the target node',
     cancelEsc: 'Cancel (Esc)',
     lineStylesTitle: 'Line Style (Routing)',
+    applyAllLines: 'Apply to all',
+    applyAllLinesTooltip: 'Apply this routing style to all lines in the diagram',
+    allLinesStyleChanged: 'All lines style updated to: {{style}}',
+    allLinesCount: '{{count}} connections updated',
     relationships: {
       title: 'Class Relationships',
       deselect: '(deselect)',
@@ -882,6 +886,7 @@ export const en = {
       title: 'Relationship Properties',
       type: 'Relationship Type',
       lineStyle: 'Line Style (Routing)',
+      applyToAll: 'Apply to all lines',
       sourceMult: 'Source Multiplicity',
       targetMult: 'Target Multiplicity',
       name: 'Label / Verb',

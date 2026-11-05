@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { UmlLineStyle } from '../../../../../core/models/diagram.model';
 
 export interface DiagramHotkeysActions {
   isReadOnly: () => boolean;
@@ -19,6 +20,7 @@ export interface DiagramHotkeysActions {
   closeContextMenu: () => void;
   getRenameTargetNodeId: () => string | null;
   startRenameNode: (nodeId: string) => void;
+  setAllLineStyle?: (style: UmlLineStyle) => void;
 }
 
 @Injectable({
@@ -72,6 +74,16 @@ export class DiagramHotkeysService {
     } else if (isCtrlOrMeta && (key === 'y' || (event.shiftKey && key === 'z'))) {
       event.preventDefault();
       actions.redo();
+    } else if (isCtrlOrMeta && event.shiftKey && key === 'd') {
+      event.preventDefault();
+      if (!actions.isReadOnly()) {
+        actions.setAllLineStyle?.('straight');
+      }
+    } else if (isCtrlOrMeta && event.shiftKey && key === 'c') {
+      event.preventDefault();
+      if (!actions.isReadOnly()) {
+        actions.setAllLineStyle?.('orthogonal_square');
+      }
     } else if (isCtrlOrMeta && key === 's') {
       event.preventDefault();
       if (!actions.isReadOnly()) {

@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, input, output, signal, effect, comp
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
-import { heroArrowsRightLeft, heroTrash, heroPlus, heroChevronUp, heroChevronDown } from '@ng-icons/heroicons/outline';
+import { heroArrowsRightLeft, heroTrash, heroPlus, heroChevronUp, heroChevronDown, heroArrowPath } from '@ng-icons/heroicons/outline';
 import { TranslatePipe } from '../../../core/i18n/index';
 import {
   UmlConnection,
+  UmlLineStyle,
   UmlRelationTypeItem,
   UmlLineStyleItem,
   UML_RELATION_TYPES,
@@ -34,6 +35,7 @@ import {
       heroPlus,
       heroChevronUp,
       heroChevronDown,
+      heroArrowPath,
     }),
   ],
   templateUrl: './edit-connection-modal.component.html',
@@ -74,8 +76,19 @@ export class EditConnectionModalComponent {
   readonly save = output<UmlConnection>();
   readonly delete = output<string>();
   readonly swapDirection = output<void>();
+  readonly applyStyleToAll = output<UmlLineStyle>();
 
   readonly editingConnection = signal<UmlConnection | null>(null);
+
+  /**
+   * Emite el estilo de línea actual para aplicarlo a todas las conexiones del diagrama.
+   */
+  onApplyStyleToAll(): void {
+    const conn = this.editingConnection();
+    if (conn?.lineStyle) {
+      this.applyStyleToAll.emit(conn.lineStyle);
+    }
+  }
 
   constructor() {
     effect(

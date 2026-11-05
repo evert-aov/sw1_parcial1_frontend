@@ -253,107 +253,45 @@
 
       <!-- Estilos de Línea -->
       <div class="py-1">
-        <div class="px-3 py-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-          Estilo de línea
+        <div class="px-3 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 flex items-center justify-between">
+          <span>Estilo de línea</span>
+          <span class="text-[9px] text-slate-400 font-normal">Clic: esta | Todas: a la vez</span>
         </div>
-        <button
-          type="button"
-          (click)="onSetLineStyle(menu.connection, 'orthogonal_square')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'orthogonal_square' || menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle"
-          [class.text-blue-600]="
-            menu.connection.lineStyle === 'orthogonal_square' || menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle
-          "
-          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
-        >
-          <span>Ortogonal - Square</span>
-          @if (menu.connection.lineStyle === 'orthogonal_square' || menu.connection.lineStyle === 'segment' || !menu.connection.lineStyle) {
-            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-          }
-        </button>
-        <button
-          type="button"
-          (click)="onSetLineStyle(menu.connection, 'orthogonal_rounded')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'orthogonal_rounded' || menu.connection.lineStyle === 'adaptive-curve'"
-          [class.text-blue-600]="menu.connection.lineStyle === 'orthogonal_rounded' || menu.connection.lineStyle === 'adaptive-curve'"
-          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
-        >
-          <span>Ortogonal - Rounded</span>
-          @if (menu.connection.lineStyle === 'orthogonal_rounded' || menu.connection.lineStyle === 'adaptive-curve') {
-            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-          }
-        </button>
-        <button
-          type="button"
-          (click)="onSetLineStyle(menu.connection, 'straight')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'straight'"
-          [class.text-blue-600]="menu.connection.lineStyle === 'straight'"
-          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
-        >
-          <span>Direct / Recta</span>
-          @if (menu.connection.lineStyle === 'straight') {
-            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-          }
-        </button>
-        <button
-          type="button"
-          (click)="onSetLineStyle(menu.connection, 'bezier')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'bezier'"
-          [class.text-blue-600]="menu.connection.lineStyle === 'bezier'"
-          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
-        >
-          <span>Curva Bézier</span>
-          @if (menu.connection.lineStyle === 'bezier') {
-            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-          }
-        </button>
-        <button
-          type="button"
-          (click)="onSetLineStyle(menu.connection, 'tree_vertical')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'tree_vertical'"
-          [class.text-blue-600]="menu.connection.lineStyle === 'tree_vertical'"
-          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
-        >
-          <span>Árbol - Vertical</span>
-          @if (menu.connection.lineStyle === 'tree_vertical') {
-            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-          }
-        </button>
-        <button
-          type="button"
-          (click)="onSetLineStyle(menu.connection, 'tree_horizontal')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'tree_horizontal'"
-          [class.text-blue-600]="menu.connection.lineStyle === 'tree_horizontal'"
-          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
-        >
-          <span>Árbol - Horizontal</span>
-          @if (menu.connection.lineStyle === 'tree_horizontal') {
-            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-          }
-        </button>
-        <button
-          type="button"
-          (click)="onSetLineStyle(menu.connection, 'lateral_vertical')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'lateral_vertical'"
-          [class.text-blue-600]="menu.connection.lineStyle === 'lateral_vertical'"
-          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
-        >
-          <span>Lateral - Vertical</span>
-          @if (menu.connection.lineStyle === 'lateral_vertical') {
-            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-          }
-        </button>
-        <button
-          type="button"
-          (click)="onSetLineStyle(menu.connection, 'lateral_horizontal')"
-          [class.bg-blue-50]="menu.connection.lineStyle === 'lateral_horizontal'"
-          [class.text-blue-600]="menu.connection.lineStyle === 'lateral_horizontal'"
-          class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left cursor-pointer"
-        >
-          <span>Lateral - Horizontal</span>
-          @if (menu.connection.lineStyle === 'lateral_horizontal') {
-            <ng-icon name="heroCheck" class="text-xs text-blue-600"></ng-icon>
-          }
-        </button>
+        @for (style of lineStyles; track style.id) {
+          <div
+            (click)="onSetLineStyle(menu.connection, style.id)"
+            [class.bg-blue-50]="isActiveLineStyle(menu.connection, style.id)"
+            [class.text-blue-600]="isActiveLineStyle(menu.connection, style.id)"
+            class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 transition-colors text-left group cursor-pointer"
+          >
+            <div class="flex items-center gap-1.5 truncate">
+              @if (isActiveLineStyle(menu.connection, style.id)) {
+                <ng-icon name="heroCheck" class="text-xs text-blue-600 shrink-0"></ng-icon>
+              } @else {
+                <span class="w-3 shrink-0"></span>
+              }
+              <span class="truncate">{{ style.label }}</span>
+            </div>
+            <button
+              type="button"
+              (click)="$event.stopPropagation(); onSetAllLineStyle(style.id)"
+              [title]="'Cambiar todas las líneas a ' + style.label"
+              class="px-1.5 py-0.5 text-[9.5px] rounded bg-slate-100 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-300 font-medium transition-colors shrink-0 opacity-80 group-hover:opacity-100 cursor-pointer"
+            >
+              Todas
+            </button>
+          </div>
+        }
+        <div class="pt-1 mt-1 border-t border-slate-100 dark:border-slate-800 px-1">
+          <button
+            type="button"
+            (click)="onSetAllLineStyle(menu.connection.lineStyle || 'straight')"
+            class="w-full flex items-center gap-2 px-2.5 py-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors text-left cursor-pointer"
+          >
+            <ng-icon name="heroArrowPath" class="text-xs shrink-0"></ng-icon>
+            <span>Aplicar estilo actual a todas las líneas</span>
+          </button>
+        </div>
       </div>
 
       <div class="py-1">
@@ -453,6 +391,27 @@
             <span>Ajustar diagrama a pantalla</span>
           </div>
         </button>
+      </div>
+
+      <!-- Estilo de todas las líneas del lienzo -->
+      <div class="py-1">
+        <div class="px-3 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <ng-icon name="heroArrowPath" class="text-xs text-slate-400"></ng-icon>
+            <span>Estilo de todas las líneas</span>
+          </div>
+          <span class="text-[9px] text-blue-500 font-mono">Todas</span>
+        </div>
+        @for (style of lineStyles; track style.id) {
+          <button
+            type="button"
+            (click)="onSetAllLineStyle(style.id)"
+            class="w-full flex items-center justify-between px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left cursor-pointer"
+          >
+            <span class="truncate">{{ style.label }}</span>
+            <span class="text-[9.5px] text-slate-400 font-mono uppercase">Aplicar</span>
+          </button>
+        }
       </div>
     }
   </div>

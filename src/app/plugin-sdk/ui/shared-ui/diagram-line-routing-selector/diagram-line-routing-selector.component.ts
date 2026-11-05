@@ -1,12 +1,19 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TranslationService } from '../../../../core/i18n/index';
+import { NgIconComponent, provideIcons } from '@ng-icons/core';
+import { heroArrowPath } from '@ng-icons/heroicons/outline';
+import { TranslationService, TranslatePipe } from '../../../../core/i18n/index';
 import { UmlLineStyle, UML_LINE_STYLES, UmlLineStyleItem } from '../../../../core/models/diagram.model';
 
 @Component({
   selector: 'app-diagram-line-routing-selector',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, NgIconComponent],
+  viewProviders: [
+    provideIcons({
+      heroArrowPath,
+    }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './diagram-line-routing-selector.component.html',
 })
@@ -16,6 +23,7 @@ export class DiagramLineRoutingSelectorComponent {
 
   @Input() selectedStyle: UmlLineStyle = 'orthogonal_square';
   @Output() styleChange = new EventEmitter<UmlLineStyle>();
+  @Output() applyToAll = new EventEmitter<UmlLineStyle>();
 
   /**
    * Obtiene el nombre traducido del estilo de trazado para las opciones del selector.
@@ -24,19 +32,34 @@ export class DiagramLineRoutingSelectorComponent {
    * @returns Nombre localizado del estilo.
    */
   getLineStyleLabel(styleId: string, fallback: string): string {
-    const key = `editor.toolbox.${styleId}`;
-    const translated = this.i18n.translate(key);
-    return translated !== key ? translated : fallback;
+    const toolboxKey = `editor.toolbox.${styleId}`;
+    const translatedToolbox = this.i18n.translate(toolboxKey);
+    if (translatedToolbox !== toolboxKey) return translatedToolbox;
+
+    const sidebarKey = `editor.sidebar.${styleId}`;
+    const translatedSidebar = this.i18n.translate(sidebarKey);
+    return translatedSidebar !== sidebarKey ? translatedSidebar : fallback;
   }
 
   /**
-   * Emite el cambio en el estilo de trazado seleccionado al modificarse el dropdown.
+   * Emite el cambio en el estilo de trazado seleccionado al modificarse el dropdown
+   * y aplica el cambio a todas las conexiones del diagrama.
    * @param event Evento change del elemento select.
    */
   onChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
     if (select && select.value) {
-      this.styleChange.emit(select.value as UmlLineStyle);
+      const style = select.value as UmlLineStyle;
+      this.selectedStyle = style;
+      this.styleChange.emit(style);
+      this.applyToAll.emit(style);
     }
+  }
+
+  /**
+   * Fuerza la aplicación del estilo actualmente seleccionado a todas las líneas del diagrama.
+   */
+  onApplyToAll(): void {
+    this.applyToAll.emit(this.selectedStyle);
   }
 }
