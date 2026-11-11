@@ -189,7 +189,7 @@ export const es = {
   "offline": "No disponible",
   "savedContext": "La IA usa el diagrama guardado y la conversación compartida.",
   "remove": "Quitar",
-  "mediaCloud": "Los adjuntos y sus respuestas se procesan con Gemini, aunque esté seleccionado Qwen. El adjunto se comparte según el ámbito del chat.",
+  "mediaCloud": "Las imágenes se analizan con el modelo seleccionado. Con Qwen, Gemini transcribe el audio y Qwen responde al texto. Los adjuntos se comparten según el ámbito del chat.",
   "message": "Mensaje",
   "placeholder": "Escribe al equipo o consulta a la IA…",
   "paste": "Pegar",

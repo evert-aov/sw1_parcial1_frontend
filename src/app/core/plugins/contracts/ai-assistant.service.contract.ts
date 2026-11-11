@@ -71,7 +71,7 @@ export interface SpeechPlayback { audioBase64: string; mimeType: string; cues: S
 export interface ChatModels {
   defaultProvider: ChatProvider;
   mediaProvider: 'vertex';
-  models: { id: string; provider: ChatProvider; available: boolean; inputs: string[]; mediaVia?: string }[];
+  models: { id: string; provider: ChatProvider; available: boolean; inputs: string[]; audioVia?: string }[];
 }
 
 export interface SuggestionFinding {

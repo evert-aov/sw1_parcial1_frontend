@@ -133,7 +133,9 @@ El compositor reúne:
 
 La revisión y aplicación de propuestas conserva los permisos y estados existentes.
 En Grupal, los mensajes sin invocación se comparten sin respuesta de Kanon. Personal usa un
-historial privado aislado. Los adjuntos y sus respuestas usan Gemini aunque esté seleccionado Qwen.
+historial privado aislado. El selector se respeta al enviar adjuntos: Qwen3.8 analiza imágenes
+Base64; los clips se transcriben con Gemini y Qwen responde a su texto. Con Gemini seleccionado
+se conserva el procesamiento del medio original. Las llamadas Live siguen usando Google.
 Los textos nuevos se encuentran en los diccionarios `es.ts` y `en.ts`.
 
 El sidebar izquierdo permite ocultar toolbox/explorador con su botón de cierre o al pulsar

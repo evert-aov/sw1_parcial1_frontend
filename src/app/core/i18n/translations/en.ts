@@ -189,7 +189,7 @@ export const en = {
   "offline": "Unavailable",
   "savedContext": "AI uses the saved diagram and the shared conversation.",
   "remove": "Remove",
-  "mediaCloud": "Attachments and their replies are processed by Gemini, even when Qwen is selected. Attachments follow the chat sharing scope.",
+  "mediaCloud": "Images are analyzed by the selected model. With Qwen, Gemini transcribes audio and Qwen answers the text. Attachments follow the chat sharing scope.",
   "message": "Message",
   "placeholder": "Write to your team or ask AI…",
   "paste": "Paste",

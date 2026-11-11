@@ -485,7 +485,7 @@ export class AiAssistantPanelComponent implements OnDestroy {
     const activeScope = this.state.scope();
     const sent = await this.state.send({
       content,
-      provider: attachment ? 'vertex' : this.provider(),
+      provider: this.provider(),
       language: this.i18n.currentLang(),
       ...(activeScope === 'personal' ? { scope: 'personal' } : {}),
       ...(attachment ? { attachment } : {}),

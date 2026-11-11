@@ -154,6 +154,22 @@ describe('Assistant panel reactive lifecycle & Kanon dual chats', () => {
     expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
   });
 
+  it.each(['image', 'audio'] as const)('preserves Qwen selection when sending %s', async (kind) => {
+    fixture.detectChanges();
+    await Promise.resolve();
+    const panel = fixture.componentInstance;
+    panel.provider.set('ollama');
+    panel.prompt.set('@Kanon explain');
+    const attachment = { kind, data: 'YWJj', mimeType: kind === 'image' ? 'image/png' : 'audio/webm', name: 'test' };
+    panel.media.attachment.set(attachment);
+    const send = vi.spyOn(panel.state, 'send').mockResolvedValue(true);
+
+    await panel.send();
+
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ provider: 'ollama', attachment }));
+  });
+
   it('preserves the draft and media when conversation signals change', async () => {
     fixture.detectChanges();
     await Promise.resolve();
@@ -296,7 +312,7 @@ describe('Assistant panel reactive lifecycle & Kanon dual chats', () => {
         defaultProvider: 'ollama',
         mediaProvider: 'vertex',
         models: [
-          { id: 'qwen2.5-coder:14b', provider: 'ollama', available: false, inputs: ['text'] },
+          { id: 'qwen3.8:latest', provider: 'ollama', available: false, inputs: ['text'] },
           { id: 'gemini-2.5-flash', provider: 'vertex', available: true, inputs: ['text', 'image'] },
         ],
       }),

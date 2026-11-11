@@ -13,7 +13,7 @@ describe('Group conversation API adapter', () => {
   });
 
   it('unwraps capabilities from the authenticated product API', async () => {
-    const models = { defaultProvider: 'ollama', models: [{ provider: 'ollama', id: 'qwen2.5-coder:14b' }] };
+    const models = { defaultProvider: 'ollama', models: [{ provider: 'ollama', id: 'qwen3.8:latest' }] };
     http.get.mockReturnValue(of({ data: models }));
     expect(await firstValueFrom(service.getAvailableModels())).toEqual(models);
     expect(http.get).toHaveBeenCalledWith('/api/conversations/models');
