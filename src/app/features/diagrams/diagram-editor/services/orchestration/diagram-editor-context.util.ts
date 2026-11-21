@@ -99,7 +99,10 @@ export class DiagramEditorContextUtil {
       editor.route.queryParams.subscribe((params) => {
         editor.tabManager.handleRouteQueryParams(params, {
           userId: editor.authService.currentUser()?.id,
-          setCurrentProjectId: (id: string) => editor.currentProjectId.set(id),
+          setCurrentProjectId: (id: string) => {
+            editor.currentProjectId.set(id);
+            editor.collabCoordinator.joinProject(id);
+          },
           setCurrentDiagramId: (id: string) => editor.currentDiagramId.set(id),
           setCurrentDiagramName: (name: string) => editor.currentDiagramName.set(name),
           setCurrentProject: (proj: any) => editor.currentProject.set(proj),
@@ -168,9 +171,37 @@ export class DiagramEditorContextUtil {
         onDocumentInvalidated: (diagramId) => {
           if (diagramId === editor.currentDiagramId() && !editor.hasUnsavedChanges()) editor.loadDiagram(diagramId);
         },
+        onProjectDiagramsInvalidated: (event) => {
+          const projId = editor.currentProjectId();
+          if (!projId || event.projectId !== projId) return;
+          editor.diagramService.loadDiagramsByProject(projId).subscribe({
+            next: (diagrams) => {
+              if (event.action === 'deleted') {
+                const updatedTabs = editor.tabManager.openTabs().filter((t) => t.id !== event.diagramId);
+                editor.tabManager.openTabs.set(updatedTabs);
+                if (editor.currentDiagramId() === event.diagramId) {
+                  const nextId = updatedTabs[0]?.id || diagrams?.[0]?.id || null;
+                  if (nextId) {
+                    editor.selectDiagram(nextId);
+                  } else {
+                    editor.currentDiagramId.set(null);
+                    editor.currentDiagramName.set('');
+                    editor.nodes.set([]);
+                    editor.connections.set([]);
+                    editor.collabCoordinator.leaveRoom();
+                  }
+                }
+              }
+              editor.cdr.markForCheck();
+            },
+            error: () => {},
+          });
+        },
         onReconnected: () => {
           const curId = editor.currentDiagramId();
           if (curId) editor.loadDiagram(curId);
+          const projId = editor.currentProjectId();
+          if (projId) editor.diagramService.loadDiagramsByProject(projId).subscribe({ error: () => {} });
         },
       }),
     );
@@ -206,10 +237,16 @@ export class DiagramEditorContextUtil {
         editor.connections.set(resolved.connections);
         editor.historyService.clear();
         editor.selectionService.clearSelection();
+        if (diagram.projectId) {
+          editor.collabCoordinator.joinProject(diagram.projectId);
+        }
         editor.persistenceService.syncProjectInfo(diagram.projectId, {
           hasCurrentProject: !!editor.currentProject(),
           projectDiagramsCount: editor.projectDiagrams().length,
-          setCurrentProjectId: (pid: string) => editor.currentProjectId.set(pid),
+          setCurrentProjectId: (pid: string) => {
+            editor.currentProjectId.set(pid);
+            editor.collabCoordinator.joinProject(pid);
+          },
           fetchProject: (pid: string) => editor.projectService.getProject(pid),
           fetchProjectDiagrams: (pid: string) => editor.diagramService.loadDiagramsByProject(pid),
           onProjectLoaded: (proj: any) => {

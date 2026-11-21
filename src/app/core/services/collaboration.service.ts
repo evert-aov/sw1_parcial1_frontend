@@ -28,6 +28,12 @@ export interface NodeLock {
   color: string;
 }
 
+export interface ProjectDiagramsInvalidatedEvent {
+  projectId: string;
+  action: 'created' | 'deleted';
+  diagramId: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -39,6 +45,7 @@ export class CollaborationService {
   readonly isConnected = signal<boolean>(false);
   readonly activeRoomCode = signal<string | null>(null);
   readonly currentDiagramId = signal<string | null>(null);
+  readonly currentProjectId = signal<string | null>(null);
   readonly myColor = signal<string>('#3B82F6');
   readonly collaborators = signal<Collaborator[]>([]);
   readonly remoteCursors = signal<RemoteCursor[]>([]);
@@ -57,6 +64,7 @@ export class CollaborationService {
   readonly nodeLockRejected$ = new Subject<{ nodeId: string; lockedBy: NodeLock }>();
   readonly onConnect$ = new Subject<void>();
   readonly documentInvalidated$ = new Subject<string>();
+  readonly projectDiagramsInvalidated$ = new Subject<ProjectDiagramsInvalidatedEvent>();
   readonly lastServerSave$ = new Subject<{ diagramId: string; savedAt: string }>();
 
   // Control de frecuencia de cursores y drag colaborativo
@@ -76,6 +84,13 @@ export class CollaborationService {
       if (stored) return JSON.parse(stored);
     } catch {}
     return null;
+  }
+
+  /**
+   * Devuelve el identificador del socket activo para excluir ecos propios en guardados HTTP.
+   */
+  getSocketId(): string | null {
+    return this.socket?.id ?? null;
   }
 
   /**
@@ -99,6 +114,10 @@ export class CollaborationService {
 
     this.socket.on('connect', () => {
       this.isConnected.set(true);
+      const projectId = this.currentProjectId();
+      if (projectId) {
+        this.emitJoinProject(projectId);
+      }
       const diagramId = this.currentDiagramId();
       if (diagramId) {
         this.emitJoinRoom(diagramId);
@@ -205,6 +224,48 @@ export class CollaborationService {
     this.socket.on('document_invalidated', (data: { diagramId: string }) => {
       if (data.diagramId === this.currentDiagramId()) this.documentInvalidated$.next(data.diagramId);
     });
+
+    this.socket.on('project_diagrams_invalidated', (data: ProjectDiagramsInvalidatedEvent) => {
+      if (data?.projectId && data.projectId === this.currentProjectId()) {
+        this.projectDiagramsInvalidated$.next(data);
+      }
+    });
+  }
+
+  /**
+   * Conecta y se une a la sala de notificaciones del proyecto para refrescar su catálogo de diagramas.
+   * @param projectId Identificador del proyecto activo.
+   */
+  joinProject(projectId: string): void {
+    if (!projectId) return;
+    const prevProjectId = this.currentProjectId();
+    if (prevProjectId === projectId && this.socket?.connected) {
+      return;
+    }
+    if (prevProjectId && prevProjectId !== projectId && this.socket?.connected) {
+      this.socket.emit('leave_project', { projectId: prevProjectId });
+    }
+    this.currentProjectId.set(projectId);
+    this.connect();
+
+    if (this.socket && this.socket.connected) {
+      this.emitJoinProject(projectId);
+    }
+  }
+
+  /**
+   * Abandona la sala de notificaciones del proyecto activo.
+   */
+  leaveProject(): void {
+    const projectId = this.currentProjectId();
+    if (projectId && this.socket?.connected) {
+      this.socket.emit('leave_project', { projectId });
+    }
+    this.currentProjectId.set(null);
+  }
+
+  private emitJoinProject(projectId: string): void {
+    this.socket?.emit('join_project', { projectId });
   }
 
   /**
@@ -433,6 +494,7 @@ export class CollaborationService {
   disconnect(): void {
     this.lastNodeDragSent.clear();
     this.leaveRoom();
+    this.leaveProject();
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;

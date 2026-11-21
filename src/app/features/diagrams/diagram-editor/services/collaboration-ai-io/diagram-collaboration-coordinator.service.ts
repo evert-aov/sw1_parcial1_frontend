@@ -1,6 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { CollaborationService, NodeLock } from '../../../../../core/services/collaboration.service';
+import {
+  CollaborationService,
+  NodeLock,
+  ProjectDiagramsInvalidatedEvent,
+} from '../../../../../core/services/collaboration.service';
 import { AuthService } from '../../../../../core/services/auth.service';
 import {
   UmlClassNode,
@@ -15,6 +19,7 @@ export interface DiagramCollaborationActions {
   onServerSave: (data: { diagramId: string; savedAt: string }) => void;
   onReconnected: () => void;
   onDocumentInvalidated?: (diagramId: string) => void;
+  onProjectDiagramsInvalidated?: (event: ProjectDiagramsInvalidatedEvent) => void;
 }
 
 @Injectable({
@@ -89,6 +94,13 @@ export class DiagramCollaborationCoordinatorService {
     if (this.collabService.documentInvalidated$) {
       subs.push(this.collabService.documentInvalidated$.subscribe(id => actions.onDocumentInvalidated?.(id)));
     }
+    if (this.collabService.projectDiagramsInvalidated$) {
+      subs.push(
+        this.collabService.projectDiagramsInvalidated$.subscribe((event) =>
+          actions.onProjectDiagramsInvalidated?.(event),
+        ),
+      );
+    }
     return subs;
   }
 
@@ -162,6 +174,22 @@ export class DiagramCollaborationCoordinatorService {
   joinRoom(diagramId: string): void {
     if (!diagramId) return;
     this.collabService?.joinRoom(diagramId);
+  }
+
+  /**
+   * Suscribe la sesión colaborativa a eventos de catálogo (creación/eliminación de diagramas) del proyecto.
+   * @param projectId Identificador del proyecto.
+   */
+  joinProject(projectId: string): void {
+    if (!projectId) return;
+    this.collabService?.joinProject(projectId);
+  }
+
+  /**
+   * Abandona la sala de eventos del proyecto activo.
+   */
+  leaveProject(): void {
+    this.collabService?.leaveProject();
   }
 
   /**

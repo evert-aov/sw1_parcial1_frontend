@@ -10,12 +10,14 @@ import {
 } from '../models/diagram.model';
 import { ApiResponse } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
+import { CollaborationService } from './collaboration.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DiagramService {
   private readonly http = inject(HttpClient);
+  private readonly collaboration = inject(CollaborationService, { optional: true });
   private readonly apiUrl = `${environment.apiUrl}/diagrams`;
 
   // Signals para estado reactivo
@@ -108,7 +110,9 @@ export class DiagramService {
    */
   saveAst(diagramId: string, payload: SaveDiagramAstRequest): Observable<DiagramDto> {
     this.isSaving.set(true);
-    return this.http.put<ApiResponse<DiagramDto>>(`${this.apiUrl}/${diagramId}/ast`, payload).pipe(
+    const socketId = this.collaboration?.getSocketId();
+    const options = socketId ? { headers: { 'X-Collaboration-Socket-Id': socketId } } : {};
+    return this.http.put<ApiResponse<DiagramDto>>(`${this.apiUrl}/${diagramId}/ast`, payload, options).pipe(
       map((res) => res.data),
       tap((saved) => {
         this.currentDiagram.set(saved);
