@@ -12,6 +12,7 @@ export * from './component-svg.component';
 export * from './deployment-node-svg.component';
 export * from './boundary-box-svg.component';
 export * from './note-svg.component';
+export * from './combined-fragment-svg.component';
 
 import { ActorSvgComponent } from './actor-svg.component';
 import { BoundarySvgComponent } from './boundary-svg.component';
@@ -27,6 +28,7 @@ import { ComponentSvgComponent } from './component-svg.component';
 import { DeploymentNodeSvgComponent } from './deployment-node-svg.component';
 import { BoundaryBoxSvgComponent } from './boundary-box-svg.component';
 import { NoteSvgComponent } from './note-svg.component';
+import { CombinedFragmentSvgComponent } from './combined-fragment-svg.component';
 
 /**
  * Array containing all UML 2.5 SVG standalone components for convenient bulk import:
@@ -47,4 +49,5 @@ export const UML_SVG_COMPONENTS = [
   DeploymentNodeSvgComponent,
   BoundaryBoxSvgComponent,
   NoteSvgComponent,
+  CombinedFragmentSvgComponent,
 ] as const;

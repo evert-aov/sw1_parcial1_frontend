@@ -32,6 +32,11 @@ import {
   UML_PREDEFINED_RETURN_TYPES,
   UML_PREDEFINED_STEREOTYPES,
 } from '../../../core/models/diagram.model';
+import {
+  COMBINED_FRAGMENT_OPERATORS,
+  parseCombinedFragment,
+  serializeCombinedFragment,
+} from '../../../plugin-sdk/combined-fragment.util';
 
 export interface ColorPreset {
   hex: string;
@@ -70,8 +75,11 @@ export class EditNodeModalComponent {
   readonly predefinedTypes = UML_PREDEFINED_TYPES;
   readonly predefinedReturnTypes = UML_PREDEFINED_RETURN_TYPES;
   readonly predefinedStereotypes = UML_PREDEFINED_STEREOTYPES;
+  readonly combinedFragmentOperators = COMBINED_FRAGMENT_OPERATORS;
 
   readonly editingNode = signal<UmlClassNode | null>(null);
+  readonly fragmentOperator = signal<string>('alt');
+  readonly fragmentOperands = signal<string[]>(['[condición]', '[else]']);
   readonly activeTab = signal<'general' | 'style'>('general');
   protected readonly Math = Math;
 
@@ -105,7 +113,7 @@ export class EditNodeModalComponent {
     const n = this.editingNode();
     if (!n) return false;
     const nt = (n.nodeType || '').toLowerCase().trim();
-    if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline' || nt === 'note') return false;
+    if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline' || nt === 'note' || nt === 'combined_fragment') return false;
 
     // En diagramas de clase estándar (class / logical), no se permite estereotipo a las clases
     const dt = (this.activeDiagramType() || '').toLowerCase().trim();
@@ -193,6 +201,47 @@ export class EditNodeModalComponent {
     }
   }
 
+  /** Sincroniza el operador y operandos del fragmento combinado en `editingNode.name`, preservando divisores. */
+  private syncCombinedFragmentName(operator: string, operands: string[]): void {
+    const curr = this.editingNode();
+    if (!curr) return;
+    const prev = parseCombinedFragment(curr.name);
+    const dividers =
+      prev.dividers.length === Math.max(0, operands.length - 1) ? prev.dividers : undefined;
+    curr.name = serializeCombinedFragment(operator, operands, dividers);
+    this.editingNode.set({ ...curr });
+  }
+
+  /** Actualiza el operador UML del fragmento combinado (`alt`, `opt`, `loop`, etc.). */
+  onFragmentOperatorChange(operator: string): void {
+    this.fragmentOperator.set(operator);
+    this.syncCombinedFragmentName(operator, this.fragmentOperands());
+  }
+
+  /** Actualiza la condición de guarda de un operando específico del fragmento combinado. */
+  onFragmentOperandChange(index: number, value: string): void {
+    const next = [...this.fragmentOperands()];
+    next[index] = value;
+    this.fragmentOperands.set(next);
+    this.syncCombinedFragmentName(this.fragmentOperator(), next);
+  }
+
+  /** Agrega un nuevo compartimento/operando al fragmento combinado. */
+  addFragmentOperand(): void {
+    const next = [...this.fragmentOperands(), '[else]'];
+    this.fragmentOperands.set(next);
+    this.syncCombinedFragmentName(this.fragmentOperator(), next);
+  }
+
+  /** Elimina un operando del fragmento combinado conservando al menos uno. */
+  removeFragmentOperand(index: number): void {
+    const current = this.fragmentOperands();
+    if (current.length <= 1) return;
+    const next = current.filter((_, idx) => idx !== index);
+    this.fragmentOperands.set(next);
+    this.syncCombinedFragmentName(this.fragmentOperator(), next);
+  }
+
   /**
    * Obtiene el color de relleno por defecto correspondiente al tipo de nodo.
    */
@@ -201,7 +250,7 @@ export class EditNodeModalComponent {
     if (nt === 'lifeline' || nt === 'boundary' || nt === 'control' || nt === 'entity') return '#DDF4F5';
     if (nt === 'actor') return '#FEF2DD';
     if (nt === 'use_case') return '#E5F2FE';
-    if (nt === 'package') return '#FFFFFF';
+    if (nt === 'package' || nt === 'combined_fragment') return '#FFFFFF';
     if (nt === 'note') return '#FEF9C3';
     return '#FDFAF3';
   }
@@ -249,7 +298,7 @@ export class EditNodeModalComponent {
           // Normalización estricta de estereotipos según tipo de nodo y diagrama
           const nt = (cloned.nodeType || '').toLowerCase().trim();
           const dt = (this.activeDiagramType() || '').toLowerCase().trim();
-          if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline' || nt === 'note') {
+          if (nt === 'actor' || nt === 'use_case' || nt === 'lifeline' || nt === 'note' || nt === 'combined_fragment') {
             cloned.stereotype = null;
           } else if (dt === 'communication' || dt === 'collaboration') {
             if (nt === 'boundary' || nt === 'ui') cloned.stereotype = 'boundary';
@@ -273,6 +322,11 @@ export class EditNodeModalComponent {
           }
 
           this.editingNode.set(cloned);
+          if (nt === 'combined_fragment') {
+            const parsed = parseCombinedFragment(cloned.name);
+            this.fragmentOperator.set(parsed.operator);
+            this.fragmentOperands.set([...parsed.operands]);
+          }
           this.activeTab.set('general');
 
           const hasCustom = !!cloned.isCustomSize || (!!cloned.customWidth && cloned.customWidth > 0);

@@ -142,6 +142,69 @@
                   {{ 'editor.nodeModal.noteCodegenNotice' | translate }}
                 </p>
               </div>
+            } @else if (editingNode()!.nodeType === 'combined_fragment') {
+              <div class="space-y-3.5">
+                <div>
+                  <label
+                    class="block font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px] mb-1.5"
+                  >
+                    {{ 'editor.nodeModal.fragmentOperatorLabel' | translate }}
+                  </label>
+                  <select
+                    [ngModel]="fragmentOperator()"
+                    (ngModelChange)="onFragmentOperatorChange($event)"
+                    class="w-full px-3.5 py-2 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-xs transition-all font-mono"
+                  >
+                    @for (op of combinedFragmentOperators; track op) {
+                      <option [value]="op">{{ op }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label
+                      class="font-semibold text-slate-700 dark:text-slate-300 uppercase text-[11px]"
+                    >
+                      {{ 'editor.nodeModal.fragmentOperandsLabel' | translate }}
+                    </label>
+                    <button
+                      type="button"
+                      (click)="addFragmentOperand()"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-[11px] font-semibold transition-colors cursor-pointer"
+                    >
+                      <ng-icon name="heroPlus" class="text-xs"></ng-icon>
+                      <span>{{ 'editor.nodeModal.addFragmentOperand' | translate }}</span>
+                    </button>
+                  </div>
+                  <div class="space-y-2">
+                    @for (guard of fragmentOperands(); track $index) {
+                      <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-mono text-slate-400 w-5 text-right shrink-0">
+                          #{{ $index + 1 }}
+                        </span>
+                        <input
+                          type="text"
+                          [ngModel]="guard"
+                          (ngModelChange)="onFragmentOperandChange($index, $event)"
+                          [placeholder]="$index === 0 ? '[usuario existe]' : '[else]'"
+                          class="flex-1 px-3 py-1.5 bg-slate-50/70 dark:bg-[#12162B] border border-slate-200 dark:border-slate-700/80 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono text-xs transition-all"
+                        />
+                        @if (fragmentOperands().length > 1) {
+                          <button
+                            type="button"
+                            (click)="removeFragmentOperand($index)"
+                            class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                            [title]="'common.delete' | translate"
+                          >
+                            <ng-icon name="heroTrash" class="text-xs"></ng-icon>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
             } @else {
               <div>
                 <label

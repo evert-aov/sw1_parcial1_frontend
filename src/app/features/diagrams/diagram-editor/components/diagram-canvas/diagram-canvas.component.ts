@@ -75,6 +75,12 @@ import {
   DiagramSequenceActivationService,
 } from '../../services/index';
 import { CalculateLateralLineData, LATERAL_CONNECTION_TYPE } from '../../services/spatial-engine/lateral-connection.builder';
+import {
+  CalculateSequenceLineData,
+  CalculateSequenceSelfLineData,
+  SEQUENCE_CONNECTION_TYPE,
+  SEQUENCE_SELF_CONNECTION_TYPE,
+} from '../../services/spatial-engine/sequence-connection.builder';
 import { NodeMetricsService, computeBoardHeight, computeBoardWidth } from '../../utils/node-metrics.util';
 import { ConnectionCascadeUtil } from '../../../../../core/plugins/contracts/connection-cascade.util.contract';
 
@@ -112,6 +118,8 @@ export interface DiagramCanvasViewState {
         'tree_horizontal': new CalculateSegmentLineData(),
         'tree_vertical': new CalculateSegmentLineData(),
         [LATERAL_CONNECTION_TYPE]: new CalculateLateralLineData(),
+        [SEQUENCE_CONNECTION_TYPE]: new CalculateSequenceLineData(),
+        [SEQUENCE_SELF_CONNECTION_TYPE]: new CalculateSequenceSelfLineData(),
         'orthogonal': new CalculateSegmentLineData(),
         'curved': new CalculateBezierCurveData(),
         'smooth': new CalculateAdaptiveCurveData(),
@@ -408,14 +416,30 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
     return this.geometryService.getConnSide(connectorId, defaultSide);
   }
 
+  /** Comprueba si una conexión de secuencia es un automensaje (sobre la misma línea de vida). */
+  isSequenceSelfConnection(conn: UmlConnection): boolean {
+    return this.isSequenceConnection(conn) && (this.isRecursiveConn(conn) || conn.type === 'self');
+  }
+
   /**
-   * Resuelve el tipo de trazado de Foblex ('segment', 'straight', 'bezier', 'adaptive-curve') para una conexión existente.
+   * Resuelve el tipo de trazado de Foblex ('segment', 'straight', 'bezier', 'adaptive-curve', 'lateral', 'sequence', 'sequence_self') para una conexión existente.
    * @param conn Conexión evaluada.
    * @returns Tipo de renderizado de la arista.
    */
-  getConnectionType(conn: UmlConnection): 'segment' | 'straight' | 'bezier' | 'adaptive-curve' | typeof LATERAL_CONNECTION_TYPE {
-    if (this.isSequenceConnection(conn) && !this.isRecursiveConn(conn)) {
-      return 'straight';
+  getConnectionType(
+    conn: UmlConnection,
+  ):
+    | 'segment'
+    | 'straight'
+    | 'bezier'
+    | 'adaptive-curve'
+    | typeof LATERAL_CONNECTION_TYPE
+    | typeof SEQUENCE_CONNECTION_TYPE
+    | typeof SEQUENCE_SELF_CONNECTION_TYPE {
+    if (this.isSequenceConnection(conn)) {
+      return this.isSequenceSelfConnection(conn)
+        ? SEQUENCE_SELF_CONNECTION_TYPE
+        : SEQUENCE_CONNECTION_TYPE;
     }
     const style = sanitizeLineStyle(conn?.lineStyle, this.defaultLineStyle() || 'orthogonal_square');
     switch (style) {
@@ -541,6 +565,12 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
    * @returns Lado de salida de la arista.
    */
   getConnectionOutputSide(conn: UmlConnection): 'default' | 'top' | 'right' | 'bottom' | 'left' {
+    if (this.isSequenceConnection(conn)) {
+      if (this.isSequenceSelfConnection(conn)) {
+        return 'right';
+      }
+      return this.geometryService.getTreeHorizontalSourceSide(conn, this.nodes());
+    }
     if (this.isRecursiveConn(conn)) {
       return this.getConnSide(conn.sourceId, 'top');
     }
@@ -569,6 +599,12 @@ export class DiagramCanvasComponent implements DiagramExportCanvasTarget {
    * @returns Lado de entrada de la arista.
    */
   getConnectionInputSide(conn: UmlConnection): 'default' | 'top' | 'right' | 'bottom' | 'left' {
+    if (this.isSequenceConnection(conn)) {
+      if (this.isSequenceSelfConnection(conn)) {
+        return 'right';
+      }
+      return this.geometryService.getTreeHorizontalTargetSide(conn, this.nodes());
+    }
     if (this.isRecursiveConn(conn)) {
       return this.getConnSide(conn.targetId, 'right');
     }

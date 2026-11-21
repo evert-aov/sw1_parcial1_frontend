@@ -43,7 +43,7 @@ export const actorPlugin: NodePlugin = {
     zIndex: [20, 25],
     cssClass: 'f-node-actor',
     transparent: true,
-    lockY: false,
+    lockY: (_node, activeDiagramType) => activeDiagramType === DiagramType.SEQUENCE,
     externalLabel: true,
   },
   tools: [

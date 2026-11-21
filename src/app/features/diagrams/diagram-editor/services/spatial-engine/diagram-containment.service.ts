@@ -153,7 +153,7 @@ export class DiagramContainmentService {
     const curPosY = Number.isFinite(node.position?.y) ? node.position.y : 50;
     const validX = Number.isFinite(rawPosX) ? Math.round(rawPosX) : curPosX;
     const validY = Number.isFinite(rawPosY) ? Math.round(rawPosY) : curPosY;
-    const isSequenceNode = activeDiagramType === DiagramType.SEQUENCE || this.nodePlugins.forNode(node)?.geometry.lockY;
+    const isSequenceNode = this.isNodeYLocked(node, activeDiagramType);
     let targetPos = { x: validX, y: isSequenceNode ? 50 : validY };
 
     if (!this.isDraggingNode) {
@@ -186,7 +186,7 @@ export class DiagramContainmentService {
         if (selectedNodeIds.size > 1 && selectedNodeIds.has(node.id)) {
           for (const other of nodes) {
             if (other.id !== node.id && selectedNodeIds.has(other.id) && !other.isAnchor) {
-              const otherIsSeq = activeDiagramType === DiagramType.SEQUENCE || this.nodePlugins.forNode(other)?.geometry.lockY;
+              const otherIsSeq = this.isNodeYLocked(other, activeDiagramType);
               const oPosX = Number.isFinite(other.position?.x) ? other.position.x : 50;
               const oPosY = Number.isFinite(other.position?.y) ? other.position.y : 50;
               const otherY = otherIsSeq ? 50 : Math.round(oPosY + dy);
@@ -205,7 +205,7 @@ export class DiagramContainmentService {
               !selectedNodeIds.has(other.id) &&
               !other.isAnchor
             ) {
-              const otherIsSeq = activeDiagramType === DiagramType.SEQUENCE || this.nodePlugins.forNode(other)?.geometry.lockY;
+              const otherIsSeq = this.isNodeYLocked(other, activeDiagramType);
               const oPosX = Number.isFinite(other.position?.x) ? other.position.x : 50;
               const oPosY = Number.isFinite(other.position?.y) ? other.position.y : 50;
               const otherY = otherIsSeq ? 50 : Math.round(oPosY + dy);
@@ -267,7 +267,7 @@ export class DiagramContainmentService {
     for (const item of eventNodes) {
       const node = nodeMap.get(item.id);
       if (node) {
-        const isSequenceNode = activeDiagramType === DiagramType.SEQUENCE || this.nodePlugins.forNode(node)?.geometry.lockY;
+        const isSequenceNode = this.isNodeYLocked(node, activeDiagramType);
         const curX = Number.isFinite(node.position?.x) ? node.position.x : 50;
         const curY = Number.isFinite(node.position?.y) ? node.position.y : 50;
         const targetX = Number.isFinite(item.position?.x) ? Math.round(item.position.x) : curX;
@@ -288,7 +288,7 @@ export class DiagramContainmentService {
                 if (descNode && !descNode.isAnchor) {
                   const dCurX = Number.isFinite(descNode.position?.x) ? descNode.position.x : 50;
                   const dCurY = Number.isFinite(descNode.position?.y) ? descNode.position.y : 50;
-                  const dY = (activeDiagramType === DiagramType.SEQUENCE || this.nodePlugins.forNode(descNode)?.geometry.lockY)
+                  const dY = this.isNodeYLocked(descNode, activeDiagramType)
                     ? 50
                     : Math.round(dCurY + dy);
                   descNode.position = { x: Math.round(dCurX + dx), y: dY };
@@ -302,5 +302,13 @@ export class DiagramContainmentService {
     }
 
     return { anyMoved };
+  }
+
+  /**
+   * Determina si el nodo debe mantener su coordenada Y bloqueada (p. ej. líneas de vida y actores en secuencia).
+   */
+  private isNodeYLocked(node: UmlClassNode, activeDiagramType: DiagramType): boolean {
+    const lockY = this.nodePlugins.forNode(node)?.geometry.lockY;
+    return typeof lockY === 'function' ? lockY(node, activeDiagramType) : Boolean(lockY);
   }
 }

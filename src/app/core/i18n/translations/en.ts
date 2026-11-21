@@ -224,7 +224,7 @@ export const en = {
     "failed": "Processing failed. Your message is saved."
   }
 },
-  plugins: {"unavailableNode": "Plug-in unavailable", "nodes": {"node": "Node", "class": "Class", "actor": "Actor", "use_case": "Use case", "package": "Package", "boundary_box": "Container", "boundary": "Boundary", "control": "Control", "entity": "Entity", "lifeline": "Lifeline", "component": "Component", "device": "Device", "executionEnvironment": "Execution environment", "note": "Floating note", "UI": "UI", "Controller": "Controller", "Entity": "Entity"}, "tools": {"user-guide": "User guide", "bmp-encoder": "BMP", "uml-language": "UML", "document-io": "Documents", "xmi": "XMI", "ai-assistant": "Kanon AI", "code-generation": "Code generation", "image-export": "Image export", "uml-relationships": "UML"}},
+  plugins: {"unavailableNode": "Plug-in unavailable", "nodes": {"node": "Node", "class": "Class", "actor": "Actor", "use_case": "Use case", "package": "Package", "boundary_box": "Container", "boundary": "Boundary", "control": "Control", "entity": "Entity", "lifeline": "Lifeline", "component": "Component", "device": "Device", "executionEnvironment": "Execution environment", "note": "Floating note", "combined_fragment": "Alt fragment", "UI": "UI", "Controller": "Controller", "Entity": "Entity"}, "tools": {"user-guide": "User guide", "bmp-encoder": "BMP", "uml-language": "UML", "document-io": "Documents", "xmi": "XMI", "ai-assistant": "Kanon AI", "code-generation": "Code generation", "image-export": "Image export", "uml-relationships": "UML"}},
   common: {
     appTitle: 'UML/ER Studio',
     appSubtitle: 'Enterprise Architect Suite & Spring Boot Generator',
@@ -649,6 +649,7 @@ export const en = {
         deleteNode: 'Delete node',
         deleteBoundaryBox: 'Delete grouping boundary',
         deleteNote: 'Delete floating note',
+        deleteCombinedFragment: 'Delete combined fragment',
         noteBadge: 'Note · Communication only',
         notePlaceholder: 'Write a note for your team...',
         boundaryBoxPlaceholder: 'Name or label (optional)...',
@@ -852,6 +853,9 @@ export const en = {
       title: 'Element Properties',
       editNoteTitle: 'Edit Floating Note',
       noteContentLabel: 'Note Text',
+      fragmentOperatorLabel: 'Operator (alt, opt, loop, par...)',
+      fragmentOperandsLabel: 'Operands / Guards',
+      addFragmentOperand: 'Add operand',
       noteCodegenNotice:
         'Floating notes are strictly for team communication and are ignored during code generation.',
       className: 'Element Name',

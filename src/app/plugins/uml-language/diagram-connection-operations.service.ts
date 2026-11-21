@@ -130,34 +130,33 @@ export class DiagramConnectionOperationsService {
 
     let sourceId = fOutputId;
     let targetId = fInputId;
+    let effectiveRelType: UmlRelationshipType | string = relType;
 
     if (sourceNode && targetNode) {
       if (isSeqRel || sourceId.includes('_slot_') || targetId.includes('_slot_')) {
-        if (baseSourceId === baseTargetId) {
-          sourceId = `${baseSourceId}_right`;
-          targetId = `${baseTargetId}_right`;
-        } else {
-          const sMatch = sourceId.match(/_slot_(\d+)$/);
-          const tMatch = targetId.match(/_slot_(\d+)$/);
-          const slotNum = sMatch
-            ? sMatch[1]
-            : tMatch
-            ? tMatch[1]
-            : this.layoutService.findNextAvailableSlot(connections);
-          const isSlotOccupied = this.layoutService.isSequenceSlotOccupied(
-            connections,
-            parseInt(slotNum, 10),
-            activeDiagramType,
-          );
-          if (isSlotOccupied) {
-            return {
-              errorMessage:
-                '⚠️ No se permite colocar dos mensajes en la misma posición temporal (fila colineal). Cada mensaje debe ubicarse en una posición distinta.',
-            };
-          }
-          sourceId = `${baseSourceId}_slot_${slotNum}`;
-          targetId = `${baseTargetId}_slot_${slotNum}`;
+        const sMatch = sourceId.match(/_slot_(\d+)$/);
+        const tMatch = targetId.match(/_slot_(\d+)$/);
+        const slotNum = sMatch
+          ? sMatch[1]
+          : tMatch
+          ? tMatch[1]
+          : this.layoutService.findNextAvailableSlot(connections);
+        const isSlotOccupied = this.layoutService.isSequenceSlotOccupied(
+          connections,
+          parseInt(slotNum, 10),
+          activeDiagramType,
+        );
+        if (isSlotOccupied) {
+          return {
+            errorMessage:
+              '⚠️ No se permite colocar dos mensajes en la misma posición temporal (fila colineal). Cada mensaje debe ubicarse en una posición distinta.',
+          };
         }
+        if (baseSourceId === baseTargetId) {
+          effectiveRelType = 'self';
+        }
+        sourceId = `${baseSourceId}_slot_${slotNum}`;
+        targetId = `${baseTargetId}_slot_${slotNum}`;
       } else if (baseSourceId === baseTargetId) {
         const valid = [
           `${baseSourceId}_top`, `${baseSourceId}_top_start`, `${baseSourceId}_top_end`,
@@ -197,7 +196,7 @@ export class DiagramConnectionOperationsService {
       newConnection: this.layoutService.buildNewConnection({
         sourceNode: sourceNode || ({ id: baseSourceId } as UmlClassNode),
         targetNode: targetNode || ({ id: baseTargetId } as UmlClassNode),
-        relType,
+        relType: effectiveRelType,
         sourceId,
         targetId,
         defaultLineStyle,
@@ -382,13 +381,17 @@ export class DiagramConnectionOperationsService {
     const isSeqRel = isSequenceConnectionLogic(activeRel, activeDiagramType);
     let sourceId: string;
     let targetId: string;
-    if (currentSource === targetNodeId) {
-      sourceId = isSeqRel ? `${currentSource}_right` : `${currentSource}_top`;
-      targetId = `${targetNodeId}_right`;
-    } else if (isSeqRel) {
+    let effectiveRelType: UmlRelationshipType = activeRel;
+    if (isSeqRel) {
       const nextSlot = this.layoutService.findNextAvailableSlot(connections);
       sourceId = `${currentSource}_slot_${nextSlot}`;
       targetId = `${targetNodeId}_slot_${nextSlot}`;
+      if (currentSource === targetNodeId) {
+        effectiveRelType = 'self';
+      }
+    } else if (currentSource === targetNodeId) {
+      sourceId = `${currentSource}_top`;
+      targetId = `${targetNodeId}_right`;
     } else {
       const optimal = getOptimalConnectorId(sourceNode, targetNode);
       sourceId = optimal.sourceId;
@@ -407,7 +410,7 @@ export class DiagramConnectionOperationsService {
       newConn: this.layoutService.buildNewConnection({
         sourceNode,
         targetNode,
-        relType: activeRel,
+        relType: effectiveRelType,
         sourceId,
         targetId,
         defaultLineStyle,
@@ -454,6 +457,26 @@ export class DiagramConnectionOperationsService {
     event.preventDefault();
 
     if (options.currentSource === null) {
+      if (options.activeRel === 'self' && options.activeDiagramType === DiagramType.SEQUENCE) {
+        const targetNode = options.nodes.find((n) => n.id === nodeId);
+        if (targetNode && (targetNode.nodeType === 'lifeline' || targetNode.nodeType === 'actor')) {
+          const selfResult = this.processTableClickConnection({
+            currentSource: nodeId,
+            targetNodeId: nodeId,
+            activeRel: 'self',
+            activeDiagramType: options.activeDiagramType,
+            nodes: options.nodes,
+            connections: options.connections,
+            defaultLineStyle: options.defaultLineStyle,
+            getOptimalConnectorId: options.getOptimalConnectorId,
+            generateNextSequenceMessage: options.generateNextSequenceMessage,
+          });
+          if (selfResult.newConn) {
+            options.onApplyNewConnection(selfResult.newConn, !!selfResult.isSeqRel);
+          }
+          return;
+        }
+      }
       this.lastSourceSetTimestamp = Date.now();
       options.setSourceNodeId(nodeId);
       options.onMouseMove(event);

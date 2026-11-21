@@ -317,22 +317,38 @@ export class DiagramSequenceActivationService {
       }
     }
 
+    const selfSlotsForNode = new Set<number>(
+      allSeqConns
+        .filter((sc) => sc.sourceId === node.id && (sc.targetId === node.id || sc.conn.type === 'self'))
+        .map((sc) => sc.slot),
+    );
+
     return mergedIntervals.map((inv) => {
       // Posición del centro de la flecha del mensaje en la línea discontinua vertical
       const startArrow = 157 + inv.minSlot * 50 - headerHeight;
       const endArrow = 157 + inv.maxSlot * 50 - headerHeight;
+      const startsWithSelf = selfSlotsForNode.has(inv.minSlot);
+      const endsWithSelf = selfSlotsForNode.has(inv.maxSlot);
 
       let top: number;
       let height: number;
 
       if (inv.minSlot === inv.maxSlot) {
-        // Mensaje puntual: la flecha incide exactamente en el centro de la barra
-        top = Math.max(0, startArrow - 12);
-        height = 24;
+        if (startsWithSelf) {
+          // Automensaje puntual: cubre el tramo superior (-10px) y el retorno inferior (+14px)
+          top = Math.max(0, startArrow - 14);
+          height = 34;
+        } else {
+          // Mensaje puntual: la flecha incide exactamente en el centro de la barra
+          top = Math.max(0, startArrow - 12);
+          height = 24;
+        }
       } else {
-        // Intervalo continuo: inicia 10px antes de la llamada inicial y termina 10px después del retorno/último mensaje
-        top = Math.max(0, startArrow - 10);
-        height = endArrow - startArrow + 20;
+        // Intervalo continuo: inicia antes de la llamada inicial y termina después del retorno/último mensaje
+        const topPad = startsWithSelf ? 14 : 10;
+        const bottomPad = endsWithSelf ? 20 : 10;
+        top = Math.max(0, startArrow - topPad);
+        height = endArrow - startArrow + topPad + bottomPad;
       }
 
       return {

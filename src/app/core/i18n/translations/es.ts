@@ -224,7 +224,7 @@ export const es = {
     "failed": "Falló el procesamiento. Tu mensaje está guardado."
   }
 },
-  plugins: {"unavailableNode": "Plug-in no disponible", "nodes": {"node": "Nodo", "class": "Clase", "actor": "Actor", "use_case": "Caso de uso", "package": "Paquete", "boundary_box": "Contenedor", "boundary": "Boundary", "control": "Control", "entity": "Entidad", "lifeline": "Línea de vida", "component": "Componente", "device": "Dispositivo", "executionEnvironment": "Entorno de ejecución", "note": "Nota flotante", "UI": "UI", "Controller": "Controller", "Entity": "Entity"}, "tools": {"user-guide": "Guía de usuario", "bmp-encoder": "BMP", "uml-language": "UML", "document-io": "Documentos", "xmi": "XMI", "ai-assistant": "Kanon IA", "code-generation": "Generación de código", "image-export": "Exportación de imágenes", "uml-relationships": "UML"}},
+  plugins: {"unavailableNode": "Plug-in no disponible", "nodes": {"node": "Nodo", "class": "Clase", "actor": "Actor", "use_case": "Caso de uso", "package": "Paquete", "boundary_box": "Contenedor", "boundary": "Boundary", "control": "Control", "entity": "Entidad", "lifeline": "Línea de vida", "component": "Componente", "device": "Dispositivo", "executionEnvironment": "Entorno de ejecución", "note": "Nota flotante", "combined_fragment": "Fragmento alt", "UI": "UI", "Controller": "Controller", "Entity": "Entity"}, "tools": {"user-guide": "Guía de usuario", "bmp-encoder": "BMP", "uml-language": "UML", "document-io": "Documentos", "xmi": "XMI", "ai-assistant": "Kanon IA", "code-generation": "Generación de código", "image-export": "Exportación de imágenes", "uml-relationships": "UML"}},
   common: {
     appTitle: 'UML/ER Studio',
     appSubtitle: 'Enterprise Architect Suite & Spring Boot Generator',
@@ -654,6 +654,7 @@ export const es = {
         deleteNode: 'Eliminar nodo',
         deleteBoundaryBox: 'Eliminar recuadro agrupador',
         deleteNote: 'Eliminar nota flotante',
+        deleteCombinedFragment: 'Eliminar fragmento combinado',
         noteBadge: 'Nota · Solo comunicación',
         notePlaceholder: 'Escribe una nota para el equipo...',
         boundaryBoxPlaceholder: 'Nombre o etiqueta (opcional)...',
@@ -858,6 +859,9 @@ export const es = {
       title: 'Propiedades del Elemento',
       editNoteTitle: 'Editar Nota Flotante',
       noteContentLabel: 'Texto de la Nota',
+      fragmentOperatorLabel: 'Operador (alt, opt, loop, par...)',
+      fragmentOperandsLabel: 'Operandos / Guardas',
+      addFragmentOperand: 'Agregar operando',
       noteCodegenNotice:
         'Las notas flotantes sirven únicamente para comunicación entre colaboradores y se ignoran al generar código.',
       className: 'Nombre del Elemento',

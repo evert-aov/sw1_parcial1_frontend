@@ -20,6 +20,7 @@ const NON_CLASS_COLORED_NODE_TYPES = [
   'use_case',
   'package',
   'note',
+  'combined_fragment',
 ] as const;
 
 export const EXPLICIT_SIZE_NODE_TYPES = [
@@ -30,6 +31,7 @@ export const EXPLICIT_SIZE_NODE_TYPES = [
   'boundary_box',
   'package',
   'note',
+  'combined_fragment',
 ] as const;
 
 /**
@@ -82,6 +84,7 @@ export class UmlNodeNormalizerUtil {
       return (
         type === 'actor' ||
         type === 'lifeline' ||
+        type === 'combined_fragment' ||
         type === 'class' ||
         type === 'boundary' ||
         type === 'control' ||
@@ -136,6 +139,13 @@ export class UmlNodeNormalizerUtil {
     }
     if (nodeType === 'note' || n.id?.startsWith('note_')) {
       return 'note';
+    }
+    if (
+      nodeType === 'combined_fragment' ||
+      n.id?.startsWith('combined_fragment_') ||
+      n.id?.startsWith('fragment_')
+    ) {
+      return 'combined_fragment';
     }
     if (nodeType === 'boundary_box' || n.id?.startsWith('boundary_box_') || n.id?.startsWith('bbox_')) {
       return 'boundary_box';
@@ -211,6 +221,8 @@ export class UmlNodeNormalizerUtil {
         return { defaultWidth: 200, defaultHeight: 120 };
       case 'note':
         return { defaultWidth: 195, defaultHeight: 115 };
+      case 'combined_fragment':
+        return { defaultWidth: 340, defaultHeight: 190 };
       case 'component':
         return { defaultWidth: 190, defaultHeight: 70 };
       case 'device':

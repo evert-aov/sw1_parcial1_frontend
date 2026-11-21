@@ -665,6 +665,10 @@
   white-space: nowrap;
 }
 
+.uml-sequence-self-message-badge {
+  transform: translateX(calc(50% + 10px));
+}
+
 .uml-sequence-slot {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
 }

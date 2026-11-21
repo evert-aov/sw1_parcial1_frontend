@@ -5,6 +5,7 @@ import { DiagramType, UmlClassNode, UmlConnection, UmlLineStyle, UmlMessage } fr
 import { DiagramSequenceActivationService } from '../../core/plugins/contracts/diagram-sequence-activation.service.contract';
 import { ToastService } from '../../core/services/toast.service';
 import { BmpEncoder } from '../../core/plugins/contracts/bmp-encoder.contract';
+import { parseCombinedFragment } from '../../plugin-sdk/combined-fragment.util';
 
 @Injectable({
   providedIn: 'root',
@@ -1511,6 +1512,7 @@ export class BmpExportService {
       y: number;
       isForward: boolean;
       isReply: boolean;
+      isSelf: boolean;
       color: string;
       parts: { text: string; opacity: number }[];
     }[];
@@ -1523,6 +1525,7 @@ export class BmpExportService {
       y: number;
       isForward: boolean;
       isReply: boolean;
+      isSelf: boolean;
       color: string;
       parts: { text: string; opacity: number }[];
     }[] = [];
@@ -1535,6 +1538,7 @@ export class BmpExportService {
     }
 
     for (const node of nodes) {
+      if (node.nodeType === 'combined_fragment' || node.nodeType === 'note') continue;
       const nInfo = nodeMap.get(node.id);
       if (!nInfo) continue;
       const cx = nInfo.x + nInfo.w / 2;
@@ -1574,9 +1578,10 @@ export class BmpExportService {
 
       const srcX = source.x + source.w / 2;
       const tgtX = target.x + target.w / 2;
+      const isSelf = source === target || conn.type === 'self';
       const isForward = tgtX >= srcX;
-      const startX = isForward ? srcX + 7 : srcX - 7;
-      const endX = isForward ? tgtX - 7 : tgtX + 7;
+      const startX = isSelf ? srcX + 7 : isForward ? srcX + 7 : srcX - 7;
+      const endX = isSelf ? srcX + 7 : isForward ? tgtX - 7 : tgtX + 7;
 
       const isReply = conn.type === 'reply' || !!conn.messages?.some((m) => m.isReturn);
       const color = conn.messages?.[0]?.color || (isReply ? '#2563EB' : '#059669');
@@ -1593,7 +1598,7 @@ export class BmpExportService {
         parts.push({ text: conn.name || `${idx + 1}: message()`, opacity: 1 });
       }
 
-      messages.push({ startX, endX, y, isForward, isReply, color, parts });
+      messages.push({ startX, endX, y, isForward, isReply, isSelf, color, parts });
     }
 
     return { lifelines, activations, messages };
@@ -1632,30 +1637,45 @@ export class BmpExportService {
     svgParts.push('<g id="sequence-messages">');
     for (const m of layout.messages) {
       const dash = m.isReply ? 'stroke-dasharray="6,4"' : '';
-      svgParts.push(
-        `<line x1="${m.startX}" y1="${m.y}" x2="${m.endX}" y2="${m.y}" stroke="${m.color}" stroke-width="1.8" ${dash} />`,
-      );
-      if (m.isReply) {
-        const arrowAngle = m.isForward ? Math.PI : 0;
-        const p1x = m.endX + 8 * Math.cos(arrowAngle - 0.5);
-        const p1y = m.y + 8 * Math.sin(arrowAngle - 0.5);
-        const p2x = m.endX + 8 * Math.cos(arrowAngle + 0.5);
-        const p2y = m.y + 8 * Math.sin(arrowAngle + 0.5);
+      if (m.isSelf) {
+        const loopW = 46;
+        const topY = m.y - 10;
+        const bottomY = m.y + 14;
+        const outerX = m.startX + loopW;
         svgParts.push(
-          `<polyline points="${p1x},${p1y} ${m.endX},${m.y} ${p2x},${p2y}" fill="none" stroke="${m.color}" stroke-width="1.8" stroke-linecap="round" />`,
+          `<path d="M ${m.startX} ${topY} L ${outerX} ${topY} L ${outerX} ${bottomY} L ${m.startX} ${bottomY}" fill="none" stroke="${m.color}" stroke-width="1.8" ${dash} />`,
         );
+        svgParts.push(
+          `<polygon points="${m.startX},${bottomY} ${m.startX + 8},${bottomY - 5} ${m.startX + 8},${bottomY + 5}" fill="${m.color}" stroke="${m.color}" stroke-width="1" />`,
+        );
+        svgParts.push(this.renderSvgTextParts(outerX + 10, m.y + 5, m.parts, m.color, 'start'));
       } else {
-        const arrowDir = m.isForward ? -8 : 8;
         svgParts.push(
-          `<polygon points="${m.endX},${m.y} ${m.endX + arrowDir},${m.y - 5} ${m.endX + arrowDir},${m.y + 5}" fill="${m.color}" stroke="${m.color}" stroke-width="1" />`,
+          `<line x1="${m.startX}" y1="${m.y}" x2="${m.endX}" y2="${m.y}" stroke="${m.color}" stroke-width="1.8" ${dash} />`,
         );
+        if (m.isReply) {
+          const arrowAngle = m.isForward ? Math.PI : 0;
+          const p1x = m.endX + 8 * Math.cos(arrowAngle - 0.5);
+          const p1y = m.y + 8 * Math.sin(arrowAngle - 0.5);
+          const p2x = m.endX + 8 * Math.cos(arrowAngle + 0.5);
+          const p2y = m.y + 8 * Math.sin(arrowAngle + 0.5);
+          svgParts.push(
+            `<polyline points="${p1x},${p1y} ${m.endX},${m.y} ${p2x},${p2y}" fill="none" stroke="${m.color}" stroke-width="1.8" stroke-linecap="round" />`,
+          );
+        } else {
+          const arrowDir = m.isForward ? -8 : 8;
+          svgParts.push(
+            `<polygon points="${m.endX},${m.y} ${m.endX + arrowDir},${m.y - 5} ${m.endX + arrowDir},${m.y + 5}" fill="${m.color}" stroke="${m.color}" stroke-width="1" />`,
+          );
+        }
+        svgParts.push(this.renderSvgTextParts((m.startX + m.endX) / 2, m.y - 6, m.parts, m.color));
       }
-      svgParts.push(this.renderSvgTextParts((m.startX + m.endX) / 2, m.y - 6, m.parts, m.color));
     }
     svgParts.push('</g>');
 
     svgParts.push('<g id="sequence-headers">');
     for (const node of nodes) {
+      if (node.nodeType === 'combined_fragment' || node.nodeType === 'note') continue;
       const nInfo = nodeMap.get(node.id);
       if (!nInfo) continue;
       const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
@@ -1664,6 +1684,44 @@ export class BmpExportService {
       } else {
         svgParts.push(this.renderSvgLifelineHeader(node, nInfo.x, nInfo.y, nInfo.w));
       }
+    }
+    svgParts.push('</g>');
+
+    svgParts.push('<g id="sequence-combined-fragments">');
+    for (const node of nodes) {
+      if (node.nodeType !== 'combined_fragment') continue;
+      const nInfo = nodeMap.get(node.id);
+      if (!nInfo) continue;
+      const { operator, operands, dividers } = parseCombinedFragment(node.name);
+      const tabW = Math.max(62, operator.length * 8 + 30);
+      const tabH = 26;
+      svgParts.push(
+        `<rect x="${nInfo.x + 3}" y="${nInfo.y + 3}" width="${nInfo.w}" height="${nInfo.h}" fill="none" stroke="rgba(121,99,84,0.38)" stroke-width="3" />`,
+      );
+      svgParts.push(
+        `<rect x="${nInfo.x}" y="${nInfo.y}" width="${nInfo.w}" height="${nInfo.h}" fill="none" stroke="#796354" stroke-width="1.5" />`,
+      );
+      svgParts.push(
+        `<path d="M ${nInfo.x} ${nInfo.y} L ${nInfo.x + tabW} ${nInfo.y} L ${nInfo.x + tabW} ${nInfo.y + tabH - 9} L ${nInfo.x + tabW - 9} ${nInfo.y + tabH} L ${nInfo.x} ${nInfo.y + tabH} Z" fill="#E8F4E4" stroke="#796354" stroke-width="1.5" />`,
+      );
+      svgParts.push(
+        `<text x="${nInfo.x + 10}" y="${nInfo.y + 17}" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="700" fill="#334155">${this.escapeXml(operator)}</text>`,
+      );
+      operands.forEach((guard, idx) => {
+        const opY = idx === 0 ? nInfo.y : nInfo.y + ((dividers[idx - 1] ?? 50) / 100) * nInfo.h;
+        if (idx > 0) {
+          svgParts.push(
+            `<line x1="${nInfo.x}" y1="${opY}" x2="${nInfo.x + nInfo.w}" y2="${opY}" stroke="#796354" stroke-width="1.5" stroke-dasharray="5,4" />`,
+          );
+        }
+        if (guard) {
+          const gx = nInfo.x + 10;
+          const gy = idx === 0 ? nInfo.y + tabH + 16 : opY + 18;
+          svgParts.push(
+            `<text x="${gx}" y="${gy}" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" fill="#334155">${this.escapeXml(guard)}</text>`,
+          );
+        }
+      });
     }
     svgParts.push('</g>');
   }
@@ -1676,6 +1734,7 @@ export class BmpExportService {
     y: number,
     parts: { text: string; opacity: number }[],
     color: string,
+    textAnchor: 'middle' | 'start' | 'end' = 'middle',
   ): string {
     const spans = parts
       .map((p) =>
@@ -1684,7 +1743,7 @@ export class BmpExportService {
           : this.escapeXml(p.text),
       )
       .join('');
-    return `<text x="${x}" y="${y}" class="uml-code" font-size="11" font-weight="normal" fill="${color}" text-anchor="middle" xml:space="preserve">${spans}</text>`;
+    return `<text x="${x}" y="${y}" class="uml-code" font-size="11" font-weight="normal" fill="${color}" text-anchor="${textAnchor}" xml:space="preserve">${spans}</text>`;
   }
 
   /**
@@ -2012,33 +2071,55 @@ export class BmpExportService {
       ctx.fillStyle = m.color;
       ctx.lineWidth = 1.8;
       ctx.setLineDash(m.isReply ? [6, 4] : []);
-      ctx.beginPath();
-      ctx.moveTo(m.startX, m.y);
-      ctx.lineTo(m.endX, m.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      if (m.isReply) {
-        const arrowAngle = m.isForward ? Math.PI : 0;
+      if (m.isSelf) {
+        const loopW = 46;
+        const topY = m.y - 10;
+        const bottomY = m.y + 14;
+        const outerX = m.startX + loopW;
         ctx.beginPath();
-        ctx.moveTo(m.endX + 8 * Math.cos(arrowAngle - 0.5), m.y + 8 * Math.sin(arrowAngle - 0.5));
-        ctx.lineTo(m.endX, m.y);
-        ctx.lineTo(m.endX + 8 * Math.cos(arrowAngle + 0.5), m.y + 8 * Math.sin(arrowAngle + 0.5));
+        ctx.moveTo(m.startX, topY);
+        ctx.lineTo(outerX, topY);
+        ctx.lineTo(outerX, bottomY);
+        ctx.lineTo(m.startX, bottomY);
         ctx.stroke();
-      } else {
-        const arrowDir = m.isForward ? -8 : 8;
+        ctx.setLineDash([]);
         ctx.beginPath();
-        ctx.moveTo(m.endX, m.y);
-        ctx.lineTo(m.endX + arrowDir, m.y - 5);
-        ctx.lineTo(m.endX + arrowDir, m.y + 5);
+        ctx.moveTo(m.startX, bottomY);
+        ctx.lineTo(m.startX + 8, bottomY - 5);
+        ctx.lineTo(m.startX + 8, bottomY + 5);
         ctx.closePath();
         ctx.fill();
-      }
+        this.drawTextParts(ctx, outerX + 54, m.y + 5, m.parts, m.color);
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(m.startX, m.y);
+        ctx.lineTo(m.endX, m.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
 
-      this.drawTextParts(ctx, (m.startX + m.endX) / 2, m.y - 6, m.parts, m.color);
+        if (m.isReply) {
+          const arrowAngle = m.isForward ? Math.PI : 0;
+          ctx.beginPath();
+          ctx.moveTo(m.endX + 8 * Math.cos(arrowAngle - 0.5), m.y + 8 * Math.sin(arrowAngle - 0.5));
+          ctx.lineTo(m.endX, m.y);
+          ctx.lineTo(m.endX + 8 * Math.cos(arrowAngle + 0.5), m.y + 8 * Math.sin(arrowAngle + 0.5));
+          ctx.stroke();
+        } else {
+          const arrowDir = m.isForward ? -8 : 8;
+          ctx.beginPath();
+          ctx.moveTo(m.endX, m.y);
+          ctx.lineTo(m.endX + arrowDir, m.y - 5);
+          ctx.lineTo(m.endX + arrowDir, m.y + 5);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        this.drawTextParts(ctx, (m.startX + m.endX) / 2, m.y - 6, m.parts, m.color);
+      }
     }
 
     for (const node of nodes) {
+      if (node.nodeType === 'combined_fragment' || node.nodeType === 'note') continue;
       const nInfo = nodeMap.get(node.id);
       if (!nInfo) continue;
       const isActor = node.nodeType === 'actor' || node.name?.toLowerCase().includes('actor');
@@ -2047,6 +2128,62 @@ export class BmpExportService {
       } else {
         this.drawLifelineHeader(ctx, node, nInfo.x, nInfo.y, nInfo.w);
       }
+    }
+
+    for (const node of nodes) {
+      if (node.nodeType !== 'combined_fragment') continue;
+      const nInfo = nodeMap.get(node.id);
+      if (!nInfo) continue;
+      const { operator, operands, dividers } = parseCombinedFragment(node.name);
+      const tabW = Math.max(62, operator.length * 8 + 30);
+      const tabH = 26;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(121, 99, 84, 0.38)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(nInfo.x + nInfo.w + 1.5, nInfo.y + 3);
+      ctx.lineTo(nInfo.x + nInfo.w + 1.5, nInfo.y + nInfo.h + 1.5);
+      ctx.lineTo(nInfo.x + 3, nInfo.y + nInfo.h + 1.5);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#796354';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(nInfo.x, nInfo.y, nInfo.w, nInfo.h);
+
+      ctx.beginPath();
+      ctx.moveTo(nInfo.x, nInfo.y);
+      ctx.lineTo(nInfo.x + tabW, nInfo.y);
+      ctx.lineTo(nInfo.x + tabW, nInfo.y + tabH - 9);
+      ctx.lineTo(nInfo.x + tabW - 9, nInfo.y + tabH);
+      ctx.lineTo(nInfo.x, nInfo.y + tabH);
+      ctx.closePath();
+      ctx.fillStyle = '#E8F4E4';
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#334155';
+      ctx.font = 'bold 12px ui-sans-serif, system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(operator, nInfo.x + 10, nInfo.y + 17);
+
+      ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
+      operands.forEach((guard, idx) => {
+        const opY = idx === 0 ? nInfo.y : nInfo.y + ((dividers[idx - 1] ?? 50) / 100) * nInfo.h;
+        if (idx > 0) {
+          ctx.save();
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          ctx.moveTo(nInfo.x, opY);
+          ctx.lineTo(nInfo.x + nInfo.w, opY);
+          ctx.stroke();
+          ctx.restore();
+        }
+        if (guard) {
+          const gy = idx === 0 ? nInfo.y + tabH + 16 : opY + 18;
+          ctx.fillText(guard, nInfo.x + 10, gy);
+        }
+      });
+      ctx.restore();
     }
 
     ctx.restore();

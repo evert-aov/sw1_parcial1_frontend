@@ -43,7 +43,7 @@ export interface NodeGeometry {
   readonly cssClass: string;
   readonly transparent: boolean;
   readonly fixedHeaderHeight?: number;
-  readonly lockY?: boolean;
+  readonly lockY?: boolean | ((node: UmlClassNode, activeDiagramType?: DiagramType) => boolean);
   readonly externalLabel?: boolean;
   readonly isResizable?: (node: UmlClassNode, activeDiagramType?: DiagramType) => boolean;
 }

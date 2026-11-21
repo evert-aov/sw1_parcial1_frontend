@@ -32,7 +32,7 @@ export const lifelinePlugin: NodePlugin = {
     zIndex: [20, 25],
     cssClass: 'f-node-lifeline',
     transparent: true,
-    lockY: false,
+    lockY: (_node, activeDiagramType) => activeDiagramType === DiagramType.SEQUENCE,
     externalLabel: false,
     fixedHeaderHeight: 60,
   },

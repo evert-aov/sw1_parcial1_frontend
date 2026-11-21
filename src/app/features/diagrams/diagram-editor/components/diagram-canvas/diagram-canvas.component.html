@@ -226,7 +226,8 @@
                 <div
                   fConnectionContent
                   [position]="0.5"
-                  [offset]="-10"
+                  [offset]="isSequenceSelfConnection(conn) ? 0 : -10"
+                  [class.uml-sequence-self-message-anchor]="isSequenceSelfConnection(conn)"
                   class="uml-sequence-message-anchor pointer-events-auto">
                   <div
                     (pointerdown)="onSequenceMessagePointerDown(conn, $event)"
@@ -236,7 +237,8 @@
                     [style.transform]="getSequenceMessageTransform(conn)"
                     [ngClass]="{
                       'cursor-grabbing opacity-70': isDraggingSeqMessage() && draggingSeqMessageConnId() === conn.id,
-                      'hover:opacity-80 cursor-grab': !isDraggingSeqMessage() || draggingSeqMessageConnId() !== conn.id
+                      'hover:opacity-80 cursor-grab': !isDraggingSeqMessage() || draggingSeqMessageConnId() !== conn.id,
+                      'uml-sequence-self-message-badge': isSequenceSelfConnection(conn)
                     }"
                     class="uml-sequence-message-badge select-none flex items-center gap-1.5 bg-transparent">
 

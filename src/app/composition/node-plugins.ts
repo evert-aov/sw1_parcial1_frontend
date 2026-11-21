@@ -12,6 +12,7 @@ import { componentPlugin } from '../plugins/uml-component-node/component.plugin'
 import { devicePlugin } from '../plugins/uml-deployment-node/device.plugin';
 import { executionEnvironmentPlugin } from '../plugins/uml-deployment-node/executionEnvironment.plugin';
 import { notePlugin } from '../plugins/uml-note-node/note.plugin';
+import { combinedFragmentPlugin } from '../plugins/uml-combined-fragment-node/combined_fragment.plugin';
 export const NODE_PLUGINS = [
   nodePlugin,
   classPlugin,
@@ -27,4 +28,5 @@ export const NODE_PLUGINS = [
   devicePlugin,
   executionEnvironmentPlugin,
   notePlugin,
+  combinedFragmentPlugin,
 ];
